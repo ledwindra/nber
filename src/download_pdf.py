@@ -29,4 +29,6 @@ while i < total_download:
     nber_id = get_nber_id(i)
     url = f'https://www.nber.org/system/files/working_papers/w{nber_id}/w{nber_id}.pdf'
     os.system(f'wget {url} -O paper/{nber_id}.pdf')
+    os.system(f'pdftotext paper/{nber_id}.pdf paper/{nber_id}.txt')
+    os.system(f'rm -rf paper/{nber_id}.pdf')
     i += 1

@@ -1,0 +1,45 @@
+name: download-pdf
+
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        descrition: 'log-level'
+        required: true
+      tags:
+        description: 'Manual trigger'
+        
+jobs:
+  printInputs:
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "Log level: ${{ github.event.inputs.logLevel }}"
+        echo "Tags: ${{ github.event.inputs.tags }}"
+  job_id:
+    name: download-pdf
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Run script
+      env:
+        TOTAL: ${{ secrets.TOTAL }}
+      run: |
+        python src/download_pdf.py --total ${TOTAL}
+    - name: Commit changes
+      env:
+        ACCESS_TOKEN: ${{ secrets.TOKEN }}
+        EMAIL: ${{ secrets.EMAIL }}
+        USERNAME: ${{ secrets.USERNAME }}
+      run: |
+        git config --global user.email ${EMAIL}
+        git config --global user.name ${USERNAME}
+        git remote set-url origin https://${USERNAME}:${ACCESS_TOKEN}@github.com/${USERNAME}/nber.git
+        git add paper/*
+        git commit -m "Add NBER paper(s) in .pdf format."
+        git pull --no-rebase origin main
+        git push -u origin main

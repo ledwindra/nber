@@ -67,7 +67,10 @@ class Paper:
             return None
     
     def issue_date(self):
-        return self.to_date(datetime.strptime(self.paper_datetime()[0], '%Y-%m-%d'))
+        try:
+            return self.to_date(datetime.strptime(self.paper_datetime()[0], '%Y-%m-%d'))
+        except IndexError:
+            return None
     
     def revision_date(self):
         try:
@@ -78,10 +81,16 @@ class Paper:
             return None
 
     def related(self):
-        return self.content.find_all('div', {'class': 'info-grid__item'})
+        try:
+            return self.content.find_all('div', {'class': 'info-grid__item'})
+        except AttributeError:
+            return None
     
     def related_title(self):
-        return [x.find('h3').text for x in self.related()]
+        try:
+            return [x.find('h3').text for x in self.related()]
+        except AttributeError:
+            return None
 
     def get_related(self, title):
         try:
@@ -92,10 +101,16 @@ class Paper:
             return None
     
     def abstract(self):
-        return self.content.find('div', {'class': 'page-header__intro-inner'}).text
+        try:
+            return self.content.find('div', {'class': 'page-header__intro-inner'}).text
+        except AttributeError:
+            return None
     
     def acknowledgement(self):
-        return self.content.find('div', {'class': 'accordion__body', 'id': 'accordion-body-guid1'}).text
+        try:
+            return self.content.find('div', {'class': 'accordion__body', 'id': 'accordion-body-guid1'}).text
+        except AttributeError:
+            return None
         
     def create(self):
         return pd.DataFrame([{
@@ -132,6 +147,7 @@ if __name__ == '__main__':
     i = 0
     while i < args.total:        
         raw = HTML()
+        print(raw.url())
         content = raw.content()
         paper = Paper(content, raw.nber_id)
         paper.save()

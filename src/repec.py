@@ -1,5 +1,6 @@
 import argparse
 import os
+from os import stat
 import pandas as pd
 import requests
 import xml.etree.ElementTree as et
@@ -7,114 +8,81 @@ from bs4 import BeautifulSoup
 from random import randint
 from time import sleep
 
-class NBER:
-    
+class ID:
     def __init__(self):
-        self.id = args.initial_id
-        self.paper = args.paper
-        self.timeout = args.timeout
-        self.sleep = args.sleep
-        self.user_agent = args.user_agent
+        self.df = pd.read_csv('data/nber.csv')
+        self.length = len(self.df) - 1
+        self.nber_id = self.df.id[randint(0, self.length)]
 
-    def get_latest_paper(self, headers):
-        url = 'https://data.nber.org/new.html#latest'
-        try:
-            response = requests.get(url, timeout=self.timeout, headers=headers)
-            content = BeautifulSoup(response.content, features='html.parser')
-            latest = content.find('li', {'class': 'multiline-li'})
-            latest = latest.find('a').attrs['href']
-            latest = int(''.join([x for x in latest if x.isnumeric() == True]))
-            return latest
-        except Exception:
-            return 1
+class RePEc:
 
-    def get_total_cites(self, nber_id, headers):
-        try:
-            if 0 <= nber_id < 10:
-                nber_id = f'000{nber_id}'
-            elif 10 <= nber_id < 100:
-                nber_id = f'00{nber_id}'
-            elif 100 <= nber_id < 1000:
-                nber_id = f'0{nber_id}'
-            status_code = None
-            while status_code != 200:
-                try:
-                    url = f'http://citec.repec.org/api/plain/RePEc:nbr:nberwo:{nber_id}'
-                    response = requests.get(url, timeout=self.timeout, headers=headers)
-                    status_code = response.status_code
-                    xml = et.fromstring(response.text)
-                    total_cites = int(xml.find('cites').text)
-                except Exception:
-                    print(f'Exception happens to get total cited by in WP {nber_id}. Don\'t worry, we\'ll try again.')
-                    continue
-        except UnboundLocalError:
-            total_cites = None
-        
-        try:
-            return total_cites
-        except UnboundLocalError:
-            return None
+    def __init__(self, nber_id):
+        self.url = 'http://citec.repec.org/api/plain/RePEc:nbr:nberwo:'
+        self.file_name = './data/repec.csv'
+        self.nber_id = nber_id
 
-    def get_cited_by(self, nber_id, headers):
-        try:
-            if 0 <= nber_id < 10:
-                nber_id = f'000{nber_id}'
-            elif 10 <= nber_id < 100:
-                nber_id = f'00{nber_id}'
-            elif 100 <= nber_id < 1000:
-                nber_id = f'0{nber_id}'
-            status_code = None
-            while status_code != 200:
-                try:
-                    url = f'http://citec.repec.org/api/plain/RePEc:nbr:nberwo:{nber_id}'
-                    response = requests.get(url, timeout=self.timeout, headers=headers)
-                    status_code = response.status_code
-                    xml = et.fromstring(response.text)
-                    cited_by = int(xml.find('citedBy').text)
-                except Exception:
-                    print(f'Exception happens to get total cited by in WP {nber_id}. Don\'t worry, we\'ll try again.')
-                    continue
-        except UnboundLocalError:
-            cited_by = None
-        
-        try:
-            return cited_by
-        except UnboundLocalError:
-            return None
+    def string_id(self):
+        if self.nber_id < 10: return f'000{self.nber_id}'
+        elif 10 <= self.nber_id < 100: return f'00{self.nber_id}'
+        elif 100 <= self.nber_id < 1000: return f'0{self.nber_id}'
+        else: return str(self.nber_id)
 
-    def get_reference(self, nber_id, headers):
-        if 0 <= nber_id < 10:
-            nber_id = f'000{nber_id}'
-        elif 10 <= nber_id < 100:
-            nber_id = f'00{nber_id}'
-        elif 100 <= nber_id < 1000:
-            nber_id = f'0{nber_id}'
+    def citation(self, xml_find):
         status_code = None
         while status_code != 200:
             try:
-                url = f'http://citec.repec.org/api/amf/RePEc:nbr:nberwo:{nber_id}'
-                response = requests.get(url, timeout=self.timeout, headers=headers)
+                url = f'{self.url}{self.string_id()}'
+                response = requests.get(url)
                 status_code = response.status_code
                 xml = et.fromstring(response.text)
-                text = xml.getchildren()[0]
-                reference = [x.getchildren()[0].text for x in text.getchildren() if 'isreferencedby' not in x.tag]
-            except Exception:
-                print(f'Exception happens to get references in WP {nber_id}. Don\'t worry, we\'ll try again.')
+                # either cites or citedBy
+                xml = int(xml.find(xml_find).text)
+                if status_code == 200:
+                    try: return xml
+                    except UnboundLocalError: return None
+            except Exception as err:
+                print(f'{err}: {self.nber_id}')
                 continue
-        try:
-            return reference
-        except UnboundLocalError:
-            return None
 
-    def get_paper(self, paper_id, total_cites, cited_by, reference):
-        paper = {
-            'id': paper_id,
-            'total_cites': total_cites,
-            'cited_by': cited_by,
-            'reference': reference
-        }
+    def reference(self):
+        status_code = None
+        while status_code != 200:
+            try:
+                url = f'http://citec.repec.org/api/amf/RePEc:nbr:nberwo:{self.string_id()}'
+                response = requests.get(url)
+                status_code = response.status_code
+                parser = et.XMLParser(encoding='utf-8')
+                xml = et.fromstring(response.text, parser=parser)
+                text = list(xml)[0]
+                reference = [list(x)[0].text for x in text if 'isreferencedby' not in x.tag]
+                if status_code == 200:
+                    try:
+                        return reference
+                    except UnboundLocalError:
+                        return None
+            except Exception as err:
+                print(f'{err}: {self.nber_id}')
+                continue
 
-        return paper
+    def create(self):
+        return pd.DataFrame([{
+            'id': self.nber_id,
+            'cites': self.citation('cites'),
+            'cited_by': self.citation('citedBy'),
+            'reference': self.reference()
+        }])
+
+    def existing(self):
+        existing = pd.read_csv(self.file_name)
+        df = pd.concat([self.create(), existing], sort=False)
+        df = df.drop_duplicates(subset=['id'])
+        return df.sort_values(by='id', ascending=True)
+    
+    def save(self):
+        if os.path.exists(self.file_name):
+            self.existing().to_csv(self.file_name, index=False)
+        else:
+            self.create().to_csv(self.file_name, index=False)
 
 def main():
     file_name = './data/repec.zip'
@@ -157,45 +125,10 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-i',
-        '--initial_id',
-        type=int,
-        default=1,
-        help='NBER Working Paper ID to begin with (default is 1)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-p',
-        '--paper',
-        type=int,
-        default=3,
-        help='How many papers will be scraped for each cron job (default is 10)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-t',
-        '--timeout',
-        type=int,
-        default=10,
-        help='How long for each request before it timed out in seconds (default is 5)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-s',
-        '--sleep',
-        type=int,
-        default=10,
-        help='How long to make time interval between iterations in case exception occurs in seconds (default is 10)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-u',
-        '--user-agent',
-        type=str,
-        default='user-agent',
-        help='User agent used for headers (default is user-agent)',
-        metavar=''
-    )
+    parser.add_argument('-t', '--total', type=int, default=5, help='Total paper(s) that will be downloaded', metavar='')
     args = parser.parse_args()
-    main()
+    i = 0
+    while i < args.total:
+        repec = RePEc(ID().nber_id)
+        repec.save()
+        i += 1

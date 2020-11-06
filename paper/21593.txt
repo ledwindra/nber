@@ -1,1871 +1,0 @@
-NBER WORKING PAPER SERIES
-
-ESTIMATION OF MULTIVARIATE PROBIT MODELS VIA BIVARIATE PROBIT
-John Mullahy
-Working Paper 21593
-http://www.nber.org/papers/w21593
-
-NATIONAL BUREAU OF ECONOMIC RESEARCH
-1050 Massachusetts Avenue
-Cambridge, MA 02138
-September 2015
-
-I would like to thank Bill Greene, Stephen Jenkins, João Santos Silva, and an anonymous reviewer
-for helpful comments on earlier drafts. Support has been provided by NICHD Grant P2CHD047873
-to UW-Madison's Center for Demography and Ecology and by the RWJF Health & Society Scholars
-Program at UW-Madison. The views expressed herein are those of the author and do not necessarily
-reflect the views of the National Bureau of Economic Research.
-NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
-NBER publications.
-© 2015 by John Mullahy. All rights reserved. Short sections of text, not to exceed two paragraphs,
-may be quoted without explicit permission provided that full credit, including © notice, is given to
-the source.
-
-Estimation of Multivariate Probit Models via Bivariate Probit
-John Mullahy
-NBER Working Paper No. 21593
-September 2015
-JEL No. C3,I1
-ABSTRACT
-Models having multivariate probit and related structures arise often in applied health economics. When
-the outcome dimensions of such models are large, however, estimation can be challenging owing to
-numerical computation constraints and/or speed. This paper suggests the utility of estimating multivariate
-probit (MVP) models using a chain of bivariate probit estimators. The proposed approach offers two
-potential advantages over standard multivariate probit estimation procedures: significant reductions
-in computation time; and essentially unlimited dimensionality of the outcome set. The time savings
-arise because the proposed approach does not rely simulation methods; the dimension advantage arises
-because only pairs of outcomes are considered at each estimation stage. Importantly, the proposed
-approach provides a consistent estimator of all the MVP model's parameters under the same assumptions
-required for consistent estimation based on standard methods, and simulation exercises suggest no
-loss of estimator precision.
-
-John Mullahy
-University of Wisconsin-Madison
-Dept. of Population Health Sciences
-787 WARF, 610 N. Walnut Street
-Madison, WI 53726
-and NBER
-jmullahy@facstaff.wisc.edu
-
-A data appendix is available at:
-http://www.nber.org/data-appendix/w21593
-
-1.	  Introduction	  
-	  
-
-Models	   having	   multivariate	   probit	   and	   related	   structures	   arise	   often	   in	   applied	  
-
-health	   economics	   (see	   Mullahy,	   2011,	   for	   references).	   	   When	   the	   outcome	   dimensions	   of	  
-such	   models	   are	   large,	   however,	   estimation	   can	   be	   challenging	   owing	   to	   numerical	  
-computation	  constraints	  and/or	  speed.	  
-	  
-
-This	  paper	  suggests	  the	  utility	  of	  estimating	  multivariate	  probit	  (MVP)	  models	  using	  
-
-a	  chain	  of	  bivariate	  probit	  estimators.	  	  It	  will	  be	  seen	  that	  the	  proposed	  approach,	  based	  on	  
-Stata's	  biprobit	  and	  suest	  procedures	  and	  driven	  by	  a	  Mata	  function	  bvpmvp(...),	  affords	  two	  
-potential	   advantages	   over	   Stata's	   mvprobit	   procedure:	   significant	   reductions	   in	  
-computation	   time;	   and	   essentially	   unlimited	   dimensionality	   of	   the	   outcome	   set	   (mvprobit's	  
-limit	  is	  M=20	  outcomes).1	  	  The	  time	  savings	  arise	  because,	  unlike	  mvprobit,	  bvpmvp(...)	  does	  
-not	   rely	   simulation	   methods;	   the	   dimension	   advantage	   arises	   because	   only	   pairs	   of	  
-outcomes	  are	  considered	  at	  each	  estimation	  stage.	  	  Importantly,	  the	  proposed	  bvpmvp(...)	  
-approach	   provides	   a	   consistent	   estimator	   of	   all	   the	   MVP	   model's	   parameters	   under	   the	  
-same	   assumptions	   required	   for	   consistent	   estimation	   via	   mvprobit,	   and	   simulation	  
-exercises	  reported	  below	  suggest	  no	  loss	  of	  estimator	  precision	  relative	  to	  mvprobit.	  
-	  
-
-The	   approach	   suggested	   here	   was	   inspired	   by	   the	   goal	   of	   embedding	   MVP	  
-
-estimation	   in	   a	   large-­‐replication	   bootstrap	   exercise.	   	   The	   simulation	   results	   presented	   in	  
-Section	   5	   suggest	   that	   the	   computation	   time	   savings	   afforded	   by	   the	   bvpmvp(...)	   method	  
-relative	  to	  mvprobit	  can	  be	  significant	  while	  numerical	  differences	  in	  the	  respective	  point	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-1	  Stata	   SE's	   restriction	   that	   matsize	   cannot	   exceed	   11,000	   ultimately	   places	   a	   limit	   on	   the	  
-
-size	   of	   the	   parameter	   vector	   that	   can	   be	   estimated.	   	   All	   references	   to	   Stata	   herein	   are	   to	  
-Stata/SE,	  Version	  13.1.	  	  Whether	  the	  results	  obtained	  here	  using	  Stata	  generalize	  to	  other	  
-statistical	  packages	  is	  an	  open	  question.	  
-
-	  
-
-1	  
-
-estimates	   and	   estimated	   standard	   errors	   are	   trivial.	   	   Since	   the	   potential	   applicability	   of	  
-MVP	   models	   is	   broad,	   it	   is	   valuable	   in	   practice	   that	   such	   potential	   not	   be	   thwarted	   by	  
-computational	  challenges.	  
-	  
-
-The	  plan	  for	  the	  remainder	  of	  the	  paper	  is	  as	  follows.	  	  Section	  2	  describes	  the	  MVP	  
-
-model.	   	   Section	   3	   describes	   the	   bvpmvp(...)	   method.	   	   Section	   4	   describes	   the	   comparison	  
-empirical	   exercises.	   	   Section	   5	   presents	   the	   comparative	   results.	   	   Section	   6	   considers	  
-parallel	   issues	   involved	   in	   estimation	   of	   multivariate	   ordered	   probit	   models.	   	   Section	   7	  
-summarizes.	  	  	  
-	  
-2.	  The	  Multivariate	  Probit	  Model	  
-	  
-
-The	  multivariate	  probit	  model	  as	  typically	  specified	  is:	  
-
-	  
-	  
-
-y * = x iβ j + uij 	   	  
-! ij
-
-	  
-
-y ij = 1 y *ij > 0 	  	  
-!
-
-	  
-
-u = ⎡ u ,...,uiM ⎤⎦ ∼ MVN 0,R 	  	  	  or	  	  	   y *i = ⎡⎣ y i1 ,...,y iM ⎤⎦ ∼ MVN x i B,R 	  	  
-!
-! i ⎣ i1
-
-(
-
-)
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-(1)	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-	  
-
-(2)	  
-
-(
-
-)
-
-(3)	  
-
-( )
-
-	  
-where	   i=1,...,N	   indexes	   observations,	   j=1,...,M	   indexes	   outcomes,	   xi	   is	   a	   K-­‐vector	   of	  
-exogenous	   covariates,	   the	   ui	   are	   assumed	   to	   be	   iid	   independent	   across	   i	   but	   correlated	  
-across	  j	  for	  any	  i,	  and	  "MVN"	  denotes	  the	  multivariate	  normal	  distribution.	  	  (Henceforth	  the	  
-"i"	  subscripts	  will	  be	  suppressed.)	  	  The	  standard	  normalization	  sets	  the	  diagonal	  elements	  
-of	   R	   equal	   to	   1	   so	   that	   R	   is	   a	   correlation	   matrix	   with	   off-­‐diagonal	   elements	   ρpq ,	  
-!
-
-	  
-
-2	  
-
-{p,q} ∈{1,...,M} ,	  !p ≠ q . 	  	   With	   standard	   full	   rank	   conditions	   on	   the	   x's	   and	   each	  !ρpq < 1 	  
-2
-
-!
-
-then	   B = ⎡⎣β1 ,...,β M ⎤⎦ 	  and	  R	  will	  be	  identified	  and	  estimable	  with	  sufficient	  sample	  variation	  
-!
-in	  the	  x's.	  
-	  
-3.	  Estimation	  and	  Inference	  
-	  
-
-Estimation	   of	   the	   M-­‐outcome	   multivariate	   probit	   model	   using	   mvprobit	   requires	  
-
-simulation	   of	   the	   MVN	   probabilities	   (Cappellari	   and	   Jenkins,	   2003),	   with	   mvprobit	  
-computation	  time	  increasing	  in	  M,	  K,	  N,	  and	  simulation	  draws	  (D).3	  	   It	  turns	  out,	  however,	  
-that	   all	   the	   parameters	   (B,R)	   can	   be	   estimated	   consistently	   using	   bivariate	   probit	   -­‐-­‐	  
-implemented	   as	   Stata's	   biprobit	   procedure	   -­‐-­‐	   while	   consistent	   inferences	   about	   all	   these	  
-parameters	  are	  afforded	  via	  Stata's	  suest	  procedure.	  	  Since	  the	  proposed	  approach	  will	  be	  
-seen	  to	  be	  significantly	  faster	  in	  terms	  of	  computation	  time	  with	  no	  obvious	  disadvantages,	  
-this	  strategy	  may	  merit	  consideration	  in	  applied	  work.	  
-	  
-
-The	  key	  result	  for	  the	  proposed	  estimation	  strategy	  is	  that	  the	  multivariate	  normal	  
-
-distribution	   is	   fully	   characterized	   by	   the	   mean	   vector	   xB	   and	   correlation	   matrix	   R.	   	   For	  
-present	   purposes,	   the	   key	   feature	   of	   the	   multivariate	   (conditional)	   normal	   distribution	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-2	  This	   normalization	   rules	   out	   cases	   like	   heteroskedastic	   errors	   (Wooldridge,	   2010,	   section	  
-
-15.7.4).	   	   While	   this	   normalization	   is	   common	   -­‐-­‐	   normalizing	   each	   univariate	   marginal	   to	   be	  
-a	   standard	   probit,	   for	   instance	  -­‐-­‐	   it	   is	   not	   the	   only	   possible	   normalization	   of	   the	   covariance	  
-matrix.	  
-3 	  Specifically,	  
-
-in	   the	   empirical	   exercises	   reported	   below	   as	   well	   as	   in	   some	   other	  
-simulations	   not	   reported	   here,	   it	   is	   found	   that	   mvprobit	   computation	   time	   increases:	  
-trivially	   in	   K;	   essentially	   proportionately	   in	   D;	   slightly	   more	   than	   proportionately	   in	   N;	   and	  
-at	   a	   rate	   between	   2M	   and	   3M	   in	   M.	   	   Greene	   and	   Hensher,	   2010,	   suggest	   that	   MVP	  
-computation	   time	   would	   increase	   with	   2M	   but	   the	   results	   obtained	   in	   the	   simulations	  
-undertaken	  here	  suggest	  a	  somewhat	  greater	  rate	  of	  increase.	  
-
-	  
-
-3	  
-
-(
-
-)
-
-(
-
-)
-
-F y1* ,...,y *M x 	  is	  that	  all	  its	  bivariate	  marginals	   F y *j ,y *m x 	  are	  bivariate	  normal	  with	  mean	  
-!
-!
-vectors	  and	  correlation	  matrixes	  corresponding	  to	  the	  respective	  submatrixes	  of	  xB	  and	  R	  
-(Rao,	  1973,	  8a.2.10).	  	  	  
-	  
-
-Under	   the	   normalization	   that	   the	   diagonal	   elements	   of	   R	   are	   all	   one,	   the	   B	  
-
-parameters	  are	  identified	  based	  on	  knowledge	  of	  all	  M	  	  (conditional)	  univariate	  marginals	  
-
-( )
-
-(
-
-)
-
-F y *j x ;	  there	  is	  no	  need	  to	  appeal	  to	  the	  multivariate	  features	  of	   F y1* ,...,y *M x 	  to	  identify	  
-!
-!
-B.	   	   The	   .5M(M-­‐1)	   bivariate	   marginals	   provide	   the	   additional	   information	   about	   the	   ρpq 	  
-!
-parameters.	   	   As	   such,	   identification	   of	   the	   parameters	   of	   all	   the	   bivariate	   marginals	   implies	  
-identification4	  of	  the	  parameters	  of	  the	  full	  multivariate	  joint	  distribution	  so	  that	  consistent	  
-
-(
-
-)
-
-estimation	   of	   all	   the	   bivariate	   marginal	   probit	   models	   Pr y p = t p ,y q = t q x 	  provides	  
-!
-
-(
-
-)
-
-consistent	   estimates	   of	   all	   the	   parameters	   B,R 	  of	   the	   full	   multivariate	   probit	   model	  
-!
-
-(
-
-)
-
-{ }
-
-Pr y1 = t 1 ,...,y M = t M x 	  for	   t j ∈ 0,1 ,	  j=1,...,M.	  
-!
-!
-
-	  
-Estimation	  via	  Bivariate	  Probit	  
-	  
-
-The	   proposed	   approach,	   which	   can	   be	   implemented	   using	   the	   Mata	   function	  
-
-bvpmvp(...)	   described	   below,	   is	   as	   follows.	   	   First,	   corresponding	   to	   each	   possible	   outcome	  
-
-(
-
-)
-
-pair,	   .5M M−1 	  bivariate	   probit	   models	   are	   estimated	   using	   biprobit	   yielding	   a	   single	  
-!
-
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-4	  As	   discussed	   below,	   identification	   of	   all	   the	   bivariate	   marginals	   implies	   overidentification	  
-
-of	  B.	  
-
-	  
-
-4	  
-
-estimate5	  of	  each	   ρpq 	  and	  M-­‐1	  estimates	  of	  each	   β j ,	  j=1,...,M.	  Each	  of	  the	  M-­‐1	  estimates	  of	  
-!
-!
-
-β 	  is	  itself	  consistent	  since	  each	  biprobit	  specification	  uses	  the	  same	  normalization	  on	  the	  
-! j
-
-(
-
-! ! !
-relevant	   submatrixes	   of	   R.	   	   Each	   of	   these	   estimates	   β p ,β q ,ρpq
-!
-
-) ,	   b=1,...,!.5M(M−1) ,	   is	  
-b
-
-stored	   and	   then	   combined	   using	   Stata's	   suest	   procedure,	   which	   provides	   a	   consistent	  
-
-(
-
-)(
-
-)
-
-estimate	   of	   the	   joint	   variance-­‐covariance	   matrix	   of	   all	   M M−1 .5+ K 	  parameters	  
-!
-
-(
-
-)
-
-estimated	   with	   the	   .5M M−1 	  biprobit	   estimates.	   	   Denote	   this	   vector	   of	   parameter	  
-!
-!
-!
-estimates	  and	  its	  estimated	  variance-­‐covariance	  matrix	  as	   α 	  and	   Ω ,	  respectively.6	  
-
-⎛ 1 ⎞ M !
-!
-Second,	   the	   simple	   averages	   β jA = ⎜
-∑ m=1β are	   computed.	   	   This	   gives	   a	  
-⎝ M−1 ⎟⎠ m≠j jm 	  
-!
-
-	  
-
-! ⎡" "⎤
-!k × M 	  matrix	   of	   estimated	   averaged	   coefficients,	   denoted	   B A = ⎢β1A ,...,β MA ⎥ .	   	   Since	   a	  
-⎣
-⎦
-!
-weighted	  average	  of	  consistent	  estimators	  is	  in	  general	  a	  consistent	  estimator,	  the	  resulting	  
-
-!
-B 	  will	  itself	  be	  consistent	  for	  B.	  	  This	  averaging	  arises	  because	  the	  B	   parameters	  in	  the	  
-! A
-proposed	   approach	   are	   overidentified,	   i.e.	   there	   are	   M-­‐1	   consistent	   estimates	   of	   each	   β j ,	  
-!
-j=1,...,M.	   	   One	   could	   use	   some	   other	   rule	   to	   compute	   a	   single	   consistent	   estimate	   of	   each	   β j 	  
-!
-from	   among	   the	   M-­‐1	   candidates,	   but	   unless	   alternative	   strategies	   could	   boast	   significant	  
-precision	   gains,	   computational	   simplicity	   recommends	   the	   simple	   average	   as	   an	   obvious	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-5
-
-	  biprobit	  
-
-((
-
-estimates	  
-
-)(
-
-))
-
-directly	  
-
-the	  
-
-inverse	  
-
-hyperbolic	  
-
-tangent	  
-
-of	   ρpq
-!
-
-.5ln 1+ ρpq 1− ρpq .	  
-!
-!
-!
-6	   α
-	  and	   Ω are	  the	  suest	  stored	  matrix	  results	  e(b)	  (a	  row	  vector)	  and	  e(V),	  respectively.	  
-	  
-	  
-
-5	  
-
-	  or	  
-
-solution.	  	  See	  the	  Appendix	  for	  further	  discussion.	  
-
-(
-
-( )
-
-)
-
-Finally,	   let	   Q	   denote	   the	   .5M M−1 	  vector	   of	   the	   tanh −1 ρjk estimated	   in	   each	  
-!
-	  
-!
-
-	  
-
-( )
-
-! ⎡
-"
-biprobit	   specification,	   and	   define	   the	   	   M .5 M−1 + K ×1 	  vector Θ = ⎢ vec B A
-!
-	  
-⎢⎣
-!
-
-((
-
-((
-
-) ) (
-
-)(
-
-) )
-
-T
-
-T
-
-!T ⎤
-,Q ⎥ .	  	  
-⎥⎦
-
-)
-
-Define	  H	  as	  the	   M .5 M−1 + K × M M−1 .5+ K 	  averaging	  and	  selection	  matrix	  that	  maps	  
-!
-
-!
-!T
-!
-!
-α 	  to	   Θ ,	   i.e.	   !Θ = Hα ;	   the	   elements	   of	   H	   are	   1/(M-­‐1),	   one,	   or	   zero. 7 	  	   The	   estimated	  
-
-()
-
-! "
-"
-!
-variance-­‐covariance	  matrix	  of	   Θ ,	  useful	  for	  inference,	  is	  given	  by	   var Θ = HΩHT .	  
-!
-	  
-bvpmvp(...):	  A	  Mata	  Function	  to	  Implement	  the	  Proposed	  Estimation	  Approach	  
-
-(
-
-(
-
-))
-
-( (
-
-(
-
-))
-
-)
-
-The	   function	   bvpmvp(...)	   returns	   the	   M k + .5 M−1 × M k + .5 M−1 +1 	  matrix	  
-!
-
-	  
-
-whose	  
-
-(
-
-first	  
-
-(
-
-column	  
-
-!T
-is	   !Θ
-
-	  and	  
-
-whose	  
-
-remaining	  
-
-elements	  
-
-are	  
-
-the	  
-
-()
-
-))
-
-! "
-M k + .5 M−1 'dimension 	  symmetric	   square	   matrix	   var Θ .	   	   bvpmvp(...)	   takes	   six	  
-!
-!
-arguments:	  (1)	  a	  string	  containing	  the	  names	  of	  the	  M	  outcomes;	  (2)	  a	  string	  containing	  the	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-7	  A	   general	   form	   of	   the	   H	   matrix	   is	   complicated	   to	   express	   concisely.	   	   As	   an	   example,	   for	  
-
-M=3	  and	  K=2	  the	  !9×15 	  H	  matrix,	  computed	  internally	  by	  bvpmvp(...),	  is	  	  
-⎡
-⎢
-⎢
-⎢
-⎢
-⎢
-H=⎢
-⎢
-⎢
-⎢
-⎢
-⎢⎣
-!
-
-	  
-
-.5 0 0 0 0 .5 0 0 0 0 0 0 0 0 0 ⎤
-⎥
-0 .5 0 0 0 0 .5 0 0 0 0 0 0 0 0 ⎥
-0 0 .5 0 0 0 0 0 0 0 .5 0 0 0 0 ⎥
-0 0 0 .5 0 0 0 0 0 0 0 .5 0 0 0 ⎥
-⎥
-0 0 0 0 0 0 0 .5 0 0 0 0 .5 0 0 ⎥ 	  
-0 0 0 0 0 0 0 0 .5 0 0 0 0 .5 0 ⎥
-⎥
-0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 ⎥
-0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 ⎥
-0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 ⎥⎦
-
-6	  
-
-names	   of	   the	   K-­‐1	   non-­‐constant	   covariates;	   (3)	   a	   (possibly	   null)	   string	   containing	   any	   "if"	  
-conditions	   for	   estimation;	   (4)	   a	   scalar	   indicating	   whether	   or	   not	   to	   display	   the	   interim	  
-estimation	   results;	   (5)	   a	   scalar	   indicating	   the	   rounding	   level	   of	   presented	   results;	   and	   (6)	   a	  
-scalar	  indicating	  whether	  or	  not	  to	  display	  the	  final	  results.	  	  For	  example:	  
-	  
-bv1 = bvpmvp("y1 y2 y3 y4","x1 x2 x3 x4","if _n<=10000",0,.001,1)
-bv2 = bvpmvp(yn,xn,ic,0,.001,1)
-	  
-
-!
-bvpmvp(...)'s	   summary	   report	   displays	   the	   B A 	  estimates,	   their	   estimated	   standard	   errors,	  
-!
-!
-and	   the	   estimated	   correlation	   matrix	  !R ;	   an	   example	   is	   provided	   in	   Exhibit	   1.	   	   Of	   course,	  
-
-suppression	   of	   these	   results	   may	   be	   useful,	   for	   instance,	   in	   simulation	   or	   bootstrapping	  
-exercises.	  	  The	  do	  file	  containing	  the	  Mata	  code	  for	  bvpmvp(...)	  is	  available	  with	  this	  paper's	  
-supplementary	  materials.	  
-	  
-4.	  Simulation	  Exercises	  
-	  
-
-To	   assess	   the	   relative	   performance	   of	   the	   proposed	   approach	   and	   the	   approach	  
-
-based	   on	   mvprobit	   a	   simulation	   exercise	   was	   conducted.	   	   Three	   sample	   sizes	   (N=2,000,	  
-N=10,000,	   N=50,000)	   are	   considered.	   	   The	   data	   structure	   corresponding	   to	   (1)-­‐(3)	   has	  
-either	   K=5	   or	   K=9	   covariates	   x	   (four	   or	   eight	   independently	   distributed	   uniform	   variates	  
-plus	   a	   constant)	   and	   M=8	   binary	   outcomes	   y ij 	  (only	   four	   of	   which	   are	   used	   in	   some	  
-!
-specifications)	  corresponding	  to	  latent	   y *ij 	  having	  cross-­‐outcome	  correlations	   ρjk 	  variously	  
-!
-!
-
-{
-
-in	   .2,!1
-!
-
-	  
-
-}
-
-10,!.5 	  for	  all	  !j ≠ k ,	  specifically	  
-
-7	  
-
-	  
-
-⎡
-⎢
-⎢
-⎢
-⎢
-⎢
-R=⎢
-⎢
-⎢
-⎢
-⎢
-⎢
-⎣
-!
-
-1
-10−.5
-
-1
-
-.5
-
-10−.5
-
-−.5
-
-10
-
-.5
-10−.5
-.5
-−.5
-
-10
-
-.2
-
-1
-−.5
-
-10
-
-−.5
-
-10−.5
-
-1
-
-10−.5
-
-.2
-
-10−.5
-
-1
-
-.5
-
-10−.5
-
-1
-
-.2
-
-10−.5
-
-−.5
-
-10
-
-.2
-
-1
-
-.5
-
-10
-
-.2
-
-(symm.)
-
-.5
-−.5
-
-10
-
-−.5
-
-10
-
-.2
-
-−.5
-
-10
-
-⎤
-⎥
-⎥
-⎥
-⎥
-⎥
-⎥ 	  
-⎥
-⎥
-⎥
-⎥
-⎥
-1 ⎦
-
-	  
-For	   mvprobit,	   the	   draws(.)	   option	   was	   set	   both	   at	   10	   and	   20.	   	   The	   simulations	   are	  
-performed	  using	  Stata/SE	  Version	  13.1	  on	  an	  iMac	  3.4GHz	  Intel	  Core	  i7	  processor	  and	  OS	  X	  
-v10.8.8.	  
-	  
-5.	  Simulation	  Results	  
-	  
-
-Key	  results	  of	  the	  simulations	  are	  summarized	  in	  Tables	  1-­‐3.	  	  Table	  1	  displays	  the	  
-
-absolute	  and	  relative	  computation	  times	  for	  mvprobit	  and	  bvpmvp(...)	  estimation	  across	  the	  
-various	   combinations	   of	   the	   N,	   M,	   K,	   and	   D	   parameters.	   	   Enormous	   differences	   in	  
-computation	   time	   are	   seen	   between	   the	   two	   estimation	   methods	   across	   all	   the	   different	  
-parameter	   combinations	   (for	   reference,	   it	   may	   be	   useful	   to	   recall	   that	   there	   are	   86,400	  
-seconds	   in	   one	   day).	   	   Tables	   2	   and	   3	   present	   a	   side-­‐by-­‐side	   comparison	   of	   the	   point	  
-estimates	  of	  B	  and	  R	  obtained	  in	  one	  select	  specification	  (N=10,000,	  M=4,	  K=5).	  	  For	  both	  B	  
-and	   R	   the	   differences	   between	   the	   mvprobit	   and	   bvpmvp(...)	   point	   estimates	   and	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-8	  The	  
-
-simulations	   set	   Stata's	   matsize	   parameter	   at	   600	   for	   all	   specifications.	   	   In	   some	  
-preliminary	  investigation,	  it	  was	  observed	  that	  computation	  time	  for	  bvpmvp(...)	  increased	  
-significantly	   when	   matsize	  was	   set	   much	   larger	   than	   necessary;	   this	   was	   not	   the	   case	   for	  
-mvprobit.	  
-
-	  
-
-8	  
-
-corresponding	  estimated	  standard	  errors	  are	  trivial.	  
-	  
-
-In	   light	   of	   these	   results,	   use	   of	   methods	   like	   bvpmvp(...)	   to	   estimate	   MVP	   models	  
-
-merits	  consideration	  when	  computation	  time	  is	  an	  important	  consideration.9	  
-	  
-6.	  Multivariate	  Ordered	  Probit	  Models	  
-	  
-
-Analogous	   conceptual	   considerations	   arise	   in	   the	   context	   of	   multivariate	   ordered	  
-
-{
-
-}
-
-probit	  (MVOP)	  models	  in	  which	  the	  observed	  ordered	  outcomes	  are	   yoj ∈ 0,...,Gj 	  for	  finite	  
-!
-integers	   Gj ≥ 1 .	  	  MVOP	  modeling	  involves	  estimation	  of	  and	  inference	  about	  the	  parameters	  
-!
-B	   and	   R	   as	   well	   as	   the	   vector	   of	   category	   cutpoints,	   C	   (for	   each	   outcome	   yoj	   there	   are	   Gj	  
-cutpoints	  that	  delineate	  the	  Gj+1	  categories).10	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-9	  It	   should	   be	   noted	   that	   these	   simulations	   paint	   what	   is	   in	   some	   sense	   a	   "worst-­‐case"	  
-
-picture	  for	  mvprobit	  estimation.	  	  The	  simulations	  use	  mvprobit	  "out	  of	  the	  box,"	  i.e.	  without	  
-specifying	   any	   options	   that	   might	   enhance	   estimation	   speed	   (see	   the	   Stata	   "help"	   file	   for	  
-mvprobit	   and	   also	   Cappellari	   and	   Jenkins,	   2003	   and	   2006).	   	   For	   instance,	   specifying	   a	  
-smaller	   number	   of	   draws	   (e.g.	   draws(3)	   or	   draws(5))	   would	   clearly	   result	   in	   faster	  
-estimation	   times;	   any	   diminished	   performance	   of	   the	   mvprobit	   estimator	   relative	   to	   the	  
-performance	   at	   greater	   number	   of	   draws	   would	   be	   a	   potential	   consideration,	   however.	  	  
-Alternatively,	  using	  good	  starting	  values	  for	  R	  via	  mvprobit's	  atrho0(.)	  option	  might	  also	  be	  
-expected	  to	  result	  in	  faster	  estimation	  times.	  	  One	  such	  approach	  would	  involve	  two	  stages:	  
-(1)	  estimate	  the	  full	  model	  using	  mvprobit	  with	  a	  small	  number	  of	  draws,	  e.g.	  draws(1)	  or	  
-draws(2);	   and	   (2)	   use	   the	   estimate	   of	   R	   thus	   obtained	   to	   provide	   starting	   values	   for	   a	  
-second	   mvprobit	   estimation	   with	   a	   larger	   number	   of	   draws	   (e.g.	   draws(10)	  or	   draws(20))	  
-being	  specified.	  	  This	  approach	   -­‐-­‐	  with	  draws(1)	  specified	  initially,	  followed	  by	  draws(10)	  -­‐-­‐	  
-was	   examined	   in	   some	   simulations.	   	   It	   was	   observed	   in	   this	   instance	   that	   the	   two-­‐stage	  
-approach	  resulted	  in	  roughly	  a	  10%	  reduction	  in	  overall	  estimation	  time,	  due	  mainly	  to	  a	  
-smaller	  number	  of	  iterations	  (three	  vs.	  four)	  required	  for	  convergence	  in	  the	  second	  stage.	  
-	  
-This	  paper	  also	  has	  not	  considered	  how	  estimation	  using	  Stata's	  cmp	  procedure	  to	  
-estimate	  the	  MVP	  model	  would	  compare	  with	  the	  bvpmvp(...)	  approach.	  
-	  
-I	  would	  like	  to	  thank	  Stephen	  Jenkins	  and	  an	  anonymous	  referee	  for	  their	  insights	  
-and	  suggestions	  on	  these	  matters.	  
-10	  For	   the	   MVOP	   model	   B	   will	   not	   contain	   a	   parameter	   for	   the	   constant	   term	   since	   this	   is	  
-
-absorbed	  into	  the	  cutpoints	  C.	  
-
-	  
-
-9	  
-
-	  
-
-An	   estimation	   strategy	   fully	   analogous	   to	   bvpmvp(...)	   is	   not	   available	   since	   the	  
-
-bioprobit	   procedure	   (Sajaia,	   2008)	   does	   not	   permit	   postestimation	   prediction	   with	   the	  
-score	   option,	   as	   required	   by	   suest.	   	   However,	   an	   alternative,	   fully	   consistent,	   and	  
-computationally	   efficient	   approach	   is	   available,	   as	   follows.	   	   First,	   estimate	   M	   univariate	  
-ordered	   probit	   models	   using	   Stata's	   oprobit	   procedure	   and	   store	   these	   results	   using	  
-estimates	   store.	   	   This	   provides	   consistent	   estimates	   of	   the	   B	   and	   C	   parameters.	   	   Second,	  
-estimate	   a	   chain	   of	   bivariate	   binary	   probit	   models	   using	   biprobit	   -­‐-­‐	   as	   with	   bvpmvp(...)	   -­‐-­‐	  
-and	   store	   these	   estimates	   using	   estimates	  store.	   	   This	   provides	   a	   consistent	   estimate	   of	   R.11	  	  
-Note	   that	   any	   thresholds	   used	   to	   map	   the	   ordered	   yoij	   to	   their	   corresponding	   coarsened	  
-binary	   outcomes	   should	   result	   in	   consistent	   estimates	   of	   R.	   	   biprobit	   uses	   the	   rule	   that	   a	  
-nonbinary	   outcome	   is	   treated	   as	   zero	   for	   zero	   values	   and	   one	   otherwise;	   this	   is	   a	  
-convenient	   mapping	   that	   minimizes	   programming	   burden.	   	   Third,	   combine	   all	   the	  
-estimates	   stored	   in	   these	   two	   steps	   using	   suest.	   	   The	   estimates	   from	   suest	   can	   then	   be	   used	  
-for	   inference.	   	   The	   do	   file	   containing	   the	   Mata	   code	   for	   the	   function	   bvopmvop(...)	   that	  
-implements	   this	   approach	   is	   available	   with	   this	   paper's	   supplementary	   materials.12	  	   An	  
-example	  of	  bvopmvop(...)	  output	  is	  presented	  in	  Exhibit	  2.13	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-11	  Note	   that	   this	   also	   provides	   consistent	   estimates	   of	   B,	   but	   these	   are	   unnecessary	   given	  
-
-those	  obtained	  in	  the	  first	  step.	  
-12	  bvopmvop(...)	   accommodates	   ordered	   outcomes	   having	   different	   numbers	   of	   cutpoints,	  
-
-including	  mixed	  ordered	  and	  binary	  outcomes.	  	  The	  single	  cutpoint	  estimated	  in	  oprobit	  for	  
-binary	   outcomes	   is	   -­‐1	   times	   the	   corresponding	   constant	   term	   that	   would	   be	   estimated	  
-using	  probit.	  
-13	  The	  
-
-outcomes	   in	   this	   example	   are	   ordered	   versions	   yoj	   of	   the	   yj	   used	   in	   the	   earlier	  
-
-simulations	  in	  which	  the	  outcome	  value	  2	  is	  assigned	  if	   1 ≤ y *j ≤ 2 	  and	  3	  is	  assigned	  if	   y *j > 2 .	  	  
-!
-!
-Then	  y2	  combines	  the	  top	  two	  categories	  and	  y3	  combines	  the	  top	  three	  categories	  (i.e.	  y3	  is	  
-the	   original	   binary	   measure).	   	   Thus,	   the	   numbers	   of	   categories	   are	   G1=4,	   G2=3,	   G3=2,	   and	  
-G4=4.	  
-
-	  
-
-10	  
-
-7.	  Summary	  
-	  
-
-This	   paper	   has	   presented	   a	   novel	   estimation	   strategy	   for	   consistent	   estimation	   of	  
-
-and	   inference	   about	   the	   parameters	   of	   MVP	   and	   MVOP	   models.	   	   The	   straightforward	  
-implementation	   of	   these	   approaches	   using	   available	   Mata	   programs	   recommends	   their	  
-consideration	   in	   applied	   work,	   particularly	   in	   situations	   involving	   large	   numbers	   of	  
-outcomes	  (M),	  large	  sample	  sizes	  (N),	  or	  in	  situations	  requiring	  repeated	  MVP	  estimation	  
-like	  bootstrapping	  exercises.	  
-	  
-
-In	  closing,	  it	  should	  be	  noted	  that	  the	  methods	  suggested	  here	  may	  prove	  useful	  in	  
-
-many	   but	   not	   all	   applications	   of	   multivariate	   probit	   models.	   	   Ultimately	   the	   methods	  
-proposed	   here	   -­‐-­‐	   as	   well	   as	   the	   mvprobit	   method	   -­‐-­‐	   permit	   estimation	   of	   the	   joint	  
-
-(
-
-)
-
-conditional	  probability	  model	   Pr y = k x 	  for	  the	  M-­‐vectors	  of	  outcomes	  y,	  all	  possible	  2M	  
-!
-
-{ }
-
-vectors	   k=[km],	   k m ∈ 0,1 ,	   and	   exogenous	   covariates	   x.	   	   As	   such,	   when	   these	   joint	  
-!
-conditional	   probabilities	   are	   per	  se	   the	   estimands	   of	   interest,	   when	   they	   are	   instrumentally	  
-of	   interest	   in	   the	   estimation	   of	   other	   quantitites	   (see	   Mullahy,	   2011,	   for	   discussion),	   or	  
-when	   reduced	   forms	   of	   structural	   models	   are	   of	   interest,	   the	   approach	   suggested	   here	   may	  
-prove	   useful.	   	   However	   in	   other	   MVN	   contexts	   with	   binary	   outcomes	  
--­‐-­‐	  e.g.	  where	  endogenous	  ym	  are	  RHS	  variables	  in	  the	  structural	  models	  for	  other	  latent	   y *j 	  
-!
--­‐-­‐	   consistent	   estimation	   of	   the	   structural	   parameters	   will	   typically	   demand	   attention	   to	   the	  
-full	  joint	  probability	  structure,	  not	  just	  its	  bivariate	  marginals.14	  
-	  
-
-	  
-
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-14	  Thanks	  are	  owed	  to	  an	  anonymous	  reviewer	  for	  emphasizing	  these	  points.	  
-
-	  
-
-11	  
-
-References	  
-Cappellari,	   L.	   and	   S.P.	   Jenkins.	   2003.	   "Multivariate	   Probit	   Regression	   Using	   Simulated	  
-Maximum	  Likelihood."	  Stata	  Journal	  3:	  278–294.	  
-Cappellari,	   L.	   and	   S.P.	   Jenkins.	   2006.	   "Calculation	   of	   Multivariate	   Normal	   Probabilities	   by	  
-Simulation,	  with	  Applications	  to	  Maximum	  Simulated	  Likelihood	  Estimation."	  Stata	  
-Journal	  6:	  156-­‐189.	  
-Greene,	   W.H.	   and	   D.A.	   Hensher.	   2010.	   Modeling	   Ordered	   Choices:	   A	   Primer.	   	   Cambridge:	  
-Cambridge	  University	  Press.	  
-Mullahy,	  J.	  2011.	  "Marginal	  Effects	  in	  Multivariate	  Probit	  and	  Kindred	   Discrete	  and	  Count	  
-Outcome	  Models,	  with	  Applications	  in	  Health	  Economics."	  NBER	  W.P.	  17588.	  
-Rao,	   C.R.	   1973.	   Linear	   Statistical	   Inference	   and	   Its	   Applications,	   2nd	   Edition.	   New	   York:	  
-Wiley.	  
-Sajaia,	   Z.	   2008.	   BIOPROBIT:	   Stata	   Module	   for	   Bivariate	   Ordered	   Probit	   Regression.	   Boston	  
-College	  Department	  of	  Economics,	  Statistical	  Software	  Components,	  No.	  S456920.	  
-Wooldridge,	   J.M.	   2010.	   Econometric	  Analysis	  of	  Cross	  Section	  and	  Panel	  Data,	   2nd	   Edition.	  
-Cambridge,	  MA:	  MIT	  Press.	  
-	  
-
-	  
-
-	  
-
-12	  
-
-Appendix:	  Additional	  Remarks	  on	  Combining	  biprobit	  Estimates	  
-	  
-
-In	   general,	   the	   optimal	   approach	   to	   combining	   such	   multiple	   estimates	   in	   the	  
-
-overidentified	  case	  is	  to	  use	  a	  minimum-­‐distance	  estimator	  with	  an	  optimal	  weight	  matrix	  
-(Wooldridge,	  2010,	  section	  14.5).	  	  In	  the	  present	  context	  this	  would	  amount	  to	  computing	  a	  
-M
-!
-!
-weighted	   average	   for	   each	   point	   estimate,	   i.e.	   β jkw = ∑ m=1 w jkm β jkm ,	   j=1,...,M,	   k=1,...,K.	  	  
-m≠j
-!
-
-Implementing	   the	   minimum-­‐distance	   approach	   can	   be	   computationally	   challenging,	  
-however.	   	   For	   example,	   consider	   the	   simplest	   case,	   M=3.	   	   The	   optimal	   (variance-­‐
-minimizing)	   weights	   even	   in	   this	   instance	   are	   complicated	   functions	   of	   the	   estimates'	  
-
-{
-
-} {
-
-}
-
-variances	   and	   covariances;	   suppressing	   the	   j,k	   subscripts,	   for	   p,q,r ∈ 1,2,3 ,	  !p ≠ q ≠ r 	  
-!
-these	  optimal	  weights	  are:	  
-wr =
-!
-
-σ ppσ qq − σ 2pq − σ qqσ pr − σ ppσ rq − σ prσ pq − σ pqσ rq
-
-(
-
-σ ppσ rr + σ rrσ qq + σ ppσ qq − σ 2pr − σ 2pq − σ 2rq + 2 σ prσ pq + σ pqσ rq + σ prσ rq − σ ppσ rq − σ rrσ pq − σ qqσ pr
-
-	  
-
-where	   σ •• 	  are	   variances	   and	   covariances	   of	   the	   parameter	   estimates	   (the	   empirical	  
-
-!
-!
-counterpart,	   w r ,	   would	   use	   σ •• ).	   	   The	   algebraic	   complexity	   of	   these	   weights	   increases	  
-!
-rapidly	  as	  M	  increases.	  
-	  
-
-	  The	   considerable	   additional	   computational	   complexity	   involved	   in	   implementing	  
-
-such	   a	   minimum-­‐distance	   approach	   is	   unlikely	   to	   provide	   much	   benefit	   (in	   terms	   of	  
-precision)	   unless	   the	   optimal	   wjkm	   were	   to	   diverge	   dramatically	   from	   1/(M-­‐1).	   	   The	  
-simulations	  undertaken	  here	  suggest	  this	  is	  unlikely	  to	  be	  the	  case.	  	  In	  general	  the	  optimal	  
-weights	   will	   diverge	   from	   the	   equi-­‐weighted	   case	   of	   1/(M-­‐1)	   to	   the	   extent	   that	   the	  
-variances	   and	   covariances	   of	   and	   between	   the	   parameter	   point	   estimates	   differ	  
-substantively	  across	  the	  (M-­‐1)	  estimates.15	  
-	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	   	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  
-15 	  Bill	  
-
-Greene	   suggested	   to	   me	   that	   a	   computationally	   straightforward	   middle-­‐ground	  
-weighting	   strategy	   would	   be	   to,	   in	   essence,	   ignore	   the	   cross-­‐estimator	   covariances	   and	  
-compute	  the	  variance-­‐matrix-­‐weighted	  quantities:	  
-	  
-
-	  
-
-( )
-
-−1
-! ⎡ M ⎡! ! ⎤ ⎤
-β jv = ⎢ ∑ m=1 var β m
-⎢
-⎥⎦ ⎥
-m≠j ⎣
-⎢
-⎣
-⎦⎥
-!
-
-−1
-
-×∑
-
-M ⎡!
-m=1 ⎢ var
-m≠j ⎣
-
-13	  
-
-( )
-
-−1
-
-!
-!
-β m ⎤ β m ,	  	  	  	  j=1,...,M.	  
-⎥⎦
-
-)
-
-!
-
-	  
-
-For	   illustrative	   purposes,	   selecting	   arbitrarily	   the	   (M-­‐1)	   point	   estimates	  
-
-corresponding	  to	  the	  parameter	   β11 	  (outcome	  y1,	  covariate	  x1)	  for	  the	  N=10,000,	  M=8	  and	  
-!
-
-!
-K=5	   specification,	   the	   range	   of	   the	   seven	   point	   estimates	   β11 	  is	   [.3266,	   .3288],	   the	   range	   of	  
-!
-the	   corresponding	   seven	   estimated	   point	   estimate	   variances	   is	   [.001983,	   .001995],	   and	   the	  
-range	   of	   the	   28	   estimated	   point	   estimate	   covariances	   is	   [.001983,	   .001993].	   	   It	   is	   thus	  
-unlikely	  that	  the	  optimal	  weights	  would	  diverge	  much	  from	  1/(M-­‐1).	  	  
-	  
-
-The	   ultimately	   important	   result	   is	   that	   at	   least	   insofar	   as	  the	   simulations	   conducted	  
-
-for	   this	   paper	   are	   concerned,	   the	   differences	   between	   the	   mvprobit	   and	   bvpmvp(...)	   point	  
-estimates	  and	  estimated	  standard	  errors	  are	  inconsequentially	  small	  (see	  Tables	  2	  and	  3).	  
-	  
-
-	  
-
-	  
-
-14	  
-
-Table	  1	  
-Estimation	  Time	  Comparisons	  (in	  Seconds)	  
-	  
-Parameters	  
-	  
-N	  
-
-M	  
-
-K	  
-5	  
-
-4	  
-9	  
-2,000	  
-5	  
-8	  
-9	  
-
-Computation	  Time	  
-D	  
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-
-mvprobit	  
-29	  
-53	  
-28	  
-54	  
-1,219	  
-2,041	  
-1,036	  
-2,044	  
-
-bvpmvp(...)	  
-1	  
-1	  
-5	  
-8	  
-
-Relative	  
-Difference	  
-(Ratio)	  
-29	  
-53	  
-28	  
-54	  
-244	  
-408	  
-130	  
-256	  
-
-	  
-5	  
-4	  
-9	  
-10,000	  
-5	  
-8	  
-9	  
-
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-
-142	  
-263	  
-137	  
-258	  
-4,628	  
-10,469	  
-4,669	  
-9,833	  
-
-2	  
-3	  
-14	  
-19	  
-
-71	  
-132	  
-46	  
-86	  
-331	  
-748	  
-246	  
-518	  
-
-	  
-5	  
-4	  
-9	  
-50,000	  
-5	  
-8	  
-9	  
-
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-10	  
-20	  
-
-986	  
-1,937	  
-995	  
-1,970	  
-35,833	  
-72,406	  
-36,647	  
-73,204	  
-	  
-
-Legend	  
-	  	  	  	  N:	  Number	  of	  sample	  observations	  
-	  	  	  	  M:	  Number	  of	  outcomes	  
-	  	  	  	  K:	  Number	  of	  covariates	  (including	  constant	  term)	  
-	  	  	  	  D:	  Number	  of	  draws	  for	  mvprobit	  
-Note:	  Stata's	  matsize	  parameter	  is	  set	  at	  600	  for	  all	  specifications.	  
-	  
-	  
-	  
-
-	  
-
-	  
-
-15	  
-
-12	  
-18	  
-65	  
-86	  
-
-82	  
-161	  
-55	  
-109	  
-551	  
-1114	  
-426	  
-851	  
-
-Table	  2	  
-!
-!
-mvprobit	  and	  bvpmvp(...)	  Comparison:	  !B 	  	  and	   B A 	  Point	  Estimates,	  One	  Example	  
-!
-(N=10,000,	  M=4,	  K=5;	  Estimated	  Standard	  Errors	  in	  Parentheses)	  
-mvprobit	  
-Outcome	  
-Covariate	  
-(draws=20)	  
-bvpmvp(...)	  
-0.3265	  
-.3279	  
-x1	  
-(.0448)	  
-(.0446)	  
--­‐0.3301	  
--­‐.3314	  
-x2	  
-(.0447)	  
-(.0447)	  
-0.3184	  
-.3198	  
-y1	  
-x3	  
-(.0447)	  
-(.0449)	  
--­‐0.3902	  
--­‐.3916	  
-x4	  
-(.0448)	  
-(.0447)	  
-0.3901	  
-.3909	  
-Constant	  
-(.0466)	  
-(.0464)	  
--­‐0.4487	  
--­‐.4487	  
-x1	  
-(.0456)	  
-(.0455)	  
-0.5624	  
-.5620	  
-x2	  
-(.0458)	  
-(.0456)	  
--­‐0.3998	  
--­‐.3977	  
-y2	  
-x3	  
-(.0457)	  
-(.0457)	  
-0.4000	  
-.3961	  
-x4	  
-(.0456)	  
-(.0457)	  
--­‐0.5086	  
--­‐.5079	  
-Constant	  
-(.0474)	  
-(.0474)	  
-0.3102	  
-.3151	  
-x1	  
-(.0445)	  
-(.0446)	  
-0.3846	  
-.3875	  
-x2	  
-(.0445)	  
-(.0449)	  
--­‐0.3188	  
--­‐.3206	  
-y3	  
-x3	  
-(.0446)	  
-(.0447)	  
--­‐0.3462	  
--­‐.3496	  
-x4	  
-(.0446)	  
-(.0447)	  
-0.3230	  
-.3210	  
-Constant	  
-(.0463)	  
-(.0463)	  
-0.4567	  
-.4573	  
-x1	  
-(.0455)	  
-(.0457)	  
--­‐0.4438	  
--­‐.4408	  
-x2	  
-(.0455)	  
-(.0457)	  
--­‐0.4489	  
--­‐.4516	  
-y4	  
-x3	  
-(.0456)	  
-(.0457)	  
-0.4555	  
-.4499	  
-x4	  
-(.0456)	  
-(.0453)	  
--­‐0.4552	  
--­‐.4524	  
-Constant	  
-(.0472)	  
-(.0472)	  
-	  
-
-16	  
-
-	  
-Table	  3	  
-!
-mvprobit	  and	  bvpmvp(...)	  Comparison:	  !R 	  Point	  Estimates,	  One	  Example	  
-(N=10,000,	  M=4,	  K=5;	  Estimated	  Standard	  Errors	  in	  Parentheses)	  
-	  
-mvprobit	  
-R	  
-(draws=20)	  
-bvpmvp(...)	  
-.3190	  
-.3308	  
-ρ 	  
-! 12
-(.0158)	  
-(.0159)	  
-.4942	  
-.5073	  
-ρ 	  
-! 13
-(.0134)	  
-(.0134)	  
-.2766	  
-.2872	  
-ρ 	  
-! 14
-(.0160)	  
-(.0161)	  
-.3356	  
-.3424	  
-ρ 	  
-! 23
-(.0156)	  
-(.0158)	  
-.2000	  
-.2034	  
-ρ 	  
-! 24
-(.0163)	  
-(.0167)	  
-.3059	  
-.3086	  
-ρ34 	  
-!
-(.0157)	  
-(.0160)	  
-	  
-	  
-
-	  
-
-	  
-
-17	  
-
-Exhibit	  1:	  	  Sample	  Output	  from	  bvpmvp(...)	  (N=10,000,	  M=4,	  K=5)	  
-	  
-. mata
------------------------------------ mata (type end to exit) ------------------------: yn="y1 y2 y3 y4"
-: xn="x1 x2 x3 x4"
-: ic="if _n<=10000"
-: bv1=bvpmvp(yn,xn,ic,1,.001,1)
-**********************************************
-*
-*
-*
-Multivariate Probit: Results
-*
-*
-*
-**********************************************
-N. of Observations (from suest): 10000
-Estimation Sample: if _n<=10000
-Averaged Beta-Hat Point Estimates and Estimated Standard Errors
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-
-1
-2
-3
-4
-5
-+----------------------------------------------+
-|
-y1
-y2
-y3
-y4 |
-|
-|
-|
-x1
-.328
--.449
-.315
-.457 |
-|
-(.045)
-(.046)
-(.045)
-(.046) |
-|
-|
-|
-x2
--.331
-.562
-.388
--.441 |
-|
-(.045)
-(.046)
-(.045)
-(.046) |
-|
-|
-|
-x3
-.32
--.398
--.321
--.452 |
-|
-(.045)
-(.046)
-(.045)
-(.046) |
-|
-|
-|
-x4
--.392
-.396
--.35
-.45 |
-|
-(.045)
-(.046)
-(.045)
-(.045) |
-|
-|
-|
-_cons
-.391
--.508
-.321
--.452 |
-|
-(.046)
-(.047)
-(.046)
-(.047) |
-|
-|
-+----------------------------------------------+
-
-(continued)	  
-	  
-
-	  
-
-	  
-
-18	  
-
-Exhibit	  1	  (continued)	  
-Estimated Correlation (Rho) Matrix and Estimated Standard Errors
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-
-1
-2
-3
-4
-5
-+----------------------------------------------+
-|
-y1
-y2
-y3
-y4 |
-|
-|
-|
-y1
-1
-.331
-.507
-.287 |
-|
-(.016)
-(.013)
-(.016) |
-|
-|
-|
-y2
-.331
-1
-.342
-.203 |
-|
-(.016)
-(.016)
-(.017) |
-|
-|
-|
-y3
-.507
-.342
-1
-.309 |
-|
-(.013)
-(.016)
-(.016) |
-|
-|
-|
-y4
-.287
-.203
-.309
-1 |
-|
-(.016)
-(.017)
-(.016)
-|
-|
-|
-+----------------------------------------------+
-
-	  
-Cut & Paste Matrix, Averaged Beta-Hat Point Estimates
-(.328 , -.449 , .315
-(-.331 , .562 , .388
-(.32 , -.398 , -.321
-(-.392 , .396 , -.35
-(.391 , -.508 , .321
-
-,
-,
-,
-,
-,
-
-.457) \
--.441) \
--.452) \
-.45) \
--.452)
-
-Cut & Paste Matrix, Estimated Correlation Matrix
-(1 , .331 , .507 , .287) \
-(.331 , 1 , .342 , .203) \
-(.507 , .342 , 1 , .309) \
-(.287 , .203 , .309 , 1)
-
-	  
-
-19	  
-
-Exhibit	  2:	  	  Sample	  Output	  from	  bvopmvop(...)	  (N=10,000,	  M=4,	  K=5)	  
-	  
-. mata
------------------------------------ mata (type end to exit) ------------------------: yn="y1o y2o y3o y4o"
-: xn="x1 x2 x3 x4"
-: ic="if _n<=10000"
-: bv2=bvopmvop(yn,xn,ic,1,.001,1)
-******************************************************
-*
-*
-*
-Multivariate Ordered Probit: Results
-*
-*
-*
-******************************************************
-N. of Observations (from suest): 10000
-Estimation Sample: if _n<=10000
-Beta-Hat and Cutpoint Point Estimates and Estimated Standard Errors
-(Note: SEs are from suest ests.)
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-
-1
-2
-3
-4
-5
-+----------------------------------------------+
-|
-y1o
-y2o
-y3o
-y4o |
-|
-|
-|
-x1
-.379
--.457
-.316
-.464 |
-|
-(.038)
-(.043)
-(.045)
-(.043) |
-|
-|
-|
-x2
--.325
-.53
-.388
--.44 |
-|
-(.038)
-(.044)
-(.045)
-(.043) |
-|
-|
-|
-x3
-.338
--.404
--.321
--.471 |
-|
-(.038)
-(.043)
-(.045)
-(.043) |
-|
-|
-|
-x4
--.393
-.397
--.348
-.45 |
-|
-(.038)
-(.043)
-(.045)
-(.043) |
-|
-|
-|
-cut1
--.354
-.485
--.319
-.447 |
-|
-(.04)
-(.045)
-(.046)
-(.045) |
-|
-|
-|
-cut2
-.356
-1.379
--1.305 |
-|
-(.04)
-(.047)
-(.047) |
-|
-|
-|
-cut3
-1.079
---2.18 |
-|
-(.041)
-(.054) |
-|
-|
-+----------------------------------------------+
-
-(continued)	  	  	  	  
-	  
-
-	  
-
-20	  
-
-Exhibit	  2	  (continued)	  
-	  
-	  
-Estimated Correlation (Rho) Matrix and Estimated Standard Errors
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-
-1
-2
-3
-4
-5
-+----------------------------------------------+
-|
-y1o
-y2o
-y3o
-y4o |
-|
-|
-|
-y1o
-1
-.331
-.507
-.287 |
-|
-(.016)
-(.013)
-(.016) |
-|
-|
-|
-y2o
-.331
-1
-.342
-.203 |
-|
-(.016)
-(.016)
-(.017) |
-|
-|
-|
-y3o
-.507
-.342
-1
-.309 |
-|
-(.013)
-(.016)
-(.016) |
-|
-|
-|
-y4o
-.287
-.203
-.309
-1 |
-|
-(.016)
-(.017)
-(.016)
-|
-|
-|
-+----------------------------------------------+
-
-Cut & Paste Matrix, Beta-Hat and Cutpoint Point Estimates
-(.379 , -.457 , .316 , .464) \
-(-.325 , .53 , .388 , -.44) \
-(.338 , -.404 , -.321 , -.471) \
-(-.393 , .397 , -.348 , .45) \
-(-.354 , .485 , -.319 , .447) \
-(.356 , 1.379 , . , 1.305) \
-(1.079 , . , . , 2.18)
-Cut & Paste Matrix, Estimated Correlation Matrix
-(1 , .331 , .507 , .287) \
-(.331 , 1 , .342 , .203) \
-(.507 , .342 , 1 , .309) \
-(.287 , .203 , .309 , 1)
-
-	  
-
-21	  
-
-

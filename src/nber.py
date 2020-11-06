@@ -3,211 +3,125 @@ import os
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime, date
 from random import randint
-from time import sleep
 
-class NBER:
-    
+class ID:
     def __init__(self):
-        self.id = args.initial_id
-        self.paper = args.paper
-        self.timeout = args.timeout
-        self.sleep = args.sleep
-        self.user_agent = args.user_agent
+        self.nber_id = randint(0, len(os.listdir('paper/')))
 
-    def get_latest_paper(self, headers):
-        url = 'https://data.nber.org/new.html#latest'
+class HTML(ID):
+    
+    def string_id(self):
+        if self.nber_id < 10:
+            return f'000{self.nber_id}'
+        elif 10 <= self.nber_id < 100:
+            return f'00{self.nber_id}'
+        elif 100 <= self.nber_id < 1000:
+            return f'0{self.nber_id}'
+        else:
+            return str(self.nber_id)
+    
+    def url(self):
+        return f'https://www.nber.org/papers/w{self.nber_id}'
+    
+    def request(self):
+        return requests.get(self.url())
+    
+    def content(self):
+        return BeautifulSoup(self.request().content, features='html.parser')
+
+class Paper:
+    def __init__(self, content, nber_id, file_name='data/nber.csv'):
+        self.content = content
+        self.nber_id = nber_id
+        self.file_name = file_name
+    
+    def to_date(self, x):
+        return date(x.year, x.month, x.day)
+    
+    def citation_title(self):
+        return self.content.find('meta', {'name': 'citation_title'}).attrs['content']
+    
+    def citation_author(self):
+        return [x.attrs['content'] for x in self.content.find_all('meta', {'name': 'citation_author'})]
+
+    def citation_publication_date(self):
+        citation_publication_date = self.content.find('meta', {'name': 'citation_publication_date'})
+        citation_publication_date = self.to_date(datetime.strptime(citation_publication_date.attrs['content'], '%Y/%m/%d'))
+        
+        return citation_publication_date
+    
+    def paper_datetime(self):
+        return [x.attrs['datetime'][:10] for x in self.content.find_all('time')]
+    
+    def issue_date(self):
+        return self.to_date(datetime.strptime(self.paper_datetime()[0], '%Y-%m-%d'))
+    
+    def revision_date(self):
         try:
-            response = requests.get(url, timeout=self.timeout, headers=headers)
-            content = BeautifulSoup(response.content, features='html.parser')
-            latest = content.find('li', {'class': 'multiline-li'})
-            latest = latest.find('a').attrs['href']
-            latest = int(''.join([x for x in latest if x.isnumeric() == True]))
-            return latest
-        except Exception:
-            return 1
+            revision_date = self.paper_datetime()[1]
+            revision_date = self.to_date(datetime.strptime(revision_date, '%Y-%m-%d'))
+            return revision_date
+        except IndexError:
+            return None
 
-    def get_citation_item(self, content, item):
-        item = content.find('meta', {'name': f'{item}'})
+    def related(self):
+        return self.content.find_all('div', {'class': 'info-grid__item'})
+    
+    def related_title(self):
+        return [x.find('h3').text for x in self.related()]
+
+    def get_related(self, title):
         try:
-            item = item.attrs['content']
-        except AttributeError:
-            item = None
-
-        return item
-
-    def get_citation_author(self, content):
-        author = content.find_all('meta', {'name': 'citation_author'})
-        author = [x.get('content') for x in author]
-
-        return author
-
-    def get_topics(self, content):
-        try:
-            bibtop = content.find('p', {'class': 'bibtop'})
-            topics = bibtop.find_all('a')
-            topics = [x.get_text() for x in topics]
-        except AttributeError:
-            topics = None
-
-        return topics
-
-    def get_abstract(self, content):
-        try:
-            abstract = content.find('p', {'style': 'margin-left: 40px; margin-right: 40px; text-align: justify'})
-            abstract = abstract.contents[0].replace('\n', '')
-            if '\x00' in abstract:
-                abstract = abstract.replace('\x00', '')
-        except AttributeError:
-            abstract = None
-
-        return abstract
-
-    def get_also_downloaded(self, content):
-        try:
-            also_downloaded = content.find('table', {'class': 'also-downloaded'})
-            also_downloaded = also_downloaded.find_all('td')
-            also_downloaded = [x.find('a') for x in also_downloaded if x.find('a') != None]
-            also_downloaded = [x.attrs['href'] for x in also_downloaded]
-        except AttributeError:
-            also_downloaded = None
-
-        return also_downloaded
-
-    def get_acknowledgement(self, nber_id, headers):
-        url = f'https://www.nber.org/papers/w{nber_id}.ack'
-        ack = requests.get(url, timeout=self.timeout, headers=headers)
-        content = BeautifulSoup(ack.content, features='html.parser')
-        ack = content.find_all('div', {'align': 'left'})[0]
-        ack = ack.get_text()
-        ack = ack.split(' ')
-        ack = ' '.join([x for x in ack if x.isalpha() == True])
-
-        return ack
-
-    def get_paper(
-        self,
-        paper_id,
-        citation_title,
-        citation_author,
-        citation_date,
-        citation_publication_date,
-        citation_technical_report_institution,
-        citation_technical_report_number,
-        citation_journal_title,
-        citation_journal_issn,
-        citation_pdf_url,
-        topics,
-        abstract,
-        also_downloaded,
-        acknowledgement
-    ):
-        paper = {
-            'id': paper_id,
-            'citation_title': citation_title,
-            'citation_author': citation_author,
-            'citation_date': citation_date,
-            'citation_publication_date': citation_publication_date,
-            'citation_technical_report_institution': citation_technical_report_institution,
-            'citation_technical_report_number': citation_technical_report_number,
-            'citation_journal_title': citation_journal_title,
-            'citation_journal_issn': citation_journal_issn,
-            'citation_pdf_url': citation_pdf_url,
-            'topics': topics,
-            'abstract': abstract,
-            'also_downloaded': also_downloaded,
-            'acknowledgement': acknowledgement
-        }
-
-        return paper
-
-def main():
-    file_name = './data/nber.zip'
-    if os.path.exists(file_name):
-        existing = pd.read_csv(file_name, sep='|')
-    nber = NBER()
-    headers = {'User-Agent': nber.user_agent}
-    i = 0
-    data = []
-    while i < nber.paper:
-        nber_id = randint(nber.id, nber.get_latest_paper(headers))
-        if nber_id not in existing['id'].to_list():
-            url = f'https://www.nber.org/papers/w{nber_id}'
-            print(f'Current paper: {url}')
-            try:
-                response = requests.get(url, timeout=nber.timeout, headers=headers)
-                content = BeautifulSoup(response.content, features='html.parser')
-                paper = nber.get_paper(
-                    paper_id = nber_id,
-                    citation_title = nber.get_citation_item(content, 'citation_title'),
-                    citation_author = nber.get_citation_author(content),
-                    citation_date = nber.get_citation_item(content, 'citation_date'),
-                    citation_publication_date = nber.get_citation_item(content, 'citation_publication_date'),
-                    citation_technical_report_institution = nber.get_citation_item(content, 'citation_technical_report_institution'),
-                    citation_technical_report_number = nber.get_citation_item(content, 'citation_technical_report_number'),
-                    citation_journal_title = nber.get_citation_item(content, 'citation_journal_title'),
-                    citation_journal_issn = nber.get_citation_item(content, 'citation_journal_issn'),
-                    citation_pdf_url = nber.get_citation_item(content, 'citation_pdf_url'),
-                    topics = nber.get_topics(content),
-                    abstract = nber.get_abstract(content),
-                    also_downloaded = nber.get_also_downloaded(content),
-                    acknowledgement = nber.get_acknowledgement(nber_id, headers)
-                )
-                df = pd.DataFrame([paper])
-                data.append(df)
-            except Exception:
-                sleep(nber.sleep)
-                pass
-        i += 1
-    try:
-        df = pd.concat(data, sort=False)
-        df = pd.concat([df, existing], sort=False)
+            index = self.related_title().index(title)
+            item = [x.text for x in self.related()[index].find('div').contents if x.text != '']
+            return item
+        except ValueError:
+            return None
+    
+    def abstract(self):
+        return self.content.find('div', {'class': 'page-header__intro-inner'}).text
+    
+    def acknowledgement(self):
+        return self.content.find('div', {'class': 'accordion__body', 'id': 'accordion-body-guid1'}).text
+        
+    def create(self):
+        return pd.DataFrame([{
+            'id': self.nber_id,
+            'citation_title': self.citation_title(),
+            'citation_author': self.citation_author(),
+            'citation_publication_date': self.citation_publication_date(),
+            'issue_date': self.issue_date(),
+            'revision_date': self.revision_date(),
+            'topics': self.get_related('Topics'),
+            'program': self.get_related('Programs'),
+            'projects': self.get_related('Projects'),
+            'working_groups': self.get_related('Working Groups'),
+            'abstract': self.abstract(),
+            'acknowledgement': self.acknowledgement()
+        }])
+    
+    def existing(self):
+        existing = pd.read_csv(self.file_name)
+        df = pd.concat([self.create(), existing], sort=False)
         df = df.drop_duplicates(subset=['id'])
-        df.to_csv(file_name, index=False, header=True, sep='|')
-    except ValueError:
-        pass
-            
+        return df.sort_values(by='id', ascending=True)
+    
+    def save(self):
+        if os.path.exists(self.file_name):
+            self.existing().to_csv(self.file_name, index=False)
+        else:
+            self.create().to_csv(self.file_name, index=False)
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-i',
-        '--initial_id',
-        type=int,
-        default=1,
-        help='NBER Working Paper ID to begin with (default is 1)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-p',
-        '--paper',
-        type=int,
-        default=3,
-        help='How many papers will be scraped for each cron job (default is 10)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-t',
-        '--timeout',
-        type=int,
-        default=10,
-        help='How long for each request before it timed out in seconds (default is 5)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-s',
-        '--sleep',
-        type=int,
-        default=10,
-        help='How long to make time interval between iterations in case exception occurs in seconds (default is 10)',
-        metavar=''
-    )
-    parser.add_argument(
-        '-u',
-        '--user-agent',
-        type=str,
-        default='user-agent',
-        help='User agent used for headers (default is user-agent)',
-        metavar=''
-    )
+    parser.add_argument('-t', '--total', type=int, default=5, help='Total paper(s) that will be downloaded', metavar='')
     args = parser.parse_args()
-    main()
+    i = 0
+    while i < args.total:        
+        raw = HTML()
+        content = raw.content()
+        paper = Paper(content, raw.nber_id)
+        paper.save()
+        i += 1

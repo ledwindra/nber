@@ -16,7 +16,8 @@ This won't include the .git directory and you can play around with the programs 
 # Download data
 If you don't want to run this locally and just want to get straight to the data, just chill, relax and, download them Enjoy! 🌞 ⛱ 🥥 🌴 😎.
 
-1. [<strong>NBER</strong>](https://github.com/ledwindra/nber/raw/master/data/nber.zip)
+1. [<strong>NBER</strong>](https://github.com/ledwindra/nber/raw/main/data/nber.csv)
+
 |column_name|data_type|description|
 |-|-|-|
 |id|integer|NBER working paper ID|
@@ -32,7 +33,8 @@ If you don't want to run this locally and just want to get straight to the data,
 |abstract|string|Paper abstract|
 |acknowledgement|string|Paper's acknowledgement (in paragraph)|
 
-2. [<strong>NBER citations (from RePEc)</strong>](https://github.com/ledwindra/nber/raw/master/data/repec.zip)
+2. [<strong>NBER citations (from RePEc)</strong>](https://github.com/ledwindra/nber/raw/main/data/repec.csv)
+
 |column_name|data_type|description|
 |-|-|-|
 |id|integer|NBER working paper ID|

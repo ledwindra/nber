@@ -1,0 +1,4581 @@
+NBER WORKING PAPER SERIES
+
+SMOLYAK METHOD FOR SOLVING DYNAMIC ECONOMIC MODELS:
+LAGRANGE INTERPOLATION, ANISOTROPIC GRID AND ADAPTIVE DOMAIN
+Kenneth L. Judd
+Lilia Maliar
+Serguei Maliar
+Rafael Valero
+Working Paper 19326
+http://www.nber.org/papers/w19326
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+August 2013
+
+An earlier version of this paper circulated under the title "A Smolyak method with an adaptive grid".
+We thank participants of the 2012 CFE-ERCIM conference and the Summer 2013 Computation in
+CA Workshop at Stanford University for useful comments. Lilia Maliar and Serguei Maliar acknowledge
+support from the Hoover Institution and Department of Economics at Stanford University, University
+of Alicante, Ivie, MECD and FEDER funds under the projects SEJ-2007-62656 and ECO2012-36719.
+Rafael Valero acknowledges support from MECD under the FPU program. The views expressed herein
+are those of the authors and do not necessarily reflect the views of the National Bureau of Economic
+Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2013 by Kenneth L. Judd, Lilia Maliar, Serguei Maliar, and Rafael Valero. All rights reserved. Short
+sections of text, not to exceed two paragraphs, may be quoted without explicit permission provided
+that full credit, including © notice, is given to the source.
+
+Smolyak Method for Solving Dynamic Economic Models: Lagrange Interpolation, Anisotropic
+Grid and Adaptive Domain
+Kenneth L. Judd, Lilia Maliar, Serguei Maliar, and Rafael Valero
+NBER Working Paper No. 19326
+August 2013
+JEL No. C63,C68
+ABSTRACT
+First, we propose a more efficient implementation of the Smolyak method for interpolation, namely,
+we show how to avoid costly evaluations of repeated basis functions in the conventional Smolyak
+formula. Second, we extend the Smolyak method to include anisotropic constructions; this allows
+us to target higher quality of approximation in some dimensions than in others. Third, we show how
+to effectively adapt the Smolyak hypercube to a solution domain of a given economic model. Finally,
+we advocate the use of low-cost fixed-point iteration, instead of conventional time iteration. In the
+context of one- and multi-agent growth models, we find that the proposed techniques lead to substantial
+increases in accuracy and speed of a Smolyak-based projection method for solving dynamic economic
+models.
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+judd@hoover.stanford.edu
+Lilia Maliar
+Office T-24 Hoover Institution
+Stanford University
+CA 94305-6010, USA
+maliarl@stanford.edu
+
+Serguei Maliar
+Office T-24 Hoover Institution
+Stanford University
+CA 94305-6010, USA
+maliars@stanford.edu
+Rafael Valero
+Department of Economics
+University of Alicante Ap. Correos 99, 03080
+Alicante, Spain
+rafaelvalerofernandez@gmail.com
+
+1
+
+Introduction
+
+In a seminal paper, a Russian mathematician Sergey Smolyak (1963) proposes a sparse-grid
+method that allows to e¢ ciently represent, integrate and interpolate functions on multidimensional hypercubes. The Smolyak method is not subject to the curse of dimensionality and can
+be used to solve large-scale applications. A pioneering work of Krueger and Kubler (2004) introduces the Smolyak method to economics in the context of a projection-style iterative method
+for solving multi-period overlapping generation models. The Smolyak methods are also used
+to solve portfolio-choice problems (Gavilan-Gonzalez and Rojas (2009)); to develop state-space
+…lters tractable in large-scale problems (Winschel and Krätzig (2010)); to solve models with in…nitely lived heterogenous agents (Malin et al. (2011), Gordon (2011), Brumm and Scheidegger
+(2013)); and to solve new Keynesian models (Fernández-Villaverde et al. (2012)).
+While the Smolyak method enables us to study far larger problems than do tensor-product
+methods, its computational expense still grows rapidly with the dimensionality of the problem.
+In particular, Krueger and Kubler (2004) and Malin et al. (2011) document a high computational cost of their solution methods when the number of state variables exceeds twenty. In
+the paper, we show a more e¢ cient implementation of the Smolyak method that reduces its
+computational expense, and we propose extensions of the Smolyak method that enable us to
+more e¤ectively solve dynamic economic models.
+First, the conventional Smolyak formula is ine¢ cient. To interpolate a function in a given
+point, it …rst causes the computer to create and evaluate a long list of repeated basis functions,
+and it then constructs linear combinations of such functions to get rid o¤ repetitions. In
+high-dimensional problems, the number of repetitions is large and slows down computations
+dramatically. We o¤er a way to avoid costly evaluations of the repeated basis functions: Instead
+of conventional nested-set generators, we introduce disjoint-set generators. Nested sets include
+one another, and as a result, their tensor products contain repeated elements but our disjoint
+sets do not. This is why our implementation of the Smolyak formula does not have repetitions.1
+An e¢ cient implementation of the Smolyak method is especially important in the context
+of numerical methods for solving dynamic economic models which require us to interpolate
+decision and value functions a very large number of times, e.g., in each grid point, integration
+node or time period. We save on cost every time when we perform an evaluation of the Smolyak
+interpolant.
+To compute the interpolation coe¢ cients, we use a universal Lagrange interpolation technique instead of the conventional closed-form expressions. Namely, we proceed in three steps:
+(i) construct M Smolyak grid points; (ii) construct M corresponding Smolyak basis functions;
+and (iii) interpolate the values of the true function at the grid points using the basis functions.
+We then solve a system of M linear equations with M unknowns. The cost of solving this
+system can be high but it is a …xed cost in the context of iterative methods for solving dynamic
+economic models. Namely, we argue that an expensive inverse in the Lagrange inverse problem
+can be precomputed up-front (as it does not change along iterations). Furthermore, to ensure
+numerical stability of a solution to the Lagrange inverse problem, we use families of orthogonal
+basis functions, such as a Chebyshev family.
+1
+
+Our exposition was informed by our personal communication with Sergey Smolyak.
+
+2
+
+Second, the conventional Smolyak formula is symmetric in a sense that it has the same
+number of grid points and basis functions for all variables. To increase the quality of approximation, one must equally increase the number of grid points and basis functions for all variables,
+which may be costly or even infeasible in large-scale applications. In the paper, we present an
+anisotropic version of the Smolyak method that allows for asymmetric treatments of variables,
+namely, it enables us to separately choose the accuracy level for each dimension to increase
+the quality of approximation. In economic applications, variables do not enter symmetrically:
+decisions or value functions may have more curvature in some variables than in others; some
+variables may have larger ranges of values than others; and …nally, some variables may be more
+important than the others. For example, in heterogeneous-agent economies, an agent’s decision
+functions may depend more on her own capital stock than on the capital stocks of other agents
+(e.g., Kollmann et al. (2011)); or we may need more grid points for accurate approximation of
+endogenous than exogenous state variables (e.g., models based on Tauchen and Hussy’s (1991)
+approximation of shocks). An anisotropic version of the Smolyak method allows us to take into
+account a speci…c structure of decision or value functions to solve the economic models more
+e¢ ciently.
+Third, the Smolyak method constructs grid points within a normalized multidimensional
+hypercube. In economic applications, we must in addition specify how the model’s state variables are mapped into the Smolyak hypercube. The way in which this mapping is constructed
+can dramatically a¤ect the e¤ective size of a solution domain, and hence, the quality of approximation. In the paper, we show how to e¤ectively adapt the Smolyak grid to a solution
+domain of a given economic model. We speci…cally construct a parallelotope that encloses
+a high-probability area of the state space of the given model, and we reduce the size of the
+parallelotope to minimum by reorienting it with a principle-component transformation of state
+variables. Judd et al. (2011) …nd that solution methods focusing on a relevant domain yield
+a better …t inside such a domain than methods focusing on larger domains and facing a trade
+o¤ between the …t inside and outside the relevant domain. For the same reason, an adaptive
+domain increase the accuracy of the Smolyak method.
+Finally, the Smolyak method for interpolation is just one ingredient of a numerical method
+for solving dynamic economic models. In particular, Krueger and Kubler (2004) and Malin et
+al. (2011) complemented Smolyak interpolation with other computational techniques that are
+tractable in large-scale problems, such as Chebyshev polynomials, monomial integration and
+learning-style procedure for …nding polynomial coe¢ cients. Nonetheless, there is one technique
+–time iteration –that is expensive in their version of their numerical procedure. Time iteration
+is traditionally used in dynamic programming: given functional forms for future value function,
+it solves for current value function using a numerical solver. In works similarly in the context of
+the Euler equation methods: given functional forms for future decision functions, it solves for
+current decision functions using a numerical solver. However, there is a simple derivative-free
+alternative to time iteration - …xed point iteration - that can solve large systems of equtions
+rapidly using only straightforward calculations. In the present paper, we replace time iteration
+used in the existing version of the Smolyak method with …xed-point iteration, avoiding thus
+the need of a numerical solver.
+We assess the performance of the Smolyak-based projection method in the context of one3
+
+and multi-agent neoclassical stochastic growth models with up to 20 state variables. Our
+analysis shows that there are substantial accuracy gains from using anisotropic grid and adaptive
+domain even in the simplest case with two state variables: the maximum residuals in the
+Euler equations can be reduced by 5-10 times compared to those produced by the baseline
+isotropic Smolyak method with the standard hypercube domain (holding the number of the
+coe¢ cients roughly the same). In multidimensional problems –the real interest of our analysis
+– the accuracy gains from using an anisotropic grid and adaptive domain reach two orders
+of magnitude in some examples. Our cost grows fairly slowly with the dimensionality of the
+problem. In particular, our MATLAB code delivers a second-level Smolyak approximation to
+a model with ten countries (twenty state variables) in about 45 minutes. For comparison,
+the Fortran code of Malin et al. (2011), based on the conventional Smolyak method, solves
+a similar model in about 10 hours. Moreover, we are able to produce a very accurate thirdlevel polynomial approximation to a ten-country model although such an approximation is
+computationally demanding even for our e¢ cient implementation of the Smolyak method (our
+running time increases to nearly 45 hours).
+The rest of the paper is organized as follows: In Section 2, we illustrate the ine¢ ciency of the
+conventional Smolyak formula. In Section 3, we introduce an alternative implementation of the
+Smolyak method based on disjoint-set unidimensional generators and Lagrange interpolation.
+In Sections 4.2 and 5, we develop versions of the Smolyak method with anisotropic grid and
+adaptive domain, respectively. In Section 6, we assess the performance of the Smolyak-based
+projection method in the context of one- and multi-agent growth models. Finally, in Section 7,
+we conclude.
+
+2
+
+Conventional Smolyak method for interpolation
+
+In this section, we describe the conventional Smolyak method for interpolation. In Section 2.1,
+we outline the idea of the Smolyak method and review the related literature. In Sections 2.2, 2.3
+and 2.4, we show how to construct the Smolyak grid points, Smolyak polynomial and Smolyak
+interpolating coe¢ cients, respectively. Finally, in Section 2.5, we argue that the conventional
+Smolyak method is ine¢ cient.
+
+2.1
+
+Smolyak method at glance
+
+The problem of representing and interpolating multidimensional functions commonly arises in
+economics. In particular, when solving dynamic economic models, one needs to represent and
+interpolate decision functions and value functions in terms of state variables. With few state
+variables, one can use tensor-product rules but such rules become intractable when the number
+of state variables increases. For example, if we have …ve grid points for one variables, a tensor
+product grid for d variables has 5d grid points, which is a large number even for moderately large
+d. Bellman (1961) referred to the exponential growth in complexity as a curse of dimensionality.
+In a seminal work, Smolyak (1963) introduces a numerical technique for representing multidimensional functions, which is tractable in problems with high dimensionality. The key idea of
+the Smolyak’s (1963) analysis is that some elements produced by tensor-product rules are more
+4
+
+important for representing multidimensional functions than the others. The Smolyak method
+orders all elements produced by a tensor-product rule by their potential importance for the
+quality of approximation and selects a relatively small number of the most important elements.
+A parameter, called a level of approximation, controls how many tensor-product elements are
+included into the Smolyak grid. By increasing the level of approximation, one can add new
+elements and improve the quality of approximation.2
+Examples of Smolyak grids under approximation levels = 0, 1, 2, 3 are illustrated in
+Figure 1 for the two-dimensional case. For comparison, we also show a tensor-product grid of
+52 points.
+Figure 1: Smolyak grids versus a tensor-product grid
+
+In Table 1, we compare the number of points in the Smolyak grid and that in the tensorproduct grid with …ve grid points in each dimension. The number of points in a Smolyak grid
+Table 1: Number of grid points: tensor-product grid with 5 points in each dimension versus
+Smolyak grids
+d
+
+Tensor-product grid
+with 5d points
+
+Smolyak grid
+=1
+
+1
+2
+10
+20
+
+5
+25
+9,765,625
+95,367,431,640,625
+
+3
+5
+21
+41
+
+=2
+5
+13
+221
+841
+
+=3
+9
+29
+1581
+11561
+
+grows polynomially with the dimensionality d, meaning that the Smolyak method is not subject
+to the curse of dimensionality. In particular, for = 1 and = 2, the number of the Smolyak
+grid points grows as 1 + 2d and 1 + 4d + 4d (d 1), i.e., linearly and quadratically, respectively.
+A relatively small number of points in Smolyak grids contrasts sharply with a huge number of
+points in tensor-product grids in a high-dimensional case. Because of this, Smolyak grids are
+also called sparse grids.
+2
+
+The level of approximation plays the same role in the Smolyak construction as the order of expansion in
+the Taylor series, i.e., we include the terms up to a given order, and we neglect the remaining high-order terms.
+
+5
+
+To interpolate multidimensional functions o¤ the Smolyak grid, two broad classes of interpolants are used in mathematical literature. One class includes piecewise local basis functions;
+see, e.g., Griebel (1998) and Bungartz and Griebel (2004) for related mathematical results,
+and see Brumm and Scheidegger (2013) for an economic application. Piecewise functions are
+very ‡exible and make it possible to vary the quality of approximations over di¤erent areas of
+the state space as needed. However, the resulting approximations are non-smooth and nondi¤erentiable and also, they have a high computational expense (this interpolation technique is
+still subject to the curse of dimensionality).
+The other class of Smolyak interpolants includes global polynomial functions; see, e.g.,
+Delvos (1982), Wasilkowski and Woźniakowski (1999) and Barthelmann et al. (2000) for a
+mathematical background. Global polynomial approximations are smooth and continuously
+di¤erentiable and also, they are relatively inexpensive. However, their ‡exibility and adaptivity
+are limited. In economics, global polynomial approximation are used in Krueger and Kubler
+(2004), Gavilan-Gonzalez and Rojas (2009), Winschel and Krätzig (2010), Gordon (2011),
+Malin et al. (2011) and Fernández-Villaverde et al. (2012). In the present paper, we also
+con…ne our attention to global polynomial approximations. Below, we show the conventional
+Smolyak method for interpolation in line with Malin et al. (2011).
+
+2.2
+
+Construction of Smolyak grids using unidimensional nested sets
+
+To construct a Smolyak grid, we generate unidimensional sets of grid points, construct tensor
+products of unidimensional sets and select a subsets of grid points satisfying the Smolyak rule.
+2.2.1
+
+Unidimensional nested sets of points
+
+The Smolyak construction begins with one dimension. To generate unidimensional grid points,
+we use extrema of Chebyshev polynomials (also known as Chebyshev-Gauss-Lobatto points or
+Clenshaw-Curtis points); see Appendix A. We do not use all consecutive extrema but those
+that form a sequence S1 ; S2 ; ::: satisfying two conditions:
+Condition 1. A set Si , i = 1; 2; :::, has m (i) = 2i 1 + 1 points for i 2 and m (1) 1.
+Condition 2. Each subsequent set contains all points of the previous set, Si Si+1 . Such
+sets are called nested.3
+Below, we show the …rst four nested sets composed of extrema of Chebyshev polynomials:
+i = 1 : S1 = f0g;
+i = 2 : S2 = n
+f 1; 0; 1g;
+o
+1
+1
+p
+p
+i = 3 : S3 =
+1; 2 ; 0; 2 ; 1 ;
+p p
+p p
+p p
+p p
+2+ 2
+2
+2
+2
+2 1
+2+ 2
+1
+i = 4 : S4 =
+1;
+; p2 ;
+; 0; 2 ; p2 ; 2 ; 1 .
+2
+2
+3
+
+There are many other ways to construct sets of points that have a nested structure. For example, we can
+use subsets of equidistant points; see Appendix A for a discussion. Gauss-Patterson points also lead to nested
+sets, however, the number of points in such sets is di¤erent, namely, m (i) = 2i 1 1; see Patterson (1968), etc.
+
+6
+
+2.2.2
+
+Tensor products of unidimensional nested sets of points
+
+Next, we construct tensor products of unidimensional sets of points. As an illustration, we
+consider a two-dimensional case with i = 1; 2; 3 in each dimension.
+Table 2: Tensor products of disjoint sets of unidimensional grid points for the two-dimensional
+case
+i2 = 1
+
+i2 = 2
+
+i2 = 3
+1; p1 ; 0; p1 ; 1
+
+Si1 nSi2
+
+0
+
+i1 = 1
+
+0
+
+(0; 0)
+
+i1 = 2
+
+1
+0
+1
+
+( 1; 0)
+(0; 0)
+(1; 0)
+
+( 1; 1) ; ( 1; 0) ; ( 1; 1)
+(0; 1) ; (0; 0) ; (0; 1)
+(1; 1) ; (1; 0; ) ; (1; 1)
+
+1
+
+( 1; 0)
+p1 ; 0
+
+( 1;
+( p1 ;
+
+p1
+2
+
+i1 = 3
+
+0
+1
+p
+2
+
+1
+
+1; 0; 1
+
+(0;
+
+2
+
+(0; 0)
+1 ;0
+p
+
+2
+
+.
+
+2
+
+(1; 0)
+
+(0;
+( p1 ;
+2
+(1;
+
+2
+
+1) ; (0; 0) ; (0; 1)
+
+1) ; ( 1; 0) ; ( 1; 1)
+1); ( p1 ; 0); ( p1 ; 1)
+2
+
+2
+
+1) ; (0; 0) ; (0; 1)
+1); ( p1 ; 0); ( p1 ; 1)
+2
+
+2
+
+1); (1; 0) ; (1; 1)
+
+(0;
+
+( 1;
+
+2
+
+2
+
+2
+
+2
+
+1) ; ( 1; p1 ); ( 1; 0) ; ( 1; p1 ); ( 1; 1)
+2
+
+2
+
+1) ; (0; p1 ); (0; 0) ; (0; p1 ); (0; 1)
+
+(1;
+
+1); (1;
+
+2
+p1 ); (1; 0) ;
+2
+
+1;
+
+2
+1
+p
+2
+
+(1; 1)
+
+1) ; ( 1; p1 ); ( 1; 0) ; ( 1; p1 ); ( 1; 1)
+2
+2
+1); ( p1 ; p1 ); ( p1 ; 0); ( p1 ; p1 ); ( p1 ; 1)
+2
+
+(0;
+( p1 ;
+
+1) ; (0; p1 ); (0; 0) ; (0; p1 ); (0; 1)
+
+(0;
+
+( 1;
+( p1 ;
+
+2
+
+2
+
+2
+
+2
+
+2
+
+1) ; (0; p1 ); (0; 0) ; (0; p1 ); (0; 1)
+
+2
+
+2
+2
+1); ( p1 ; p1 ); ( p1 ; 0); ( p1 ; p1 ); ( p1 ; 1)
+2
+2
+2
+2
+2
+2
+1
+1
+(1; 1); (1; p ); (1; 0) ; 1; p
+(1; 1)
+2
+2
+
+In Table 2, i1 and i2 are indices that correspond to dimensions one and two respectively; a
+column Si1 and a row Si2 (see Si1 nSi2 ) show the sets of unidimensional elements that correspond
+to dimensions one and two, respectively; ( ` ; n ) denotes a two-dimensional grid point obtained
+by combining a grid point ` in dimension 1 and a grid point n in dimension two.
+2.2.3
+
+Smolyak sparse grids
+
+Smolyak (1963) o¤ers a rule that tells us which tensor products must be selected from the table.
+For the two-dimensional case, we must select tensor products (cells of Table 2) for which the
+following condition is satis…ed:
+d i1 + i2 d + ;
+(1)
+where 2 f0; 1; 2; :::g is the approximation level, and d is the dimensionality (in our case,
+d = 2). In other words, the sum of a column i1 and a raw i2 , must be between d and d + .
+Let Hd; denote a Smolyak grid for a problem with dimensionality d and approximation
+level . Let us construct Smolyak grids for = 0, 1, 2 and d = 2 using the Smolyak rule (1).
+If = 0, then 2 i1 + i2 2. The only cell that satis…es this restriction is i1 = 1 and
+i2 = 1, so that the Smolyak grid has just one grid point,
+H2;0 = f(0; 0)g :
+7
+
+(2)
+
+If = 1, then 2 i1 + i2 3. The three cells that satisfy this restriction are (a) i1 = 1,
+i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1, and the corresponding …ve Smolyak grid
+points are
+H2;1 = f(0; 0) ; ( 1; 0) ; (1; 0) ; (0; 1) ; (0; 1)g :
+(3)
+If = 2, then 2 i1 + i2 4. There are six cells that satisfy this restriction: (a) i1 = 1,
+i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1; (d) i1 = 1, i2 = 3; (e) i1 = 2, i2 = 2; (f)
+i1 = 3, i2 = 1, and there are thirteen Smolyak grid points,
+H2;2 = ( 1; 1) ; (0; 1) ; (1; 1) ; ( 1; 0) ; (0; 0) ; (1; 0) ; ( 1; 1) ; (0; 1) ;
+1
+1
+1
+1
+(1; 1) ; ( p ; 0); ( p ; 0); (0; p ); (0; p ) : (4)
+2
+2
+2
+2
+Smolyak grids H2;0 , H2;1 and H2;2 are those that are shown in the …rst three subplots of
+Figure 1.
+
+2.3
+
+Smolyak formula for interpolation using unidimensional nested
+sets
+
+The conventional technique for constructing a Smolyak polynomial function also builds on
+unidimensional nested sets and mimics the construction of a Smolyak grid.
+2.3.1
+
+Smolyak polynomial
+
+Let fbd; denote a Smolyak polynomial function (interpolant) in dimension d, with approximation
+level . The Smolyak interpolant is a linear combination of tensor-product operators pjij whose
+indices jij satisfy a constraint jij i1 + ::: + id and is given by
+X
+d 1
+fbd; (x1 ; :::; xd ; b) =
+( 1)d+ jij
+pjij (x1 ; :::; xd ) ;
+(5)
+d+
+jij
+max(d; +1) jij d+
+
+where ( 1)d+ jij d+d 1jij is a counting coe¢ cient. For each jij satisfying max(d; + 1)
+d + , a tensor-product operator pjij (x1 ; :::; xd ) is de…ned as
+X
+pjij (x1 ; :::; xd ) =
+pi1 ;:::;id (x1 ; :::; xd ) ;
+
+jij
+
+(6)
+
+i1 +:::+id =jij
+
+and pi1 ;:::;id is is de…ned as
+m(i1 )
+
+p
+
+i1 ;:::;id
+
+(x1 ; :::; xd ) =
+
+X
+
+`1 =1
+
+m(id )
+
+:::
+
+X
+
+b`1 :::`d
+
+`1
+
+(x1 )
+
+`d
+
+(xd ) ;
+
+(7)
+
+`d =1
+
+where m (ij ) is the number of basis functions in dimension j, with m (ij )
+2ij 1 + 1 for
+ij
+2 and m (1)
+1; `j (xj ) is a `j th unidimensional basis function in dimension j with
+`j = 1; :::; m (ij ); `1 (x1 )
+`d (xd ) is a d-dimensional basis function and b`1 :::`d are the corresponding polynomial coe¢ cients.
+8
+
+2.3.2
+
+Example of Smolyak polynomial under d = 2 and
+
+=1
+
+We now illustrate the construction of Smolyak polynomial function (5) under d = 2 and = 1;
+in Appendix B, we show the construction of such a function under d = 2 and = 2.
+For the case of
+= 1, we have that 2
+jij
+3. This is satis…ed in three cases: (a)
+i1 = i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1. From (7), we obtain
+m(1) m(1)
+
+(a) p
+
+1;1
+
+XX
+
+=
+
+(8)
+
+b ` 1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b11 ;
+
+b ` 1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b11 + b12
+
+2 (y)
+
++ b13
+
+3 (y);
+
+(9)
+
+b ` 1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b11 + b21
+
+2 (x)
+
++ b31
+
+3 (x);
+
+(10)
+
+`1 =1 `2 =1
+m(1) m(2)
+
+(b) p
+
+1;2
+
+XX
+
+=
+
+`1 =1 `2 =1
+m(2) m(1)
+
+(c) p
+
+2;1
+
+XX
+
+=
+
+`1 =1 `2 =1
+
+where we assume that
+i1 + i2 jij, we obtain
+
+1 (x)
+
+=
+
+1. Collecting the elements pi1 ;i2 with the same sum
+
+1 (y)
+
+pj2j
+pj3j
+
+p1;1 ;
+p2;1 + p1;2 :
+
+(11)
+(12)
+
+Smolyak polynomial function (5) for the case of d = 2 and
+fb2;1 (x; y; b) =
+
+X
+
+( 1)d+
+
+jij
+
+max(d; +1) jij d+
+
+=
+
+X
+
+2 jij 3
+
+=
+
+( 1)3
+
+jij
+
+1
+3
+
+jij
+
+d
+d+
+pjij =
+j2j
+
+1
+jij
+
+X
+
+2 jij 3
+
+= 1 is given by
+
+pjij
+( 1)3
+
+jij
+
+1
+(3
+
+jij)!
+
+pjij
+
+= ( 1) p + 1 pj3j
+= ( 1) p1;1 + 1 (p2;1 + p1;2 )
+b11 + b11 + b21 2 (x) + b31 3 (x) + b11 + b12 2 (y) + b13 3 (y)
+= b11 + b21 2 (x) + b31 3 (x) + b12 2 (y) + b13
+
+3 (y):
+
+(13)
+
+By construction, the number of basis functions in Smolyak polynomial fb2;1 (x; y; b) is equal to
+the number of points in Smolyak grid H2;1 . The same is true for a Smolyak grid Hd; and
+Smolyak polynomial fbd; under any d 1 and
+0.
+
+2.4
+
+Smolyak interpolation coe¢ cients
+
+Polynomial coe¢ cients b`1 :::`d ’s in (5) must be constructed so that Smolyak polynomial fbd;
+matches the true function f in all points of Smolyak grid Hd; .
+9
+
+2.4.1
+
+Closed-form expression for Smolyak interpolation coe¢ cients
+
+There is a closed-form formula for the polynomial coe¢ cients in (5) if multidimensional Smolyak
+grid points and basis functions are constructed using unidimensional Chebyshev polynomials
+and their extrema, respectively; see Quarteroni et al. (2000) for a derivation of such formulas.
+Consider a grid that has m (i1 ) ; :::; m (id ) grid points and basis functions in dimensions 1; :::; d,
+respectively. Then, the corresponding coe¢ cients are given by
+b`1 :::`d =
+
+2d
+(m (i1 )
+
+1)
+
+1
+(m (id )
+
+1) c`1
+
+c `d
+m(id )
+
+m(i1 )
+
+X
+
+X
+
+`1
+
+j1
+
+cj1
+
+jd =1
+
+j1 =1
+
+f
+
+jd
+
+`d
+
+j1 ; :::;
+
+cj d
+
+jd
+
+; (14)
+
+where j1 ; :::; jd are grid points in dimensions j1 ; :::; jd , respectively; cj = 2 for j = 1 and
+j = m (id ); cj = 1 for j = 2; :::; m (id ) 1. If along any dimension d, we have m (id ) = 1, this
+dimension is dropped from computation, i.e., m (id ) 1 is set to 1 and cjd = c1 is set to 1.
+2.4.2
+
+Example of the Smolyak coe¢ cients under d = 2 and
+
+=1
+
+We must compute the coe¢ cients fb11 ; b21 ; b31 ; b12 ; b13 g so that polynomial function fb2;1 , given
+by (13), matches true function f on Smolyak grid H2;1 given by (3). For
+= 1, the set
+2
+of Chebyshev polynomial basis are f 1 (x) ; 2 (x) ; 3 (x)g = f1; x; 2x
+1g (and we have the
+same polynomial basis for y, namely, f1; y; 2y 2 1g) and the extrema of Chebyshev polynomials
+are f 1 ; 2 ; 3 g = f0; 1; 1g.
+For b21 , formula (14) implies
+b21 =
+
+22
+3
+
+1
+1 c2 c1
+
+3
+X
+
+2
+
+( 1) f
+cj 1 1
+
+j1
+
+1
+
+j1 =1
+
+j1 ;
+
+( 1) f ( 1; 1)
+( ) f ( 2; 1)
++ 2 2
++
+c1
+c2
+1 f ( 1; 0) 1 f (1; 0)
+=
++
+;
+2
+2
+and similarly, for b12 , we get
+f (0; 1) f (0; 1)
+b12 =
++
+:
+2
+2
+Coe¢ cient b31 is given by
+=
+
+2
+
+b31 =
+
+2
+3
+
+1
+1 c3 c1
+
+3
+X
+
+3
+
+j1 =1
+
+j1
+
+1
+
+1
+
+2
+
+( 1) f
+cj 1
+
+1 1 f ( 1; 0)
+1 f (1; 0)
+f (0; 0) +
+2
+2
+2
+f (0; 0) f ( 1; 0) + f (1; 0)
+=
++
+;
+2
+4
+=
+
+10
+
+( 3) f ( 3;
+c3
+
+j1 ;
+
+1
+
+1)
+
+and b13 is obtained similarly
+b13 =
+
+f (0; 0) f (0; 1) + f (0; 1)
++
+:
+2
+4
+
+Formula (14) does not apply to a constant term b11 . To …nd b11 , observe that (13) implies
+fb2;1 (0; 0; b) =
+
+b11 +
+
+f (0; 0)
+2
+
+f ( 1; 0) + f (1; 0) f (0; 0)
++
+4
+2
+
+f (0; 1) + f (0; 1)
+:
+4
+
+Since under interpolation, we must have fb2;1 (0; 0; b) = f (0; 0), the last formula yields
+b11 =
+
+f ( 1; 0) + f (1; 0) + f (0; 1) + f (0; 1)
+:
+4
+
+Note that to compute the coe¢ cients, we need to evaluate function f in …ve Smolyak grid
+points of H2;1 .
+
+2.5
+
+Shortcomings of the conventional Smolyak method
+
+The conventional Smolyak method using nested sets is ine¢ cient. First, it creates a list of
+tensor products with many repeated elements and then, it eliminates the repetitions. In highdimensional applications, the number of repetitions is large and increases with both and d,
+which leads to a considerable increase in computational expense.
+Repetitions of grid points can be appreciated by looking at Table 2. For example, when
+constructing H2;1 , we list a grid point (0; 0) in three di¤erent cells, and hence, we must eliminate
+two grid points out of seven; when constructing H2;2 , we must eliminate twelve repeated points
+out of twenty …ve points, etc. However, the repeated grid points are not a critical issue for the
+computational expense. Grid points must be constructed just once, and it is not so important
+if they are constructed e¢ ciently or not. It is a one-time …xed cost.
+Unfortunately, the Smolyak formula (5) involves the same kind of repetitions, and it is not
+a …xed cost. For example, fb2;1 , given by (13), lists seven basis functions f1g, f1; 2 (x) ; 3 (x)g
+and f1; 2 (y) ; 3 (y)g in (8)–(10), respectively, and eliminates two repeated functions f1g by
+assigning a weight ( 1) to pj2j ; furthermore, fb2;2 , derived in Appendix B, creates a list of twenty
+…ve basis functions and removes twelve repeated basis function by assigning appropriate weights,
+etc. We su¤er from repetitions every time we evaluate a Smolyak polynomial function. This is
+an especially important issue in the context of numerical methods for solving dynamic economic
+models, since we must interpolate decision and value functions in a very large number of points,
+e.g., grid points, integration nodes and time periods. Moreover, we must repeat interpolation
+each time when the decision and value functions change in the iterative cycle. The overall cost
+of repetitions in the Smolyak formula can be very large.
+
+11
+
+3
+
+E¢ cient implementation of the Smolyak method for
+interpolation
+
+We have argued that Smolyak (1963) sparse-grid structure is an e¢ cient choice for highdimensional interpolation. However, the existing implementation of the Smolyak method does
+not arrive to this structure directly. Instead, it produces such a structure using a linear combinations of sets with repeated elements, which is ine¢ cient and expensive. In this section, we
+propose a more e¢ cient implementation of the Smolyak method that avoids costly repetitions
+of elements and arrives to the Smolyak structure directly. Our key novelty is to replace the conventional nested-set generators with equivalent disjoint-set generators. We use the disjoint-set
+generators not only for constructing the Smolyak grids but also for constructing the Smolyak
+basis functions; as a result, we do not make use of the conventional interpolation formula of
+type (7). Furthermore, to identify the interpolating coe¢ cients, we use a canonical Lagrange
+interpolation; thus, we also do not make use of formula (14) for the coe¢ cient. We …nd it
+easiest to present our implementation of the Smolyak method starting from a description of the
+Lagrange interpolation framework.
+
+3.1
+
+Multidimensional Lagrange interpolation
+
+We consider the following interpolation problem. Let f : [ 1; 1]d ! R be a smooth function
+de…ned on a normalized d-dimensional hypercube, and let fb( ; b) be a polynomial function of
+the form
+M
+X
+bn n (x) ;
+(15)
+fb(x; b) =
+n=1
+
+d
+
+where n : [ 1; 1] ! R, n = 1; :::; M , are d-dimensional basis functions, and b (b1 ; :::; bM ) is
+a coe¢ cient vector.
+We construct a set of M grid points fx1 ; :::; xM g in [ 1; 1]d , and we compute b so that the
+true function, f , and its approximation, fb( ; b) coincide in all grid points:
+3 2
+3
+2
+3 2
+3 2
+1 (x1 )
+M (x1 )
+f (x1 )
+fb(x1 ; b)
+b1
+7 4
+...
+5:
+4
+5=4
+5=6
+(16)
+5
+4
+b
+bM
+f (xM )
+f (xM ; b)
+1 (xM )
+M (xM )
+
+Approximation fb( ; b) is used to interpolate (infer, reconstruct) f in any point x 2 [ 1; 1]d .
+To implement the above interpolation method, we must perform three steps:
+(i) Choose M grid points fx1 ; :::; xM g.
+(ii) Choose M basis functions for forming fb(x; b).
+(iii) Compute b that makes f and fb( ; b) coincide in all grid points.
+Lagrange interpolation allows for many di¤erent choices of grid points and basis functions.
+We will use grid points and basis functions produced by the Smolyak method. In Section 3.2,
+we construct the Smolyak grid points; in Section 3.3, we produce the Smolyak basis functions;
+12
+
+in Section 3.4, we identify the interpolation coe¢ cients; in Section 3.5, we compare our implementation of the Smolyak method with the conventional implementation described in Section
+2; and …nally, in Section 3.6, we show an e¢ cient formula for Smolyak interpolation.
+
+3.2
+
+Construction of Smolyak grids using unidimensional disjoint sets
+
+To construct a Smolyak grid, we proceed as in the conventional Smolyak method, namely, we
+produce sets of unidimensional grid points, compute tensor products of such sets and select an
+appropriate subsets of tensor-product elements for constructing a multidimensional grid. The
+di¤erence is that we operate with unidimensional disjoint sets instead of unidimensional nested
+sets. This allows us to avoid repetitions of grid points.
+3.2.1
+
+Unidimensional disjoint sets of grid points
+
+Let us de…ne a sequence of disjoint sets A1 ; A2 ; ::: using the sequence of nested sets S1 ; S2 ; ::: of
+Section 2.2.1 such that A1 = S1 and Ai = Si nSi 1 for i 2:
+i = 1 : A1 = f0g;
+i = 2 : A2 = n
+f 1; 1g;o
+i = 3 : A3 = p12 ; p12 ;
+p p
+p p p p p p
+2+ 2
+2
+2
+2
+2
+2+ 2
+i = 4 : A4 =
+;
+; 2 ; 2
+.
+2
+2
+By de…nition, Ai is a set of points in Si but not in Si 1 . The constructed sets are disjoint,
+Ai \ Aj = f?g for any i 6= j and their unions satisfy A1 [ ::: [ Ai = Si . The number of elements
+in Ai is m (i) m (i 1) = 2i 2 points for i 3, and the number of elements in A1 and A2 is
+1 and 2, respectively.
+3.2.2
+
+Tensor products of unidimensional disjoint sets of points
+
+Next, we construct tensor products of disjoint sets of unidimensional grid points. Again, we
+consider the two-dimensional case, with i = 1; 2; 3 in each dimension.
+In Table 3, indices i1 and i2 are indices that correspond to dimensions one and two, respectively; a column Ai1 and a row Ai2 (see Ai1 nAi2 ) show the sets of unidimensional elements that
+correspond to dimensions one and two, respectively; ( ` ; n ) denotes a two-dimensional grid
+point obtained by combining a grid point ` in dimension 1 and a grid point n in dimension
+two. Thus, the table shows incremental grid points, and we can easily see which grid points are
+added when we increase the approximation level.
+3.2.3
+
+Smolyak sparse grids
+
+We use the same Smolyak rule (1) for constructing multidimensional grid points. That is, we
+select elements that belong to the cells in Table 3 for which the sum of indices of a column and
+a row, i1 + i2 , is between d and d + . This leads to the same Smolyak grids H2;0 , H2;1 and
+H2;2 as shown in (2), (3), and (4), respectively. However, in our case, no grid point is repeated
+13
+
+Table 3: Tensor products of disjoint sets of unidimensional grid points for the two-dimensional
+case
+i2 = 1
+
+Ai1 nAi2
+
+0
+
+i1 = 1
+
+0
+
+(0; 0)
+
+i1 = 2
+
+1
+1
+
+( 1; 0)
+(1; 0)
+
+i2 = 2
+
+i2 = 3
+1
+p1 ; p
+2
+2
+
+1; 1
+
+(0;
+
+( 1;
+(1;
+
+1) ; (0; 1)
+
+1) ; ( 1; 1)
+1) ; (1; 1)
+
+0; p1
+
+; 0; p1
+
+1; p1
+
+;
+
+2
+
+2
+
+1; p1
+
+2
+
+i1 = 3
+
+p1
+2
+1
+p
+2
+
+p1 ; 0
+2
+1 ;0
+p
+2
+
+p1 ;
+2
+1 ;
+p
+2
+
+1 ;
+1 ;
+
+p1 ; 1
+2
+1 ;1
+p
+2
+
+p1 ; p1
+2
+2
+1 ; p1
+p
+2
+2
+
+2
+
+1; p1
+2
+; 1; p1
+2
+
+;
+;
+
+1
+p1 ; p
+2
+2
+1
+1 ; p
+p
+2
+2
+
+in Table 3. Furthermore, note that the multidimensional grids H2;0 , H2;1 and H2;2 are nested
+H2;0 H2;1 H2;2 even though their unidimensional generators are disjoint (not nested).
+
+3.3
+
+Construction of Smolyak polynomials using unidimensional disjoint sets
+
+Our construction of Smolyak polynomials parallels our construction of Smolyak grids using unidimensional disjoint sets. To be speci…c, we produce disjoint sets of unidimensional basis functions, compute tensor products of such sets and select an appropriate subset of tensor-product
+elements for constructing a multidimensional polynomial function. Again, using disjoint-set
+generators instead of nested-set generators allows us to avoid repetitions of basis functions.
+3.3.1
+
+Unidimensional disjoint sets of basis functions
+
+We …rst construct disjoint sets A1 ; :::; Ai ; ::: that contain unidimensional basis functions:
+i = 1 : A1 = f1g;
+i = 2 : A2 = f 2 (x) ; 3 (x)g;
+i = 3 : A3 = f 4 (x) ; 5 (x)g.
+i = 4 : A3 = f 6 (x) ; 7 (x) ; 8 (x) ; 9 (x)g.
+3.3.2
+
+Tensor products of unidimensional disjoint sets of basis functions
+
+We next construct the two-dimensional basis functions using tensor products of unidimensional
+basis functions.
+By construction, all elements in Table 4 appear just once and therefore, are non-repeated.
+Note that Table 4 looks exactly like Table 3.
+
+14
+
+Table 4: Tensor products of disjoint sets of Chebyshev polynomial basis for the two-dimensional
+case
+i2 = 1
+
+i1 = 1
+
+3.3.3
+
+i2 = 2
+
+i2 = 3
+
+Ai1 nAi2
+
+1
+
+2
+
+(y) ;
+
+3
+
+(y)
+
+4
+
+(y) ;
+
+5
+
+(y)
+
+1
+
+1
+
+2
+
+(y) ;
+
+3
+
+(y)
+
+4
+
+(y) ;
+
+5
+
+(y)
+
+i1 = 2
+
+2
+3
+
+(x)
+(x)
+
+2
+3
+
+(x)
+(x)
+
+2
+3
+
+(x)
+(x)
+
+2
+2
+
+(y) ;
+(y) ;
+
+2
+3
+
+(x)
+(x)
+
+3
+3
+
+(y)
+(y)
+
+2
+3
+
+(x)
+(x)
+
+4
+4
+
+(y) ;
+(y) ;
+
+2
+3
+
+(x)
+(x)
+
+5
+5
+
+(y)
+(y)
+
+i1 = 3
+
+4
+5
+
+(x)
+(x)
+
+4
+5
+
+(x)
+(x)
+
+4
+5
+
+(x)
+(x)
+
+2
+2
+
+(y) ;
+(y) ;
+
+4
+5
+
+(x)
+(x)
+
+3
+3
+
+(y)
+(y)
+
+4
+5
+
+(x)
+(x)
+
+4
+4
+
+(y) ;
+(y) ;
+
+4
+5
+
+(x)
+(x)
+
+5
+5
+
+(y)
+(y)
+
+Smolyak polynomial basis functions
+
+We apply the same Smolyak rule (1) to produce a list of basis function as we used for producing
+grid points. Let P d; denote a Smolyak basis function with dimensionality d and approximation
+level .
+If = 0, then 2 i1 + i2 2. The only cell that satis…es this restriction is i1 = 1 and
+i2 = 1, so that the set of Smolyak basis functions has just one element
+P 2;0 = f1g :
+
+(17)
+
+If = 1, then 2 i1 + i2 3. The three cells that satisfy this restriction are (a) i1 = 1,
+i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1, and the corresponding …ve Smolyak basis
+functions are
+P 2;1 = f1; 2 (x) ; 3 (x) ; 2 (y) ; 3 (y)g :
+(18)
+If = 2, then 2 i1 + i2 4. There are six cells that satisfy this restriction: (a) i1 = 1,
+i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1; (d) i1 = 1, i2 = 3; (e) i1 = 2, i2 = 2; (f)
+i1 = 3, i2 = 1, and there are thirteen Smolyak basis functions
+P 2;2 = f1;
+
+2
+
+(x) ;
+
+3
+
+(x) ;
+
+(y) ; 3 (y) ; 4 (x) ; 5 (x) ; 4 (y) ; 5 (y)
+2 (x) 2 (y) ;
+2 (x) 3 (y) ;
+3 (x) 2 (y) ;
+3 (x)
+2
+
+3
+
+(y)g : (19)
+
+The sets of Smolyak basis functions P 2;0 , P 2;1 and P 2;2 de…ned in (17), (18), and (19)
+correspond to grids H2;0 , H2;1 and H2;2 de…ned in (2), (3), and (4), respectively. To form
+a Smolyak polynomial function under our construction, one just need to use the elements
+satisfying condition (1) since no element is repeated in Table 4 by construction.
+
+15
+
+3.4
+
+Construction of Smolyak coe¢ cients using Lagrange interpolation
+
+Recall that b`1 :::`d ’s in (5) must be constructed so that the Smolyak polynomial fbd; matches the
+true function f on the Smolyak grid Hd; . We construct the Smolyak interpolating coe¢ cients
+solving the inverse problem (16) numerically.
+3.4.1
+
+Solution to the inverse problem
+
+Provided that the matrix of basis functions in the right side of (16) has full rank, we obtain a
+system of M linear equations with M unknowns that admits a unique solution for b :
+3 12
+2
+3 2
+3
+1 (x1 )
+M (x1 )
+b1
+f (x1 )
+7 4
+...
+4
+5=6
+5:
+(20)
+4
+5
+bM
+f
+(x
+)
+M
+1 (xM )
+M (xM )
+
+By construction, the approximating polynomial fb coincides with the true function f in all grid
+points, i.e., fb(xn ; b) = f (xn ) for all xn 2 fx1 ; :::; xM g.
+3.4.2
+
+Example of interpolation coe¢ cients under d = 2 and
+
+= 1 revisited
+
+Let us now construct the Smolyak polynomial coe¢ cients under d = 2 and = 1 by solving the
+inverse problem as shown in (20). We again use unidimensional Chebyshev polynomials and
+extrema of Chebyshev polynomials. As follows from (18), the Smolyak polynomial function is
+given by
+fb(x; y; b) b11 1 + b21 x + b31 2x2 1 + b12 y + b13 2y 2 1 ;
+(21)
+
+where b (b11 ; b21 ; b31 ; b12 ; b13 ) is a vector of …ve unknown coe¢ cients on …ve basis functions. We
+identify the coe¢ cients such that the approximation fb(x; y; b) matches the true function f (x; y)
+in …ve Smolyak grid points distinguished in (3), namely, f(0; 0) ; ( 1; 0) ; (1; 0) ; (0; 1) ; (0; 1)g.
+This yields a system of linear equations Bb = w, where
+2
+3
+2
+3
+2
+3
+1 0
+1 0
+1
+b11
+f (0; 0)
+6 1
+6 b21 7
+6 f ( 1; 0) 7
+1 1
+0
+1 7
+6
+7
+6
+7
+6
+7
+7;
+6 b31 7 ;
+6 f (1; 0) 7 :
+1
+1
+1
+0
+1
+(22)
+B 6
+b
+w
+6
+7
+6
+7
+6
+7
+4 1 0
+4 b12 5
+4 f (0; 1) 5
+1
+1 1 5
+1 0
+1 1
+1
+b13
+f (0; 1)
+The solution to this system is given by b = B 1 w,
+32
+2
+3 2
+1
+1
+1
+1
+f (0; 0)
+b11
+0
+4
+4
+4
+4
+1
+1
+6 b21 7 6 0
+7 6 f ( 1; 0)
+0
+0
+2
+2
+76
+6
+7 6
+6 b31 7 = 6 1 1 1 0 0 7 6 f (1; 0)
+76
+6
+7 6 2 4 4
+1
+1 54
+4 b12 5 4 0
+0 0
+f (0; 1)
+2
+2
+1
+1
+1
+0 0 4 4
+f (0; 1)
+b13
+2
+
+3
+
+2
+
+7 6
+7 6
+7=6
+7 6
+5 6
+4
+
+f ( 1;0)+f (1;0)+f (0; 1)+f (0;1)
+4
+f ( 1;0)+f (1;0)
+2
+f (0;0)
+f ( 1;0)+f (1;0)
++
+2
+4
+f (0; 1)+f (0;1)
+2
+f (0;0)
+f (0; 1)+f (0;1)
++
+2
+4
+
+3
+7
+7
+7
+7
+7
+5
+
+(23)
+
+As expected, coe¢ cients in (23) coincide with those produced by conventional formula (14).
+16
+
+3.5
+
+Comparison to the conventional Smolyak method
+
+We compare our implementation of the Smolyak method with the conventional implementation
+described in Section 2. First, we quantify the reduction in cost of the Smolyak interpolant
+evaluation that we achieve by avoiding the repetitions and then, we compare the Lagrange
+interpolation method with explicit formulas for the interpolating coe¢ cients.
+3.5.1
+
+Nested-set versus disjoint-set constructions of the Smolyak interpolant
+
+First, consider the conventional construction of the Smolyak polynomial in (5) based on unidimensional nested sets; see Section 2.3.1. By (5), the number of terms which we list to evaluate
+d
+Y
+P
+fbd; is
+m (ij ). Note that the counting coe¢ cient ( 1)d+ jij d+d 1jij is not
+max(d; +1) jij d+ j=1
+
+relevant for computation of the number of terms because it does not add new terms but only
+counts the number of repetitions to be cancelled out.
+Second, consider our alternative construction of the Smolyak polynomial function based on
+unidimensional disjoint sets; see Section 3.3. The number of basis functions in P d; is equal to
+d
+P Y
+[m (ij ) m (ij 1)]. To assess the di¤erence in costs between the two constructions,
+d jij d+ j=1
+
+we consider the ratio of the number of terms under the two constructions:
+
+Rd;
+
+d
+Y
+
+P
+
+m (ij )
+
+max(d; +1) jij d+ j=1
+
+P
+
+d
+Y
+
+[m (ij )
+
+m (ij
+
+=
+1)]
+
+d jij d+ j=1
+
+P
+
+d
+Y
+
+m (ij )
+
+max(d; +1) jij d+ j=1
+
+P
+
+d
+Y
+
+d jij d+ j=1
+
+m (ij )
+
+d
+Y
+
+1
+
+(24)
+
+:
+m(ij 1)
+m(ij )
+
+j=1
+
+In Figure 2, we represent the ratio Rd; for 1 d 30 and 0
+5.The higher is the level
+of approximation, the larger are the savings due to more e¢ cient evaluation of the Smolyak
+interpolant. In particular, under = 1 the conventional nested-set construction of the Smolyak
+interpolant is 40 percent more expensive than our construction, while under = 6, it is more
+than 700 percent more expensive than ours. We shall emphasize that our construction saves on
+cost every time when the Smolyak interpolant is evaluated, i.e., in every grid point, integration
+node or time period.
+Some qualitative assessment of Rd; can be derived for the case when max(d; + 1) = d
+(this is the most relevant case for high-dimensional problems in which high-order polynomial
+d
+Y
+m(ij 1)
+in the denominator of (24).
+approximations are infeasible). Consider the term
+1
+m(ij )
+j=1
+
+m(0)
+m(1)
+
+If ij = 1, we have 1
+
+ij
+
+= 1, and if ij
+
+2, we have 1
+
+2
+
+m(ij 1)
+m(ij )
+
+= 1
+
+2ij
+2ij
+
+2
+1
+
++1
++1
+
+=
+
+2ij
+
+2ij
+
+2
+
+1
+
++1
+
+.
+
+2
+2
+Observe that 12
+for ij
+2, and that the limits are reached under ij ! 1 and
+3
+2ij 1 +1
+ij = 2, respectively. This means that for any ij
+2, our disjoint-set construction reduces the
+number of terms by at least a factor of 12 compared to the conventional nested-set construction.
+
+17
+
+Figure 2: The ratio of the number of basis functions under two alternative implementations of
+the Smolyak method.
+8
+7
+6
+
+Rd,µ
+
+5
+4
+3
+2
+1
+
+0
+
+5
+
+10
+
+µ=1
+
+3.5.2
+
+15
+d
+
+µ=2
+
+20
+
+µ=3
+
+µ=4
+
+25
+
+30
+
+µ=5
+
+Analytical expression for interpolation coe¢ cients versus numerical Lagrange
+interpolation
+
+The Lagrange interpolation method is universal: it can be applied to any sets of grid points
+and basis functions provided that the inverse problem (20) is well-de…ned (the matrix of basis
+functions evaluated in grid points has full rank). In turn, the formula of type (14) is a special
+case of Lagrange interpolation in which the solution to the inverse problem can be derived in
+a closed form. The numerical implementation of Lagrange interpolation using (20) has two
+potential shortcomings compared to the closed-form expression: …rst, it can be numerically
+unstable and second, it can be expensive.
+To attain numerical stability, we must use families of grid points and basis functions that
+do not lead to ill-conditioned inverse problems. Chebyshev polynomials and their extrema are
+one example but many other choices are possible.4
+To reduce the computational expense, we use the following precomputation technique in the
+context of numerical algorithm for solving dynamic economic models. We compute the inverse
+of the matrix of basis functions in (20) at the initialization stage, before entering the main
+iterative cycle. In this way, the expensive part of Lagrange interpolation becomes a …xed cost.
+In the main iterative cycle, computing the interpolation coe¢ cients requires only inexpensive
+matrix multiplications, which can be easily parallelized for a further reduction in cost if needed.
+This precomputation technique allows us to reconstruct the polynomial coe¢ cients at a low cost
+each time when decision and value functions change along iterations.5
+4
+
+See Judd et al. (2011) for a discussion of numerical techniques for dealing with ill-conditioned problems.
+See Maliar et al. (2011) and Judd et al. (2011) for other precomputation techniques that reduce the
+computational expense of numerical solution methods, precomputation of intertemporal choice functions and
+precomputation of integrals, respectively.
+5
+
+18
+
+3.6
+
+Smolyak formula for interpolation revisited
+
+It is relatively straightforward to write a computer code that automates the construction of the
+Smolyak interpolant under our disjoint-set generators described in Section 3.3. We just have
+to sum up all the basis functions that appear in the table like Table 4 since no basis function
+is repeated by construction. Nonetheless, we were also able to derive a formula for Smolyak
+interpolation using disjoint sets, which is parallel to the conventional formula (5) using nested
+sets. We show such a formula below.
+3.6.1
+
+Smolyak polynomial: e¢ cient construction
+
+The formula for constructing a Smolyak polynomial function using unidimensional disjoint sets
+is as follows:
+X
+fbd; (x1 ; :::; xd ; b) =
+q jij (x1 ; :::; xd ) ;
+(25)
+d jij d+
+
+for each jij satisfying d
+
+d + , a tensor-product operator pjij (x1 ; :::; xd ) is de…ned as
+X
+q jij (x1 ; :::; xd ) =
+q i1 ;:::;id (x1 ; :::; xd ) ;
+(26)
+jij
+
+i1 +:::+id =jij
+
+and q i1 ;:::;id (x1 ; :::; xd ) is de…ned as
+m(i1 )
+
+q
+
+i1 ;:::;id
+
+(x1 ; :::; xd ) =
+
+X
+
+`1 =m(i1 1)+1
+
+m(id )
+
+X
+
+:::
+
+b`1 :::`d
+
+`1
+
+(x1 )
+
+`d
+
+(xd ) ;
+
+(27)
+
+`d =m(id 1)+1
+
+where `1 (x1 ) ; :::; `d (xd ) are unidimensional basis functions, in dimensions 1; :::; d, respectively; `1 (x1 )
+`d (xd ) is a d-dimensional basis function; `d = 1; :::; m (id ); b`1 :::`d are coe¢ cients vectors. We use the convention that m (0) = 0 and m (1) = 1. By construction of (27),
+there are no repeated terms across di¤erent q i1 ;:::;id ’s.
+Formula (25) sums up all the terms in Table 4 (recall that all the sets in Table 4 are
+disjoint and basis functions are never repeated by construction). The economization from our
+more e¢ cient alternative Smolyak formula is described by (24) and is shown in Figure 2. To
+compute coe¢ cients b`1 :::`d ’s, we can use either the conventional closed-form expression (14) or
+a numerical solution (20) to the Lagrange interpolation problem.
+3.6.2
+
+Example of Smolyak polynomial under d = 2 and
+
+= 1 revisited
+
+We now illustrate the construction of Smolyak polynomial function (25) by revisiting an example
+with d = 2 and = 1 studied in Section 2.3.2 (in Appendix B, we also show the construction
+of such a function with d = 2 and = 2).
+For the case of = 1, we have i1 + i2 3. This restriction is satis…ed in three cases: (a)
+
+19
+
+i1 = i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1. Thus, using (27), we obtain
+m(1)
+
+(a) q
+
+1;1
+
+=
+
+X
+
+m(1)
+
+X
+
+b `1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b11 ;
+
+X
+
+X
+
+b `1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b12
+
+2 (y)
+
++ b13
+
+3 (y);
+
+(29)
+
+X
+
+b ` 1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b21
+
+2 (x)
+
++ b31
+
+3 (x):
+
+(30)
+
+(28)
+
+`1 =m(0)+1 `2 =m(0)+1
+m(1)
+
+(b) q
+
+1;2
+
+=
+
+m(2)
+
+`1 =m(0)+1 `2 =m(1)+1
+m(2)
+
+(c) q
+
+2;1
+
+=
+
+X
+
+m(1)
+
+`1 =m(1)+1 `2 =m(0)+1
+
+Collecting elements q i1 ;i2 with the same i1 + i2
+q j2j
+
+q 1;1 ;
+
+jij, we have
+(31)
+
+and
+q j3j
+
+q 2;1 + q 1;2 :
+
+Smolyak polynomial function (27) for the case of
+X
+P 2;1 (x; y; b) =
+q jij = q 1;1 + q 2;1 + q 1;2
+
+(32)
+
+= 1 is given by
+
+jij d+
+
+= b11 + b21
+
+2 (x)
+
++ b31
+
+3 (x)
+
++ b12
+
+2 (y)
+
++ b13
+
+3 (y):
+
+(33)
+
+This formula coincides with (13). Thus, we obtain the same Smolyak polynomial function as
+the one produced by the conventional Smolyak formula but we avoid forming lists of repeated
+basis functions.
+
+4
+
+Anisotropic Smolyak method
+
+In economic applications, variables often enter assymetically in decision functions or value
+functions. For example, in a heterogeneous-agent economy studied in Kollmann et al. (2011),
+the individual choices depend more on her own variables than on variables of other agents; and
+the literature, based on Tauchen and Hussy’s (1991) discretizations uses many grid points for
+endogenous state variables and few grid points for exogenous state variables.
+However, the Smolyak method, studied in Sections 2 and 3, treats all dimensions equally in
+the sense that it uses the same number of grid points and basis functions for all variables. To
+increase the quality of approximation under such a method, we must equally increase the number
+of grid points and basis functions in all dimensions. This may be too costly to do in large-scale
+applications. An alternative is to increase the number of grid points and basis functions only
+in those dimensions that are most important for the overall quality of approximation. In this
+section, we show a variant of the Smolyak method that allows for a di¤erential treatment of
+variables, speci…cally, it enables us to separately choose accuracy levels for each dimension by
+taking into account a speci…c structure of decision functions in a given economic model. We
+refer to such a method as a Smolyak method with anisotropic grid.
+20
+
+4.1
+
+De…nition of anisotropy
+
+The term anisotropic comes from mathematical literature and refers to functions that are
+"asymmetric" in some respect, for example, have more curvature in some variables than in
+others, or have a larger range in some variables than in others. Gerstner and Griebel (2003)
+propose dimension-adaptive grids for numerical integration of multivariate anisotropic functions; see also Bungartz and Griebel (2004) and Garcke (2011).
+The above literature uses very ‡exible piecewise linear basis functions which allows for consecutive re…nements of the solution in those areas in which higher accuracy is needed (though at
+a high computational expense). Our method, based on a global polynomial approximation, is
+less ‡exible, and the possibility of re…nement is limited to speci…c dimensions. Our implementation of the anisotropic construction and the error bounds are therefore di¤erent from those
+in the literature that uses piecewise basis functions.
+As a starting point, consider a standard (isotropic) Smolyak grid with a degree of approximation as de…ned in Sections 2 and 3. Observe that for each dimension j = 1; :::; d, index ij
+varies from 1 to + 1. For example, in Table 2, i1 and i2 vary from 1 to 3, and varies from
+0 to 2, respectively (i.e., is equal to the maximum ij , j = 1; :::; d, minus 1).
+For the anisotropic case, let us denote by j an approximation level in dimension j. If in a
+1. A
+, then j = imax
+, i.e., ij = 1; :::; imax
+dimension j, the maximum index admitted is imax
+j
+j
+j
+Smolyak grid is called anisotropic if there is at least one dimension j such that j 6= k for all
+k 6= j; otherwise, it is called isotropic. We denote an anisotropic Smolyak grid, Smolyak basis
+functions and Smolyak interpolant as Hd;( 1 ;:::; d ) , P d;( 1 ;:::; d ) and fbd;( 1 ;:::; d ) , respectively.
+
+4.2
+
+Anisotropic Smolyak grid
+
+Our design of an anisotropic variant of the Smolyak method parallels the design of the isotropic
+Smolyak method described in Sections 3. Namely, we …rst produce an anisotropic Smolyak
+grid, we then produce an anisotropic Smolyak polynomial function, and we …nally compute
+polynomial coe¢ cients using Lagrange interpolation. Our anisotropic construction also builds
+on disjoint-set generators, which allows us to avoid costly repetitions of elements in the Smolyak
+interpolant.
+4.2.1
+
+Tensor products of unidimensional sets of points
+
+The two-dimensional tensor products constructed from the unidimensional sets up to i = 4 and
+i = 2 in the dimensions x and y, respectively are summarized in Table 5. By construction, the
+table contains only non-repeated elements.
+4.2.2
+
+Smolyak sets of multidimensional elements under anisotropic construction
+
+The Smolyak rule tells us which tensor products must be selected. For the two-dimensional
+case, it is as follows: Select elements that belong to the cells in Table 5 for which the following
+
+21
+
+Table 5: Tensor products of unidimensional disjoint sets of grid points in the two-dimensional
+case
+i2 = 1
+
+i2 = 2
+
+Ai1 nAi2
+
+0
+
+i1 = 1
+
+0
+
+(0; 0)
+
+i1 = 2
+
+1
+1
+
+( 1; 0)
+(1; 0)
+
+( 1;
+(1;
+
+1) ; ( 1; 1)
+1) ; (1; 1)
+
+p1
+2
+1
+p
+2
+
+p1 ; 0
+2
+1 ;0
+p
+2
+
+p1 ;
+2
+1 ;
+p
+2
+
+1 ;
+
+i1 = 3
+
+q
+
+i1 = 4
+
+q
+
+p
+
+2+ 2
+q2 p
+2
+2
+q 2p
+2
+2
+q 2p
+2+ 2
+2
+
+q
+q
+
+2+
+2
+
+2
+2
+
+2
+
+1; 1
+
+p
+2
+p
+
+p
+
+2
+
+2
+
+(0;
+
+!
+
+;0
+
+!
+
+;0
+!
+
+;0
+2
+q
+!
+p
+2+ 2
+;0
+2
+
+q
+q
+q
+
+2+
+2
+
+2
+2
+2
+
+q
+
+p
+
+2
+
+p
+
+2
+
+p
+
+2
+
+2
+2+
+2
+
+p
+
+2
+
+;
+;
+;
+;
+
+1) ; (0; 1)
+
+1 ;
+!
+
+1 ;
+!
+
+1 ;
+!
+1 ;
+!
+
+1
+
+;
+
+p1 ; 1
+2
+1 ;1
+p
+2
+q
+
+2+
+2
+
+q
+
+2
+2
+
+q
+q
+
+p
+
+p
+
+p
+
+2
+2
+
+2
+
+2
+
+2
+
+!
+
+;1
+
+!
+
+;1
+!
+
+;1
+
+!
+p
+2+ 2
+;1
+2
+
+condition is satis…ed
+d
+i1
+
+i1 + i2 d + max ;
+1 + 1, i2
+2 + 1;
+
+(34)
+(35)
+
+where max max f 1 ; 2 g is a maximum of the level of approximation across the two dimensions, and the dimensionality is d = 2. In other words, the sum of indices of a column and a
+row, i1 +i2 , must be between d and d+ max subject to additional dimension-speci…c restrictions
+i1
+1 + 1, i2
+2 + 1.
+Let us construct examples of Smolyak anisotropic grids using the anisotropic version of the
+Smolyak rule (34).
+If ( 1 ; 2 ) = (1; 0), then max = 1 and the anisotropic Smolyak rule implies 2 i1 +i2 3,
+i1 2 and i2 1. The three cells that satisfy this restriction are (a) i1 = 1, i2 = 1; (b)
+i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1, and the corresponding three Smolyak grid points are
+H2;(1;0) = f(0; 0) ; ( 1; 0) ; (1; 0)g :
+
+(36)
+
+If ( 1 ; 2 ) = (2; 1), then max = 2 and 2 i1 + i2 4, i1 3 and i2 2. There are …ve
+cells that satisfy this restriction (a) i1 = 1, i2 = 1; (b) i1 = 1, i2 = 2; (c) i1 = 2, i2 = 1;
+(d) i1 = 1, i2 = 3; (e) i1 = 2, i2 = 2; and there are eleven Smolyak grid points
+H2;(2;1) = ( 1; 1) ; (0; 1) ; (1; 1) ; ( 1; 0) ; (0; 0) ; (1; 0) ; ( 1; 1) ; (0; 1) ;
+1
+1
+(1; 1) ; ( p ; 0); ( p ; 0) : (37)
+2
+2
+22
+
+If ( 1 ; 2 ) = (3; 1), then max = 3 and 2
+i 1 + i2
+5, , i1
+4 and i2
+2. There are
+seven cells in the table that satisfy this restriction, and H3;(3;1) consists of nineteen grid
+points (see Table 5).
+The three Smolyak anisotropic grids constructed in the above two-dimensional example are
+shown in Figure 3.
+Figure 3: Examples of Smolyak anisotropic grids
+
+We do not elaborate the construction of the anisotropic Smolyak polynomial function because such a construction trivially repeats the construction of grid points. Furthermore, to …nd
+the interpolation coe¢ cients, we use the Lagrange interpolation approach described in Section
+3.4, which applies to anisotropic construction without changes. Finally, we can adapt Smolyak
+interpolation formula (25) to the anisotropic case by imposing restrictions on i1 ; :::; id .
+
+4.3
+
+Advantages of anisotropic Smolyak method
+
+The anisotropic class of methods involves a trade-o¤: from one side, reducing a number of grid
+points and basis functions, reduces the computational expense but from the other side, it also
+reduces the quality of approximation. This trade-o¤ suggests that anisotropic methods must
+be used when the former e¤ect overweighs the latter. Using anisotropic methods in practice
+would require us either to have certain knowledge of function that we want to interpolate or
+to do some experimentation. Namely, we can keep adding or removing grid points and basis
+functions in di¤erent dimensions until the target level of accuracy is attained. Maliar et al.
+(2013) provide the error bounds for the Smolyak anisotropic constructions.
+Let us compare the number of elements in an isotropic Smolyak grid Hd; with the number
+of elements in an anisotropic Smolyak grid Hd;( 1 ;:::; d ) ; we assume that = max f 1 ; :::; d g;
+
+23
+
+and in both cases, we use disjoint-set construction with no elements repeated
+d
+Y
+
+P
+
+m (ij ) 1
+
+d jij d+ j=1
+
+Rd; =
+
+P
+
+d jij d+ ;fij
+
+d
+j +1 j=1
+
+g
+
+d
+Y
+
+m(ij 1)
+m(ij )
+
+:
+m (ij ) 1
+
+m(ij 1)
+m(ij )
+
+j=1
+
+The above ratio depends on the speci…c assumption about the approximation level in each
+dimension ( 1 ; :::; d ). Let us assume that the true function is completely ‡at in all dimensions
+except of dimension 1. To accurately approximate such a function, we can use an anisotropic
+Smolyak method in which 1 = in dimension 1 and j = 0 for all other dimensions, j = 2; :::; d.
+In Figure 4, we show the corresponding ratio of the number of points under isotropic and
+anisotropic versions of the Smolyak method.
+Figure 4: The ratio of the number of basis functions under isotropic and anisotropic versions
+of the Smolyak method.
+80
+70
+60
+
+Rd,µ
+
+50
+40
+30
+20
+10
+0
+
+1
+
+1.5
+
+2
+
+µ=1
+
+2.5
+
+3
+d
+
+µ=2
+
+3.5
+
+µ=3
+
+4
+
+µ=4
+
+4.5
+
+5
+
+µ=5
+
+In this example, the savings are very large when d and are large. For example, when d = 5
+and = 5, the number of grid points and basis functions is reduced by nearly two orders of
+magnitude. This is an extreme example which shows maximum possible gains from anisotropy.
+In empirically relevant examples, the gains from anisotropic constructions can vary depending
+on the anisotropy of speci…c decision or value functions in economic models.
+
+5
+
+Smolyak method with adaptive domain
+
+The Smolyak construction tells us how to represent and interpolate functions de…ned on a normalized d-dimensional hypercube. However, the solution domain of a typical dynamic economic
+model does not have the shape of a hypercube but can be a set of any shape in a d-dimensional
+24
+
+space. We now describe how to e¤ectively adapt a multidimensional Smolyak hypercube to an
+unstructured solution domain of a given economic model.
+
+5.1
+
+Adaptive parallelotope
+
+The ergodic set (i.e., the support of the ergodic distribution) of a dynamic economic model
+can have any shape in a d-dimensional space. It may be even an unbounded set such as Rd+ .
+We must …rst construct a d-dimensional parallelotope to enclose the relevant area of the state
+space of the studied model, typically, a high-probability area of the ergodic set. We must then
+match the parallelotope to a normalized hypercube [ 1; 1]d used by the Smolyak method.
+As an example, in Figure 5, we plot a simulation of 10,000 observations for capital and
+productivity level in a representative-agent neoclassical stochastic growth model with a closedform solution (see Section 6.1 for a detailed description of this model).
+We show two possible rectangulars in the …gure that enclose a given set of simulated point:
+one is a conventional rectangular in the original coordinates, and the other is a rectangular
+obtained after a change of variables (both rectangulars are minimized subject to including all
+simulated points).
+Figure 5: Two rectangular domains enclosing a set of simulated points.
+
+1.15
+
+Productivity level, θt
+
+1.1
+1.05
+1
+0.95
+0.9
+Simulated series
+
+0.85
+0.8
+0.7
+
+Rectangular 1: original coordinates
+Rectangular 2: principal components
+
+0.8
+
+0.9
+
+1
+
+1.1
+
+1.2
+1.3
+Capital, k t
+
+1.4
+
+1.5
+
+1.6
+
+1.7
+
+Our example shows that the way in which the rectangular is adapted to the state space of
+an economic model can matter a lot for the size of the resulting rectangular. How much the
+rectangular can be reduced by changing the system of coordinates will depend on the shape of
+the high-probability set. In particular, all rectangulars will have the same size when simulated
+data are of a shape of a perfect sphere, however, the reduction in size can be fairly large if such
+the high-probability set is inclined (as is shown in the …gure). The reduction in size can be
+especially large in problems with high dimensionality.
+
+25
+
+5.2
+
+Smolyak grid on principal components
+
+There are many ways to match a parallelotope into a normalized hypercube in the context
+of the Smolyak method. We propose an approach that relies on a principle component (PC)
+transformation and that is convenient to use in economic applications. Namely, we …rst use
+simulation to determine the high-probability area of the model’s state space (for a su¢ ciently
+accurate initial guess), and we then build a parallelotope surrounding the cloud of simulated
+points.
+Let X
+x1 ; :::; xL 2 RT L be a set of simulated data, i.e., we have T observations
+on L variables. Let the variables x1 ; :::; xL be normalized to zero mean and unit variance.
+Consider the singular value decomposition of X, de…ned as X = U SV > , where U 2 RT L and
+V 2 RL L are orthogonal matrices, and S 2 RL L is a diagonal matrix with diagonal entries
+s1 s2 ::: sL 0, called singular values of X. Perform a linear transformation of X using
+the matrix of singular vectors V as follows: Z
+XV , where Z = z 1 ; :::; z L 2 RT L . The
+1
+L
+variables z ; :::; z are called principal components of X, and are orthogonal (uncorrelated),
+0 >
+>
+z ` z ` = 0 for any `0 6= ` and z ` z ` = s2` . The sample variance of z ` is s2` =T , and, thus, z 1
+and z L have the largest and smallest sample variances, respectively.
+In Figure 6, we illustrate the four steps of construction of the adaptive parallelotope using
+PCs.
+Figure 6: Smolyak grid on PCs
+Original series
+
+PC
+
+1.3
+
+4
+
+1.2
+
+2
+
+yt
+
+θt
+
+1.1
+0
+
+1
+-2
+
+0.9
+0.8
+
+0.7
+
+0.8
+
+0.9
+
+1
+kt
+
+1.1
+
+1.2
+
+-4
+-4
+
+1.3
+
+-2
+
+Smolyak Grid on PC
+
+0
+xt
+
+2
+
+4
+
+Inverse PC transformation
+
+1
+
+1.3
+1.2
+
+0.5
+
+θt
+
+yt
+
+1.1
+0
+
+1
+-0.5
+
+-1
+-1
+
+0.9
+
+-0.5
+
+0
+xt
+
+0.5
+
+0.8
+
+1
+
+0.7
+
+0.8
+
+0.9
+
+1
+kt
+
+1.1
+
+1.2
+
+1.3
+
+In Panel 1, we show a set of simulated points; in Panel 2, we translate the origin in the
+center of the cloud, rotate the system of coordinates, renormalize the principal components to
+have a unit variance in both dimensions and surround it with a hypercube [ 1; 1]2 . In Panel 3,
+we show 13 Smolyak points with the approximation level = 2 for the principal components of
+the data. Finally, in Panel 4, we plot the corresponding 13 Smolyak points for the original data
+26
+
+after computing an inverse PC transformation. In Appendix D, we provide additional details
+on how to construct the rectangular domains for this particular example.
+
+5.3
+
+Advantages of adaptive domain
+
+The size of a parallelotope on which a function is approximated is translated into either higher
+quality or lower costs of the resulting approximation. For a …xed cost of approximation (i.e., for
+a given approximation level of the Smolyak method), …tting a polynomial on the relevant domain
+gives us a better …t inside of such a domain than would give us an otherwise identical method
+that solves a problem on a large domain and that faces a trade-o¤ between the …t inside and
+outside the relevant domain. In turn, to attain a given quality of approximation in the relevant
+domain, we need a more expensive approximation characterized by a higher approximation level
+if we solve the model on a larger domain than on a smaller domain. Finally, we remark that
+we can combine asymmetric treatment of variables with an adaptive domain. This could be a
+potentially useful extension for some applications but we do not pursue it in the present paper.
+
+6
+
+Smolyak method for solving dynamic economic models
+
+The Smolyak method for interpolation is just one speci…c ingredient of a method for solving dynamic economic models. We need to complement it with other ingredients, such as a procedure
+for approximation of integrals, a procedure that solves for …xed point coe¢ cients, a procedure
+that updates the functions along iterations, a procedure that maps the state space of a given
+economic model into the Smolyak hypercube, etc. In this section, we incorporate the Smolyak
+method for interpolation into a projection methods for solving dynamic economic models. We
+assess the performance of the studied Smolyak-based solution method in the context of oneand multi-agent growth models.
+
+6.1
+
+The representative agent model
+
+Our …rst example is the standard representative agent neoclassical stochastic growth model:
+max1 E0
+
+fct ;kt+1 gt=0
+
+1
+X
+
+t
+
+u(ct )
+
+(38)
+
+t=1
+
+s.t. ct + kt+1 = (1
+)kt + t f (kt );
+ln t = ln t 1 + "t ; "t N (0; 2 );
+
+(39)
+(40)
+
+where ct ; kt+1
+0, and k0 and 0 are given. Here, ct and kt are consumption and capital,
+respectively; 2 (0; 1) is the discount factor; u(ct ) is the utility function, which is assumed
+to be increasing and concave;
+2 (0; 1] is the depreciation rate of capital; f (kt ; t ) is the
+production function with 2 (0; 1) being the capital share in production; and Et is the operator
+of expectation conditional on state (kt ; t ). The productivity level t in (40) follows a …rst-order
+autoregressive process with 2 ( 1; 1) and > 0.
+27
+
+6.2
+
+Time iteration versus …xed-point iteration
+
+Our implementation of the Smolyak method also di¤ers from the one in Krueger and Kubler
+(2004) and Malin et al. (2011) in the technique that we use to iterate on decision functions.
+Speci…cally, they use time iteration that solves a system of non-linear equations using a numerical solver, whereas we use derivative-free …xed-point iteration that does so using only
+straightforward calculations. As an illustration, suppose we need to solve a non-linear equation
+f (x) = x; then time iteration …nds min jf (x) xj using a solver, while …xed-point iteration
+x
+
+constructs a sequence like x(i+1) = f (x(i) ), i = 0; 1; :::, starting from some initial guess x(0) with
+the hope that this sequence will converge to a true solution. See Wright and Willams (1984),
+Miranda and Helmberger (1988), Marcet (1988) for early applications of …xed-point iteration
+to economic problems. Den Haan (1990) proposed a way to implement …xed-point iteration in
+models with multiple Euler equations; see also Marcet and Lorenzoni (1999) for related examples. Gaspar and Judd (1997) pointed out that …xed-point iteration is a cheap alternative to
+time iteration in high-dimensional applications. Finally, Judd et al. (2010, 2011, 2012) show a
+variant of …xed-point iteration, which performs particularly well in the context of the studied
+models; we adopt their variant in the present paper. Below, we illustrate the di¤erence between
+time-iteration and …xed-point iteration methods using the model (38)–(40) as an example.
+6.2.1
+
+Time iteration
+
+Time iteration solves a system of three equilibrium conditions with respect to b
+k 0 in each point of
+the Smolyak grid. It parameterizes the capital function by Smolyak polynomial b
+k 0 = K (k; ; b),
+where b is the coe¢ cient vector. It iterates on b by solving for current capital b
+k 0 given the
+k 0 ; 0 ; b (it mimics time iteration in dynamic proSmolyak interpolant for future capital K b
+gramming where we solve for the current value function given the future value function):
+h
+i
+0
+0
+0
+0
+0 b0
+u (c) = E u cj 1
++ j f k
+;
+(41)
+c = (1
+
+c0j = (1
+
+) k + f (k) b
+k0;
+)b
+k 0 + 0j f b
+k0
+K b
+k0;
+
+(42)
+
+0
+j; b
+
+b:
+
+(43)
+
+The system (41)-(43) must be solved with respect to b
+k 0 using a numerical solver. Observe
+that Smolyak interpolation K b
+k 0 ; 0j ; b must be performed for each subiteration on b
+k 0 using
+a numerical solver, which is expensive. Time iteration has a high cost even in a simple unidimensional problem.
+Time iteration becomes far more expensive in more complex settings. For example, in
+the multi-agent version of the model, one needs to solve a system of N Euler equations with
+respect to N unknown capital stocks. A high cost of time iteration procedure accounts for a
+rapid growth of the cost of the Smolyak method of Malin et al. (2011) with the dimensionality
+of the problem.
+
+28
+
+6.2.2
+
+Fixed-point iteration
+
+We also parameterize the capital function using the Smolyak polynomial b
+k 0 = K (k; ; b). Before
+performing any computation, we rewrite the Euler equation of the problem (38)–(40) in a way,
+which is convenient for implementing a …xed-point iteration
+u0 (c0 )
+k = E
+(1
+u0 (c)
+0
+
++ 0 f 0 (k 0 )) k 0 :
+
+(44)
+
+In the true solution, k 0 on both sides of (44) takes the same values and thus, cancels out. In
+the …xed-point iterative process, k 0 on the two sides of (44) takes di¤erent values. To proceed,
+b ( ; b) in the right side of (44), and we get a di¤erent value in the left side
+we substitute k 0 = K
+of (44); we perform iterations until the two sides coincide.6
+Using parameterization (44), we represent the system of equations (41)-(43) as follows:
+k 0 = K (k; ; b) and kj00 = K (k 0 ; 0 ; b) ;
+c = (1
+) k + f (k) k 0 ;
+c0 = (1
+) k 0 + 0 f (k 0 ) k 00 ;
+u0 (c0 )
+b
+k0 = E
+(1
++ 0 f 0 (k 0 )) k 0 :
+u0 (c)
+
+(45)
+(46)
+(47)
+(48)
+
+In each iteration, given b, we compute k 0 ; k 00 ; c; c0 , substitute them into (48), get b
+k 0 and continue
+iterating until convergence is achieved.
+In Appendix D, this approach is extended to a multi-agent version of the model to perform
+iterations on N Euler equations. Even in the multidimensional case, our …xed-point iterative
+procedure requires only trivial calculations and avoids the need of a numerical solver, unlike
+the time-iteration method.
+Some theoretical arguments suggest that time iteration may possess better convergence
+properties than …xed-point iteration. In particular, for very simple models, it is possible to
+show that time iteration has a contraction mapping property locally, which is similar to the
+one observed for value function iteration; see Judd (1998, p.553) for details. However, the local
+contraction mapping property is not preserved in more complicated models like the multi-agent
+model studied later in the paper. It is therefore unknown which iterative scheme has better
+convergence properties in general. Our simple …xed-point iteration method was reliable and
+stable in all experiments if appropriate damping is used.
+
+6.3
+
+Algorithm
+
+Below, we show a Smolyak-based projection algorithm for solving the model (38)–(40).
+6
+
+This kind of parameterization was used by Den Haan (1990) as a technique to implement the parameterized
+expectations algorithm in a model with several Euler equations.
+
+29
+
+Smolyak-based projection method
+Initialization.
+a. Choose the approximation level, .
+b. Construct the Smolyak grid H2; = f(xn ; yn )gn=1;:::;M on [ 1; 1]2 .
+c. Compute the Smolyak basis functions P 2; in each grid point n.
+The resulting M M matrix is B.
+d. Fix : (k; ) ! (x; y), where (k; ) 2 R2+ and (x; y) 2 [ 1; 1]2 .
+1 to compute (k ;
+2; .
+Use
+n n ) that corresponds to (xn ; yn ) in H
+e. Choose integration nodes, j , and weights, ! j , j = 1; :::; J.
+f. Construct future productivities, 0n;j = n exp ( j ) for all j;
+g. Choose an initial guess b(1) .
+Step 1. Computation of a solution for K.
+a. At iteration i, for n = 1; :::; M , compute
+–kn0 = Bn b(i) , where Bn is the nth row of B.
+0
+– x0n ; yn;j
+
+that corresponds to kn0 ;
+
+0
+n;j
+
+using
+
+.
+
+0
+–Compute the Smolyak basis functions in each point x0n ; yn;j
+
+–The resulting M M J matrix is B 0 .
+00 = B 0 b(i) , where B 0
+0
+–kn;j
+n;j
+n;j is the nth row of B in state j.
+0
+–cn = (1
+) kn + n f (kn ) kn ;
+0
+00 for all j;
+–cn;j = (1
+) kn0 + n exp ( j ) f (kn0 ) kn;j
+J
+X
+u0 (c0n;j )
+!j
+–b
+kn0
++ n exp ( j ) f 0 (kn0 )] kn0 :
+u0 (cn ) [1
+j=1
+
+b. Find b that solves the system in Step 1a.
+–Compute bb that solves b
+k 0 = Bbb, i.e., bb = B 1 b
+kn0 .
+(i+1)
+(i)
+–Use damping to compute b
+= (1
+) b + bb, where 2 (0; 1] :
+M
+X
+0 )(i+1) (k 0 )(i)
+(kn
+n
+–Check for convergence: end Step 1 if M1
+< 10 # , # > 0.
+0 (i)
+n=1
+
+(kn )
+
+Iterate on Step 1 until convergence.
+
+6.4
+
+Relation to other solution methods in the literature
+
+We now describe the relation between the Smolyak solution method and other numerical methods for solving dynamic economic models in the literature; see Maliar and Maliar (2013) for
+a survey of numerical methods for solving large-scale dynamic economic models. First, the
+baseline version of the Smolyak method is similar to conventional projection methods in that
+it relies on a …xed grid, orthogonal polynomials and deterministic integration methods; see
+Judd (1992), Gaspar and Judd (1997), Christiano and Fisher (2000), and Aruoba et al. (2006),
+among others. The di¤erence is that conventional projection methods build on tensor-product
+rules and their cost grows rapidly with the dimensionality of the problem, whereas the Smolyak
+method uses non-product rules and its cost grows far more slowly. Second, the anisotropic
+variant of the Smolyak method is similar to solution methods that use di¤erent number of grid
+points for di¤erent variables (e.g., few grid points for shocks and many grid points for capital
+30
+
+as in Aiyagari (1994), Huggett (1993), Rios-Rull (1997), Krusell and Smith (1998)) and other
+numerical methods that rely on discretization of shocks in line with Tauchen and Hussy (1991).
+Third, the variant of the Smolyak method with an adaptive domain is related to simulationbased and learning methods; see, e.g., Marcet (1988), Marcet and Sargent (1989), Smith (1991,
+1993), Rust (1997), Maliar and Maliar (2005) and Powell (2011). The advantage of simulationbased methods is that they focus on the relevant area of the state space; the shortcoming is
+that their accuracy is limited by a low rate of convergence of Monte Carlo integration. The
+Smolyak method with an adaptive domain does not rely on Monte Carlo integration: it uses
+simulations only for constructing the solution domain, and it uses projection techniques to
+accurately solve the model on this domain; in this respect, it is similar to combinations of
+projection and simulation methods studied in Judd (2010, 2011, 2012). Fourth, in contrast to
+perturbation methods, the Smolyak method is a global solution method whose accuracy does
+not decline rapidly away from the steady state and that can be used to accurately solve models
+with strong non-linearities. Fifth, in our examples, we focus on equilibrium problems, however,
+the techniques described in the paper can be also used in the context of dynamic programming
+problems. Winschel and Krätzig (2010) show how to use the conventional Smolyak method in
+the context of canonical value function iteration, however, the Smolyak method can be used in
+the context of an endogenous grid method of Carroll (2005) and an envelope condition method of
+Maliar and Maliar (2013a) both of which can signi…cantly reduce the cost of conventional value
+function iteration. Finally, Brumm and Scheidegger (2013) parallelize a sparse grid method
+using piecewise local basis functions, and Valero et al. (2013) parallelize a Smolyak method
+using a global polynomial function; in particular, the latter article also implements parallel
+computation on a Blacklight supercomputer.
+Finally, the anisotropic-grid and adaptive-domain constructions, which we propose in the
+context of the Smolyak method, will also work for any projection solution method that operates
+on a hypercube domain including those based on tensor-product rules, e.g., Judd (1992). Also,
+these construction can be e¤ectively used in the context of low-dimensional problems. However,
+there are many ways to increase accuracy in problems with low dimensionality, in particular,
+one can increase the degree of polynomial approximations. In high-dimensional applications,
+increasing the polynomial degree might be too costly. Anisotropic grids or adaptive domain
+or their combination may be the only feasible alternative. This is why we advocate these
+techniques in the context of the Smolyak method applied to problems with high dimensionality.
+
+6.5
+
+Implementation details
+
+Our algorithm builds on techniques that are used in the related literature. To approximate
+expectation functions, we use a 10-node Gauss-Hermite quadrature rule. We could have used
+Monte Carlo integration but this would reduce the accuracy dramatically; see Judd et al. (2011)
+for a discussion.
+We consider two mappings
+: X ! [ 1; 1]2 that transform each possible value of state
+variables (k; ) 2 X
+R2 into a hypercube (which is a square in the two-dimensional case)
+2
+(x; y) 2 [ 1; 1] . One is a conventional rectangular domain for capital and productivity, and
+the other is a rectangular domain constructed on principal components of simulated series. The
+31
+
+rectangulars are chosen to enclose the cloud of simulated data as shown in Figure 3. (That
+is, we solve the model two times: we …rst compute a solution starting from some initial guess
+about the ergodic range, we then simulate time series, and we …nally recompute solutions
+more accurately using the rectangular domains that enclose the cloud of simulated data). In
+Appendix C, we provide further details on the construction of the two mappings.
+We use extrema of Chebyshev polynomials as unidimensional grid points, and we use a
+Chebyshev polynomial family as unidimensional basis functions; in this respect, we are similar
+to Krueger and Kubler(2004) and Malin et al. (2011). We use the damping parameter = 0:05,
+and we use the convergence criterion $ = 10 7 .
+Finally, as a measure of accuracy, we report the mean and maximum of unit-free Euler
+equation errors on a stochastic simulation of 10,000 observations. Our computer code is written
+in MATLAB 2012a, and we use a desktop computer with Intel(R) Core(TM) i7-2600 CPU (3.40
+GHz) with RAM 12GB. At the initial stage of this project, we bene…ted from consulting with
+the Fortran code of Malin et al. (2011).
+
+6.6
+
+Results for the representative agent model
+1
+
+We parameterize the model (38)–(40) by u (c) = c 1 1 , f (k) = k and ln 0 = ln + ",
+where the parameters are …xed at = 0:95, = 0:99 and = 1=3. We set the benchmark
+values of = 0:025, = 1 and = 0:01, and we consider variations in , and one-by-one,
+holding the remaining parameters at the benchmark values. Speci…cally, we consider
+= f0, 0:1, 0:2, 0:3, 0:4, 0:5, 0:6, 0:7, 0:8, 0:9, 1g ;
+= f1, 5, 10, 15, 20g ;
+= f0:001; 0:005, 0:01, 0:02, 0:03, 0:04, 0:05g :
+We use these parameterizations to test the performance of di¤erent versions of the Smolyak
+method introduced in the paper.
+6.6.1
+
+Conventional isotropic Smolyak grids under di¤erent approximation levels
+
+We …rst solve the model (38)–(40) using a baseline version of the Smolyak method under four
+approximation levels = 1, 2, 3, 4. Our baseline version is isotropic, i.e., has the same number
+of grid points for capital and productivity, and it operates on a rectangular domain in the
+original system of coordinates. The algorithm was able to converge in a wide range of the
+parameters and to produce highly accurate solutions.
+In Figure 7, we report the (unit-free) maximum residuals in the Euler equation (44) (expressed in log10 units).
+The residuals vary from about 1% under = 1 to 10 8 % under = 4. Therefore, the
+quality of approximation consistently increases with .
+6.6.2
+
+Anisotropic Smolyak grids
+
+We next consider anisotropic variants of the Smolyak method that use di¤erent numbers of grid
+points for di¤erent variables. We consider two possibilities ( 1 ; 2 ) = (3; 1) and ( 1 ; 2 ) = (1; 3).
+32
+
+Figure 7: Accuracy of the Smolyak method under di¤erent approximation levels.
+
+With these constructions, we have 9 elements in the …rst dimension and 3 elements in the second
+dimension, which results in 19 elements in total (i.e., 19 grid points and 19 basis functions);
+these are the elements distinguished in Section 4.2.2.
+Figure 8: Accuracy of the Smolyak method with anisotropic grid
+
+In Figure 8, we compare the maximum residuals in the Euler equation with anisotropic grids
+and isotropic grids. The medium line (the one with triangles) is our benchmark isotropic case
+= 2 that contains 13 polynomial terms.
+We observe that if we use more grid points in dimension of capital than in dimension
+of productivity, the anisotropic Smolyak method produces more accurate solutions than the
+benchmark isotropic Smolyak method, but if we have more grid points in productivity than
+in capital, the opposite is true. The di¤erence in accuracy between two anisotropic solutions
+can be as large as two orders of magnitude. These results illustrate the potential usefulness of
+anisotropic grids in economic applications.
+6.6.3
+
+Adaptive domain
+
+We next assess how the performance of the Smolyak method depends on the choice of the
+solution domain. We compare the accuracy of solutions of the Smolyak method that operates
+on the conventional hypercube with that of Smolyak technique that operates on the adaptive
+
+33
+
+Figure 9: Accuracy of the Smolyak method with adaptive domain
+
+rectangular domain. We compare the maximum residuals in the Euler equation under the
+conventional and adaptive domains in Figure 9.
+The maximum residuals in the Euler equation are about a half order of magnitude (i.e.,
+about 5 times) lower under the adaptive Smolyak domain than under the conventional Smolyak
+domain for the range of values for , and considered.
+
+6.7
+
+Results for the multicountry model
+
+We now explore the performance of the Smolyak-based projection method in the context of
+problems with high dimensionality. To this purpose, we extend the one-agent model (38)–(40)
+to include multiple agents. This is a simple way to expand the size of the problem and to have
+a control over its dimensionality.
+There are N agents, interpreted as countries, that di¤er in initial capital endowment and
+productivity level. The countries’productivity levels are a¤ected by both country-speci…c and
+worldwide shocks. We study the social planner’s problem. If agents are identical in preferences,
+the planner will allocate identical consumption to all agents. However, we do not make use
+of the symmetric structure of the economy, and we approximate the planner’s solution in the
+form of N capital policy functions, each of which depends on 2N state variables (N capital
+stocks and N productivity levels). We solve for N policy functions (k 0 )h = B h bh , where B h is a
+matrix of Smolyak basis functions evaluated in the Smolyak grid points and bh is a vector of the
+polynomial coe¢ cients for the countries h = 1; :::N . For each country, we use essentially the
+same computational procedure as the one used for the representative-agent model. The GaussHermite quadrature method builds on product rules and is not tractable in problems with high
+dimensionality. We replace it with monomial rules combined with Cholesky decomposition;
+see Judd et al. (2011) for a detailed description of these techniques. For a description of the
+multicountry model and details of the computational procedure, see Appendix F.
+In Figure 10, we compare four di¤erent solutions to the multicountry model, namely, the
+conventional solutions with = 2 and = 3, the anisotropic solution with h1 = 3 for the
+capital stocks and h2 = 2 for the productivity levels of all countries, h = 1; :::N (in the …gure,
+1
+N
+we denote this case as ( 1 ; 2 ) = (3; 2) which means 11 ; :::; N
+= (3; :::; 3; 2; :::; 2)).
+1 ; 2 ; :::; 2
+Finally, we report the solution with = 2 for the Smolyak method with an adaptive domain.
+34
+
+Figure 10: Accuracy and running time for the multicountry model
+
+We observe the following results from the …gure. First, the di¤erence between the isotropic
+solution with = 3 and that with = 2 is about two orders of magnitude. Second, by using
+an anisotropic grid, we can make half of the way between = 2 and = 3 in terms of the
+average residuals, and we obtain essentially identical maximum residuals. Third, the e¤ect of
+an adaptive domain is also quite sizable, namely, we can reduce the residuals up to one order
+of magnitude. Finally, we should draw attention to the computational expense of our solution
+method. We observe a clearly concave pattern for the running time in the logarithmic scale.
+This means that the expense grows slower than an exponential function, i.e., our implementation
+does not appear to be subject to the curse of dimensionality in the sense of Bellman (1961).
+Malin et al. (2011) also solve models with up to 10 countries (20 state variables); in
+particular, a symmetric speci…cation of Model I in their analysis is similar to the model studied
+in the present paper. For this model, their cost in seconds is 1, 59, 916, 7313, 38150 when the
+number of countries is 2, 4, 6, 8, 10, which grows faster than the exponential function. They
+use an approximation level = 2, and their program is written in Fortran. We di¤er in two
+respects: …rst, we implement the Smolyak method for interpolation by avoiding the repetitions,
+and second, we use a much cheaper version of …xed-point iteration than time iteration used in
+Malin et al. (2011). We solve a similar model with 10 countries in about 45 minutes using
+MATLAB. However, the third-level Smolyak approximation is expensive even for our e¢ cient
+implementation: we need almost 45 hours to solve a model with 10 countries, which increases
+accuracy by two orders of magnitude.
+Thus, the adaptive domain allows us to make about 1/3 way in terms of accuracy between
+= 2 and = 3 without a visible increase in cost. The anisotropic grid with ( 1 ; 2 ) = (3; 2)
+gives us essentially the same accuracy as = 3 but uses a considerably smaller number of grid
+points and basis function. However, our current implementation of the anisotropic Smolyak
+method does not allow us to translate a reduction in the number of Smolyak elements in a
+sizable cost reduction in this particular example.
+
+35
+
+7
+
+Conclusion
+
+The Smolyak method is designed to deal with high-dimensional applications. However, the
+cost of the Smolyak method still grows rapidly with dimensionality of the problem. In this
+paper, we propose a more e¢ cient implementation of the Smolyak method that reduces its
+computational expense, and we present extensions of the Smolyak method that allow us to
+increase its accuracy level while maintaining a …xed computational cost. The analytical and
+numerical techniques developed in the present paper are not limited to economic applications
+but can be used in other …elds.
+First, we propose a more e¢ cient implementation of the Smolyak method than the conventional one, namely, we avoid unnecessary repeated evaluations of basis functions when forming
+the Smolyak interpolant. E¢ cient implementation of interpolation is especially important in
+the context of numerical methods for solving dynamic economic models in which decision functions or value function need to be interpolated a very large number of times during the solution
+procedure, i.e., in each grid point, integration node or time period.
+Second, we propose an anisotropic version of the Smolyak grid which allows us to vary the
+number of grid points and basic functions by dimension. In a typical economic application,
+we know some properties of decision and value functions, and we may use this knowledge to
+represent such functions more e¢ ciently using the proposed anisotropic constructions.
+Third, we show an e¤ective transformation of the state space of a given economic model into
+a normalized hypercube used by the Smolyak method. We …nd that the best accuracy of approximations is attained when we use a minimum hypercube that encloses the high-probability
+set of a given economic model.
+The above three improvements are related to interpolation. Our last improvement is concerned with an iterative procedure for solving dynamic economic models. Time iteration used
+in the existing Smolyak methods rely on numerical solver while a version of …xed-point iteration used in the present paper involves only straightforward computation. This improvement,
+although minor in substance, allows us to achieve substantial economizing on cost, especially,
+in high-dimensional applications.
+
+References
+[1] Aruoba, S. B., Fernández-Villaverde, J. and J. Rubio-Ramírez, (2006). Comparing solution
+methods for dynamic equilibrium economies. Journal of Economic Dynamics and Control
+30, 2477-2508.
+[2] Aiyagari, R. (1994). Uninsured idiosyncratic risk and aggregate saving. Quarterly Journal
+of Economics 109(3), 659-684.
+[3] Barthelmann, V., E. Novak and K. Ritter, (2000). High-dimensional polynomial interpolation on sparse grids. Advances in Computational Mathematics 12, 273–288.
+[4] Bellman, R.E. (1961). Adaptive Control Processes. Princeton University Press, Princeton,
+NJ.
+36
+
+[5] Brumm, J. and S. Scheidegger, (2013). Using adaptive sparse grids to solve highdimensional dynamic models. Manuscript. University of Zurich.
+[6] Bungartz, H. and M. Griebel, (2004). Sparse grids. Acta Numerica 13, 147-269.
+[7] Carroll, K. (2005). The method of endogenous grid points for solving dynamic stochastic
+optimal problems. Economic letters 91, 312-320.
+[8] Christiano, L. and D. Fisher, (2000). Algorithms for solving dynamic models with occasionally binding constraints. Journal of Economic Dynamics and Control 24, 1179-1232.
+[9] Delvos, F., (1982). d-variate Boolean interpolation. Journal of Approximation Theory 34,
+99-114.
+[10] Den Haan, W. (1990). The optimal in‡ation path in a Sidrauski-type model with uncertainty. Journal of Monetary Economics 25, 389-409.
+[11] Fernández-Villaverde, J., G. Gordon, P. Guerrón-Quintana, and J. Rubio-Ramírez, (2012).
+Nonlinear adventures at the zero lower bound. NBER working paper 18058.
+[12] Garcke, J. (2011). Sparse grid tutorial. Manuscript.
+[13] Gaspar, J. and K. Judd, (1997). Solving large-scale rational-expectations models. Macroeconomic Dynamics 1, 45-75.
+[14] Gavilan-Gonzalez, A. and J. Rojas, (2009). Solving portfolio problems with the Smolyakparameterized expectations algorithm. Banco de España working paper 0838.
+[15] Gerstner, T. and M. Griebel, (2003). Dimension-adaptive tensor-product quadrature. Computng 71, 65-87.
+[16] Griebel, M., (1998). Adaptive sparse grid multilevel methods for elliptic PDEs based on
+…nite di¤erences. Computing 61, 151-179.
+[17] Gordon, G., (2011). Computing dynamic heterogeneous-agent economies. Penn Institute
+for Economic Research working paper 11-018.
+[18] Huggett, M., (1993). The risk-free rate in heterogeneous-agent incomplete-insurance
+economies. Journal of Economic Dynamics and Control 17, 953-969.
+[19] Judd, K., (1992). Projection methods for solving aggregate growth models. Journal of
+Economic Theory 58, 410-452.
+[20] Judd, K., (1998). Numerical Methods in Economics. Cambridge, MA: MIT Press.
+[21] Judd, K., L. Maliar and S. Maliar, (2010). A cluster-grid projection method: solving
+problems with high dimensionality. NBER working paper 15965.
+
+37
+
+[22] Judd, K., L. Maliar and S. Maliar, (2011). Numerically stable and accurate stochastic
+simulation approaches for solving dynamic models. Quantitative Economics 2, 173-210.
+[23] Judd, K., L. Maliar and S. Maliar, (2012). Merging simulation and projection approaches
+to solve high-dimensional problems, NBER 18501.
+[24] Kollmann, R., S. Maliar, B. Malin and P. Pichler, (2011). Comparison of solutions to the
+multi-country real business cycle model. Journal of Economic Dynamics and Control 35,
+186-202.
+[25] Krueger, D. and F. Kubler, (2004). Computing equilibrium in OLG models with production. Journal of Economic Dynamics and Control 28, 1411-1436.
+[26] Krueger, D. and F. Kubler, (2006). Pareto-improving social security reform when …nancial
+markets are incomplete? American Economic Review 96(3), 737-755.
+[27] Krusell, P. and A. Smith (1998). Income and wealth heterogeneity in the macroeconomy.
+Journal of Political Economy 106, 868-896.
+[28] Maliar, L. and S. Maliar, (2005). Solving nonlinear stochastic growth models: iterating on
+value function by simulations. Economics Letters 87, 135-140.
+[29] Maliar, L. and S. Maliar, (2013a). Envelope condition method versus endogenous grid
+method for solving dynamic programming problems. Economics Letters 120, 262–266.
+[30] Maliar, L. and S. Maliar, (2013b). Numerical methods for large scale dynamic economic
+models. in: Schmedders, K. and K. Judd (Eds.), Handbook of Computational Economics,
+Volume 3, Amsterdam: Elsevier Science (forthcoming).
+[31] Maliar, S., L. Maliar and K. Judd, (2011). Solving the multi-country real business cycle
+model using ergodic set methods. Journal of Economic Dynamic and Control 35, 207–228.
+[32] Maliar, L., S. Maliar and R. Valero, (2013). Error bounds for anisotropic Smolyak interpolation formula. Manuscript, http://www.stanford.edu/~maliarl/.
+[33] Malin, B., D. Krueger and F. Kubler, (2011). Solving the multi-country real business cycle
+model using a Smolyak-collocation method. Journal of Economic Dynamics and Control
+35, 229-239.
+[34] Marcet, A., (1988). Solving non-linear models by parameterizing expectations. Manuscript,
+Carnegie Mellon University, Graduate School of Industrial Administration.
+[35] Marcet, A., and G. Lorenzoni (1999). The parameterized expectation approach: some
+practical issues. In: R. Marimon and A. Scott (Eds.) Computational Methods for Study
+of Dynamic Economies. Oxford University Press, New York, pp. 143-171.
+[36] Marcet, A. and T. Sargent, (1989). Convergence of least-squares learning in environments
+with hidden state variables and private information. Journal of Political Economy 97,
+1306-1322.
+38
+
+[37] Miranda, M. and P. Helmberger (1988). The e¤ects of commodity price stabilization programs. American Economic Rewiev 78, 46-58.
+[38] Patterson, T., (1968). The optimum addition of points to quadrature formulae. Math.
+Comp. 22, 847-856.
+[39] Powell W., (2011). Approximate Dynamic Programming. Wiley: Hoboken, New Jersey.
+[40] Quarteroni, A., Sacco, R., and F. Saleri, (2000). Numerical Mathematics. Springer, New
+York.
+[41] Rios-Rull, J. V., (1997). Computing of equilibria in heterogeneous agent models. Federal
+Reserve Bank of Minneapolis Sta¤ Report 231.
+[42] Rust, J., (1997). Using randomization to break the curse of dimensionality. Econometrica
+65, 487-516.
+[43] Smith, A., (1991). Solving stochastic dynamic programming problems using rules of thumb.
+Queen’s University. Economics Department. Discussion Paper 816.
+[44] Smith, A. (1993). Estimating nonlinear time-series models using simulated vector autoregressions. Journal of Applied Econometrics, 8, S63-S84.
+[45] Smolyak, S., (1963). Quadrature and interpolation formulas for tensor products of certain
+classes of functions, Dokl. Akad. Nauk 148, 1042-1045.
+[46] Tauchen, G. and R. Hussey, (1991). Quadrature-based methods for obtaining approximate
+solutions to nonlinear asset pricing models. Econometrica 59, 371-396.
+[47] Valero, R., Maliar, S. and L. Maliar (2013). Smolyak method: are supercomputers useful
+for solving large scale dynamic economic models? Manuscript.
+[48] Wasilkowski, G. and H. Woźniakowski, (1995). Explicit cost bounds of algorithms for
+multivariate tensor-product problems. Journal of Complexity 11, 1-56.
+[49] Winschel, V. and M. Krätzig, (2010). Solving, estimating and selecting nonlinear dynamic
+models without the curse of dimensionality. Econometrica 78(2), 803-821.
+[50] Wright, B. and J. Williams (1984). The welfare e¤ects of the introduction of storage.
+Quarterly Journal of Economics 99, 169-192.
+
+Appendices
+This section contains some supplementary results. In Appendix A, we describe how to construct
+unidimensional Smolyak grid points and basis functions. In Appendix B, we develop the formula
+for the Smolyak interpolant in the two-dimensional example with = 2. In Appendix C, we
+show an example of constructing adaptive domain. Finally, in Appendix D, we describe the
+multicontry model and the solution algorithm.
+39
+
+Appendix A: Unidimensional Smolyak grid points and basis functions
+To construct multidimensional Smolyak grid points and basis functions, we must …rst specify
+unidimensional grid points and basis functions. Many choice are possible. For example, we can
+consider a family of ordinary polynomials, f1; x; x2 ; :::g and grid points generated by dividing
+the interval [ 1; 1] into 2i 1 equal parts, i
+2 (for i = 1 we assume a grid point 0). In this
+manner, for i = 2, we have grid points f 1; 0; 1g and we have basis functions f1; x; x2 g; for
+i = 3, we have grid points
+1; 21 ; 0; 12 ; 1 , and we use basis functions f1; x; x2 ; x3 ; x4 g, etc.
+Another possibility is to use Chebyshev polynomials as basis functions and extrema of
+such polynomials as grid points. Approximations based on Chebyshev polynomials have two
+useful properties. First, there always exists a unique set of coe¢ cients such that a Chebyshev
+polynomial function matches M given values at M grid points. Second, approximations are
+uniformly accurate, and error bounds are established. We stick to this choice in our analysis.
+Chebyshev polynomials are de…ned in the interval [ 1; 1] with a recursive relation: T0 (x) =
+1, T1 (x) = x, and Tn (x) = 2xTn 1 (x) Tn 2 (x) for n 2.7 Chebyshev polynomial of degree
+n 1 has n extrema. Let nj be a jth extremum of Chebyshev polynomial of degree n 1 with
+j = 1; :::; n,
+(j 1)
+n
+:
+cos
+j =
+n 1
+Table 6 presents Chebyshev polynomials of degree n 1 and their n extrema (for the polynomial
+of degree 0, the extremum is assumed to be 0). Note that the sequence of unidimensional
+Table 6: Extrema of Chebyshev polynomials and construction of Smolyak points in the unidimensional case
+
+n
+
+Chebyshev polynomial of degree n 1
+Tn 1 (x) = cos (n 1) cos 1 (x)
+
+1
+
+1
+
+2
+
+x
+
+1;
+
+2x2
+
+1
+
+4
+
+4x3
+
+3x
+
+8x4
+
+1
+
+0
+
+3
+
+5
+
+n extrema of the polynomial of degree n
+(j 1)
+n
+cos( n 1 ); j = 1; :::; n
+j =
+
+1
+
+1
+
+0
+1
+;
+2
+
+1;
+
+8x2 + 1
+
+1
+
+1
+p
+2
+
+1
+1
+;
+2
+
+0
+
+1
+1
+p
+2
+
+1
+
+Chebyshev polynomials and their extrema cannot be used in Smolyak formula (5) because such
+sequence does not satisfy Conditions 1 and 2 of Section 2.5, namely, the number of extrema
+is equal to i, with i = 1, 2, 3; :::, and not to 2i 1 + 1 as required by Condition 1, and the
+7
+
+Tn
+
+In terms of basis function
+(x) = n (x).
+
+that was used in the main text and that is used later in Appendix B, we have
+
+1
+
+40
+
+consecutive sets are not nested as required by Condition 2. However, there is a subsequence
+of this sequence that satis…es both Conditions 1 and 2, and is suitable for the conventional
+interpolation formula. Namely, we select a subsequence in which the number of extrema is
+m (i) = 1, 3, 5, 9, 17, ::: for i = 1; 2; 3; 4; 5:::, respectively (the …rst three sets of such a sequence
+are in-boxed elements in the last column of the table).
+Therefore, the unidimensional Smolyak basis functions and grid points are as follows: for
+i = 1, a grid point is f0g and a basis function is f1g; for i =n2, grid points
+o are f 1; 0; 1g and
+basis functions are f1; x; 2x2 1g; for i = 3, grid points are
+1; p12 ; 0 and basis functions
+are f1; x; 2x2
+
+1; 4x3
+
+3x; 8x4
+
+8x2 + 1g; etc.
+
+=2
+
+Appendix B: Smolyak interpolant under
+
+We compare two alternative formulas for Smolyak interpolation in the two-dimensional case
+under the approximation level = 2. One is the conventional formula with repeated basis
+functions and the other is an alternative formula introduced in the present paper.
+Conventional Smolyak interpolation formula. We consider the conventional Smolyak
+formula for interpolation in the two-dimensional case, d = 2, under the approximation level
+= 2. Condition max (d; + 1) jij
++ d in (5) becomes 2 i1 + i2 4. We use (7) to
+form pi1 ;i2 . In particular, p1;1 , p1;2 and p2;1 are given by (8)–(10), respectively. For the remaining
+polynomials, p2;2 , p3;1 and p1;3 , we have
+m(2) m(2)
+
+p
+
+2;2
+
+=
+
+XX
+
+b `1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b11 + b21
+
+2 (x)
+
++ b31
+
+3 (x)
+
+`1 =1 `2 =1
+
++ b12
+
+2 (y)
+
++ b22
+
+2 (x)
+
+2 (y)
+
++ b32 3 (x) 2 (y)
++ b13 3 (y) + b23 2 (x)
+
+3 (y)
+
++ b33
+
+3 (x)
+
+3 (y);
+
+m(3) m(1)
+
+p
+
+3;1
+
+=
+
+XX
+
+b `1 ` 2
+
+`1 (x)
+
+`2 (y)
+
+`1 =1 `2 =1
+
+= b11 + b21
+
+2 (x)
+
++ b31
+
+3 (x)
+
++ b41
+
+4 (x)
+
++ b51
+
+5 (x);
+
++ b14
+
+4 (y)
+
++ b15
+
+5 (y):
+
+m(1) m(3)
+
+p
+
+1;3
+
+=
+
+XX
+
+b `1 `2
+
+`1 (x)
+
+`2 (y)
+
+`1 =1 `2 =1
+
+= b11 + b12
+
+2 (y)
+
++ b13
+
+3 (y)
+
+Furthermore, pj2j and pj3j are de…ned before in (11) and (12), respectively. A new combination of polynomials with jij = i1 + i2 = 4 is given by
+pj4j
+
+p2;2 + p3;1 + p1;3 :
+41
+
+Smolyak polynomial function (7) for the case
+fb2;2 (x; y; b) =
+
+X
+
+( 1)d+
+
+d
+d+
+
+jij
+
+max(d; +1) jij d+
+
+=
+
+X
+
+( 1)4
+
+jij
+
+3 jij 4
+
+1
+=
+
+1
+
+1 p
+
+j3j
+
+pjij
+
+jij
+
+pjij =
+
+jij
+
+4
+
+= 2 is given by
+
+X
+
+( 1)4
+
+jij
+
+3 jij 4
+
+1
+jij)!
+
+(4
+
+pjij
+
++ 1 pj4j
+
+= 1 (p2;1 + p1;2 ) + 1 p2;2 + p3;1 + p1;3
+= b11 + b21 2 (x) + b31 3 (x) + b12 2 (y) + b22 2 (x) 2 (y)
++ b32 3 (x) 2 (y) + b13 3 (y) + b23 2 (x) 3 (y) + b33 3 (x) 3 (y)
++ b41 4 (x) + b51 5 (x) + b14 4 (y) + b15
+
+5 (y):
+
+As expected, the conventional Smolyak formula gives us the same thirteen basis functions as
+distinguished in (19).
+Smolyak interpolation formula without repeated basis functions Let us now illustrate
+the use of interpolation formula (25) without repetitions. Here, we have d jij
++ d, which
+means 2 i1 + i2 4. We use formula (27) to form q i1 ;i2 . In particular, q 1;1 , q 1;2 and q 2;1 are
+given by (28)–(30), respectively. For the remaining polynomials, q 2;2 , q 3;1 and q 1;3 , we obtain
+m(2)
+
+q
+
+2;2
+
+=
+
+m(2)
+
+X
+
+X
+
+b `1 ` 2
+
+`1 (x)
+
+`2 (y)
+
+= b22
+
+2 (x)
+
+2 (y)
+
++ b32
+
+3 (x)
+
+2 (y)
+
+`1 =m(1)+1 `2 =m(1)+1
+
++ b13
+m(3)
+
+q
+
+3;1
+
+=
+
+X
+
+m(1)
+
+m(1)
+
+m(3)
+
+X
+
+3 (y)
+
++ b23
+
+2 (x)
+
+3 (y)
+
++ b33
+
+b `1 ` 2
+
+`1 (x)
+
+`2 (y)
+
+= b41
+
+4 (x)
+
++ b51
+
+5 (x);
+
+b ` 1 `2
+
+`1 (x)
+
+`2 (y)
+
+= b14
+
+4 (y)
+
++ b15
+
+5 (y):
+
+3 (x)
+
+3 (y);
+
+`1 =m(2)+1 `2 =m(0)+1
+
+q
+
+1;3
+
+=
+
+X
+
+X
+
+`1 =m(0)+1 `2 =m(2)+1
+j2j
+
+Furthermore, q and q j3j are de…ned before in (31) and (32), respectively. A new sum with
+jij = i1 + i2 = 4 is given by
+q j4j q 2;2 + q 3;1 + q 1;3 :
+The Smolyak polynomial function (27) for the case of
+X
+fb(x; y; b) =
+q jij = q j2j + q j3j + q j4j
+
+= 2 is given by
+
+d jij d+
+
+= b11 + b21 2 (x) + b31 3 (x) + b12 2 (y) + b22 2 (x) 2 (y)
++ b32 3 (x) 2 (y) + b13 3 (y) + b23 2 (x) 3 (y) + b33 3 (x) 3 (y)
++ b41 4 (x) + b51 5 (x) + b14 4 (y) + b15
+42
+
+5 (y):
+
+Again, as expected, our interpolation formula gives the same 13 basis functions as those distinguished in (19) for the conventional Smolyak interpolation formula.
+
+Appendix C: Adaptive domain
+We show how to adapt the Smolyak hypercube to the high-probability area of the state space in
+the context of the representative agent model (38)–(40). Our objective is to de…ne a mapping
+that transforms each possible value of state variables (k; ) into (x; y) 2 [ 1; 1]2 . Below, we
+show two ways of constructing the mapping , one uses the original coordinates and the other
+uses principal components of the original coordinates.
+Standard hypercube. Consider a cloud of simulated data fkt ; t gt=1;:::;T shown in Figure 5.
+Let us de…ne k; k and ; as intervals for the state variables that we observe in simulation
+(the rectangular k; k
+; is the larger rectangular shown in Figure 5. Consider the following
+linear transformation of (k; ) 2 k; k
+; into (x; y) 2 [ 1; 1]2
+x=2
+
+k
+k
+
+k
+k
+
+1 and y = 2
+
+1:
+
+(49)
+
+By using (49) and its inverse, we can move from k; k
+; to [ 1; 1]2 . Malin et al. (2011)
+)], where the
+set bounds exogenously at k; k = [0:8; 1:2] and ;
+= [exp( 10:8 ); exp( 0:8
+1
+steady state of both capital and productivity level is one. Our own analysis shows that the best
+accuracy is attained if the intervals k; k and ; are chosen to enclose the set of simulated
+data as shown in Figure 5.
+Adaptive parallelotope. We now describe how to construct the adaptive (inclined) rectangular in Figure 5. To map the state variables into a unit square, we use a principal component
+(PC) transformation of the time series as described in Section 5 and illustrated in Figure 6. We
+…rst normalize the simulated data fkt ; t gt=1;:::;T to have zero mean and unit variance by
+
+where
+
+U 2 RT
+
+2
+
+are means, and
+
+k
+k
+
+and V 2 R2
+
+k
+
+and
+
+and et =
+
+t
+
+;
+
+(50)
+
+are standard deviations of of capital2 and shock,
+3
+e
+k1 e1
+6 ..
+.. 7,
+respectively. We then compute the SVD decomposition Y = U SV > , where Y
+4 .
+. 5
+e
+kT eT
+k
+
+and
+
+kt
+e
+kt =
+
+2
+
+are orthogonal matrices,
+and 3S 2 R2 2 is a diagonal matrix of
+2
+x
+z1 z1y
+6
+.. 7 2 RT 2 . Let [z x ; z x ] and [z y ; z y ]
+singular values. We …nd Z
+Y V , where Z = 4 ...
+. 5
+x
+zT zTy
+43
+
+be the intervals for the resulting principal components fztx ; zty gt=1;:::;T . We map each (z x ; z y ) 2
+[z x ; z x ] [z y ; z y ] into (x; y) 2 [ 1; 1]2 using
+x=2
+
+zx
+zx
+
+zx
+zx
+
+1 and y = 2
+
+zy
+zy
+
+zy
+zy
+
+(51)
+
+1:
+
+To go back to the state space of the model, we …rst …nd (z x ; z y ) that correspond to a given pair
+>
+(x; y) using (51), we then apply an inverse PC transformation to get e
+k; e = V 1 (z x ; z y )>
+
+and …nally, we compute (k; ) using the inverse of (50).
+In our experiments, we typically recompute solutions two times: First, we solve the model
+using the standard rectangular domain in the original system of coordinates for some guess
+k; k
+; . After the decision functions were computed, we simulate the model and use the
+time series solution fkt ; t gt=1;:::;T either to re…ne the guess on the bounds k, k, and for
+constructing the conventional domain or to compute k , , k , , V , z x , z x , z y and z y for
+constructing the adaptive domain.
+
+Appendix D: Smolyak-based projection methods for problems with
+high dimensionality
+We describe the multicountry model studied in Section 6.7 and provide further computational
+details about the Smolyak method that was used to produce numerical solutions in that section.
+Appendix D1. Multicountry model
+We test the performance of the Smolyak-based projection method in the context of the multiagent model studied in Judd (2010, 2011, 2012). This allows us to compare the performance of
+the Smolyak method with other approaches tractable in high-dimensional applications.
+A world economy consists of a …nite number of agents N , interpreted as countries. Each
+country h 2 f1; :::; N g is populated by a representative consumer. A social planner solves the
+following maximization problem:
+"1
+#
+N
+X
+X
+h
+t h
+E0
+u cht
+max
+(52)
+h=1;:::;N
+h ;k h
+c
+f t t+1 gt=0;:::;1 h=1
+t=0
+subject to the aggregate resource constraint,
+N
+X
+
+cht
+
++
+
+h=1
+
+N
+X
+
+h
+kt+1
+
+=
+
+h=1
+
+N
+X
+
+kth
+
+(1
+
+)+
+
+h=1
+
+N
+X
+
+h
+h
+t Af
+
+kth ;
+
+(53)
+
+h=1
+
+and to the process for the countries’productivity levels,
+ln
+
+h
+t+1
+
+= ln
+
+h
+t
+
++
+
+h
+t+1 ;
+
+44
+
+h = 1; :::; N;
+
+(54)
+
+h=1;:::;N
+
+is exogenously given, and the productivity shocks follow
+where initial condition k0h ; h0
+>
+1
+a multivariate Normal distribution t+1 ; :::; N
+N (0N ; ) with 0N 2 RN being a vector
+t+1
+of zero means and 2 RN N being a variance-covariance matrix. We assume that shocks of
+N (0; 2 ) is a countrydi¤erent countries are given by ht+1 = & ht + & t , h = 1; :::; N , where & ht
+2
+speci…c component, and 0
+&t
+N (0; ) is 1a worldwide component. The resulting variance
+2
+2
+2
+...
+covariance matrix is = @ ... ... ... A.
+2
+... 2 2
+In the problem (52)–(54), Et is the operator of conditional expectation; cht , kth , ht and h
+are a country’s h consumption, capital, productivity level and welfare weight, respectively;
+2 (0; 1) is the discount factor; 2 (0; 1] is the depreciation rate; A is a normalizing constant
+in the production function;
+2 ( 1; 1) is the autocorrelation coe¢ cient. The utility and
+production functions, uh and f h , respectively, are strictly increasing, continuously di¤erentiable
+and concave. We assume that all countries have identical preferences and technology, i.e. uh = u
+and f h = f for all h. Under these assumptions, the planner assigns equal weights, h = 1, and
+therefore, equal consumption to all countries, cht = ct for all h = 1; ::; N .
+Appendix D2. Algorithm for the multicountry model
+The solution to the model (52)–(54) satis…es N Euler equations:
+h
+kt+1
+= Et
+
+u0 (ct+1 )
+1
+u0 (ct )
+
++
+
+h
+0
+t+1 Af
+
+h
+kt+1
+
+h
+kt+1
+;
+
+h = 1; :::; N;
+
+where u0 and f 0 are the …rst derivatives of u and f , respectively.
+We approximate the planner’s solution as N capital policy functions K h
+
+kth ;
+
+(55)
+
+h h=1;:::;N
+t
+
+.
+
+b h k h ; h h=1;:::;N ; bh , h = 1; :::; N , are countryNote that our approximating functions K
+t
+t
+speci…c. In e¤ect, we treat countries as completely heterogeneous even if they are identical
+in fundamentals and have identical optimal policy functions. This allows us to assess costs
+associated with computing solutions to models with heterogeneous preferences and technology.
+Steps of the Smolyak-based projection method. The Smolyak method, described for
+the representative agent model in the main text, can be readily extended to the multicountry
+case.
+Initialization:
+(a) Choose the level of approximation, .
+h=1;:::;N
+0
+b h kth ; ht h=1;:::;N ; bh which is
+(b) Parameterize k h = K h kth ; ht
+with K
+a Smolyak interpolant constructed using Chebyshev unidimensional basis functions.
+h=1;:::;N
+
+(c) Construct a Smolyak grid H2N; = xhn ; ynh n=1;:::;M on the hypercube [ 1; 1]2N , as
+described in Section 3 and 4 for isotropic and anisotropic cases, respectively.
+45
+
+(d) Compute Smolyak basis functions P 2N; in each grid point n as described in Section
+3 for the isotropic case or in Section 4 for the anisotropic case. The resulting M M
+matrix is B.
+h h
+(e) Choose the relevant ranges of values
+h for 1 ikt ; t
+puted. The resulting hypercube is k 1 ; k
+:::
+
+h=1;:::;N
+
+oni which a solution is com;
+.
+h
+i
+1
+in the original hypercube k 1 ; k
+
+h
+
+N
+
+h=1;:::;N
+
+N
+
+(f) Construct a mapping between points knh ; hn
+h
+i
+N
+h=1;:::;N
+N
+in the normalized hypercube [ 1; 1]2N using
+:::
+and points xhn ; ynh
+;
+either a linear change of variables of type (49) or principal component transformation
+of type (51); see Section 5.
+h
+i
+h
+i
+1
+N
+N
+: k1; k
+:::
+! [ 1; 1]2N :
+(56)
+;
+
+(g) Choose integration nodes,
+
+h h=1;:::;N
+,
+j
+
+and weights, ! j , j = 1; :::; J.
+n
+o
+0 h=1;:::;N
+0
+h
+(h) Construct next-period productivity,
+with hn;j =
+n;j
+for all j and n.
+(1)
+
+(k) Make an initial guess on the coe¢ cients vectors (b1 )
+(i)
+
+Iterative cycle. At iteration i, given (b1 )
+
+; :::; bN
+
+(i)
+
+; :::; bN
+
+(1)
+
+h
+n
+
+exp
+
+h
+j
+
+.
+
+, perform the following steps.
+
+Step 1. Computation of the capital choice.
+(i)
+0
+Compute knh = Bn bh , where Bn is the nth row of B for n = 1; :::; M .
+Step 2. Computation of the consumption choice.
+n
+oh=1;:::;N
+h h=1;:::;N
+h h
+h 0
+Compute cn
+satisfying (53) given kn ; n ; kn
+for n = 1; :::; M .
+Step 3. Approximation of conditional expectation.
+For n = 1; :::; M ,
+
+(a) compute:
+n
+o
+n
+o
+0 h=1;:::;N
+0
+0 h=1;:::;N
+h
+h
+h
+h 0
+– xn;j ; yn;j
+that correspond to
+kn ; n;j
+using the inverse of transformation (56);
+o
+n
+0
+0 h=1;:::;N
+h
+; the resulting
+–Smolyak basis functions P 2N; in each point xhn;j ; yn;j
+0
+M M J matrix is Bn;j
+;
+n
+o
+0 h=1;:::;N
+00
+(i)
+0
+h
+0
+0
+– kn;j
+= Bn;j
+bh , where Bn;j
+are basis functions evaluated in knh ; hn;j
+using the transformation (56) for all j;
+n
+o
+n
+o
+0
+0 h=1;:::;N
+0
+00 h=1;:::;N
+h
+– chn;j
+satisfying (53) given knh ; hn;j ; kn;j
+for n = 1; :::; M ;
+46
+
+(b) evaluate conditional expectation:
+8 0
+0
+J <
+h
+uh1 chn;j
+X
+ehn
+!j @
+1
+h)
+:
+u1
+(c
+n
+j=1
+
+0
+h
+n;j
+
++
+
+f1h
+
+knh
+
+0
+
+i
+
+Step 4. Computation of the coe¢ cients.
+n oh=1;:::;N
+Find bbh
+that solves ehn = Bnbbh , i.e., bbh = Bn 1 ehn .
+
+19
+=
+0
+knh A :
+;
+
+Step 5. Updating of the coe¢ cients vectors.
+For each h = 1; :::; N , compute the coe¢ cients vector for the subsequent iteration i + 1
+using …xed-point iteration,
+bh
+where
+
+(i+1)
+
+= (1
+
+) bh
+
+2 (0; 1) is a damping parameter.
+
+(i)
+
++ bbh :
+
+(57)
+
+Iterate on Steps 1–5 until convergence of the solution,
+1
+MN
+0 (i+1)
+
+M X
+N
+X
+n=1 h=1
+
+knh
+
+0 (i+1)
+(i)
+(knh )0
+
+knh
+
+0 (i)
+
+< 10
+
+#
+
+(58)
+
+;
+
+0 (i)
+
+where knh
+and knh
+are the hth country’s capital choices on the grid obtained on
+iterations i + 1 and i, respectively, and # > 0.
+c1
+
+1
+
+Computational details. To solve the model, we assume u (ct ) = t1
+, f (kt ) = kt with
+= 0:36, = 0:99, = 0:95 and we vary , and . We start iterations from an arbitrary
+h
+= 0:9kth + 0:1 ht for all h = 1; :::N (this
+initial guess on the capital decision function, kt+1
+guess matches the steady-state level of capital). To approximate integrals, we use a monomial
+integration rule with 2N nodes combined with Cholesky decomposition; see Judd et al. (2011)
+for a description of these techniques. We set the damping parameter in (57) at = 0:05, and
+we set the tolerance parameter in convergence criterion (58) at # = 7.
+
+47
+
+

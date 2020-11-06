@@ -1,0 +1,7962 @@
+NBER WORKING PAPER SERIES
+
+ESTIMATING DYNAMIC EQUILIBRIUM MODELS WITH STOCHASTIC VOLATILITY
+Jesus Fernandez-Villaverde
+Pablo A. Guerrón-Quintana
+Juan Rubio-Ramírez
+Working Paper 18399
+http://www.nber.org/papers/w18399
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+September 2012
+
+We thank the NSF for financial support. The views expressed herein are those of the authors and do
+not necessarily reflect the views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2012 by Jesus Fernandez-Villaverde, Pablo A. Guerrón-Quintana, and Juan Rubio-Ramírez. All
+rights reserved. Short sections of text, not to exceed two paragraphs, may be quoted without explicit
+permission provided that full credit, including © notice, is given to the source.
+
+Estimating Dynamic Equilibrium Models with Stochastic Volatility
+Jesus Fernandez-Villaverde, Pablo A. Guerrón-Quintana, and Juan Rubio-Ramírez
+NBER Working Paper No. 18399
+September 2012
+JEL No. C1,E30
+ABSTRACT
+We propose a novel method to estimate dynamic equilibrium models with stochastic volatility. First,
+we characterize the properties of the solution to this class of models. Second, we take advantage of
+the results about the structure of the solution to build a sequential Monte Carlo algorithm to evaluate
+the likelihood function of the model. The approach, which exploits the profusion of shocks in stochastic
+volatility models, is versatile and computationally tractable even in large-scale models, such as those
+often employed by policy-making institutions. As an application, we use our algorithm and Bayesian
+methods to estimate a business cycle model of the U.S. economy with both stochastic volatility and
+parameter drifting in monetary policy. Our application shows the importance of stochastic volatility
+in accounting for the dynamics of the data.
+
+Jesus Fernandez-Villaverde
+University of Pennsylvania
+160 McNeil Building
+3718 Locust Walk
+Philadelphia, PA 19104
+and NBER
+jesusfv@econ.upenn.edu
+Pablo A. Guerrón-Quintana
+Federal Reserve Bank of Philadelphia
+pablo.guerron@phil.frb.org
+
+Juan Rubio-Ramírez
+Duke University
+P.O. Box 90097
+Durham, NC 27708
+juan.rubio-ramirez@duke.edu
+
+1. Introduction
+Over the last few years, economists have uncovered the importance of time-varying volatility in
+accounting for the dynamics of U.S. aggregate data. Stock and Watson (2002) and Sims and
+Zha (2006) are some prominent examples of this line of research. As a response, a growing
+literature has developed to investigate the origins and consequences of time-varying volatility. A
+particularly successful branch of this literature uses dynamic equilibrium models to emphasize the
+role of volatility shocks (also known as uncertainty shocks, but in any case speci…ed as stochastic
+volatility as in Shephard, 2008) in business cycle ‡uctuations. Among those we can highlight are
+Bloom et al. (2007), Fernández-Villaverde and Rubio-Ramírez (2007), Justiniano and Primiceri
+(2008), Bloom (2009), Fernández-Villaverde et al. (2010c), and Bloom et al. (2012). In these
+models, there are two types of shocks: structural shocks (shock to productivity, to preferences,
+to policy, etc.) and volatility shocks (shocks to the standard deviation of the innovations to the
+structural shocks).
+To ful…ll the promise in this literature, it is crucial to have a set of tools to take these dynamic
+equilibrium models with stochastic volatility to the data. Namely, we want to estimate, evaluate,
+and compare these models using a likelihood-based approach. However, the task is complicated
+by the inherent non-linearity that stochastic volatility generates. By construction, linearization is
+ill-equipped to handle time-varying volatility models because it yields certainty-equivalent policy
+functions. That is, volatility in‡uences neither the agents’decision rules nor the laws of motion
+of the aggregate variables. Hence, to consider how volatility a¤ects those, it becomes imperative
+to employ a non-linear solution method for the dynamics of the economy. Once we consider
+non-linear solution methods we are forced to use simulation-based estimators of the likelihood.
+In principle, and beyond the computational burden, this could seem a mild challenge. For
+instance, one could be tempted to get around this problem by solving the model non-linearly with
+a fast algorithm and employing, for estimation, a particle …lter to get an unbiased simulationbased estimator of the likelihood. The particle …lter presented in Fernández-Villaverde and RubioRamírez (2007) would be a natural candidate for such an undertaking. Unfortunately, that version
+of the particle …lter relies, when estimating models with stochastic volatility, on the presence of linear measurement errors in observables. Otherwise, we would be forced to solve a large quadratic
+system of equations with multiple solutions, an endeavor for which there are no suitable algorithms. Although measurement errors are both plausible and empirically relevant, their presence
+3
+
+complicates the interpretation of the results. Thus, it is desirable to consider a particle …lter that
+departs from requiring measurement errors.
+To accomplish this goal, we show how to write a particle …lter that allows us to evaluate
+the likelihood of a dynamic equilibrium model with stochastic volatility by exploiting the structure of the second-order approximation to the decision rules that characterize the equilibrium
+of the economy without the need of measurement errors. Second-order approximations capture
+the implications of stochastic volatility and are convenient because they are accurate but not
+computationally expensive.
+We achieve the objective in two steps. First, we characterize the second-order approximation
+to the decision rules of a rather general dynamic equilibrium model with stochastic volatility.1
+Second, we demonstrate how we can use this characterization to handily simulate the likelihood
+function of the model with a particle …lter without measurement errors. The key is to show how
+the decision rules characterization reduces the quadratic problem associated with the evaluation
+of the approximated measurement density to a much simpler matrix inversion problem. This is a
+novel extension of sequential Monte Carlo methods that can be useful for other applications. After
+we have evaluated the likelihood, we can combine it with a prior and an Markov chain Monte
+Carlo (McMc) algorithm to draw from the posterior distribution (Flury and Shephard, 2011).
+Our characterization of the second-order approximation to the decision rules should be of
+interest in itself even for researchers who are not evaluating the likelihood of their model but who
+are keen to understand how the model works. Among others, the results are useful to analyze the
+equilibrium of the model, to explore the shape of its impulse-response functions, or to calibrate
+it.
+More concretely, we prove that:
+1. The …rst-order approximation to the decision rules of the agents (or any other equilibrium
+object of interest) does not depend on volatility shocks and they are certainty equivalent.
+2. The second-order approximation to the decision rules of the agents only depends on volatility
+shocks on terms where volatility is multiplied by the innovation to its own structural shock.
+For instance, if we have two structural shocks (a productivity and a preference shock) and
+1
+
+These theorems generalize previous results derived by Schmitt-Grohé and Uribe (2004), for the homoscedastic
+shocks case to the time-varying case.
+
+4
+
+a volatility shock to each of them, the only non-zero term where the volatility shock to
+productivity appears is the one where the volatility shock to productivity multiplies the
+innovation to the productivity shock. Thus, of the terms in the second-order approximation
+that complicate the evaluation of the likelihood function, only a few are non-zero.
+3. The perturbation parameter will only appear in a non-zero term where it is raised to a
+square. This term is a constant that corrects for precautionary behavior induced by risk.
+As an application, we estimate a dynamic equilibrium model of the U.S. economy with stochastic volatility using the particle …lter and Bayesian methods. The model, an otherwise standard
+business cycle model with nominal rigidities, incorporates not only stochastic volatility in the
+shocks that drive its dynamics but also parameter drifting in the parameters that control monetary policy. In that way, we include two of the main mechanisms that researchers have highlighted
+to account for the time-varying volatility of U.S. data: heteroscedastic shocks and parameter drifting. We include these together in the model because a “one-at-a-time” investigation is fraught
+with peril. If we allow only one source of variation in the model, the likelihood may want to take
+advantage of this extra degree of ‡exibility to …t the data better. For example, if the “true”model
+is one with parameter drifting in monetary policy, an estimated model without drift but with stochastic volatility in one of the structural shocks may interpret the “true” drift as time-varying
+volatility in that shock. If, instead, we had time-varying volatility in technological shocks in the
+data, an estimated model without stochastic volatility and only parameter drifting may conclude,
+erroneously, that the parameters of monetary policy are changing. Lastly, we have a model that
+is as rich as the models employed by policy-making institutions in real life. While solving and
+estimating such a large model is a computational challenge, we wanted to demonstrate that our
+procedure is of practical use and to make our application a blueprint for the estimation of other
+dynamic equilibrium models.
+Our main empirical …ndings are as follows. First, the posterior distribution of parameters
+puts most of its mass in areas that denote a fair amount of stochastic volatility, yet another
+proof of the importance of time-varying volatility in applied models. Second, a model comparison
+exercise indicates that, even after controlling for stochastic volatility, the data clearly prefer a
+speci…cation where monetary policy changes over time. This …nding should not be interpreted,
+though, as implying that volatility shocks did not play a role of their own. It means, instead,
+
+5
+
+that a successful model of the U.S. economy requires the presence of both stochastic volatility
+and parameter drifting, a result that challenges the results of Sims and Zha (2006). Finally, we
+document the evolution of the structural shocks, of stochastic volatility, and the parameters of
+monetary policy. We emphasize the con‡uence, during the 1970s, of times of high volatility and
+weak responses to in‡ation, and, during the 1990s, of positive structural shocks and low volatility
+even if monetary policy was weaker than often argued. In the appendix, we thoroughly explore
+the model, including the construction of counterfactual histories of the U.S. data by varying
+some aspect of the model such as shutting down time-varying volatility or imposing alternative
+monetary policies.
+An alternative to our stochastic volatility framework would be to work with Markov regimeswitching models such as those of Bianchi (2009) or Farmer et al. (2009). This class of models
+provides an extra degree of ‡exibility in modelling aggregate dynamics that is highly promising.
+In fact, some of the fast changes in policy parameters that we document in our empirical section suggest that discrete jumps could be a good representation of the data. However, current
+technical limitations regarding the computation of the equilibria induced by regime switches force
+researchers to focus on small models that are only stylized representations of an economy.
+Finally, even if the motivation for our approach and the application belong to macroeconomics,
+there is nothing speci…c about that …eld in the tools we present. One can think about the importance of estimating dynamic equilibrium models with stochastic volatility in many other …elds,
+from …nance (Bansal and Yaron, 2004, would be a prominent example) to industrial organization
+(for instance, an equilibrium model of industry dynamics where the demand and supply shocks
+have time-varying volatility), international trade (where innovations to the real exchange rates or
+to the country spreads are well known to have time-varying volatility, see Fernández-Villaverde et
+al., 2010c), or many others.
+The rest of the paper is organized as follows. Section 2 presents a generic dynamic equilibrium
+model with stochastic volatility to …x notation and discuss how to solve it. Section 3 explains
+the evaluation of the likelihood of the model. Section 4 introduces a business cycle model as
+an application of our procedure, takes it to the U.S. data, and comments on the main …ndings.
+Section 5 concludes. An extensive technical appendix includes details about the proofs of the
+main results in the paper, the model, the computation, and additional empirical exercises.
+
+6
+
+2. Dynamic Equilibrium Models with Stochastic Volatility
+2.1. The Model
+The set of equilibrium conditions of a wide class of dynamic equilibrium models can be written as
+Et f (Yt+1 ; Yt ; St+1 ; St ; Zt+1 ; Zt ; ) = 0;
+
+(1)
+
+where Et is the conditional expectation operator at time t, Yt = (Y1t ; Y2t ; : : : ; Ykt )0 is the k
+
+vector of observables at time t, St = (S1t ; S2t ; : : : ; Snt )0 is the n
+
+at time t, Zt = (Z1t ; Z2t ; : : : ; Zmt )0 is the m
+R2(k+n+m) into Rk+n+m , and
+
+is the n
+
+technology. In the context of this paper,
+
+1
+
+1 vector of endogenous states
+
+1 vector of structural shocks at time t, f maps
+
+1 vector of parameters that describe preferences and
+is also the vector of parameters to be estimated.
+
+We will consider models where the structural shocks, Zit+1 , follow a stochastic volatility process
+of the form
+Zit+1 =
+for all i 2 f1; : : : ; mg, where
+
+i Zit
+
++
+
+(2)
+
+i it+1 "it+1
+
+is a perturbation parameter,
+
+i
+
+is the mean volatility, and log
+
+it+1 ,
+
+the percentage deviation of the standard deviation of the innovations to the structural shocks with
+respect to its mean, evolves as
+log
+
+it+1
+
+= #i log
+
+it
+
++
+
+1
+
+#2i
+
+1
+2
+
+(3)
+
+i uit+1
+
+for all i 2 f1; : : : ; mg. The combination of levels in (2) and logs in (3) ensures a positive
+#2i
+
+1
+2
+
+it .
+
+It
+
+will be clear momentarily why we specify (2) and (3) in terms of the perturbation parameter
+
+.
+
+We multiply the innovation in (3) by 1
+
+to normalize its size by the persistence of
+
+it+1 .
+
+It is also convenient to write, for all i 2 f1; : : : ; mg, the laws of motions for Zit and log
+Zit =
+
+i Zit 1
+
++
+
+it
+
+(4)
+
+i it "it
+
+and
+log
+
+it
+
+= #i log
+
+Note that the perturbation parameter
+
+it 1
+
++ 1
+
+#2i
+
+1
+2
+
+i uit
+
+(5)
+
+appears only in equations (2) and (3) but not in
+
+7
+
+equations (4) and (5). This is because this parameter is used to eliminate, when we later determine
+the point around which to perform a higher-order approximation to the equilibrium dynamics of
+the model, any uncertainty about the future. Given the information set in equation (1), there
+is uncertainty about both Zit+1 and log
+about either Zit or log
+Let
+
+t
+
+= (log
+
+it
+
+for all i 2 f1; : : : ; mg, but there is no uncertainty
+
+it+1
+
+for any i 2 f1; : : : ; mg.
+
+1t ; : : : ; log
+
+0
+mt )
+
+be the m
+
+1 vector of volatility shocks, Et = ("1t ; : : : ; "mt )0 the
+
+1 vector of innovations to the structural shocks, and Ut = (u1t ; : : : ; umt )0 the m
+
+m
+
+1 vector of
+
+innovations to the volatility shocks. We assume that Et s N (0; I) and Ut s N (0; I), where 0 is
+an m
+
+1 vector of zeros and I is an m
+
+m identity matrix. To ease notation, we assume that:
+
+1. All structural shocks face volatility shocks and that the volatility shocks are uncorrelated.
+It is straightforward, yet cumbersome, to generalize the notation to other cases.
+2. Et and Ut are normally distributed. As we will see below, to implement our particle …lter,
+we only need to be able to simulate Et and evaluate the density of Ut .
+2.2. The Solution
+Given equations (1)-(5), the solution to the model -if one exists- that embodies equilibrium dynamics (that is, agent’s optimization and market clearing conditions) is characterized by a policy
+function describing the evolution of the endogenous state variables
+St+1 = h (St ; Zt 1 ;
+
+t 1 ; Et ; Ut ;
+
+; );
+
+(6)
+
+and two policy functions describing the law of motion of the observables
+Yt = g (St ; Zt 1 ;
+
+t 1 ; Et ; Ut ;
+
+; )
+
+(7)
+
+and
+Yt+1 = g (St+1 ; Zt ;
+
+t;
+
+Et+1 ; Ut+1 ; ; ) ;
+
+(8)
+
+together with equations (4) and (5) describing the laws of motion of the structural and volatility
+shocks. The policy functions h and g map Rn+4m+1 into Rn and Rk ; respectively, and are indexed
+by the vector of parameters .
+
+8
+
+For our purposes, it is important to de…ne the steady state of the model. Our assumptions
+about the stochastic processes imply that, in the steady state, Z = 0 and
+of parameters
+
+= 0. Given a vector
+
+and equations (1)-(8), the steady state of the model is a k 1 vector of observables
+
+Y = (Y1 ; Y2 ; : : : ; Yk )0 and an n
+
+1 vector of endogenous states S = (S1 ; S2 ; : : : ; Sn )0 such that
+
+f (g (h (S; 0; 0; 0; 0; 0; ) ; 0; 0; 0; 0; 0; ) ; g (S; 0; 0; 0; 0; 0; ) ; h (S; 0; 0; 0; 0; 0; ) ; S; 0; 0; ) = 0:
+(9)
+In addition, in the steady state, the following two relationships hold
+S = h (S; 0; 0; 0; 0; 0; ) ;
+
+(10)
+
+Y = g (S; 0; 0; 0; 0; 0; ) :
+
+(11)
+
+and
+
+The perturbation parameter
+
+plays a key role in de…ning our steady state. If
+
+= 0; the
+
+model is in the steady state, since we eliminate any uncertainty about the future. If
+
+6= 0; the
+
+model is not in the steady state and conditions (9)-(11) do not hold. For instance, in general
+S 6= h (S; 0; 0; 0; 0; ; ) because of the precautionary behavior of agents.
+2.3. The State-Space Representation
+Given the solution to the model -the policy functions (6)-(8) together with equations (4) and (5)we can concisely characterize the equilibrium dynamics of the model by its state-space representation written in terms of the transition and the observation equations.
+The transition equation uses the policy function (6), together with equations (4) and (5),
+to describe the evolution of the states (endogenous states, structural shocks, volatility shocks,
+and their innovations) as a function of lag states, the perturbation parameter, and the vector of
+parameters
+
+where St = St0 ; Zt0 1 ;
+
+0
+0
+0 0
+t 1 ; Et ; Ut
+
+St+1 = e
+h (St ; ; ) + Wt+1
+
+(12)
+
+is the (n + 4m) 1 vector of the states and e
+h maps Rn+4m+1 into
+0
+
+0
+0
+Rn+4m . Also, Wt+1 = W1t+1
+; W2t+1
+is a 2m 1 vector of random variables, W1t+1 and W2t+1 are
+
+m 1 vectors with distributions W1t+1 s N (0; I) and W2t+1 s N (0; I), and
+matrix with the the top n + 2m rows equal to zero and the bottom 2m
+9
+
+is a (n + 4m) 2m
+
+2m matrix equal to the
+
+identity matrix. Note that W1t+1 and W2t+1 share distributions with Et+1 and Ut+1 respectively.
+If we were to change distributions for either Et+1 or Ut+1 we would need to do the same with W1t+1
+and W2t+1 . Let us de…ne ns = n + 4m. The linearity of the second term of the right-hand side
+is a consequence of the autoregressive speci…cation of the structural shocks and the evolution of
+their volatilities. However, through the function e
+h, we let those shocks and their volatilities a¤ect
+St+1 nonlinearly.
+
+The measurement equation uses the policy function (7) to describe the relationship of the
+observables with the states, the perturbation parameter, and the vector of parameters
+Yt = g (St ; ; ) :
+
+(13)
+
+2.4. Approximating the State-Space Representation
+In general, when we deal with the class of dynamic equilibrium models with stochastic volatility,
+we do not have access to a closed-form solution, that is, the policy functions h and g cannot be
+found explicitly. Thus, we cannot build the state-space representation described by (12) and (13).
+Instead, we will approximate numerically the solution of model and use the result to generate an
+approximated state-space representation.
+There are many di¤erent solution algorithms for dynamic equilibrium models. Among those,
+the perturbation method has emerged as a popular way (see Judd and Guu, 1997, Schmitt-Grohé
+and Uribe, 2004, and Aruoba et al., 2006 among others) to obtain higher-order Taylor series
+approximations to the policy functions (6)-(7) together with equations (4) and (5) around the
+steady state. It is key to note that we also get the Taylor expansion of (4) because it is a nonlinear function. Beyond being extremely fast for systems with a large number of state variables,
+perturbation o¤ers high levels of accuracy even relatively far away from the perturbation point
+(Aruoba, et al., 2006, and, for cases with stochastic volatility, Caldara et al., 2012).
+The perturbation method allows the researcher to approximate the solution to the model up
+to any order. Since we want to analyze models with volatility shocks, we must go beyond a
+…rst-order approximation. First-order approximations are certainty equivalent and hence, they
+are silent about stochastic volatility. As we well see in section 3.1, volatility shocks only appear
+starting in the second-order approximation. But since we want to evaluate the likelihood function,
+we need to stop at a second-order approximation. Because of dimensionality issues, higher-order
+
+10
+
+approximation would make the evaluation of the likelihood function exceedingly challenging for
+current computers for models with a reasonable number of state variables.
+Given a second-order approximation to the policy functions (6)-(7) together with equations (4)
+and (5) around the steady state, the approximated state-space representation can be written in
+terms of two equations: the approximated transition equation and the approximated measurement
+equation. The approximated transition equation is
+
+b
+St+1
+where b
+St = St
+
+0
+
+1 b
+s;1 St
+
+B
+B
+=B
+@
+
+..
+.
+
+S is the ns
+
+1 b
+s;ns St
+
+1
+
+0
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+b
+S0t
+
+b
+S0t
+
+2 b
+s;1 St
+
+..
+.
+
+2 b
+s;ns St
+
+1
+
+0
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+s;1
+
+..
+.
+s;ns
+
+1
+
+C
+C
+C + Wt+1
+A
+
+(14)
+
+1 vector of deviations of the states from their steady-state value and
+
+S = (S 0 ; 00 ; 00 ; 00 ; 00 )0 . The approximated measurement equation is
+
+Yt
+
+0
+
+B
+B
+Y=B
+@
+
+1 b
+y;1 St
+
+..
+.
+
+1 b
+y;k St
+
+1
+
+0
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+where Y is the steady-state value of Yt .
+In these equations,
+
+1
+s;i
+
+is a 1
+
+b
+S0t
+
+b
+S0t
+
+ns vector and
+
+2 b
+y;1 St
+
+..
+.
+
+2 b
+y;k St
+2
+s;i
+
+1
+
+0
+
+y;1
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+is an ns
+
+..
+.
+y;k
+
+1
+
+C
+C
+C:
+A
+
+(15)
+
+ns matrix for i = 1; : : : ; ns .
+
+The …rst term is the linear approximation to transition equation for the states, while the second
+term is the quadratic component of the second-order approximation. Similarly,
+vector and
+
+2
+y;i
+
+an ns
+
+1
+y;i
+
+is a 1
+
+ns
+
+ns matrix for i = 1; : : : ; k. The interpretation of each term is the same as
+
+before: the …rst term is the linear component and the second one the quadratic component of the
+approximation to the law of motion for the measurement equations. The term
+
+s;i
+
+is the constant
+
+that appears in the second-order perturbation and that is often interpreted as the correction for
+risk in the evolution of state i = 1; : : : ; ns . Similarly, the term
+
+y;i
+
+is the constant correction
+
+for risk of observable i = 1; : : : ; k. All these vectors and matrices are non-linear functions of the
+vector of parameters . It is important to emphasize that we are not assuming the presence of
+any measurement error. We will return to this point in a few paragraphs.
+
+11
+
+3. Stochastic Volatility and Evaluation of the Likelihood
+In this section, we explain how to evaluate the likelihood function of our class of dynamic equilibrium models with volatility shocks in equation (1) using the approximated transition and the
+measurement equations (14) and (15). If we allow Yt to be the data counterpart of our observables Yt , Yt = (Y1 ; : : : ; Yt ) (with Y0 = f?g) to be their history up to time t, given a vector of
+parameters , we can write the likelihood of YT as
+T
+Y
+t=1
+
+p Yt = Yt jYt 1 ;
+
+;
+
+where
+
+Z Z Z Z
+
+p Yt = Yt jYt 1 ;
+p (Yt = Yt jSt ; Zt 1 ;
+
+t 1 ; Et ;
+
+) p St ; Zt 1 ;
+
+=
+t 1 ; Et jY
+
+t 1
+
+;
+
+dSt dZt 1 d
+
+t 1 dEt
+
+(16)
+
+for all t 2 f2; : : : ; T g and
+
+=
+
+Z Z Z Z
+
+p (Y1 = Y1 ; )
+p (Y1 = Y1 jS1 ; Z0 ;
+
+0 ; E1 ;
+
+) p (S1 ; Z0 ;
+
+0 ; E1 ;
+
+) dS1 dZ0 d
+
+0 dE1 :
+
+(17)
+
+Note that the Ut ’s do not show up in these two expressions. It will be momentarily clear why this
+comes directly from our procedure below to evaluate the likelihood.
+Computing this likelihood is a di¢ cult problem. Since we do not have analytic forms for the
+terms inside the integral, it cannot be evaluated exactly and deterministic numerical integration
+algorithms are too slow for practical use (we have four integrals per period over large dimensions).
+As a feasible alternative, we will show how to use a simple particle …lter to obtain a simulationbased estimate of (16) for the class of dynamic equilibrium models with volatility shocks we
+described above. Künsch (2005) proves, under weak conditions, that the particle …lter delivers a
+consistent estimator of the likelihood function and that a central limit theorem applies. A particle
+…lter is a sequential simulation device for …ltering of nonlinear and/or non-Gaussian space models
+(Pitt and Shephard, 1999, and Doucet et al., 2001). In economics the particle …lter has been used,
+among others, by Fernández-Villaverde and Rubio-Ramírez (2007).
+12
+
+As mentioned before, the particle …lter has minimal requirements: the ability to evaluate the
+approximated measurement density associated with the approximated measurement equation, to
+simulate from the approximated dynamics of the state using the approximated transition equation,
+and to draw from the unconditional density of the states implied by the approximated transition
+equation. Usually, the …rst requirement is the hardest. These three requirements are formally
+described in the following assumption.
+Assumption 1. To implement the particle …lter, we assume that:
+1. We can evaluate the approximated measurement density
+p (Yt = Yt jSt ; Zt 1 ;
+
+t 1 ; Et ;
+
+):
+
+2. We can simulate from the approximated transition equation
+0
+St+1
+; Zt0 ;
+
+0
+0
+0
+t ; Et+1
+
+j St0 ; Zt0 1 ;
+
+0
+0 0
+t 1 ; Et
+
+; F Yt ;
+
+for all t 2 f1; : : : ; T g, where F (Yt ) is the …ltration of Yt .
+3. We can draw from the unconditional distribution implied by the approximated transition
+equation
+p (St ; Zt 1 ;
+
+t 1 ; Et ;
+
+):
+
+The second requirement asks for the …ltration of Yt , F (Yt ), because we will need to evaluate
+the volatility shocks (this will be clearer below). The last requirement can be easily implemented
+using the results in Santos and Peralta-Alva (2005). Given our assumption about Et+1 and the
+quadratic form of the approximated transition equation (14), the second requirement easily holds.
+A key novelty of this paper is that we show how the class of dynamic equilibrium models with
+volatility shocks considered here also satis…es the …rst requirement.
+For our class of models, conditional on having N draws of sit ; zti 1 ;
+p (St ; Zt 1 ;
+
+t 1 ; Et jY
+
+t 1
+
+i
+i N
+t 1 ; "t i=1
+
+from the density
+
+; ), each integral (16) can be consistently approximated by
+
+p Yt = Yt jY
+
+t 1
+
+;
+
+N
+1 X
+p Yt = Yt jsit ; zti 1 ;
+'
+N i=1
+
+13
+
+i
+i
+t 1 ; "t ;
+
+(18)
+
+for all t 2 f2; : : : ; T g. For t = 1, we need N draws from the density p (St ; Zt 1 ;
+
+t 1 ; Et ;
+
+), so
+
+that the integral (17) can be consistently approximated by
+
+p (Y1 = Y1 ; ) '
+
+N
+1 X
+p Y1 = Y1 jsi1 ; z0i ;
+N i=1
+
+i
+i
+0 ; "1 ;
+
+(19)
+
+:
+
+We know that we can make the draws because requirement 3 in assumption 1 holds.
+In our framework, checking whether requirement 1 in assumption 1 holds means checking
+whether we can evaluate the approximated measurement density
+p Yt = Yt jsit ; zti 1 ;
+for each draw in sit ; zti 1 ;
+
+i N
+i
+t 1 ; "t i=1
+
+i
+i
+t 1 ; "t ;
+
+(20)
+
+for all t 2 f1; : : : ; T g. This evaluation step is crucial, not only
+
+because it is required to compute (18) and (19) but also because, as we will explain momentarily,
+our particle …lter needs to evaluate (20) to resample from p (St ; Zt 1 ;
+draws from p (St+1 ; Zt ;
+
+t ; Et+1 jY
+
+t
+
+; ) in order to obtain sit ; zti 1 ;
+
+t 1 ; Et jY
+
+i
+i N
+t 1 ; "t i=1
+
+t 1
+
+; ) and get
+
+for all t 2 f2; : : : ; T g
+
+in a recursive way.
+To check how we can evaluate the approximated measurement density (20), we rewrite (15)
+i0 0
+i0
+t 1 ; "t
+
+in terms of draws si0t ; zti0 1 ;
+
+and Yt , instead of St0 ; Zt0 1 ;
+
+0 0
+0
+t 1 ; Et
+
+and Yt . Thus, the
+
+1
+
+(21)
+
+approximated measurement equation (15) can be rewritten as
+0
+
+B
+B
+Y=B
+@
+
+Yt
+
+where b
+Sit = Sit
+
+1 bi
+y;1 St
+
+..
+.
+
+1 bi
+y;k St
+
+S and Sit = si0t ; zti0 1 ;
+
+1
+
+0
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+i0
+i0
+0 0
+t 1 ; "t ; Ut .
+
+b
+Si0t
+
+b
+Si0t
+
+2 bi
+y;1 St
+
+..
+.
+
+2 bi
+y;k St
+
+1
+
+0
+
+y;1
+
+C 1B
+C
+B
+C+ B
+A 2@
+
+..
+.
+y;k
+
+C
+C
+C
+A
+
+The new approximated measurement equation
+
+(21) implies that evaluating the approximated measurement density (20) involves solving the
+system of quadratic equations
+
+Yt
+
+for Ut given Yt ; sit ; zti 1 ;
+
+Y
+
+0
+B
+B
+B
+@
+i
+t 1;
+
+1 bi
+y;1 St
+
+..
+.
+
+1 bi
+y;k St
+
+and "it .
+
+1
+C
+C
+C
+A
+
+0
+
+1B
+B
+B
+2@
+
+b
+Si0t
+
+b
+Si0t
+14
+
+2 bi
+y;1 St
+
+..
+.
+
+2 bi
+y;k St
+
+1
+C
+C
+C
+A
+
+0
+
+1B
+B
+B
+2@
+
+y;1
+
+..
+.
+y;k
+
+1
+
+C
+C
+C=0
+A
+
+(22)
+
+Solving this system is non-trivial. Since the system is quadratic, we may have either none or
+several di¤erent solutions. In fact, it is even hard to know how many solutions there are. But
+even if we knew the number of solutions, we are not aware of any accurate and e¢ cient method to
+solve quadratic problems that …nds all the solutions. This di¢ culty seemingly prevents us from
+achieving our goal of evaluating the likelihood function.
+A solution would be to introduce, as Fernández-Villaverde and Rubio-Ramírez (2007) did, a
+k
+
+1 vector of linear measurement errors and solve for those instead of Ut . In this case the system
+
+would have a unique, easy to …nd solution. However, there are three reasons, in increasing order
+of importance, why this solution is not satisfactory:
+1. Although measurement errors are both plausible and empirically relevant, their presence
+complicates the interpretation of any empirical results. In particular, we are interested
+in measuring how heteroscedastic structural shocks help in accounting for the data and
+measurement errors can confound us.
+2. The absence of measurement errors will help us to illustrate below how dynamic equilibrium
+models with volatility shocks have a profusion of shocks that we can exploit in our estimation.
+3. As we will also show below, volatility shocks would enter linearly (conditional on the draw)
+in the system equations. Since, by de…nition, linear measurement errors would also enter in
+the same fashion, it would be hard to identify one apart from the others.
+Our alternative in this paper is to realize that considering stochastic volatility converts the
+above-described quadratic system into a linear one. Hence, if a rank condition is satis…ed, the
+system (22) has only one solution and the solution can be found by simply inverting a matrix.
+Thus, requirement 1 in assumption 1 holds and we can use the particle …lter. The core of the
+argument is to note that, when volatility shocks are considered, the policy functions share a
+peculiar pattern that we can exploit.
+3.1. Structure of the Solution
+Our …rst step will characterize the …rst- and second-order derivatives of the policy functions
+h and g evaluated at the steady state. Then, we will describe an interesting pattern in these
+derivatives. The second step will take advantage of the pattern to show that, when the number
+15
+
+of volatility shocks equals the number of observables, our quadratic system becomes a linear one.
+This characterization is important both for estimation and, more generally, for the analysis of
+perturbation solutions to dynamic equilibrium models with stochastic volatility.
+3.1.1. First- and Second-order Derivatives of the Policy Functions
+Let us begin with the characterization of the …rst- and second-order derivatives of the policy
+functions. The following theorem shows that the …rst-order derivatives of h and g with respect to
+any component of Ut and
+
+t 1
+
+evaluated at the steady state are zero; that is, volatility shocks and
+
+their innovations do not a¤ect the linear component of the optimal decision rule of the agents.
+The same occurs with the perturbation parameter
+
+. A similar result has been established by
+
+Schmitt-Grohé and Uribe (2004) for the homoscedastic shocks case.
+i
+! ]j
+
+Theorem 2. Let us denote [
+with respect to the j
+
+as the derivative of the i
+
+th element of generic function
+
+th element of generic variable ! evaluated at the non-stochastic steady
+
+state (where we drop this index if ! is unidimensional). Then, for the dynamic equilibrium model
+speci…ed in equation (1), we have that h
+
+t 1
+
+i1
+j
+
+= g
+
+t 1
+
+i2
+j
+
+= [hUt ]ij1 = [gUt ]ij2 = [h ]i1 = [g ]i2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+Proof. See appendix 6.1.1.
+The second theorem shows, among other things, that the second partial derivatives of h and g
+with respect to either log
+
+it
+
+or ui;t and any other variable but "i;t is also zero for any i 2 f1; : : : ; mg.
+
+Theorem 3. Furthermore, if we denote [
+function
+
+with respect to the j1
+
+generic variable
+
+!
+
+]ij1 ;j2 as the derivative of the i
+
+th element of generic
+
+th element of generic variable ! and the j2
+
+th element of
+
+evaluated at the non-stochastic steady state (where again we drop the index for
+
+unidimensional variables), we have that [h
+
+i1
+;St ]j
+
+= [g
+
+i2
+;St ]j
+
+= 0 for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg,
+
+and j 2 f1; : : : ; ng ;
+h
+
+;Zt
+
+1
+
+i1
+j
+
+= g
+
+;Zt
+
+1
+
+i2
+j
+
+= h
+
+;
+
+t 1
+
+i1
+j
+
+= g
+
+;
+
+t 1
+
+i2
+j
+
+= [h
+
+i1
+;Et ]j
+
+= [g
+
+i2
+;Et ]j
+
+= [h
+
+i1
+;Ut ]j
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg,
+hSt ;
+
+t 1
+
+i1
+j1 ;j2
+
+= gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+= [hSt ;Ut ]ij11 ;j2 = [gSt ;Ut ]ij21 ;j2 = 0
+16
+
+= [g
+
+i2
+;Ut ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg ;
+hZt
+
+1;
+
+i1
+j1 ;j2
+
+t 1
+
+= gZt
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+= h
+
+t 1;
+
+t 1
+
+i1
+j1 ;j2
+
+= g
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+and
+hZt
+
+1 ;Ut
+
+i1
+j1 ;j2
+
+= gZt
+
+1 ;Ut
+
+i2
+j1 ;j2
+
+= h
+
+i1
+j1 ;j2
+
+t 1 ;Ut
+
+= g
+
+t 1 ;Ut
+
+i2
+j1 ;j2
+
+= [hUt ;Ut ]ij11 ;j2 = [gUt ;Ut ]ij21 ;j2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg, and
+hEt ;
+
+i1
+j1 ;j2
+
+t 1
+
+= gEt ;
+
+t 1
+
+i2
+j1 ;j2
+
+= [hEt ;Ut ]ij11 ;j2 = [gEt ;Ut ]ij21 ;j2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg if j1 6= j2 .
+Proof. See appendix 6.1.2.
+Since the statement of theorem 3 is long and involved, we clarify it with a table in which we
+characterize the second derivatives of the functions h and g with respect to the di¤erent variables
+(St ; Zt 1 ;
+
+t 1 ; Et ; Ut ;
+
+). This pattern is both interesting and useful for our purposes.
+Table 3.1: Second Derivatives
+
+St St 6= 0
+
+St Zt
+Zt 1 Zt
+
+1
+
+6= 0
+1
+
+St
+
+6= 0 Zt
+
+t 1
+
+St Et 6= 0
+
+=0
+
+1
+
+t 1
+
+=0
+
+t 1
+
+t 1
+
+=0
+
+Zt 1 Et 6= 0
+t 1 Et
+
+6= 0
+
+Et Et 6= 0
+
+St Ut = 0
+
+St = 0
+
+Zt 1 Ut = 0 Zt
+t 1 Ut
+
+=0
+
+1
+
+=0
+
+t 1
+
+=0
+
+Et Ut 6= 0
+
+Et = 0
+
+Ut Ut = 0
+
+Ut = 0
+6= 0
+
+The way to read table 3.1 is as follows. Take an arbitrary entry, for instance, entry (1,2),
+St Zt
+Zt
+
+1
+
+1
+
+6= 0. In this entry, we state that the cross-derivatives of h and g with respect to St and
+
+are di¤erent from zero (the table is upper triangular because, given the symmetry of second
+
+derivatives, we do not need to report those entries). Similarly, entry (3,5),
+the cross-derivatives of h and g with respect to
+
+t 1
+
+t 1 Ut
+
+= 0 tells us that
+
+and Ut are all zero.2 Entries (3,4) and (4,5)
+
+2
+For ease of exposition, in table 3.1 we are not being explicit about the dimensions of the matrices: it is a purely
+qualititive description of the relevant derivatives.
+
+17
+
+have a “*” to denote that the only cross-derivatives of those entries that are di¤erent from zero
+are those that correspond to the same index j (that is, the cross-derivatives of each innovation
+to the structural shocks with respect to its own volatility shock and the cross-derivatives of the
+innovation to the structural shocks to the innovation to its own volatility shock). The lower
+triangular part of the table is empty because of the symmetry of second derivatives.
+Table 3.1 tells us that, of the 21 possible sets of second derivatives, 12 are zero and 9 are not.
+The implications for the decision rules of agents and for the equilibrium function are striking.
+The perturbation parameter, , will only have a coe¢ cient di¤erent from zero in the term where
+it appears in a square by itself. This term is a constant that corrects for precautionary behavior
+induced by risk. Volatility shocks,
+term
+
+t 1 Et
+
+t 1
+
+, appear with coe¢ cients di¤erent from zero only in the
+
+where they are multiplied by the innovation to its own structural shock Et . Finally,
+
+innovations to the volatility shocks, Ut , also appear with coe¢ cients di¤erent from zero when they
+show up with the innovation to their own structural shock Et . Hence, of the terms that complicate
+the evaluation of the approximated measurement density, only the ones associated with [hEt ;Ut ]ij11 ;j1
+and [gEt ;Ut ]ij21 ;j1 are non-zero.
+3.1.2. Evaluating the Likelihood Using the Particle Filter
+The second step is to use theorems 2 and 3 to show that the system (22) is linear and it has only
+one solution. Corollary 4 shows that the pattern described in table 3.1. has an important, yet
+rather direct implication for the structure of the approximated measurement equation (21).
+Corollary 4. The approximated measurement equation (21) can be written as
+
+Yt
+
+0
+
+B
+B
+Y=B
+@
+
+i
+
+b
+e 1y;1 e
+St
+..
+.
+i
+b
+e1 e
+y;k St
+
+0
+i 1
+i0
+e
+e
+b
+b
+St e 2;1
+S
+y;1 t C
+C 1B
+B
+..
+C
+C 1B
+B
++
+C+ B
+C
+B
+.
+2
+A
+@
+A 2 @ i0
+i
+e
+e
+2;1
+b
+St e y;k b
+St
+1
+
+0
+
+0
+where e
+Sit = si0t ; zti0 1 ; "i0t is the (n + 2m)
+
+y;1
+
+..
+.
+y;k
+
+1
+
+0
+
+1
+2;2
+"i0t e y;1
+C B
+C
+..
+C B
+C
+C+B
+C
+.
+A @
+A
+i0 e 2;2
+"t y;k
+
+i
+t
+
+0
+
+1
+2;3
+"i0t e y;1
+B
+C
+..
+B
+C
++
+B
+C Ut
+.
+1
+@
+A
+i0 e 2;3
+"t y;k
+
+1 vector of the simulated states without the stochastic
+
+volatility components (that is, endogenous states, structural shocks, and their innovations), e
+S=
+i
+e
+(S 0 ; 00 ; 00 )0 is its steady state, and b
+St = e
+Sit e
+S is its deviation from the steady state. Let us de…ne
+n
+es = n + 2m. The matrix e 1y;j is a 1
+
+n
+es vector that represents the …rst-order component of the
+
+second-order approximation to the law of motion for the measurement equation as a function of
+18
+
+e
+b
+St , where e
+St = St0 ; Zt0 1 ; Et0
+
+0
+
+e
+and b
+St = e
+St
+
+e
+S, for j = 1; : : : ; k. The matrix e 2;1
+es
+y;j is an n
+
+n
+es
+
+matrix that represents the second-order component of the second-order approximation to the law
+e
+St for j = 1; : : : ; k. The matrix e 2;2
+of motion for the measurement equation as a function of b
+y;j is
+an m
+
+m matrix that represents the second-order component of the second-order approximation
+
+to the law of motion for the measurement equation as a function of Et and
+
+The matrix e 2;3
+y;j is an m
+
+t 1
+
+for j = 1; : : : ; k.
+
+m matrix that represents the second-order term of the approximated
+
+law of motion for the measurement equation as a function of Et and Ut for j = 1; : : : ; k.
+We are now ready to show that the system (22) is linear, and if a rank condition is satis…ed,
+it has only one solution. De…ne
+
+Yt
+
+Y
+
+and
+
+0
+B
+B
+B
+@
+
+i
+b
+e1 e
+S
+y;1 t
+..
+.
+ei
+e1 b
+y;k St
+
+1
+C
+C
+C
+A
+
+A Yt ; sit ; zti 1 ;
+0 i0
+i
+e
+2;1 e
+b
+b
+St e y;1
+St
+1B
+..
+B
+B
+.
+2 @ i0
+i
+e
+e
+b
+b
+St e 2;1
+S
+y;k t
+2;3
+"i0t e y;1
+
+B "it ;
+Let k = m, then B ("it ; ) is a k
+
+0
+
+i
+i
+t 1 ; "t ;
+
+1
+C
+C
+C
+A
+
+0
+
+y;1
+
+1B
+B
+B
+2@
+
+:::
+
+..
+.
+y;k
+
+0
+
+1
+
+B
+B
+B
+@
+
+C
+C
+C
+A
+
+"i0t e 2;3
+y;k
+
+0
+
+0
+
+"i0t e 2;2
+y;1
+..
+.
+
+2;2
+"i0t e y;k
+
+1
+C
+C
+C
+A
+
+i
+t 1
+
+:
+
+k matrix. If B ("it ; ) is full rank, the solution to the system (22)
+
+can be written as
+Ut = B
+
+1
+
+"it ;
+
+A Yt ; sit ; zti 1 ;
+
+i
+i
+t 1 ; "t ;
+
+:
+
+The next theorem shows how to use this solution to evaluate the approximated measurement
+density.
+Theorem 5. Let k = m, then B ("it ; ) is a k k matrix. If B ("it ; ) is full rank, the approximated
+measurement density can be written as
+p Yt = Yt jsit ; zti 1 ;
+
+i
+i
+t 1 ; "t ;
+
+= det B
+
+1
+
+"it ;
+
+p Ut = B
+
+1
+
+"it ;
+
+A Yt ; sit ; zti 1 ;
+
+i
+i
+t 1 ; "t ;
+
+(23)
+for each draw in sit ; zti 1 ;
+know B
+
+1
+
+i
+i N
+t 1 ; "t i=1
+
+("it ; ), A Yt ; sit ; zti 1 ;
+
+for all t 2 f1; : : : ; T g, which can be evaluated given that we
+
+i
+i
+t 1 ; "t ;
+
+, and the distribution of Ut .
+
+Proof. The theorem is a straightforward application of the change of variables theorem.
+19
+
+Theorem 5 shows that requirement 1 in assumption 1 holds. Consequently, we can use a
+variation of the particle …lter adapted for our class of dynamic equilibrium models with volatility
+shocks. We are requiring B ("it ; ) to be full rank. When can B ("it ; ) not be full rank? B ("it ; )
+would fail to have full rank when the impact of volatility innovations are identical across several
+elements of Yt . This would mean that the observables lack enough information to tell volatility
+shocks apart. If this is the case, a new set of observables would have to be chosen to estimate the
+model.
+Note also that theorem 5 assumes k = m. Given the notation in section 2.1, this means
+that the number of structural shocks equals to the number of observables. This is not always
+necessary. What the theorem needs is that the number of volatility shocks equals the number of
+observables. Since, to simplify notation, we have assumed that all structural shocks face volatility
+shocks, the number of structural shocks equals the number of observables. As mentioned in section
+2.1, we could have structural shocks that do not face volatility shocks (this will be the case in
+our application to follow). In that case, we could have more structural shocks than observables.
+From the theorem, it is also clear that if we used Et rather than Ut to compute the approximated
+measurement equation, we would have to solve a quadratic system, a challenging task.
+An outline of the algorithm in pseudo-code is:
+
+Step 0: Set t
+
+1.
+
+Sample N values
+
+sit ; zti 1 ;
+
+i N
+i
+t 1 ; "t i=1
+
+from p (St ; Zt 1 ;
+
+t 1 ; Et ;
+
+).
+
+Step 1: Compute
+
+p Yt = Yt jY
+
+t 1
+
+;
+
+N
+1 X
+'
+det B
+N i=1
+
+1
+
+"it ;
+
+p Ut = B
+
+1
+
+"it ;
+
+A Yt ; sit ; zti 1 ;
+
+i
+i
+t 1 ; "t ;
+
+using expression (23) and the importance weights for each draw
+det B 1 ("it ; ) p Ut = B 1 ("it ; ) A Yt ; sit ; zti 1 ; it 1 ; "it ;
+qti = PN
+1 ("i ; ) p U = B 1 ("i ; ) A Y ; si ; z i ; i ; "i ;
+t
+t t t 1
+t
+t
+t 1 t
+i=1 det B
+
+n
+Step 2: Sample N times with replacement from sitjt 1 ; zti
+n
+oN
+N
+probability fqti gi=1 . This delivers sitjt ; zti 1jt ; it 1jt ; "itjt
+.
+i=1
+
+20
+
+1jt 1 ;
+
+:
+
+i
+i
+t 1jt 1 ; "tjt 1
+
+oN
+
+i=1
+
+and
+
+Step 3: Simulate
+
+sit+1 ; zti ;
+0
+; Zt0 ;
+St+1
+
+Step 4: If t < T; set t
+
+N
+i i
+t ; "t+1 i=1
+
+0
+0
+0
+t ; Et+1
+
+from the approximated transition equation
+
+j si0tjt ; zti0
+
+1jt ;
+
+i0 0
+i0
+t 1jt ; "tjt
+
+t + 1 and go to step 1.
+
+; F Yt ; :
+
+Otherwise stop.
+
+Once we have evaluated the likelihood, we can nest this algorithm either with a McMc to
+perform Bayesian inference (as done in our application; see Flury and Shephard, 2011, for technical
+details) or with some optimization algorithm to undertake maximum likelihood estimation (as
+done, in a model without volatility shocks, by Van Binsbergen et al., 2012). In this last case, care
+must be taken to keep the random numbers used in the particle …lter constant among iterations
+to achieve equi-continuity and to use an optimization algorithm that does not rely on derivatives,
+as the particle …lter implies an evaluation of the likelihood function that is not di¤erentiable.
+
+4. An Application: A Business Cycle Model with Stochastic Volatility
+As an illustration of our procedure, we estimate a business cycle model of the U.S. economy with
+nominal rigidities and stochastic volatility. We will show: 1) how we can characterize posterior
+distributions of the parameters of interest and 2) how we can recover and analyze the smoothed
+structural and volatility shocks. Those are two of the most relevant exercises in terms of the
+estimation of dynamic equilibrium models. Once the estimation has been undertaken, there are
+many other exercises that can be done with the empirical results. For instance, in the appendix,
+we include several of those such as: 1) …nding the impulse response functions (IRFs) of the model;
+2) evaluating the …t of the model in comparison with some alternatives; and 3) undertaking some
+counterfactuals and run alternative histories of the evolution of the U.S. economy.
+Before doing so, though, we need to motivate our choice of application. The model that we
+present has many strengths but also important weaknesses. Su¢ ce it to say here that since this
+model is the base of much applied policy analysis by academics and policy-making institutions, it
+is a natural example for this paper. Thus, given that the model is well known, our presentation
+will be brief. We will depart only along two dimensions from the standard model: we will have
+stochastic volatility in the shocks that drive the dynamics of the economy (the object of interest
+in this paper) and parameter drifting in the monetary policy rule. In that way, the likelihood
+21
+
+has the chance of picking between two of the alternatives that the literature has highlighted to
+account for the well-documented time-varying volatility of the U.S. aggregate time series, either
+a reduced volatility of the shocks that hit the economy (as in Sims and Zha, 2006) or a di¤erent
+monetary policy (Clarida et al., 2000), which makes the application of interest in itself.
+4.1. Households
+The economy is populated by a continuum of households indexed by j and preferences:
+
+E0
+
+1
+X
+
+t
+
+t=0
+
+dt
+
+(
+
+log (cjt
+
+mjt
+pt
+
+hcjt 1 ) + log
+
+1+#
+ljt
+1+#
+
+'t
+
+)
+
+;
+
+which are separable in consumption, cjt , real money balances, mjt =pt ; and hours worked, ljt . In
+our notation, E0 is the conditional expectations operator,
+
+is the discount factor, h controls habit
+
+persistence, # is the inverse of the Frisch labor supply elasticity, dt is a shifter to intertemporal
+preference that follows log dt =
+
+log dt
+
+d
+
+shifter that evolves as log 't =
+
+'
+
+1+
+
+log 't
+
+1
+
+d dt "dt
+
++
+
+where "dt
+
+' 't "'t
+
+N (0; 1); and 't is a labor supply
+
+where "'t
+
+N (0; 1): The two preference
+
+shocks are common to all households.
+The principal novelty of these preferences is that, for both shifters dt and 't , the standard
+deviations,
+
+dt
+
+and
+
+'t ,
+
+of their innovations, "dt and "'t , are indexed by time; that is, they
+
+stochastically move according to:
+log
+
+dt
+
+=
+
+log
+d
+
++ 1
+
+2
+
+1+ 1
+
+2
+
+dt 1
+
+1
+2
+d
+
+d udt
+
+where udt
+
+N (0; 1)
+
+and
+log
+
+'t
+
+=
+
+log
+'
+
+'t
+
+1
+2
+'
+
+' u't
+
+where u't
+
+This parsimonious speci…cation introduces only four new parameters,
+
+N (0; 1):
+d
+
+,
+
+'
+
+,
+
+d,
+
+and
+
+',
+
+while
+
+being surprisingly powerful in capturing important features of the data (Shephard, 2008). All the
+shocks and innovations throughout the model are observed by the agents when they are realized.
+Agents have, as well, rational expectations about how they evolve over time.
+We can interpret the shocks to preferences and to their volatility as re‡ecting the random
+evolution of more complicated phenomena. For example, stochastic volatility may appear as the
+consequence of changing demographics. An economy with older agents might be both less patient
+22
+
+because of higher mortality risk (in our notation, a lower dt ) and less prone to reallocations in the
+labor force because of longer attachments to particular jobs (in our notation, a lower
+
+'t ).
+
+Although we assume complete …nancial markets, to ease notation we drop the Arrow securities
+implied by that assumption from the budget constraints (they are in net zero supply at the
+aggregate level anyway). Households also hold bjt government bonds that pay a nominal gross
+interest rate of Rt 1 . Therefore, the j
+cjt + xjt +
+
+th household’s budget constraint is given by:
+
+mjt bjt+1
++
+= wjt ljt + rt ujt
+pt
+pt
+
+1
+
+[ujt ] kjt
+
+t
+
+1
+
++
+
+mjt
+pt
+
+1
+
++ Rt
+
+1
+
+bjt
++ Tt + zt
+pt
+
+where xt is investment, wjt is the real wage, rt is the real rental price of capital, ujt > 0 is the
+1
+
+rate of use of capital,
+
+[ujt ] is the cost of using capital at rate ujt in terms of the …nal good,
+
+t
+
+is an investment-speci…c technological level, Tt is a lump-sum transfer, and zt is …rms’pro…ts.
+
+t
+
+We specify that
+and
+
+00
+
+[u] =
+
+1
+
+(u
+
+1) +
+
+2
+
+2
+
+1)2 , a form that satis…es that
+
+(u
+
+[1] = 0,
+
+0
+
+[ ] = 0,
+
+[ ] > 0. This function carries the normalization that u = 1 in the balanced growth path of
+
+the economy. Using the relevant …rst-order conditions, we can …nd
+
+1
+
+=
+
+0
+
+[1] = re where re is the
+
+(rescaled) steady-state rental price of capital (determined by the other parameters in the model).
+This leaves us with only one free parameter,
+
+2.
+
+The capital accumulated by household j at the end of period t is given by:
+
+kjt = (1
+
+) kjt
+
+where is the depreciation rate and
+
+1
+
++
+
+t
+
+1
+
+2
+
+2
+
+xjt
+xjt 1
+
+x
+
+!
+
+xjt
+
+is an investment adjustment cost parameter. This function is
+
+written in deviations with respect to the balanced growth rate of investment,
+
+x.
+
+The investment-
+
+speci…c technology level
+
+t 1
+
++
+
+"
+
+t
+
+t,
+
+N (0; 1) and where
+
+The standard deviation
+log
+
+t
+
+is the drift of the process and "
+t
+
+=
+
+follows a random walk in logs, log
+t
+
+t
+
+=
+
++ log
+
+t" t
+
+with
+
+is the innovation to its growth rate.
+
+also evolves as:
+log
+
+t 1
+
++ 1
+
+2
+
+1
+2
+
+u
+
+t
+
+where u
+
+t
+
+N (0; 1):
+
+Again, we can interpret this stochastic volatility as a stand-in for a more detailed explanation of
+technological progress in capital production that we do not model explicitly.
+Each household j supplies a di¤erent type of labor services ljt that are aggregated by a labor
+23
+
+packer into homogeneous labor ltd with the production function ltd =
+
+R1
+0
+
+1
+
+1
+
+that is rented
+
+ljt dj
+
+to intermediate good producers at wage wt . The labor packer is perfectly competitive and it takes
+all wages as given. Households set their wages with a Calvo pricing mechanism. At the start of
+every period, a randomly selected fraction 1
+
+w
+
+of households can reoptimize their wages (where,
+
+by a law of large numbers, individual probabilities and aggregate fractions are equal). All other
+households index their wages given past in‡ation with an indexation parameter
+
+w
+
+2 [0; 1].
+
+4.2. Firms
+There is one …nal good producer that aggregates a continuum of intermediate goods according to
+the production function:
+yt =
+
+Z
+
+1
+
+" 1
+"
+
+"
+" 1
+
+(24)
+
+yit di
+
+0
+
+where " is the elasticity of substitution. The …nal good producer is perfectly competitive and
+minimizes its costs subject to the production function (24) and taking as given all intermediate
+goods prices pti and the …nal good price pt .
+Each intermediate good is produced by a monopolistic competitor with technology yit =
+At kit
+
+1
+
+litd
+
+1
+
+; where kit
+
+1
+
+is the capital rented by the …rm, litd is the amount of the “packed”
+
+labor input rented by the …rm, and At is neutral productivity. Productivity evolves as log At =
+A
+
++ log At
+
+1
+
++
+
+where
+
+A At "At
+
+A
+
+is the drift of the process and "At
+
+N (0; 1) is the innovation
+
+to its growth rate. The time-varying standard deviation of this innovation follows:
+log
+
+At
+
+=
+
+A
+
+log
+
+At 1
+
++ 1
+
+1
+2
+
+2
+A
+
+A uAt
+
+where uAt
+
+N (0; 1):
+
+Intermediate good producers meet the quantity demanded by the …nal good producer by
+renting litd and kit
+
+1
+
+at prices wt and rt . Given their demand function, these producers set prices
+
+to maximize pro…ts. However, when they do so, they follow a Calvo pricing scheme. In each
+period, a fraction 1
+
+p
+
+of intermediate good producers reoptimize their prices. All other …rms
+
+partially index their prices by past in‡ation with an indexation parameter
+
+24
+
+2 [0; 1].
+
+4.3. The Monetary Authority
+The model is closed with a monetary authority that sets the nominal interest rates by following
+a modi…ed Taylor rule:
+Rt 1
+R
+
+Rt
+=
+R
+
+R
+
+ytd
+= exp
+ytd 1
+
+;t
+
+t
+
+1
+
+y y;t
+
+R
+
+(25)
+
+t:
+
+yd
+
+The …rst term on the right-hand side represents a desire for interest rate smoothing, expressed in
+terms of R; the balanced growth path nominal interest rate. The second term, an “in‡ation gap,”
+responds to the deviation of in‡ation from its balanced growth path level
+a “growth gap”: the ratio between the growth rate of the economy and
+
+. The third term is
+yd ,
+
+the balanced path
+
+gross growth rate of ytd , where ytd is aggregate demand (de…ned precisely in appendix 6.2). The
+last term is the monetary policy shock, where log
+and a time-varying standard deviation,
+log
+
+t
+
+=
+
+log
+
+t 1
+
+;t ,
+
+t
+
+=
+
+;t " t
+
+with an innovation "
+
+N (0; 1)
+
+t
+
+that follows an autoregressive process
+2
+
++ 1
+
+1
+2
+
+u
+
+;t
+
+where u
+
+N (0; 1):
+
+;t
+
+In this policy rule, we have two drifting parameters: the responses of the monetary authority
+to the in‡ation gap and the growth gap. The parameters drift over time as:
+log
+
+t
+
+=
+
+log
+
+t 1
+
++
+
+"
+
+t
+
+and log
+
+yt
+
+=
+
+y
+
+log
+
+yt 1
+
++
+
+y "yt
+
+where " t ; "yt
+
+N (0; 1):
+
+For simplicity, the volatility of the innovation to this processes is …xed over time. The agents
+perfectly observe the changes in monetary policy parameters.
+4.4. Equilibrium and Solution
+We can characterize the equilibrium of the model in appendix 6.2. This equilibrium conditions
+are non-stationary because we have two unit roots in the processes for technology. However, we
+1
+
+circumvent this problem by rescaling the model using the variable zt = At1
+e
+kt =
+
+kt
+,
+zt t
+
+e
+ct =
+
+ct
+,
+zt
+
+x
+et =
+
+xt
+,
+zt
+
+yet =
+
+yt
+,
+zt
+
+w
+et =
+
+the notation of section 2.1 we have that:
+
+wt
+,
+zt
+
+ret =
+
+25
+
+t rt ;
+
+et =
+A
+
+exp(
+
+At
+A )At
+
+1
+
+1
+
+t
+
+, and et =
+
+in the form:
+t
+
+exp(
+
+)
+
+t 1
+
+. In
+
+1. The states of the (rescaled) economy are
+St = log e
+kt 1 ; log e
+ct 1 ; log x
+et 1 ; log yet 1 ; log
+
+p
+t 1 ; log
+
+w
+et 1 ; log Rt 1 ; log
+t 1 ; log w
+
+et ; log t ; log
+2. The structural shocks are Zt = log dt ; log 't ; log et ; log A
+
+t ; log
+
+yt
+
+t 1
+
+0
+
+0
+
+:
+
+. The pa-
+
+rameter drifts are handled as structural shocks in the state-space representation.
+
+3. The volatility shocks are
+
+t
+
+= (log
+
+dt ; log
+
+'t ; log
+
+t ; log
+
+At ; log
+
+0
+t)
+
+; where the last two
+
+zeros correspond to the processes for parameter drifting, which have constant volatilities (see
+also in vector Ut below). Here, we can see that we do not need as many volatility shocks (5
+of them) as structural shocks (7 of them).
+4. The innovations to the structural and the volatility shocks are Et = ("dt ; "'t ; " t ; "At ; " t ; " t ; "yt )0
+and Ut = (udt ; u't ; u t ; uAt ; u t )0 ; respectively.
+We pick as observables the …rst di¤erence of the log of the relative price of investment, the log
+federal funds rate, log in‡ation, the …rst di¤erence of log output, and the …rst di¤erence of log real
+wages, in our notation Yt = ( 4 log
+
+t ; log Rt ; log
+
+0
+t ; 4 log yt ; 4 log wt )
+
+: We select these variables
+
+because they bring us information about aggregate behavior (output), the stand of monetary policy
+(the interest rate and in‡ation), and the di¤erent shocks (the relative price of investment about
+investment-speci…c technological change, the other four variables about technology and preference
+shocks) that we are concerned about. Note that we have the same number of observables as we
+do of volatility shocks, as required by theorem 5.
+We follow the steps in section 2.2 and employ a second-order perturbation around the rescaled
+steady-state to approximate this equilibrium and build the associated state-space representation
+(appendix 6.4 gives more details). The second-order approximation is even more relevant in our
+application because, to complicate matters, a linearization would also imply that the parameter
+drift in the Taylor rule would disappear as well from the equilibrium dynamics (see appendix 6.3).
+4.5. Data and Estimation
+We estimate our model using the …ve time series for the U.S. economy described above. Our
+sample covers 1959.Q1 to 2007.Q1, with 192 observations. Because of space considerations, we
+stop at 2007 to avoid having to deal with the recent …nancial crisis, which would make it di¢ cult
+26
+
+to appreciate the points we want to illustrate about how to econometrically deal with stochastic
+volatility. This could be …xed at the cost of a lengthier discussion. Appendix 6.5 explains how we
+construct the series.
+Once we have evaluated the likelihood, we combine it with a prior. We pick ‡at priors on
+a bounded support for all the parameters. The bounds are either natural economic restrictions
+(for instance, the Calvo and indexation parameters lie between 0 and 1) or are so wide that
+the likelihood assigns (numerically) zero probability to values outside them. Bounded ‡at priors
+induce a proper posterior, a convenient feature for our exercises below.
+We resort to ‡at priors for two reasons. First, to reduce the impact of presample information
+and show that our results arise mainly from the shape of the likelihood and not from the prior
+(although, of course, ‡at priors are not invariant to reparameterization). Thus, the reader who
+wants to interpret our posterior modes as maximum likelihood point estimates can do so. Second, because as we learned in Fernández-Villaverde et al. (2010c), eliciting priors for stochastic
+volatility is di¢ cult, since we deal with unfamiliar units, such as the variance of volatility shocks,
+about which we do not have clear beliefs. Flat priors come, though, at a price: before proceeding
+to the estimation, we have to …x several parameters to reduce the dimensionality of the problem.
+Table 4.1: Fixed Parameters
+h
+0:99 0:9
+
+#
+8
+
+"
+
+2
+
+1:17 0:025 0:21 9:5 10 10 0:001 0:95
+
+y
+
+0
+
+y
+
+0
+
+Table 4.1 lists the …xed parameters. Our guiding criterion in selecting them was to pick conventional values in the literature. The discount factor,
+
+= 0:99, is a default choice, habit persistence,
+
+h = 0:9; matches the observed sluggish response of consumption to shocks, the parameter controlling the level of labor supply,
+the depreciation rate,
+substitution, " =
+
+= 8; captures the average amount of hours in the data, and
+
+= 0:025, induces the appropriate capital-output ratio. The elasticities of
+
+= 10, deliver average mark-ups of around 10 percent, a common value in these
+
+models. We set the cost of capital utilization,
+
+2,
+
+to a small number to introduce some curvature
+
+in this decision. Three parameter values are borrowed from the point estimates from a similar
+model without stochastic volatility or parameter drifting presented in Fernández-Villaverde et al.
+(2009). The …rst is the inverse of the Frisch labor elasticity, # = 1:17. As argued by Chetty et
+al. (2011), this aggregate elasticity is compatible with micro data, once we allow for intensive
+and extensive margins on labor supply. The second is the coe¢ cient of the intermediate goods
+27
+
+production function,
+
+= 0:21. This value is lower than the common calibration of Cobb-Douglas
+
+production functions in real business cycle models because, in our environment, we have positive
+pro…ts that appear as capital income in the National Income and Product Accounts. Finally,
+the adjustment cost,
+
+= 9:5, is in line with other estimates from similar models ( would be
+
+particularly hard to identify, since investment is not one of our observables).
+The autoregressive parameter of the evolution of the response to in‡ation,
+
+, is set to 0.95.
+
+In preliminary estimations, we discovered that the likelihood pushed this parameter to 1. When
+this happened, the simulations became numerically unstable: after a series of positive innovations
+to log
+
+t,
+
+the reaction of nominal interest rates to in‡ation could be too tepid for too long. The
+
+0.95 value seems to be the highest possible value of
+The last two parameters,
+
+y
+
+and
+
+the likelihood favored values of
+
+y;
+
+such that the problem does not appear.
+
+are equal to zero because, also in exploratory estimations,
+
+0: Thus, we decided to forget about them and make
+
+y
+
+y;t
+
+= 1:
+
+To …nd the posterior, we proceed as follows. First, we de…ne a grid of parameter values and
+check for the regions of high posterior density by evaluating the likelihood function in each point
+of the grid. This is a time-consuming procedure, but it ensures that we are searching in the right
+zone of the parameter space. Once we have identi…ed the global maximum in the grid, we initialize
+a random-walk Metropolis-Hastings algorithm from this point. After an extensive …ne-tuning of
+the algorithm, we use 10,000 draws from the chain to compute posterior moments.
+4.6. Results I: Parameter Estimates
+Our …rst empirical result is the parameter estimates. To ease the discussion, we group them in
+di¤erent tables, one for each set of parameters dealing with related aspects of the model. In all
+cases, we report the mode of the posterior and the standard deviation in parenthesis below (in
+the interest of space, we do not include the whole histograms of the posterior).
+Table 4.2: Posterior, Parameters of Nominal Rigidities and Structural Shocks
+p
+
+w
+
+w
+
+d
+
+A
+
+'
+
+0:8139 0:6186 0:6869 0:6340 0:1182 0:9331 0:0034 0:0028
+(0:0143)
+
+(0:024)
+
+(0:0432)
+
+(0:0074)
+
+(0:0049)
+
+(0:0425)
+
+(6:6e 5)
+
+(4:1e 5)
+
+Table 4.2 presents the results for the nominal rigidities and the stochastic processes for the
+structural shocks parameters. Our estimates indicate an economy with substantial rigidities in
+prices, which are reoptimized roughly once every …ve quarters, and in wages, which are reoptimized
+28
+
+approximately every three quarters. Moreover, since the standard deviations are small, there is
+enough information in the data about this result. At the same time, there is a fair amount of
+indexation, between 0.62-0.63, which brings a strong persistence of in‡ation. While it is tempting
+to compare our estimates with the micro evidence on the individual duration of prices, in our
+model all prices and wages change every quarter. That is why, to a naive observer, our economy
+would look like one displaying tremendous price ‡exibility.
+We estimate a low persistence of the intertemporal preference shock and a high persistence of
+the intratemporal one. The low estimate of
+
+d
+
+produces the quick variations in marginal utilities
+
+of consumption that match output growth and in‡ation ‡uctuations. The intratemporal shock
+is persistent to account for long-lived movements in hours worked. We estimate mean growth
+rates of technology of 0.0034 (neutral) and 0.0028 (investment-speci…c). Those numbers give us
+an average growth of the economy of 0.44 percent per quarter, or around 1.77 percent on an
+annual basis (0.46 and 1.86 percent in the data, respectively). Technology shocks, in our model,
+are deviations with respect to these drifts. Thus, we estimate that At falls in only 8 of the 192
+quarters in our sample (which roughly corresponds to the percentage of quarters where measured
+productivity falls in the data), even if we estimate negative innovations to neutral technology in
+103 quarters.
+Table 4.3: Posterior, Parameters of the Stochastic Processes for Volatility Shocks
+log
+
+d
+
+1:9834
+(0:0726)
+d
+
+0:9506
+(0:0298)
+d
+
+0:1007
+(0:0083)
+
+log
+
+'
+
+2:4983
+(0:0917)
+
+log
+6:0283
+(0:1278)
+
+'
+
+0:1275
+(0:0032)
+
+(0:0669)
+
+A
+
+3:9013
+(0:0745)
+
+log
+6:000
+(0:1471)
+
+a
+
+0:7508
+(0:035)
+
+'
+
+2:8316
+
+log
+
+0:2411
+(0:005)
+
+0:8550
+(0:0231)
+
+a
+
+0:3115
+(0:006)
+
+0:7720
+(0:013)
+
+0:5723
+(0:0185)
+
+The results for the parameters of the stochastic volatility processes appear in table 4.3. In
+all cases, the ’s and the ’s are far away from zero: the likelihood strongly favors values where
+stochastic volatility plays an important role. The standard deviations of the innovations of the
+intertemporal preference shock and of the monetary policy shock are the most persistent, while the
+standard deviation of the innovation of the intratemporal preference shock is the least persistent.
+The standard deviation of the innovations of the volatility shock to the intratemporal preference
+29
+
+shock,
+
+'
+
+= 2:8316, is large: the model asks for fast changes in the size of movements in marginal
+
+utilities of leisure to reproduce the hours data.
+Table 4.4: Posterior, Policy Parameters
+log
+
+R
+
+0:7855
+(0:0162)
+
+log
+
+y
+
+1:4034 1:0005 0:0441 0:145
+(0:0498)
+
+(0:0043)
+
+(0:0005)
+
+(0:002)
+
+In table 4.4., we have the estimates of the policy parameters. The autoregressive component
+of the federal funds rate is high, 0:7855, although somewhat smaller than in estimations without
+parameter drift. The value of
+
+y
+
+(0.24 in levels) is similar to other results in the literature and
+
+shows that the likelihood clearly likes parameter drifting, although with mild persistence. The
+estimated value of
+
+plus the correction on equilibrium in‡ation implied by second-order e¤ects
+
+of the solution match the average in‡ation in the data.3 Finally, the estimated value of
+in levels) guarantees local determinacy of the equilibrium even if
+
+;t
+
+(1.045
+
+is temporarily below 1 (see
+
+appendix 6.6 for details).
+In appendix 6.7 we plot the impulse response functions of the model implied by our estimates.
+This exercise allows us to check that the estimates are sensible and that the behavior of the model
+is consistent with the behavior of related models in the literature. In appendix 6.8 we compare our
+model against an alternative version without parameter drifting but still with stochastic volatility.
+That is, we ask whether, once we have included stochastic volatility, it is still important to allow
+for changes in the monetary policy rule to account for the time-varying volatility of U.S. aggregate
+data over the last several decades. The results show that, even after controlling for stochastic
+volatility, the data strongly prefer a speci…cation where the monetary policy rule has changed over
+time. In appendix 6.9 we show, though, that this …nding does not imply that volatility shocks did
+not play an important role in the time-varying volatilities of U.S. aggregate time series. In other
+words, both stochastic volatility and parameter drifting are key parts of a successful dynamic
+equilibrium model of the U.S. economy.
+3
+
+Also, these second-order e¤ects enormously complicate the introduction of time-variation in . The likelihood
+wants to match the moments of the ergodic distribution of in‡ation, not the level of , which is in‡ation along
+the balanced growth path. When we have non-linearities, the mean of that ergodic distribution may be far from
+: Thus, learning about is hard. Learning about a time-varying is even harder.
+
+30
+
+4.7. Results II: Smoothed Shocks
+Figure 4.1 reports the log-deviations with respect to their means for the smoothed intertemporal,
+intratemporal, and monetary shocks and deviations of the growth rate of the investment and
+technological shocks with respect to their means ( 2 standard deviations). To ease reading of the
+results, we color di¤erent vertical bars to represent each of the periods at the Federal Reserve:
+the McChesney Martin years from the start of our sample in 1959 to the appointment of Burns in
+February 1970 (white), the Burns-Miller era (light blue), the Volcker interlude from August 1979
+to August 1987 (grey), the Greenspan times (orange), and Bernanke’s tenure from February 2006
+(yellow).
+
+Inter. Shock +/- 2 Std. Dev.
+
+Intra. Shock +/- 2 Std. Dev.
+
+Log Diff. form S.S.
+
+Log Diff. form S.S.
+
+0.2
+0
+-0.2
+1960
+
+1980
+
+2000
+
+0
+
+-0.5
+
+1960
+
+Period
+Tech. Shock +/- 2 Std. Dev.
+
+Log Diff. form S.S.
+
+0
+-0.05
+-0.1
+1960
+
+1980
+
+0.01
+0
+-0.01
+-0.02
+
+2000
+
+1960
+
+Period
+Mon. Shock +/- 2 Std. Dev.
+
+0.1
+0.05
+
+Log Diff. form S.S.
+
+0.5
+
+0.4
+
+Log Diff. form S.S.
+
+Invest. Shock +/- 2 Std. Dev.
+
+0.02
+
+1980
+
+2000
+
+Period
+
+Burns-Miller
+
+0.02
+
+Volcker
+
+0.01
+
+Greenspan
+
+0
+
+Bernanke
+
+-0.01
+-0.02
+-0.03
+
+1980
+
+2000
+
+1960
+
+1980
+
+Period
+
+2000
+
+Period
+
+Figure 4.1: Smoothed intertemporal (log dt ) shock, intratemporal ( log 't ) shock, investment-speci…c
+
+et ) shock, and monetary policy (log
+(log et ) shock, technology ( log A
+
+t)
+
+shock +/- 2 s.d.
+
+We see in the top left panel of …gure 4.1 that the intertemporal shock, log dt ; is particularly high
+in the 1970s. This increases households’desire for current consumption (for instance, because of
+the entrance of baby boomers into adulthood). A higher aggregate demand triggers, in the model,
+the higher in‡ation observed in the data for those years. The shock has a dramatic drop in the
+second quarter of 1980. This is precisely the quarter in which the Carter administration invoked
+the Credit Control Act (March 14, 1980). Schreft (1990) documents that this measure caused
+31
+
+turmoil in …nancial markets and, most likely, distorted intertemporal choices of households, which
+is re‡ected in the large negative innovation to log dt . The low values of log dt in the 1990s with
+respect to the 1970s and 1980s eased the in‡ationary pressures in the economy.
+The shock to the utility of leisure, log 't , grows in the 1970s and falls in the 1980s to stabilize
+at a very low value in the 1990s. The likelihood wants to track, in this way, the path of average
+hours worked: low in the 1970s, increasing in the 1980s, and stabilizing in the 1990s. Higher hours
+also lower the marginal cost of …rms (wages fall relative to the technology level). The reduction
+in marginal costs also helped to reduce in‡ation during Greenspan’s tenure.
+The evolution of the investment-speci…c technology, log et , shows a sharp drop after 1973 (when
+
+it is likely that energy-intensive capital goods su¤ered the consequences of the oil shocks in the form
+of economic obsolescence) and large positive realizations in the late 1990s (our model interprets
+
+the sustained boom of those years as the consequence of strong improvements in investment
+technology). These positive realizations were an additional help to contain in‡ation during the
+et , have been stable since 1959, with
+1990s. In comparison, the neutral-technology shocks, log A
+
+only a few big shocks at the end of the sample.
+
+The evolution of the monetary policy shock, log t , reveals large innovations in the early 1980s.
+This is due both to the fast change in policy brought about by Volcker and to the fact that a Taylor
+rule might not fully capture the dynamics of monetary policy during a period in which money
+growth targeting was attempted. Sims and Zha (2006) also …nd that the Volcker period appears
+to be one with large disturbances to the policy rule and argue that the Taylor rule formalism can
+be a misleading perspective from which to view policy during that time. Our evidence from the
+estimated intertemporal, intratemporal, and investment shocks suggests that monetary authorities
+faced a more di¢ cult environment in the 1970s and early 1980s than in the 1990s.
+As a way to gauge the level of uncertainty of our smoothed estimates, we also plot in …gure
+4.1 the same shock ( 2 standard deviations). The lesson to take away from this …gure is that, in
+all cases, the data are informative about the history we just narrated.
+
+32
+
+Std. Dev. Inter. Shock +/- 2 Std. Dev.
+
+Std. Dev. Intra. Shock +/- 2 Std. Dev.
+
+2
+
+2
+0
+-2
+
+Log Diff. form S.S.
+
+5
+Log Diff. form S.S.
+
+Log Diff. form S.S.
+
+4
+
+Std. Dev. Invest. Shock +/- 2 Std. Dev.
+
+0
+
+-5
+
+1960 1970 1980 1990 2000
+
+1960 1970 1980 1990 2000
+
+Period
+Std. Dev. Tech. Shock +/- 2 Std. Dev.
+
+Period
+Std. Dev. Mon. Shock +/- 2 Std. Dev.
+
+1
+0
+-1
+1960 1970 1980 1990 2000
+Period
+
+2
+
+Log Diff. form S.S.
+
+Log Diff. form S.S.
+
+4
+
+0
+
+-2
+1960 1970 1980 1990 2000
+
+2
+
+Burns-Miller
+
+0
+
+Volcker
+
+-2
+
+Greenspan
+
+-4
+
+Bernanke
+
+-6
+-8
+1960 1970 1980 1990 2000
+
+Period
+
+Period
+
+Figure 4.2: Smoothed standard deviation shocks to the intertemporal (log
+(log
+
+t)
+
+shock, the investment-speci…c (log
+
+t)
+
+monetary policy (log
+
+dt )
+
+shock, the intratemporal
+
+shock, the technology (log
+t)
+
+At )
+
+shock, and the
+
+shock +/- 2 s.d.
+
+We move now, in …gure 4.2, to plot the evolution of the volatility shocks, all of them in logdeviations with respect to their estimated means (plus/minus two standard deviations). We see
+in this …gure that the standard deviation of the intertemporal shock was particularly high in the
+1970s and only slowly went down during the 1980s and early 1990s. By the end of the sample,
+the standard deviation of the intertemporal shock was roughly at the level where it started. In
+comparison, the standard deviation of all the other shocks is relatively stable except, perhaps,
+for a large drop in the standard deviation of the monetary policy shock in the early 1980s as
+well as large changes in the standard deviation of the investment shock during the period of oil
+price shocks. Hence, the 1970s and the 1980s were more volatile than the 1960s and the 1990s,
+creating a tougher environment for monetary policy. This result also con…rms Blanchard and
+Simon’s (2001) and Nason and Smith’s (2008) observation that volatility had a downward trend
+in the 20th century with an abrupt and temporal increase in the 1970s. Also, from the size of the
+plus/minus two standard deviations, we conclude that the big movements in the di¤erent series
+that we report can be ascertained with a reasonable degree of con…dence.
+
+33
+
+Drift on Taylor Rule Param. on Inflation +/- 2 Std. Dev.
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+
+5
+
+Level of Parameter
+
+4
+
+3
+
+2
+
+1
+
+0
+
+-1
+1960
+
+1965
+
+1970
+
+1975
+
+1980
+
+1985
+
+1990
+
+1995
+
+2000
+
+Period
+
+Figure 4.3: Smoothed path for the Taylor rule parameter on in‡ation +/- 2 standard deviations.
+Finally, in …gure 4.3, we plot the evolution of the response of monetary policy to in‡ation
+plus/minus a two-standard-deviation interval. In particular, we graph
+
+t.
+
+This graph shows
+
+us an intriguing narrative. The parameter started the sample around its estimated mean, slightly
+over 1, and it grew more or less steadily during the 1960s until reaching a peak in early 1968.
+After that year, it su¤ered a fast collapse that took it below 1 in 1971. To put this evolution
+in perspective, it is useful to remember that Burns was appointed chairman in February 1970.
+The parameter stayed below 1 for all of the 1970s. The arrival of Volcker is quickly picked up by
+our smoothed estimates: it increases to over 2 after a few months and stays high during all the
+years of Volcker’s tenure. Interestingly, our estimate captures well the observation by Goodfriend
+and King (2007) that monetary policy tightened in the spring of 1980 as in‡ation and long-run
+in‡ation expectations continued to grow. Its level stayed roughly constant at this high during
+the remainder of Volcker’s tenure. But as quickly as it rose when Volcker arrived, it went down
+again when he departed. Greenspan’s tenure at the Fed meant that, by 1990, the response of the
+monetary authority to in‡ation was again below 1. Moreover, our estimates are relatively tight.
+Fernández-Villaverde et al. (2010a) discuss how the results of the estimation relate to historical
+evidence.
+
+34
+
+2005
+
+5. Conclusion
+In this paper, we have shown how to estimate dynamic equilibrium models with stochastic volatility. The key of the procedure is to realize that a second-order perturbation to the solution of this
+class of models has a very particular structure that can be easily exploited to build an e¢ cient
+particle …lter. The recent boom in the literature on dynamic equilibrium models with stochastic
+volatility suggests that this procedure may have many uses. Our characterization of the solution
+might also be, on many occasions, of interest in itself to understand the dynamic properties of
+the equilibrium even if the researcher does not want to estimate the model.
+As an application to illustrate how the procedure works we have estimated a business cycle
+model with both stochastic volatility in the structural shocks that drive the economy and parameter drifting in the monetary policy rule. Such a model is motivated by the need to have an
+empirical framework where we can account for the time-varying volatility of U.S. aggregate time
+series. In particular, we have explained how you get point estimates in such a model and how
+to recover and analyze the smoothed structural and volatility shocks. Finally, through di¤erent
+comments -even if brief and not exhaustive- we have discussed the di¤erent empirical lessons that
+one can get from all those steps.
+
+35
+
+References
+[1] Aruoba, S.B., J. Fernández-Villaverde, and J. Rubio-Ramírez (2006). “Comparing Solution
+Methods for Dynamic Equilibrium Economies.”Journal of Economic Dynamics and Control
+30, 2477-2508.
+[2] Bansal, R. and A. Yaron (2004). “Risks for the Long Run: a Potential Resolution of Asset
+Pricing Puzzles.”Journal of Finance 59, 1481-1509.
+[3] Bianchi, F. (2009). “Regime Switches, Agents’Beliefs, and Post-World War II U.S. Macroeconomic Dynamics.”Mimeo, Duke University.
+[4] Binsbergen, J.V., J. Fernández-Villaverde, R.J. Koijen, and J. Rubio-Ramirez (2012) “The
+Term Structure of Interest Rates in a DSGE Model with Recursive Preferences.”Journal of
+Monetary Economics, forthcoming.
+[5] Blanchard, O.J. and J. Simon (2001). “The Long and Large Decline in U.S. Output Volatility.”Brookings Papers on Economic Activity 2001-1, 187-207.
+[6] Bloom, N., S. Bond, and J. Van Reenen (2007). “Uncertainty and Investment Dynamics.”
+Review of Economic Studies 74, 391-415.
+[7] Bloom, N. (2009). “The Impact of Uncertainty Shocks.”Econometrica 77, 623–685.
+[8] Bloom, N., N. Jaimovich, N., and M. Floetotto (2012). “Really Uncertain Business Cycles.”
+NBER Working Paper 18245.
+[9] Caldara, D., J. Fernández-Villaverde, J. Rubio-Ramirez, and W. Yao (2012). “Computing
+DSGE Models with Recursive Preferences and Stochastic Volatility.” Review of Economic
+Dynamics 15, 188-206.
+[10] Chetty, R., A. Guren, D. Manoli, and A. Weber (2011).“ Micro versus Macro Labor Supply
+Elasticities.”American Economic Review: Papers and Proceedings, 101, 472-475.
+[11] Clarida, R., J. Galí, and M. Gertler (2000). “Monetary Policy Rules and Macroeconomic
+Stability: Evidence and Some Theory.”Quarterly Journal of Economics 115, 147-180.
+[12] Doucet A., N. de Freitas and N. Gordon (2001). Sequential Monte Carlo Methods in Practice.
+Springer Verlag.
+[13] Farmer, R.E., D.F. Waggoner, and T. Zha (2009). “Understanding Markov-Switching Rational Expectations Models.”Journal of Economic Theory 144, 1849-1867.
+[14] Fernández-Villaverde, J. and J. Rubio-Ramírez (2007). “Estimating Macroeconomic Models:
+A Likelihood Approach.”Review of Economic Studies 74, 1059-1087.
+[15] Fernández-Villaverde, J. and J. Rubio-Ramirez (2008). “How Structural Are Structural Parameters?”NBER Macroeconomics Annual 2007, 83-137.
+[16] Fernández-Villaverde, J., P. Guerrón-Quintana, and J. Rubio-Ramírez (2009). “The New
+Macroeconometrics: A Bayesian Approach.”in A. O’Hagan and M. West (eds.) Handbook of
+Applied Bayesian Analysis, Oxford University Press.
+36
+
+[17] Fernández-Villaverde, J., P. Guerrón-Quintana, and J. Rubio-Ramírez (2010a). “Reading the
+Recent Monetary History of the U.S., 1959-2007” Federal Reserve Bank of St. Louis Review
+92(4), 311-38.
+[18] Fernández-Villaverde, J., P. Guerrón-Quintana, and J. Rubio-Ramírez (2010b). “Fortune or
+Virtue: Time-Variant Volatilities Versus Parameter Drifting in U.S. Data.” NBER Working
+Papers 15928.
+[19] Fernández-Villaverde, J., P. Guerrón-Quintana, J. Rubio-Ramírez, and M. Uribe (2010c).
+“Risk Matters: The Real E¤ects of Volatility Shocks.” American Economic Review 101,
+2530-61.
+[20] Flury, T. and N. Shephard (2011). “Bayesian Inference Based Only on Simulated Likelihood:
+Particle Filter Analysis of Dynamic Economic Models.”Econometric Theory 27, 933-956.
+[21] Goodfriend, M. and R. King (2007). “The Incredible Volcker Disin‡ation.”Journal of Monetary Economics 52, 981-1015.
+[22] Judd, K. and S. Guu (1997). “Asymptotic Methods for Aggregate Growth Models.” Journal
+of Economic Dynamics and Control 21, 1025-1042.
+[23] Justiniano A. and G.E. Primiceri (2008). “The Time Varying Volatility of Macroeconomic
+Fluctuations.”American Economic Review 98, 604-641.
+[24] Künsch, H.R. (2005). “Recursive Monte Carlo Filters: Algorithms and Theoretical Analysis.”
+Annals of Statistics 33, 1983-2021.
+[25] Nason, James M. and Gregor W. Smith (2008). “Great Moderation(s) and US Interest Rates:
+Unconditional Evidence.”The B.E. Journal of Macroeconomics (Contributions) 8, Art. 30.
+[26] Pitt, M.K. and N. Shephard (1999). “Filtering via Simulation: Auxiliary Particle Filters.”
+Journal of the American Statistical Association 94, 590-599.
+[27] Santos, M.S. and A. Peralta-Alva (2005). “Accuracy of Simulations for Stochastic Dynamic
+Models”. Econometrica 73, 1939-1976.
+[28] Schmitt-Grohé, S., and M. Uribe (2004). “Solving Dynamic General Equilibrium Models Using a Second-Order Approximation to the Policy Function.”Journal of Economic Dynamics
+and Control 28, 755-775.
+[29] Schreft, S. (1990). “Credit Controls: 1980.” Federal Reserve Bank of Richmond Economic
+Review 1990, 6, 25-55.
+[30] Shephard, N. (2008). “Stochastic Volatility.” The New Palgrave Dictionary of Economics.
+Palgrave MacMillan.
+[31] Sims, C.A. and T. Zha (2006). “Were There Regime Switches in U.S. Monetary Policy?”
+American Economic Review 96, 54-81.
+[32] Stock, J.H. and M.W. Watson (2002). “Has the Business Cycle Changed, and Why?”NBER
+Macroeconomics Annual 17, 159-218.
+37
+
+6. Technical Appendix (Not for Publication)
+This technical appendix is organized as follows. First, it presents the proofs of theorems 2 and 3.
+Second, it describes the equilibrium of the model in more detail. Third, it shows how parameter
+drifting in the monetary policy rule does not appear in the …rst-order approximation. Fourth, it
+focuses on describing how we e¢ ciently compute the model. Fifth, it o¤ers details on how we
+elaborated the data. Sixth, it discusses the determinacy of the model. Finally, it includes some
+additional empirical results not reported in the main text regarding the IRF of the model, the …t
+of the model in comparison with some alternatives, and some counterfactuals.
+6.1. Proofs
+6.1.1. Theorem 2
+We start by proving theorem 2. In this theorem, we characterize the …rst-order derivatives of
+the policy functions h and g evaluated at the steady state. We …rst show that the …rst partial
+derivatives of h and g with respect to any component of
+
+t 1,
+
+Ut , or
+
+evaluated at the steady state
+
+are zero (in other words, that the …rst-order approximation of the policy functions do not depend
+on volatility shocks nor their innovations nor on the perturbation parameter). Before proceeding,
+note that using (2), we can write Zt+1 , in a compact manner, as a function of Zt ;
+
+t ; Et+1 ;
+
+Ut+1 ,
+
+and
+Zt+1 = & (Zt ;
+that using (3)
+
+t+1
+
+Et+1 ; Ut+1 ; ) ;
+
+t;
+
+can be expressed as a function of
+
+t+1
+
+=#
+
+t
+
+and that using (5)
+
+t
+
+Ut+1 , and
+
+Ut+1 ;
+
++
+
+that using (4) we can write Zt as a function of Zt 1 ;
+Zt = & (Zt 1 ;
+
+t;
+
+(26)
+
+(27)
+
+t 1 ; Et ;
+
+t 1 ; Et ; Ut ;
+
+and Ut
+
+);
+
+(28)
+
+can be expressed as
+
+t
+
+=#
+
+t 1
+
+38
+
++ Ut
+
+(29)
+
+where # and
+1
+
+#2i
+
+1
+2
+
+i
+
+are both m
+
+m diagonal matrices with diagonal elements equal to #i and
+
+respectively. If we substitute the policy functions (6)-(8) and (26)-(29) into the
+
+set of equilibrium conditions (1), we get that
+
+0
+
+B
+B
+Et f B
+@
+
+F (St ; Zt 1 ;
+g (h (St ; Zt 1 ;
+
+1 ; Et ; Ut ; ) ; & (Zt 1 ;
+
+t
+
+g (St ; Zt 1 ;
+
+t 1 ; Et ; Ut ;
+
+t 1 ; Et ; Ut ) ; #
+
+& (& (Zt 1 ;
+
+t 1 ; Et ; Ut ;
+
+t 1
+
+t
+
+)
+
+1 ; Et ; Ut ) ; #
+
+) ; h (St ; Zt 1 ;
+
+t
+
+1 + Ut ; Et+1 ; Ut+1 ; ) ;
+
+t 1 ; Et ; Ut ;
+
+) ; St ;
+
++ Ut ; Et+1 ; Ut+1 ) ; & (Zt 1 ;
+
+t 1 ; Et ; Ut )
+
+1
+
+C
+C
+C=0
+A
+
+where, to ease notation, we do not explicitly write that the functions above depend on .
+Proof. We want to show that
+h
+
+t 1
+
+i1
+j
+
+= g
+
+t 1
+
+i2
+j
+
+= [hUt ]ij1 = [gUt ]ij2 = [h ]i1 = [g ]i2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+We show this result in three steps that basically repeat the same argument based on the
+homogeneity of a system of linear equations:
+1. We write the derivative of the i
+
+th element of F with respect to the j
+
+th element of
+
+t 1
+
+as
+F
+
+t 1
+
+i
+j
+
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 h
+
+t 1
+
+i1
+j
+
++ g
+
+t 1
+
+i2
+j
+
+#j + [fYt ]ii2 g
+
+t 1
+
+i2
++
+j
+
+fSt+1
+
+i
+i1
+
+h
+
+t 1
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. This is a homogeneous system on h
+and g
+
+t 1
+
+i2
+j
+
+i1
+j
+
+=0
+
+t 1
+
+i1
+j
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Thus
+h
+
+t 1
+
+i1
+j
+
+= g
+
+t 1
+
+i2
+j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+2. We write the derivative of the i
+
+th element of F with respect to the j
+
+th element of Ut
+
+as
+[FUt ]ij = fYt+1
+
+i
+i2
+
+[gSt ]ii21 [hUt ]ij1 + g
+
+t 1
+
+i2
+j
+
+1
+39
+
+#2j
+
+1
+2
+
+j
+
++ [fYt ]ii2 [gUt ]ij2 + fSt+1
+
+i
+i1
+
+[hUt ]ij1 = 0
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. Since we have already shown that g
+
+t 1
+
+i2
+j
+
+=
+
+0 for i2 2 f1; : : : ; kg and j 2 f1; : : : ; mg, this is a homogeneous system on [hUt ]ij1 and [gUt ]ij2
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Thus
+[hUt ]ij1 = [gUt ]ij2 = 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+3. Finally, we write the derivative of the i
+[F ]i = fYt+1
+
+i
+i2
+
+th element of F with respect to
+
+[gSt ]ii21 [h ]i1 + [g ]i2 + [fYt ]ii2 [g ]i2 + fSt+1
+
+i
+i1
+
+as
+
+[h ]i1 = 0
+
+for i 2 f1; : : : ; k + n + mg. Since this is a homogeneous system on [h ]i1 and [g ]i2 for
+i1 2 f1; : : : ; ng and i2 2 f1; : : : ; kg, we have that
+[h ]i1 = [g ]i2 = 0
+for i1 2 f1; : : : ; ng and i2 2 f1; : : : ; kg.
+
+6.1.2. Theorem 3
+Let us now prove theorem 3. We show, among other things, that the second partial derivatives of
+h and g with respect to either log
+
+it
+
+or ui;t and any other variable but "i;t are also zero for any
+
+i 2 f1; : : : ; mg. We divide the proof into three parts.
+The …rst part of the proof deals with the cross-derivatives of the policy
+
+Proof, part 1.
+
+functions h and g with respect to
+
+and any of St , Zt 1 ,
+
+t 1,
+
+Et , or Ut and it shows that all of
+
+them are equal to zero. In particular, we want to show that
+[h
+
+i1
+;St ]j
+
+= [g
+
+i2
+;St ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; ng and
+h
+
+;Zt
+
+1
+
+i1
+j
+
+= g
+
+;Zt
+
+1
+
+i2
+j
+
+= h
+
+;
+
+t 1
+
+i1
+j
+
+= g
+
+;
+
+t 1
+
+i2
+j
+
+40
+
+= [h
+
+i1
+;Et ]j
+
+= [g
+
+i2
+;Et ]j
+
+= [h
+
+i1
+;Ut ]j
+
+= [g
+
+i2
+;Ut ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+We show this result in …ve steps. We again exploit the homogeneity of a system of linear
+equations.
+1. We consider the cross-derivative of the i
+
+th element of F with respect to
+
+and the j
+
+th
+
+element of St
+[F
+
+i
+;St ]j
+
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 [h
+
+i1
+;St ]j
+
+i2
+;St ]i1
+
++ [g
+
+i2
+;St ]j
+
+[hSt ]ij1 + [fYt ]ii2 [g
+
++ fSt+1
+
+i
+i1
+
+[h
+
+i1
+;St ]j
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; ng. This is a homogeneous system on [h
+and [g
+
+i2
+;St ]j
+
+=0
+i1
+;St ]j
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; ng. Thus
+[h
+
+i1
+;St ]j
+
+= [g
+
+i2
+;St ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; ng.
+2. We consider the cross-derivative of the i
+element of Zt
+F
+
+;Zt
+
+th element of F with respect to
+
+and the j
+
+th
+
+1
+
+1
+
+i
+j
+
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 h
+
++ [fYt ]ii2 g
+
+;Zt
+
+1
+
+;Zt
+i2
+j
+
+1
+
+i1
+j
+
++ [g
+
++ fSt+1
+
+i
+i1
+
+i2
+;St ]i1
+
+h
+
+hZt
+
+;Zt
+
+1
+
+i1
+j
+
+1
+
+i1
+j
+
+i2
+;St ]j
+
+j 2 f1; : : : ; ng, this is a homogeneous system on h
+
+and g
+
+1
+
+1
+
+i2
+j
+
+i1
+j
+
+;Zt
+
+1
+
+i2
+j
+
+j
+
+=0
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. Since [g
+;Zt
+
++ g
+
+= 0 for i2 2 f1; : : : ; kg and
+;Zt
+
+1
+
+i2
+j
+
+for i1 2 f1; : : : ; ng,
+
+i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Hence
+h
+
+;Zt
+
+1
+
+i1
+j
+
+= g
+
+;Zt
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+3. We consider the cross-derivative of the i
+
+th element of F with respect to
+
+41
+
+and the j
+
+th
+
+element of
+
+t 1
+
+F
+
+;
+
+i
+j
+
+t 1
+
+= fYt+1
+
++ [fYt ]ii2 g
+
+;
+
+i
+i2
+
+[gSt ]ii21 h
+i2
+j
+
+t 1
+
+;
+
++ fSt+1
+
+i1
+j
+
+t 1
+
+i
+i1
+
+h
+
++ g
+;
+
+;
+i1
+j
+
+t 1
+
+i2
+j
+
+t 1
+
+#j
+
+=0
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. This is a homogeneous system on h
+and g
+
+;
+
+t 1
+
+i2
+j
+
+;
+
+t 1
+
+i1
+j
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Hence
+h
+
+;
+
+i1
+j
+
+t 1
+
+= g
+
+;
+
+t 1
+
+i2
+j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+4. We consider the cross-derivative of the i
+
+th element of F with respect to
+
+and the j
+
+th
+
+element of Et
+[F
+
+i
+;Et ]j
+
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 [h
+
+i1
+;Et ]j
+
++ [fYt ]ii2 [g
+
++ [g
+
+i2
+;Et ]j
+
+i2
+;St ]i1
+
+[hEt ]ij1 + g
+
++ fSt+1
+
+i
+i1
+
+[h
+
+system on [h
+
+i1
+;Et ]j
+
+i2
+;St ]j
+
+and [g
+
+1
+
+i1
+;Et ]j
+
+=0
+
+;Zt
+
+i2
+j
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. Since g
+j 2 f1; : : : ; mg and [g
+
+;Zt
+
+1
+
+i2
+j
+
+j
+
+exp#j log
+
+j;t 1
+
+= 0 for i2 2 f1; : : : ; kg and
+
+= 0 for i2 2 f1; : : : ; kg and j 2 f1; : : : ; ng, this is a homogeneous
+
+i2
+;Et ]j
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Thus
+[h
+
+i1
+;Et ]j
+
+= [g
+
+i2
+;Et ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+5. We consider the cross-derivative of the i
+
+th element of F with respect to
+
+and the j
+
+th
+
+element of Ut
+[F
+
+i
+;Ut ]j
+
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 [h
+
++ [fYt ]ii2 [g
+
+i2
+;Ut ]j
+
+i1
+;Ut ]j
+
++ g
+
++ fSt+1
+
+i
+i1
+
+;
+
+[h
+
+t 1
+
+i2
+j
+
+i1
+;Ut ]j
+
+1
+
+#2j
+
+1
+2
+
+j
+
+=0
+
+for i 2 f1; : : : ; k + n + mg and j 2 f1; : : : ; mg. Since we have shown that g
+42
+
+;
+
+t 1
+
+i2
+j
+
+= 0 for
+
+i2 2 f1; : : : ; kg and j 2 f1; : : : ; mg ; we have that the above system is a homogeneous system
+on [h
+
+i1
+;Ut ]j
+
+i2
+;Ut ]j
+
+and [g
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg. Then
+i1
+;Ut ]j
+
+[h
+
+= [g
+
+i2
+;Ut ]j
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j 2 f1; : : : ; mg.
+
+The second part of the proof deals with the cross-derivatives of the policy
+
+Proof, part 2.
+
+functions h and g with respect to
+
+and any of St , Zt 1 ,
+
+t 1
+
+t 1,
+
+or Et and it shows that all of
+
+them are equal to zero with one exception. In particular, we want to show that
+hSt ;
+
+t 1
+
+i1
+j1 ;j2
+
+= gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg,
+hZt
+
+1;
+
+t 1
+
+i1
+j1 ;j2
+
+= gZt
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+= h
+
+t 1;
+
+t 1
+
+i1
+j1 ;j2
+
+= g
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg, and
+hEt ;
+
+t 1
+
+i1
+j1 ;j2
+
+= gEt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg if j1 6= j2 .
+We show this result in four steps (and where we have already taken advantage of the terms
+that we know to be equal to zero from previous derivations).
+1. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+of St and the j2
+FSt ;
+
+th element of
+
+t 1
+
+i
+j1 ;j2
+
+= fYt+1
+
+t 1
+
+i
+i2
+
++ [fYt ]ii2 gSt ;
+
+[gSt ]ii21 hSt ;
+t 1
+
+i2
+j1 ;j2
+
+t 1
+
++ fSt+1
+
+i1
+j1 ;j2
+i
+i1
+
++ gSt ;
+
+hSt ;
+
+t 1
+
+t 1
+
+i1
+j1 ;j2
+
+i2
+i1 ;j2
+
+[hSt ]ij11 #j2
+
+=0
+
+for i 2 f1; : : : ; k + n + mg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg. This is a homogeneous
+system on hSt ;
+
+t 1
+
+i1
+j1 ;j2
+
+and gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng,
+43
+
+and j2 2 f1; : : : ; mg. Therefore
+hSt ;
+
+i1
+j1 ;j2
+
+t 1
+
+= gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg.
+2. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+of Zt
+
+1
+
+and the j2
+
+th element of
+
+t 1
+
+FZt
+= fYt+1
+
+i
+i2
+
+[gSt ]ii21 hZt
+
+1;
+
+t 1
+
++ [fYt ]ii2 gZt
+
+i1
+j1 ;j2
+1;
+
+1;
+
++ gSt ;
+i2
+j1 ;j2
+
+t 1
+
+i
+j1 ;j2
+
+t 1
+
+t 1
+
+i2
+i1 ;j2
+
++ fSt+1
+
+hZt
+i
+i1
+
+1
+
+hZt
+
+i1
+j1
+
+#j2 + gZt
+
+1;
+
+t 1
+
+i1
+j1 ;j2
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+j1 #j2
+
+=0
+
+for i 2 f1; : : : ; k + n + mg, and j1 ; j2 2 f1; : : : ; mg. Since we just found that gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=
+
+0 for i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg, this is a homogeneous system
+on hZt
+
+1;
+
+t 1
+
+i1
+j1 ;j2
+
+and gZt
+
+1;
+
+t 1
+
+hZt
+
+1;
+
+i2
+i2 ;j2
+
+f1; : : : ; mg. Therefore
+t 1
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2
+i1
+j1 ;j2
+
+= gZt
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg.
+3. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+of
+
+t 1
+
+and the j2
+
+th element of
+
+t 1
+
+F
+fYt+1
+
+i
+i2
+
+[gSt ]ii21 h
+
++ [fYt ]ii2 g
+
+t 1;
+
+t 1;
+
+t 1
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+t 1
+
+i1
+j1 ;j2
+
+i
+j1 ;j2
+
+=
+
++ g
+
++ fSt+1
+
+i
+i1
+
+t 1;
+
+h
+
+t 1
+
+t 1;
+
+i2
+j1 ;j2
+
+t 1
+
+#j1 #j2
+
+i1
+j1 ;j2
+
+=0
+
+for i 2 f1; : : : ; k + n + mg and j1 ; j2 2 f1; : : : ; mg. This is a homogeneous system on
+h
+
+t 1;
+
+t 1
+
+i1
+j1 ;j2
+
+and g
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+h
+
+t 1;
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg,
+
+therefore
+t 1
+
+i1
+j1 ;j2
+
+= g
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg.
+44
+
+=0
+
+4. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+of Et and the j2
+
+th element of
+
+if j1 6= j2
+
+t 1
+
+FEt ;
+fYt+1
+
+i
+i2
+
+[gSt ]ii21 hEt ;
+
+t 1
+
+i1
+j1 ;j2
+
++ gSt ;
+
++ [fYt ]ii2 gEt ;
+
+t 1
+
+i2
+i1 ;j2
+
+i2
+j1 ;j2
+
+t 1
+
+i
+j1 ;j2
+
+t 1
+
+=
+
+[hEt ]ij11 #j2 + gZt
+i
+i1
+
++ fSt+1
+
+hEt ;
+
+1;
+
+t 1
+
+t 1
+
+i1
+j1 ;j2
+
+i2
+j1 ;j2
+
+j1
+
+exp#j1 log
+
+t 1
+
+i2
+j;j2
+
+#j2
+
+=0
+
+for i 2 f1; : : : ; k + n + mg and j1 ; j2 2 f1; : : : ; mg. Since we know that gZt
+gSt ;
+
+j1 ;t 1
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+=
+
+= 0 for i2 2 f1; : : : ; kg, j 2 f1; : : : ; ng, and j1 ; j2 2 f1; : : : ; mg, this is a
+
+homogeneous system on hEt ;
+
+t 1
+
+i1
+j1 ;j2
+
+and gEt ;
+
+t 1
+
+i2
+j1 ;j2
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg,
+
+and j1 ; j2 2 f1; : : : ; mg if j1 6= j2 . Therefore
+hEt ;
+
+i1
+j1 ;j2
+
+t 1
+
+= gEt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg if j1 6= j2 .
+Note that if j1 = j2 , we have that
+
+0
+@
+
+FEt ;
+[gSt ]ii21 hEt ;
+gZt
+
+1;
+
+t 1
+
+i1
+j1 ;j1
+
+t 1
+
+i2
+j1 ;j1
+
++ [fYt ]ii2 gEt ;
+
+t 1
+
+i
+j1
+
+i2
+j1 ;j1
+i
+j1
+
+j1
+
+1
+
+i
+i2
+
+= fYt+1
+
++ gSt ;
+
++ gZt
+
++ [fZt ]ij1 + fZt+1
+and since [fZt ]ij1 and fZt+1
+
+i
+j1 ;j1
+
+t 1
+
+i2
+j1
+
+t 1
+
+j1
+
++ fSt+1
+j1
+
+i2
+i1 ;j1
+
+[hEt ]ij11 #j1 +
+
+#j1 log
+
+exp
+i
+i1
+
+hEt ;
+
+exp#j1 log
+
+t 1
+
+j1 ;t 1
+
+j1 ;t 1
+
+#j1
+
+i1
+j1 ;j1
+
+1
+A
+
+#j1 = 0
+
+are di¤erent from zero in general for i 2 f1; : : : ; k + n + mg
+
+and j1 2 f1; : : : ; mg ; we have that this system is not homogeneous and
+hEt ;
+
+t 1
+
+i1
+j1 ;j1
+
+= gEt ;
+
+t 1
+
+i2
+j1 ;j1
+
+6= 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 2 f1; : : : ; mg.
+
+Proof, part 3.
+
+The …nal part of the proof deals with the cross-derivatives of the policy
+45
+
+functions h and g with respect to Ut and any of St , Zt 1 ,
+
+t 1,
+
+Et , or Ut and it shows that all of
+
+them are equal to zero with one exception. In particular, we want to show that
+[hSt ;Ut ]ij11 ;j2 = [gSt ;Ut ]ij21 ;j2 = 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg,
+hZt
+
+1 ;Ut
+
+i1
+j1 ;j2
+
+= gZt
+
+1 ;Ut
+
+i2
+j1 ;j2
+
+= h
+
+t 1 ;Ut
+
+i1
+j1 ;j2
+
+= g
+
+i2
+j1 ;j2
+
+t 1 ;Ut
+
+= [hUt ;Ut ]ij11 ;j2 = [gUt ;Ut ]ij21 ;j2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg, and
+[hEt ;Ut ]ij11 ;j2 = [gEt ;Ut ]ij21 ;j2 = 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 ; j2 2 f1; : : : ; mg, and j1 6= j2 .
+Again, we follow the same steps for each part of the result as before and use our previous
+…ndings regarding which terms are zero.
+1. We consider the cross derivative of the i th element of F with respect to the j1 th element
+of St and the j2
+
+th element of Ut
+
+[FSt ;Ut ]ij1 ;j2 = fYt+1
+
+i
+i2
+
+[gSt ]ii21 [hSt ;Ut ]ij11 ;j2 + gSt ;
+
++ [fYt ]ii2 [gSt ;Ut ]ij21 ;j2 + fSt+1
+
+i
+i1
+
+t 1
+
+i2
+i1 ;j2
+
+[hSt ]ij11 1
+
+#2j2
+
+1
+2
+
+j2
+
+[hSt ;Ut ]ij11 ;j2 = 0
+
+for i 2 f1; : : : ; k + n + mg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg. Since gSt ;
+
+t 1
+
+i2
+j1 ;j2
+
+=0
+
+for i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg, this is a homogeneous system on
+[hSt ;Ut ]ij11 ;j2 and [gSt ;Ut ]ij21 ;j2 .Therefore
+
+[hSt ;Ut ]ij11 ;j2 = [gSt ;Ut ]ij21 ;j2 = 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 2 f1; : : : ; ng, and j2 2 f1; : : : ; mg.
+2. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+
+46
+
+of Zt
+
+1
+
+and the j2
+
+fYt+1
+
+i
+i2
+
+th element of Ut
+
+0
+@
+
+FZt
+[gSt ]ii21 hZt
+
+1 ;Ut
+
+i1
+j1 ;j2
+
++ gZt
+
++ [fYt ]ii2 gZt
+
+1 ;Ut
+
+i
+j1 ;j2
+
+1 ;Ut
+
++ gSt ;
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+=
+i2
+i1 ;j2
+
+t 1
+
+i2
+j1 ;j2
+
++ fSt+1
+
+[hZt ]ij11 1
+
+j1
+
+1
+
+#2j2
+
+i
+i1
+
+hZt
+
+1 ;Ut
+
+for i 2 f1; : : : ; k + n + mg, and j1 ; j2 2 f1; : : : ; mg. Since gZt
+
+1
+2
+
+1
+2
+
+j2
+
+j2
+
+i1
+j1 ;j2
+
+1;
+
+#2j2
+
+=0
+i2
+j1 ;j2
+
+t 1
+
+1
+A
+
+= gSt ;
+
+t 1
+
+i2
+j;j2
+
+=0
+
+for i2 2 f1; : : : ; kg, j 2 f1; : : : ; ng, and j1 ; j2 2 f1; : : : ; mg, this is a homogeneous system on
+hZt
+
+1 ;Ut
+
+i1
+j1 ;j2
+
+and gZt
+
+1 ;Ut
+
+i2
+j1 ;j2
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg.
+
+Therefore
+hZt
+
+1 ;Ut
+
+i1
+j1 ;j2
+
+= gZt
+
+1 ;Ut
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg.
+3. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+of
+
+t 1
+
+and the j2
+
+th element of Ut
+F
+
+fYt+1
+
+i
+i2
+
+[gSt ]ii21 h
+
++ [fYt ]ii2 g
+
+t 1 ;Ut
+
+i
+j1 ;j2
+
+t 1 ;Ut
+
+i1
+j1 ;j2
+
++ g
+
+t 1 ;Ut
+
+i2
+j1 ;j2
+
++ fSt+1
+
+t 1;
+
+=
+t 1
+
+i
+i1
+
+h
+
+i2
+j1 ;j2
+
+#2j2
+
+#j1 1
+
+t 1 ;Ut
+
+i1
+j1 ;j2
+
+for i 2 f1; : : : ; k + n + mg, and j1 ; j2 2 f1; : : : ; mg. Since g
+
+1
+2
+
+j2
+
+=0
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg, this is a homogeneous system on h
+g
+
+t 1 ;Ut
+
+i2
+j1 ;j2
+
+= 0 for i2 2
+t 1 ;Ut
+
+i1
+j1 ;j2
+
+and
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg. Therefore
+h
+
+t 1 ;Ut
+
+i1
+j1 ;j2
+
+= g
+
+t 1 ;Ut
+
+i2
+j1 ;j2
+
+=0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, j1 ; j2 2 f1; : : : ; mg.
+4. We consider the cross-derivative of the i th element of F with respect to the j1 th element
+
+47
+
+of Ut and the j2
+
+th element of Ut
+[FUt ;Ut ]ij1 ;j2 =
+
+fYt+1
+
+i
+i2
+
+g
+
+t 1;
+
+t 1
+
+i2
+j1 ;j2
+
+1
+
+#2j1
+
+1
+2
+
+j1
+
+#2j2
+
+1
+
++ [fYt ]ii2 [gUt ;Ut ]ij21 ;j2 + fSt+1
+
+i
+i1
+
+1
+2
+
+j2
+
++ [gSt ]ii21 [hUt ;Ut ]ij11 ;j2
+
+[hUt ;Ut ]ij11 ;j2 = 0
+
+for i 2 f1; : : : ; k + n + mg and j1 ; j2 2 f1; : : : ; mg. Since g
+
+i2
+j1 ;j2
+[hUt ;Ut ]ij11 ;j2
+
+t 1;
+
+f1; : : : ; kg and j1 ; j2 2 f1; : : : ; mg, this is a homogeneous system on
+
+t 1
+
+= 0 for i1 2
+
+and [gUt ;Ut ]ij21 ;j2
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg. Therefore
+[hUt ;Ut ]ij11 ;j2 = [gUt ;Ut ]ij21 ;j2 = 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg.
+5. Finally, consider the cross-derivative of the i
+element of Et and the j2
+
+fYt+1
+
+i
+i2
+
+0
+@
+
+th element of F with respect to the j1
+
+th
+
+th element of Ut if j1 6= j2
+[FEt ;Ut ]ij1 ;j2 =
+[gSt ]ii21
++
+
+[hEt ;Ut ]ij11 ;j2 +
+i
+gZt 1 ; t 1 j21 ;j2
+
+gSt ;
+j1
+
+t 1
+
+i2
+i1 ;j2
+
+#j1 log
+
+exp
+
++ [fYt ]ii2 [gEt ;Ut ]ij21 ;j2 + fSt+1
+
+i
+i1
+
+[hEt ]ij11
+j1 ;t 1
+
+1
+1
+
+1
+2
+
+#2j2
+#2j2
+
+1
+2
+
+[hEt ;Ut ]ij11 ;j2 = 0
+
+for i 2 f1; : : : ; k + n + mg and j1 ; j2 2 f1; : : : ; mg. Since gZt
+
+1;
+
+t 1
+
+i2
+j1 ;j2
+
+j2
+j2
+
+1
+A
+
+= gSt ;
+
+t 1
+
+i2
+j;j2
+
+=0
+
+for i2 2 f1; : : : ; kg, j 2 f1; : : : ; ng, and j1 ; j2 2 f1; : : : ; mg, this is a homogeneous system
+on [hEt ;Ut ]ij11 ;j2 and [gEt ;Ut ]ij21 ;j2 for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg if
+j1 6= j2 . Therefore
+
+[hEt ;Ut ]ij21 ;j2 = [gEt ;Ut ]ij11 ;j2 = 0
+
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 ; j2 2 f1; : : : ; mg if j1 6= j2 .
+
+48
+
+Note that if j1 = j2 , we have that
+
+fYt+1
+
+i
+i2
+
+0
+@
+
+[FEt ;Ut ]ij1 ;j1 =
+gZt
+
+1;
+
+i2
+i
++ gZt 1 j21
+j1 ;j1
+i2
+i1
+1 i1 ;j1 [hEt ]j1 1
+
+t 1
+
++ gSt ;
+
+t
+
+#j log
+j1 exp 1
+
+#2j1
+
++ [fYt ]ii2 [gEt ;Ut ]ij21 ;j1 + fSt+1
+
++ [fZt ]ij1 +
+and since [fZt ]ij1 and fZt+1
+
+i
+j1
+
+j1
+
+i
+j1
+
+fZt+1
+
+j1
+
+1
+2
+
+i
+i1
+
+exp#j1 log
+
++
+
+j1
+
+[gSt ]ii21
+
+#2j1
+
+1
+
+j1 ;t 1
+
+1
+2
+
+[hEt ;Ut ]ij11 ;j1
+
+[hEt ;Ut ]ij11 ;j1
+
+j1 ;t 1
+
+1
+
+#2j1
+
+1
+2
+
+j1
+
+j1
+
+1
+A
+
+=0
+
+are di¤erent from zero in general for i 2 f1; : : : ; k + n + mg and
+
+j1 2 f1; : : : ; mg ; we have that this system is not homogeneous and hence
+[hEt ;Ut ]ij21 ;j1 = [gEt ;Ut ]ij11 ;j1 6= 0
+for i1 2 f1; : : : ; ng, i2 2 f1; : : : ; kg, and j1 2 f1; : : : ; mg.
+6.2. Equilibrium
+In this section we describe the equilibrium conditions of the model. First, we introduce the ones
+related to the household, then the ones related to the …rm and the monetary authority, and …nally
+we present the market clearing and aggregation conditions.
+6.2.1. Households
+We can de…ne two Lagrangian multipliers,
+
+jt ,
+
+the multiplier associated with the budget con-
+
+straint, and qjt (the marginal Tobin’s Q), the multiplier associated with the investment adjustment constraint normalized by
+
+jt .
+
+Thus, the …rst-order conditions of the household problem with
+
+respect to cjt , bjt , ujt , kjt , and xjt can be written as:
+dt (cjt
+
+hcjt 1 )
+
+1
+
+jt
+
+b Et dt+1 (cjt+1
+= Et f
+rt =
+
+Rt
+jt+1
+
+1
+t
+
+49
+
+t+1
+0
+
+[ujt ] ;
+
+hcjt )
+g;
+
+1
+
+=
+
+jt ;
+
+(30)
+(31)
+(32)
+
+qjt = Et
+
+jt+1
+
+(1
+
+1
+t+1
+
+) qjt+1 + rt+1 ujt+1
+
+jt
+
+[ujt+1 ]
+
+(33)
+
+;
+
+and
+1 = qjt
+
+t
+
+1
+
+V
+
+xjt
+xjt 1
+
+V0
+
+xjt
+xjt
+xjt 1 xjt 1
+
+jt+1
+
++ Eqjt+1
+
+t+1
+
+V0
+
+jt
+
+xjt+1
+xjt
+
+2
+
+xjt+1
+xjt
+
+(34)
+
+:
+
+The …rst-order conditions of the “labor packer”imply a demand function for labor:
+wjt
+wt
+
+ljt =
+
+ltd
+
+and, together with a zero pro…t condition wt ltd =
+Z
+
+wt =
+
+R1
+0
+
+8j
+
+wjt ljt dj, an expression for the wage:
+1
+
+1
+1
+wjt
+
+1
+
+:
+
+dj
+
+0
+
+Households follow a Calvo pricing mechanism when they set their wages. At the start of every
+period, a randomly selected fraction 1
+
+w
+
+of households can reoptimize their wages. All other
+
+households simply index their nominal wages given past in‡ation with an indexation parameter
+w
+
+2 [0; 1].
+Since we postulated in the main text both complete …nancial markets for the households
+
+and separable utility in consumption, the marginal utilities of consumption are the same for all
+households. Thus, in equilibrium, cjt = ct , ujt = ut , kjt
+
+1
+
+= kt , xjt = xt , qjt = qt ;
+
+jt
+
+=
+
+t,
+
+and
+
+wjt = wt .
+The last two equalities are the most relevant to simplify our analysis: they tell us that the
+shadow cost of consumption is equated across households and that all households that can reset
+their wages optimally will do it at the same level wt . With these two results, and after several
+steps of algebra, we …nd that the evolution of wages is described by two recursive equations:
+
+ft =
+
+1
+
+and
+ft = dt 't
+
+wt
+wt
+
+1
+
+(wt )
+
+(1+#)
+
+d
+t wt lt
+
+1+#
+ltd
+
++
+
++
+
+w Et
+
+w Et
+
+on the auxiliary variable ft .
+50
+
+t
+
+w
+
+t+1
+
+t
+
+w
+
+t+1
+
+1
+
+wt+1
+wt
+(1+#)
+
+wt+1
+wt
+
+1
+
+(35)
+
+ft+1
+
+(1+#)
+
+ft+1
+
+(36)
+
+Taking advantage of the expression for the wage and that, in every period, a fraction 1
+of households set wt as their wage and the remaining fraction
+
+w
+
+w
+
+partially index their nominal
+
+wage by past in‡ation, we can write the law of motion of real wage as:
+wt1
+
+w
+
+=
+
+1
+
+wt1
+
+t 1
+
+w
+
+t
+
++ (1
+
+1
+
+w ) wt
+
+1
+
+(37)
+
+:
+
+6.2.2. Firms
+The …nal good producer is perfectly competitive and minimizes its costs subject to the production
+function (24) and taking as given all intermediate goods prices pti and the …nal good price pt .
+The optimality conditions of this problem result in a demand function for each intermediate good
+with the classic form:
+
+"
+
+pit
+pt
+
+yit =
+
+ytd
+
+8i
+
+where ytd is the aggregate demand and a price for the …nal good:
+Z
+
+pt =
+
+1
+1 "
+
+1
+
+pit1 " di
+
+:
+
+0
+
+Each of the intermediate goods is produced by a monopolistic competitor. Intermediate good
+producers produce the quantity demanded of the good by renting litd and kit
+
+1
+
+at prices wt and rt .
+
+Then, by minimization, we have a marginal cost of:
+mct =
+
+1
+
+1
+
+wt1 rt
+At
+
+1
+
+1
+
+(38)
+
+The marginal cost is constant for all …rms and all production levels given At , wt , and rt .
+Given the demand function, the intermediate good producers set prices to maximize pro…ts.
+However, when they do so, they follow the same Calvo pricing scheme as households. In each
+period, a fraction 1
+
+p
+
+of intermediate good producers reoptimize their prices. All other …rms
+
+partially index their prices by past in‡ation with an indexation parameter
+
+2 [0; 1].
+
+The solution for the …rm’s pricing problem has a recursive structure in two new auxiliary
+variables gt1 and gt2 that take the form:
+"
+
+gt1 =
+
+d
+t mct yt +
+
+p Et
+
+51
+
+t
+t+1
+
+1
+gt+1
+;
+
+(39)
+
+1 "
+
+gt2
+
+=
+
+t
+
+d
+t yt
+
++
+
+p Et
+
+t
+
+t
+
+t+1
+
+t+1
+
+2
+gt+1
+;
+
+(40)
+
+and
+"gt1 = ("
+
+1)gt2
+
+(41)
+
+where
+t
+
+pt
+pt
+
+=
+
+(42)
+
+is the ratio between the optimal new price (common across all …rms that can reset their prices)
+and the price of the …nal good. With this structure, the price index follows:
+"
+
+p1t
+
+1 "
+
+=
+
+p
+
+t 1
+
+or, normalizing by p1t " :
+
+p1t
+
+"
+1
+
++ (1
+
+p ) pt
+
+1 "
+
+1 "
+
+1=
+
+t 1
+
+p
+
++ (1
+
+p)
+
+t
+
+1 "
+t
+
+:
+
+(43)
+
+6.2.3. The Monetary Authority
+The model is closed with a monetary authority that sets the nominal interest rates by a modi…ed
+Taylor rule described in (25).
+6.2.4. Market Clearing and Aggregation
+Aggregate demand is given by:
+ytd = ct + xt +
+
+1
+t
+
+[ut ] kt 1 :
+
+(44)
+
+By relying on the observation that the capital-labor ratio is constant across …rms, we can
+derive that aggregate supply is:
+yts
+
+=
+
+ltd
+
+At (ut kt 1 )
+
+1
+
+zt
+
+p
+t
+
+where:
+p
+t
+
+=
+
+Z
+
+0
+
+1
+
+pit
+pt
+
+"
+
+di
+
+is the aggregate loss of e¢ ciency induced by price dispersion of the intermediate goods.
+52
+
+(45)
+
+Market clearing requires that
+yt = ytd = yts :
+
+(46)
+
+By the properties of Calvo’s pricing:
+"
+p
+t
+
+=
+
+p
+t 1
+
+t 1
+
+p
+
+t
+
++ (1
+
+p)
+
+"
+t
+
+(47)
+
+:
+
+Finally, demanded labor is given by:
+ltd
+
+=
+
+where:
+w
+t
+
+1
+
+=
+
+w
+t
+
+Z
+
+Z
+
+1
+
+(48)
+
+ljt dj = lt
+
+0
+
+1
+
+wjt
+wt
+
+0
+
+dj:
+
+is the aggregate loss of labor input induced by wage dispersion among di¤erentiated types of labor.
+Again, by Calvo’s pricing, this ine¢ ciency evolves as:
+w
+t
+
+=
+
+w
+
+wt 1
+wt
+
+w
+
+t 1
+
+w
+t 1
+
+t
+
++ (1
+
+w) (
+
+w
+t
+
+)
+
+(49)
+
+:
+
+Thus an equilibrium is characterized by equations (30)-(49), the Taylor rule (25), the law of
+motion for the structural shocks (augmented with the parameter drifts), and the law of motion
+for the volatility shocks.
+6.3. Non-linearities in Parameter Drifting
+We argued in the main text that, since we wanted to consider the e¤ects of stochastic volatility
+on our model, it was of the essence to deal with higher-order approximations. In this section
+we argue that higher-order approximations are also key to dealing with parameter drifting in the
+Taylor rule. The reason is that parameter drifting disappears from a linear solution. To see this,
+take the Taylor rule de…ned in (25) (assuming only in this paragraph and to simplify notation
+that
+
+y
+
+= 0 and log
+
+t
+
+= 0) and let us rewrite it:
+
+bt ; R
+bt 1 ; b t ; b
+f R
+
+;t ; " t
+
+b
+
+= expRt
+
+exp
+
+53
+
+b
+
+R Rt 1 +(1
+
+R)
+
+exp
+
+b ;t
+
+b t+
+
+"
+
+t
+
+= 0:
+
+where we have expressed each variable vart in terms of log deviation with respect to the steady
+state, vd
+art = log vart
+
+log var. The log-linear approximation of f around the steady state is
+
+bt ; R
+bt 1 ; b t ; b
+f R
+
+;t ; " t
+
+bt + f2 (0) R
+bt
+' f1 (0) R
+
+1
+
++ f3 (0) b t + f4 (0) b
+
+;t
+
++ f5 (0) " t :
+
+where fi (0) is the …rst derivative of the function f evaluated at (0; 0; 0; 0; 0) with respect to the
+variable i. Note that:
+bt ; R
+bt 1 ; b t ; b
+f4 R
+
+;t ; " t
+
+Clearly, f4 (0) = 0 and b
+
+;t
+
+=
+
+(1
+
+R)
+
+b t expb
+
+;t
+
+exp
+
+b
+
+R Rt 1 +(1
+
+R)
+
+exp
+
+b ;t
+
+b t+
+
+"
+
+t
+
+:
+
+does not play any role in this …rst-order approximation. This is
+
+the consequence of one variable (
+
+t)
+
+being raised to another variable (
+
+;t ).
+
+Thus, the log-linear
+
+approximation of the Taylor rule is:
+bt ; R
+bt 1 ; b t ; b
+f R
+
+which does not depend on
+
+;t ;
+
+;t ; "mt
+
+bt
+'R
+
+b
+
+R Rt 1
+
+(1
+
+but only on the steady state
+
+R)
+
+bt +
+
+"
+
+t
+
+(50)
+
+and it is exactly the same
+
+expression as the one without parameter drifting. Hence, in order to capture parameter drifting
+in the Taylor rule, we need, at least, to perform a second-order approximation.
+6.4. Computation
+In this section, we provide some more details regarding the computation of the paper. We generate
+all the derivatives required by our second-order perturbation with Mathematica 6.0. In that
+way, we do not need to recompute the derivatives, the most time-intensive step, for each set of
+parameter values in our estimation. Once we have all the relevant derivatives, we export them
+automatically into Fortran …les. This whole process takes about 3 hours. Then, we compile the
+resulting …les with the Intel Fortran Compiler version 10:1:025 with IMSL. Previous versions
+failed to compile our project because of the length of some of the expressions. Compilation takes
+about 18 hours. The project has 1798 …les and occupies 2:33 Gbytes of memory.
+The next step is, for given parameter values, to compute the …rst- and second-order approximation to the decision rules around the deterministic steady state using the analytic derivatives
+we found before. For this task, Fortran takes around 5 seconds. Once we have the solution, we
+54
+
+approximate the likelihood using the particle …lter with 10; 000 particles. This number delivered
+a good compromise between accuracy and time to compute the likelihood. The evaluation of one
+likelihood requires 22 seconds on a Dell server with 8 processors. Once we have the likelihood
+evaluation, we guess new parameter values and we start again. This means that drawing 5,000
+times from the posterior (even forgetting about the initial search over a grid of parameter values)
+takes around 38 hours.
+It is important to emphasize that the Mathematica and Fortran code were highly optimized
+in order to 1) keep the size of the project within reasonable dimensions (otherwise, the compiler
+cannot parse the …les and, even when it can, it delivers code that is too ine¢ cient) and 2) provide
+a fast computation of the likelihood.
+Perhaps the most important task in that optimization was the parallelization of the Fortran
+code using OPENMP as well as the compilation options: OG (global optimizations) and Loop Unroll.
+In addition, we tailored specialized code to perform the matrix multiplications required in the …rstand second-order terms of our model solution.
+Implementing corollary 1 requires the solution of a linear system of equations and the computation of a Jacobian. For our particular application, we found that the following sequence of
+LAPACK operations delivered the fastest solution:
+1. DGESV (computes the solution to a real system of linear equations A X = B).
+2. DGETRI (computes the inverse of a matrix using the LU factorization from the previous line).
+3. DGETRF (helps to compute the determinant of the inverse from the previous line).
+Without the parallelization and our optimized code, the solution of the model and evaluation
+of its likelihood take about 70 seconds.
+With respect to the random-walk Metropolis-Hastings, we performed an intensive process of
+…ne-tuning of the chain, both in terms of initial conditions as well as in terms of getting the
+right acceptance level. The only other important remark is to remember that as pointed out by
+McFadden (1989) and Pakes and Pollard (1989), we must keep the random numbers used for
+resampling in the particle …lter constant across draws of the Markov chain. This is required to
+achieve stochastic equi-continuity, and even if this condition is not strictly necessary in a Bayesian
+framework, it reduces the numerical variance of the procedure, which was a serious concern for us
+given the complexity of our problem.
+55
+
+6.5. Construction of Data
+When we estimate the model, we make the series provided by the National Income and Product
+Accounts (NIPA) consistent with the de…nition of variables in the theory. The main adjustment
+we undertake is to express both real output and real gross investment in consumption units. Our
+model implies that there is a numeraire in terms of which all the other prices need to be quoted.
+We pick consumption as the numeraire. The NIPA, in comparison, uses an index of all prices
+to transform nominal GDP and investment into real values. In the presence of changing relative
+prices, such as the ones we have seen in the U.S. over the last several decades with the fall in the
+relative price of capital, NIPA’s procedure biases the valuation of di¤erent series in real terms.
+We map theory into the data by computing our own series of real output and real investment.
+To do so, we use the relative price of investment, de…ned as the ratio of an investment de‡ator
+and a de‡ator for consumption. The denominator is easily derived from the de‡ators of nondurable goods and services reported in the NIPA. It is more complicated to obtain the numerator
+because, historically, NIPA investment de‡ators were poorly constructed. Instead, we rely on the
+investment de‡ator computed by Fisher (2006). Since the series ends early in 2000.Q4, we have
+extended it to 2007.Q1 by following Fisher’s methodology.
+For the real output per capita series, we …rst de…ne nominal output as nominal consumption
+plus nominal gross investment. We de…ne nominal consumption as the sum of personal consumption expenditures on non-durable goods and services. We de…ne nominal gross investment as
+the sum of personal consumption expenditures on durable goods, private residential investment,
+and non-residential …xed investment. Per capita nominal output is equal to the ratio between
+our nominal output series and the civilian non-institutional population between 16 and 65. To
+obtain per capita values, we divide the previous series by the civilian non-institutional population
+between 16 and 65. Finally, real wages are de…ned as compensation per hour in the non-farm
+business sector divided by the CPI de‡ator.
+6.6. Determinacy of Equilibrium
+We mentioned in the main text that the estimated value of
+
+(1.045 in levels) guarantees local
+
+determinacy of the equilibrium. To see this note that, for local determinacy, the relevant part
+of the solution of the model is only the linear, …rst-order component. This component depends
+on
+
+, the mean policy response, and not on the current value of
+56
+
+t.
+
+The economic intuition is
+
+that local unicity survives even if
+
+t
+
+temporarily violates the Taylor principle as long as there is
+
+reversion to the mean in the policy response and, thus, the agents have the expectation that
+
+t
+
+will satisfy the Taylor principle on average. For a related result in models with Markov-switching
+regime changes, see Davig and Leeper (2006). While we cannot …nd an analytical expression
+for the determinacy region, numerical experiments show that, conditional on the other point
+estimates, values of
+to values of
+
+above 0.98 ensure uniqueness. Since the likelihood assigns zero probability
+
+lower than 1.01, well inside the determinacy region, multiplicity of local equilibria
+
+is not an issue in our application.
+6.7. Impulse Response Functions
+As a check of our estimates, we plot the IRFs generated by the model to a monetary policy shock.
+This exercise is an important test. If the IRFs match the shapes and sizes of those gathered
+by time series methods such as SVARs, it will strengthen our belief in the rest of our results.
+Otherwise, we should at least understand where the di¤erences come from.
+Auspiciously, the answer is positive: our model generates dynamic responses that are close to
+the ones from SVARs (see, for instance, Sims and Zha, 2006). The left panel of …gure 6.1 plots the
+IRFs to a monetary shock of three variables commonly discussed in monetary models: the federal
+funds rate, output growth, and in‡ation. Since we have a non-linear model, in all the …gures in
+this section, we report the generalized IRFs starting from the mean of the ergodic distribution
+(Koop, Pesaran, and Potter, 1996). After a one-standard-deviation shock to the federal funds
+rate, in‡ation goes down in a hump-shaped pattern for many quarters and output growth drops.
+The right panel of …gure 6.1 plots the IRFs after a one-standard-deviation innovation to the
+monetary policy shock computed conditional on …xing
+
+t
+
+to the estimated mean during the tenure
+
+of each of three di¤erent chairmen of the Board of Governors: the combination Burns-Miller,
+Volcker, and Greenspan. This exercise tells us how the variation on the systematic component
+of monetary policy has a¤ected the dynamics of aggregate variables. Furthermore, it allows a
+comparison with numerous similar exercises done in the literature with SVARs where the IRFs
+are estimated on di¤erent subsamples.
+The most interesting di¤erence is that the response of output growth under Volcker was the
+mildest: the estimated average stance of monetary policy under his tenure reduces the volatility
+of output. In‡ation responds moderately as well since the agents have the expectation that future
+57
+
+shocks will be smoothed out by the monetary authority. This …nding also explains why the
+IRFs of the interest rate are nearly on top of each other for all three periods: while we estimate
+that monetary policy responded more during Volcker’s years for any given level of in‡ation than
+under Burns-Miller or Greenspan, this policy lowers in‡ation deviations and hence moderates the
+actual movement along the equilibrium path of the economy. Moreover, this second set of IRFs
+already points out one important result of this paper: we estimate that monetary policy under
+Burns-Miller and Greenspan was similar, while it was di¤erent under Volcker. This …nding will
+be reinforced by the results we present in the main body of the text.
+
+IRF Monetary Policy Shock
+0.14
+
+Conditional IRF Monetary Policy Shock
+
+0.12
+
+Output Burns-Miller
+0.12
+
+FFR Burns-Miller
+Inf lation Volcker
+
+0.1
+
+Log Diff. form Mean Ergodic
+
+0.1
+
+Log Diff. form Mean Ergodic
+
+Inf lation Burns-Miller
+
+0.14
+
+Inf lation
+Output
+FFR
+
+0.08
+0.06
+0.04
+0.02
+0
+
+Output Volcker
+
+0.08
+
+FFR Volcker
+0.06
+
+Inf lation Greenspan
+
+0.04
+
+Output Greenspan
+FFR Greenspan
+
+0.02
+0
+-0.02
+
+-0.02
+-0.04
+-0.04
+-0.06
+-0.06
+5
+
+10
+
+15
+
+20
+
+Quarters
+
+5
+
+10
+
+15
+
+20
+
+Quarters
+
+Figure 6.1: IRFs to a Monetary Policy Shock, Unconditional and Conditional
+For completeness, we also plot, in …gure 6.2, the IRFs to each of the other four shocks in
+our model: the two preferences shocks (intertemporal and intratemporal) and the two technology
+shocks (investment-speci…c and neutral). The behavior of the model is standard. A one-standarddeviation intertemporal preference shock raises output growth and in‡ation because there is an
+increase in the desire for consumption in the current period. The intratemporal shock lowers
+output because labor becomes less attractive, driving up the marginal costs and, with it, prices.
+The two supply shocks raise output growth and lower in‡ation by increasing productivity. All of
+those IRFs show that the behavior of the model is standard.
+58
+
+Inf lation
+Output
+FFR
+
+0.2
+0.1
+0
+5
+
+10
+
+15
+
+20
+
+Quarters
+IRF Inv estment Shock
+0.05
+0.04
+0.03
+0.02
+0.01
+0
+5
+
+10
+
+15
+
+20
+
+Log Diff. form Mean Ergodic
+
+0.3
+
+Log Diff. form Mean Ergodic
+
+Log Diff. form Mean Ergodic
+Log Diff. form Mean Ergodic
+
+IRF Intertemporal Shock
+
+IRF Intratemporal Shock
+0.2
+0.1
+0
+-0.1
+5
+
+10
+
+15
+
+0.4
+0.2
+0
+-0.2
+5
+
+Quarters
+
+10
+
+15
+
+Quarters
+
+Figure 6.2: IRFs of in‡ation, output growth, and the federal funds rate to an intertemporal
+demand ("dt ) shock, an intratemporal demand ("'t ) shock, an investment-speci…c (" t ) shock,
+and a neutral technology ("At ) shock. The responses are measured as log di¤erences with respect
+to the mean of the ergodic distribution.
+6.8. Model Comparison
+Another use of our procedure to evaluate the likelihood function is to compare our model against
+alternative models -or alternative versions of the same model. For instance, a natural question
+is to compare our benchmark model with stochastic volatility and parameter drifting with a
+version without parameter drifting but with stochastic volatility. That is: once we have included
+stochastic volatility, is it still important to allow for changes in monetary policy to account for
+the time-varying volatility of aggregate data in the U.S.?
+Given our Bayesian framework, a natural approach for model comparison is the computation
+of log marginal data densities (log MDD) and log Bayes factors. Let us focus on the proposed
+example of comparing the full model with stochastic volatility and parameter drifting (drift) with
+a version without parameter drifting (no drift) but with stochastic volatility. In this second case,
+we have two fewer parameters,
+
+and
+
+(but we still have
+
+59
+
+20
+
+Quarters
+IRF Technology Shock
+
+). To ease notation, we partition
+
+20
+
+the parameter vector
+
+= e;
+
+as
+
+; where e is the vector of all the other parameters,
+
+;
+
+common to the two versions of the model.
+
+Given that our priors are 1) uniform, 2) independent of each other, and 3) cover all the areas
+where the likelihood is (numerically) positive, and that 4) the priors on e are common across the
+two speci…cations of the model, we can write
+T
+
+log p Y = Y
+
+data;T
+
+; drift = log
+
+where log p (e), log p
+T
+
+log p Y = Y
+
+Z
+
+p YT = Ydata;T ; ; drift d + log p (e) + log p
+
+, and log p (
+data;T
+
++ log p (
+
+);
+
+) are constants and
+
+; no drift = log
+
+Z
+
+Thus
+
+p YT = Ydata;T ; e; no drift de + log p (e) :
+
+log Bdrift, no drift = log p YT = Ydata;T ; drift
+log p YT = Ydata;T ; no drift
+Z
+Z
+data;T
+T
+= log p Y = Y
+; ; drift de log p YT = Ydata;T ; e; no drift de
+log p
+
+log p (
+
+):
+
+The di¤erence
+log
+
+Z
+
+T
+
+p Y =Y
+
+data;T
+
+; ; drift d
+
+log
+
+Z
+
+p YT = Ydata;T ; e; no drift de
+
+tells us how much better the version with parameter drift …ts the data in comparison with the
+version with no drift. The last two terms, log p
+
++ log p (
+
+) ; penalize for the presence of two
+
+extra parameters.
+We estimate the log MDDs following Geweke’s (1998) harmonic mean method. This requires
+us to generate a new draw of the posterior of the model for the speci…cation with no parameter
+R
+drift to compute log p YT = Ydata;T ; e; no drift de. After doing so, we …nd that
+log Bdrift, no drift = 126:1331 + log p
+
++ log p (
+
+)
+
+This expression shows a potential problem of Bayes factors: by picking uniform priors for
+
+60
+
+and
+
+spread out over a su¢ ciently large interval, we could overcome any di¤erence in
+
+…t. But the prior for
+
+is pinned down by our desire to keep that process stationary, which
+
+imposes natural bounds in [ 1; 1] and makes log p
+degree of freedom left: our choice of log p (
+
+=
+
+0:6931. Thus, there is only one
+
+). Any sensible prior for
+
+will only put mass
+
+in a relatively small interval: the point estimate is 0:1479, the standard deviation is 0:002, and
+the likelihood is numerically zero for values bigger than 0.2. Hence, we can safely impose that
+log p (
+
+)>
+
+1 (log p (
+
+)=
+
+1 would imply a uniform prior between 0 and 2:7183, a considerably
+
+wider support than any evidence in the data), and conclude that log Bdrift, no drift > 124:4400. This
+is conventionally considered overwhelming evidence in favor of the model with parameter drift
+(Je¤reys, 1961, for instance, suggests that di¤erences bigger than 5 are decisive). Thus, even after
+controlling for stochastic volatility, the data strongly prefer a speci…cation where monetary policy
+has changed over time. This …nding, however, does not imply that volatility shocks did not play
+an important role in the time-varying volatilities of U.S. aggregate time series. In fact, as we will
+see in the next section of this appendix, they were a key mechanism in accounting for it.4
+It has been noted that the estimation of log MDDs is dangerous because of numerical instabilities in the evaluation of the integral log marginal data density (log MDD). This concern is
+particularly relevant in our case, since we have a large model saddled with burdensome computation. Thus, as a robustness analysis, we also computed the Bayesian Information Criterion (BIC)
+(Schwarz, 1978). The BIC, which avoids the need to handle the integral in the log MDD, can be
+understood as an asymptotic approximation of the Bayes factor that also automatically penalizes
+for extra parameters. The BIC of model i is de…ned:
+BICi =
+
+2 ln p YT = Ydata;T ; b; i + ki ln n
+
+where b is the maximum likelihood estimator (or, given our ‡at priors, the mode of the posterior),
+
+ki is the number of parameters, and n is the number of observations. Then, the BIC of the model
+4
+
+A formal comparison with the case without stochastic volatility is more di¢ cult, since we are taking advantage
+of its presence to evaluate the likelihood. Fortunately, Justiniano and Primiceri (2008) and Fernández-Villaverde
+and Rubio-Ramírez (2007) estimate models similar to ours with and without stochastic volatility (in the …rst case,
+using only a …rst-order approximation to the decision rules of the agents and in the second with measurement
+errors). Both papers …nd that the …t of the model improves substantially when we include stochastic volatility. Finally, Fernández-Villaverde and Rubio-Ramírez (2008) compare a model with parameter drifting and no stochastic
+volatility with a model without parameter drifting and no stochastic volatility and report that parameter drifting
+is also strongly preferred by the likelihood.
+
+61
+
+with stochastic volatility and parameter drifting is BICdrift =
+If we eliminate parameter drifting and the parameters
+
+2 3885 + 28 ln 192 =
+
+and
+
+7; 622:8:
+
+associated with it (and, of
+
+course, with a new point estimate of the other parameters) BICno drift =
+
+2 3810:7+26 ln 192 =
+
+7; 484:7. The di¤erence is, therefore, of over 138 log points, which is again overwhelming evidence
+in favor of the model with parameter drifting.
+6.9. Historical Counterfactuals
+One important additional exercise is to quantify how much of the observed changes in the volatility of aggregate U.S. variables can be accounted for by changes in the standard deviations of
+shocks and how much by changes in policy. To accomplish this, we build a number of historical
+counterfactuals. In these exercises, we remove one source of variation at a time and we measure
+how aggregate variables would have behaved when hit only by the remaining shocks. Since our
+model is structural in the sense of Hurwicz (1962) (it is invariant to interventions, including shocks
+by nature such as the ones we are postulating), we will obtain an answer that is robust to the
+Lucas critique.
+In the next two subsections, we will always plot the same three basic variables that we used in
+section 4 of the main text: in‡ation, output growth, and the federal funds rate. Counterfactual
+histories of other variables could be built analogously. Also, we will have vertical bars for the
+tenure of each chairman, following the same color scheme as in section 4.
+6.9.1. Counterfactual I: Switching Chairmen
+In our …rst counterfactual, we move one chairman from his mandate to an alternative time period.
+For example, we appoint Greenspan as chairman during the Burns-Miller years. By that, we mean
+that the Fed would have followed the policy rule dictated by the average
+
+t
+
+estimated during
+
+Greenspan’s time while starting from the same states as Burns-Miller and su¤ering the same
+shocks (both structural and of volatility). We repeat this exercise with all the other possible
+combinations: Volcker in the Burns-Miller decade, Burns-Miller in Volcker’s mandate, Greenspan
+in Volcker’s time, Burns-Miller in the Greenspan years, and, …nally, Volcker in Greenspan’s time.
+It is important to be careful in interpreting this exercise. By appointing Greenspan at Volcker’s
+time, we do not literally mean Greenspan as a person, but Greenspan as a convenient label for a
+particular monetary policy response to shocks that according to our model were observed during
+62
+
+his tenure. The real Greenspan could have behaved in a di¤erent way, for example, as a result of
+some non-linearities in monetary policy that are not properly captured by a simple rule such as the
+one postulated in section 3. The argument could be pushed one step further and we could think
+about the appointment of Volcker as an endogenous response of the political-economic equilibrium
+to high in‡ation. In our model agents have a probability distribution regarding possible changes in
+monetary policy in the next periods, but those changes are uncorrelated with current conditions.
+Therefore, our model cannot capture the endogeneity of policy selection.
+Another issue that we sidelined is the evolution of expectations. In our model, agents have
+rational expectations and observe the changes in monetary policy parameters. This hypothesis
+may be a poor approximation of the agents’behavior in real life. It could be the case that
+
+t
+
+was
+
+high in 1984, even though in‡ation was already low by that time, because of the high in‡ationary
+expectations that economic agents held during most of the 1980s (this point is also linked to issues
+of commitment and credibility that our model does not address). While we see all these arguments
+as interesting lines of research, we …nd it important to focus …rst on our basic counterfactual.
+Moments In table 6.1, we report the mean and the standard deviation of in‡ation, output
+growth, and the federal funds rate in the observed and in the sets of counterfactual data. In‡ation
+was high with Burns-Miller, fell with Volcker, and stayed low with Greenspan. Output growth
+went down during the Volcker years to recover with Greenspan. The federal funds rate reached its
+peak with Volcker. The standard deviation of output growth fell from 4.7 in Burns-Miller’s time
+to 2.45 with Greenspan, a cut in half. Similarly, in‡ation volatility fell nearly 54 percent and the
+federal funds rate volatility 5 percent.
+But table 6.1 also tells us one important result: time-varying monetary policy signi…cantly
+a¤ected average in‡ation. In particular, Volcker’s response to in‡ation was strong and switching
+him to either Burns-Miller’s or Greenspan’s time would have reduced average in‡ation dramatically. But it also tells us other things: contrary to the conventional wisdom, our estimates suggest
+that the stance of monetary policy against in‡ation under Greenspan was not strong. In BurnsMiller’s time, the monetary policy under Greenspan would have delivered slightly higher average
+in‡ation, 6.83 versus the observed 6.23, accompanied by a lower federal funds rate and lower output growth, 1.89 versus the observed 2.03. The di¤erence is even bigger in Volcker’s time, during
+which average in‡ation would have been nearly 1.4 percent higher, while output growth would
+
+63
+
+have been virtually identical (1.34 versus 1.38). The key for this …nding is in the behavior of the
+federal funds rate, which would have increased only by 9 basis points, on average, if Greenspan
+had been in charge of the Fed instead of Volcker. Given the higher in‡ation in the counterfactual,
+the higher nominal interest rates would have meant much lower real rates. The counterfactual
+of Burns-Miller in Greenspan’s and Volcker’s time casts doubt on the malignant reputations of
+these two short-lived chairmen, at least when compared with Greenspan. Burns-Miller would have
+brought even slightly lower in‡ation than Greenspan, thanks to a higher real federal funds rate
+and a bit higher output growth. However, Burns-Miller would have delivered higher in‡ation than
+Volcker.
+Table 6.1: Switching Chairmen, Data versus Counterfactual Histories
+Means
+
+Standard Deviations
+
+In‡ation Output Gr.
+
+FFR
+
+In‡ation Output Gr.
+
+FFR
+
+BM (data)
+
+6.2333
+
+2.0322
+
+6.5764
+
+2.7347
+
+4.7010
+
+2.2720
+
+Greenspan to BM
+
+6.8269
+
+1.8881
+
+6.5046
+
+3.3732
+
+4.6781
+
+2.0103
+
+Volcker to BM
+
+4.3604
+
+1.5010
+
+7.6479
+
+2.4620
+
+4.6219
+
+2.3470
+
+Volcker (data)
+
+5.3584
+
+1.3846
+
+10.3338
+
+3.1811
+
+4.4811
+
+3.4995
+
+BM to Volcker
+
+6.4132
+
+1.3560
+
+10.4126
+
+2.9728
+
+4.4220
+
+3.0648
+
+Greenspan to Volcker
+
+6.7284
+
+1.3423
+
+10.4235
+
+2.9824
+
+4.3730
+
+2.8734
+
+Greenspan (data)
+
+2.9583
+
+1.5177
+
+4.7352
+
+1.2675
+
+2.4567
+
+2.1887
+
+BM to Greenspan
+
+2.3355
+
+1.5277
+
+4.4529
+
+1.5625
+
+2.4684
+
+2.4652
+
+Volcker to Greenspan
+
+-0.4947
+
+1.3751
+
+3.6560
+
+1.7700
+
+2.4705
+
+2.7619
+
+This is an important empirical …nding: according to our model, time-varying monetary policy signi…cantly a¤ected average in‡ation. While Volcker’s response to in‡ation was strong,
+Greenspan’s response was milder and he seems to have behaved quite similarly to how BurnsMiller would have behaved.
+Counterfactual Paths An alternative way to analyze our results is to plot the whole counterfactual histories summarized in table 6.1. We …nd it interesting to plot the whole history
+because changes in the economy’s behavior in one period will propagate over time and we want
+to understand, for example, how Greenspan’s legacy would have molded Volcker’s tenure. Also,
+
+64
+
+plotting the whole history allows us to track the counterfactual response of monetary policy to
+large economic events such as the oil shocks.
+In …gure 6.3, we move to Burns-Miller being reappointed in Greenspan’s time. This plot
+suggests that the di¤erences in monetary policy under Greenspan and Burns-Miller may have
+been overstated by the literature.
+
+Inflation
+
+Output
+
+Interest Rate
+
+10
+
+14
+
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+Data
+Counterfactual
+
+18
+
+12
+
+16
+5
+14
+Annualized Rate
+
+Annualized Rate
+
+10
+8
+6
+4
+
+10
+-5
+
+8
+6
+
+-10
+
+2
+
+4
+
+0
+1960
+
+12
+
+0
+
+2
+
+-15
+1970
+
+1980 1990
+Period
+
+2000
+
+1960
+
+1970
+
+1980 1990
+Period
+
+2000
+
+1960
+
+1970
+
+1980
+
+1990
+
+2000
+
+Figure 6.3: Burns-Miller during the Greenspan years
+In …gure 6.4, we plot the counterfactual of Burns-Miller extending their tenure to 1987. The
+results are very similar to the case in which we move Greenspan to the same period: slower
+disin‡ation and no improvement in output growth.
+
+65
+
+Inflation
+
+Output
+
+Interest Rate
+
+10
+
+14
+
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+Data
+Counterfactual
+
+18
+
+12
+
+16
+5
+14
+
+8
+6
+4
+
+Annualized Rate
+
+Annualized Rate
+
+Annualized Rate
+
+10
+0
+
+-5
+
+12
+10
+8
+6
+
+-10
+
+2
+
+4
+0
+1960
+
+2
+
+-15
+1970
+
+1980 1990
+Period
+
+2000
+
+1960
+
+1970
+
+1980 1990
+Period
+
+2000
+
+1960
+
+1970
+
+1980 1990
+Period
+
+2000
+
+Figure 6.4: Burns-Miller during the Volcker years
+A particularly interesting exercise is to check what would have happened if Reagan had decided
+to reappoint Volcker and not appoint Greenspan. We plot these results in …gure 6.5. The quick
+answer is: lower in‡ation and interest rates. Our estimates also suggest that Volcker would have
+reduced price increases with little cost to output.
+
+Inflation
+
+Output
+
+Interest Rate
+
+10
+
+14
+12
+
+16
+5
+
+10
+
+14
+
+6
+4
+2
+0
+
+Annualized Rate
+
+Annualized Rate
+
+8
+Annualized Rate
+
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+Data
+Counterfactual
+
+18
+
+0
+
+-5
+
+12
+10
+8
+6
+4
+
+-10
+
+2
+
+-2
+
+0
+
+-15
+
+-4
+1960 1970 1980 1990 2000
+
+1960 1970 1980 1990 2000
+
+Period
+
+Period
+
+Figure 6.5: Volcker during the Greenspan years
+
+66
+
+1960 1970 1980 1990 2000
+Period
+
+Our …nal exercise is to plot, in …gure 6.6, the counterfactual in which we move Volcker to the
+time of Burns-Miller. The main …nding is that in‡ation would have been rather lower, especially
+because the e¤ects of the second oil shock would have been much more muted. This counterfactual
+is plausible: other countries, such as Germany, Switzerland, and Japan, that undertook a more
+aggressive monetary policy during the late 1970s were able to keep in‡ation under control at levels
+below 5 percent at an annual rate, while the U.S. had peaks of price increases over 10 percent.
+
+Inflation
+
+Output
+
+Interest Rate
+
+10
+
+14
+
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+Data
+Counterfactual
+
+18
+12
+16
+
+5
+
+8
+6
+4
+
+Annualized Rate
+
+14
+Annualized Rate
+
+Annualized Rate
+
+10
+0
+
+-5
+
+10
+8
+6
+
+-10
+
+2
+
+12
+
+4
+0
+
+-15
+
+1960 1970 1980 1990 2000
+
+2
+
+1960 1970 1980 1990 2000
+
+Period
+
+1960 1970 1980 1990 2000
+
+Period
+
+Period
+
+Figure 6.6: Volcker during the Burns-Miller years
+6.9.2. Counterfactual II: No Volatility Changes
+In our second historical counterfactual, we compute how the economy would have performed in
+the absence of changes in the volatility of the shocks, that is, if the volatility of the innovation of
+the structural shocks had been …xed at its historical mean. To do so, we back out the smoothed
+structural shocks as we did in section 4.7 and we feed them to the model, given our parameter
+point estimates and the historical mean of volatility, to generate series for in‡ation, output, and
+the federal funds rate.
+Moments Table 6.2 reports the moments of the data (in annualized terms) and the moments
+from the counterfactual history (no s.v. in the table stands for “no stochastic volatility”). In both
+cases, we include the moments for the whole sample and for the sample divided before and after
+67
+
+1984.Q1, a conventional date for the start of the great moderation (McConnell and Pérez-Quirós,
+2000). In the last two rows of the table, we compute the ratio of the moments after 1984.Q1 over
+the moments before 1984.Q1. The benchmark model with stochastic volatility plus parameter
+drifting replicates the data exactly.
+Some of the numbers in table 6.2 are well known. For instance, after 1984, the standard
+deviation of in‡ation falls by nearly 60 percent, the standard deviation of output growth falls by
+44 percent, and the standard deviation of the federal funds rate falls by 39 percent. In terms of
+means, after 1984, there is less in‡ation and the federal funds rate is lower, but output growth is
+also 15 percent lower.
+
+Table 6.2: No Volatility Changes, Data versus Counterfactual History
+Means
+In‡ation
+
+Output
+
+Standard Deviations
+FFR
+
+In‡ation
+
+Growth
+
+Output
+
+FFR
+
+Growth
+
+Data
+
+3.8170
+
+1.8475
+
+6.0021
+
+2.6181
+
+3.5879
+
+3.3004
+
+Data, pre 1984.1
+
+4.6180
+
+1.9943
+
+6.7179
+
+3.2260
+
+4.3995
+
+3.8665
+
+Data, after 1984.1
+
+2.9644
+
+1.6911
+
+5.2401
+
+1.3113
+
+2.4616
+
+2.3560
+
+No s.v.
+
+2.5995
+
+0.7169
+
+6.9388
+
+3.5534
+
+3.1735
+
+2.4128
+
+No s.v., pre-1984.1
+
+2.0515
+
+0.9539
+
+6.3076
+
+3.7365
+
+3.4120
+
+2.7538
+
+No s.v., after-1984.1
+
+3.1828
+
+0.4647
+
+7.6106
+
+3.2672
+
+2.8954
+
+1.7673
+
+Data, post-1984.1/pre-1984.1
+
+0.6419
+
+0.8480
+
+0.7800
+
+0.4065
+
+0.5595
+
+0.6093
+
+No s.v., post-1984.1/pre-1984.1
+
+1.5515
+
+0.4871
+
+1.2066
+
+0.8744
+
+0.8486
+
+0.6418
+
+The table also re‡ects the fact that without volatility shocks, the reduction in volatility observed after 1984 would have been noticeably smaller. The standard deviation of in‡ation would
+have fallen by only 13 percent, the standard deviation of output growth would have fallen by 16
+percent, and the standard deviation of the federal funds rate would have fallen by 35 percent, that
+is, only 33, 20, and 87 percent, respectively, of how much they would have fallen otherwise. We
+must resist here the temptation to undertake a standard variance decomposition exercise. Since
+we have a second-order approximation to the policy function and its associated cross-product
+terms, we cannot neatly divide total variance among the di¤erent shocks as we could do in the
+linear case.
+68
+
+Table 6.2 documents that, while time-varying policy is re‡ected in changes of average in‡ation, volatility shocks a¤ect the standard deviation of the observed series. Without time-varying
+volatility the decrease in observed volatility would not have been nearly as big as we observed
+in the data. Hence, while changes in the systematic component of monetary policy account for
+changes in average in‡ation, volatility shocks account for changes in the standard deviation of
+in‡ation, output growth and interest rates observed after 1984. Also, without stochastic volatility,
+output growth would have been quite lower on average.
+Counterfactual Paths Figure 6.7 compares the whole path of the counterfactual history (blue
+line) with the observed one (red line). Figure 6.7 tells us that volatility shocks mattered throughout
+the sample. The run-up in in‡ation would have been much slower in the late 1960s (in‡ation would
+have actually been negative during the last years of Martin’s tenure) with small e¤ects on output
+growth or the federal funds rate (except at the very end of the sample). In‡ation would not
+have picked up nearly as much during the …rst oil shock, but output growth would have su¤ered.
+During Volcker’s time, in‡ation would also have fallen faster with little cost to output growth.
+These are indications that both Burns-Miller and Volcker su¤ered from large and volatile shocks
+to the economy. In comparison, during the 1990s, in‡ation would have been more volatile, with a
+big increase in the middle of the decade. Similarly, during those years, output growth would have
+been much lower, with a long recession between 1994 and 1998, and the federal funds rate would
+have been prominently higher. Con…rming the results presented in section 4 of the paper, this is
+another manifestation of how placid the 1990s were for policy makers.
+
+69
+
+Inflation
+
+Output
+
+FFR
+
+10
+
+14
+
+Burns-Miller
+Volcker
+Greenspan
+Bernanke
+Data
+Counterfactual
+
+18
+
+12
+
+16
+5
+
+8
+6
+4
+
+Annualized Rate
+
+14
+Annualized Rate
+
+Annualized Rate
+
+10
+
+0
+
+-5
+
+2
+
+12
+10
+8
+6
+
+-10
+0
+
+4
+
+-2
+
+-15
+
+1960 1970 1980 1990 2000
+
+2
+
+1960 1970 1980 1990 2000
+
+Period
+
+1960 1970 1980 1990 2000
+
+Period
+
+Figure 6.7: Counterfactual “No Changes in Volatility”.
+
+70
+
+Period
+
+References
+[1] Davig, T. and E.M. Leeper (2006). “Generalizing the Taylor Principle.” American Economic
+Review 97, 607-635.
+[2] Fernández-Villaverde, J. and J. Rubio-Ramírez (2007). “Estimating Macroeconomic Models:
+A Likelihood Approach.”Review of Economic Studies 74, 1059-1087.
+[3] Fernandez-Villaverde, J. and J. Rubio-Ramirez (2008). “How Structural Are Structural Parameters?”NBER Macroeconomics Annual 2007, 83-137.
+[4] Fisher, J., (2006). “The Dynamic E¤ects of Neutral and Investment-Speci…c Technology
+Shocks.”Journal of Political Economy 114, 413-52.
+[5] Geweke, J. (1998). “Using Simulation Methods for Bayesian Econometric Models: Inference,
+Development and Communication.”Sta¤ Report 249, Federal Reserve Bank of Minneapolis.
+[6] Hurwicz, L. (1962). “On the Structural Form of Interdependent Systems.”Logic, Methodology
+and Philosophy of Science, Proceedings of the 1960 International Congress, 232-39.
+[7] Je¤reys H. (1961). The Theory of Probability (3rd ed.). Oxford University Press.
+[8] Justiniano A. and G.E. Primiceri (2008). “The Time Varying Volatility of Macroeconomic
+Fluctuations.”American Economic Review 98, 604-641.
+[9] Koop G., M. Hashem Pesaran, and S. Potter (1996). “Impulse Response Analysis in Nonlinear
+Multivariate Models.”Journal of Econometrics 74, 199-147.
+[10] McConnell, M.M. and G. Pérez-Quirós (2000). “Output Fluctuations in the United States:
+What Has Changed Since the Early 1980’s?”American Economic Review 90, 1464-1476.
+[11] McFadden, D.L. (1989). “A Method of Simulated Moments for Estimation of Discrete Response Models Without Numerical Integration.”Econometrica 57, 995-1026.
+[12] Pakes, A. and D. Pollard (1989). “Simulation and the Asymptotics of Optimization Estimators.”Econometrica 57, 1027-1057.
+[13] Schwarz, G.E. (1978). “Estimating the Dimension of a Model.” Annals of Statistics 6, 461–
+464.
+[14] Sims, C.A. and T. Zha (2006). “Were There Regime Switches in U.S. Monetary Policy?”
+American Economic Review 96, 54-81.
+
+71
+
+

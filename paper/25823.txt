@@ -1,0 +1,732 @@
+NBER WORKING PAPER SERIES
+
+ESTIMATING SELECTION MODELS WITHOUT INSTRUMENT WITH STATA
+Xavier D'Haultfoeuille
+Arnaud Maurel
+Xiaoyun Qiu
+Yichong Zhang
+Working Paper 25823
+http://www.nber.org/papers/w25823
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+May 2019
+
+Zhang acknowledges the financial support from Singapore Ministry of Education Tier 2 grant
+under grant no. MOE2018-T2-2-169. The views expressed herein are those of the authors and do
+not necessarily reflect the views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2019 by Xavier D'Haultfoeuille, Arnaud Maurel, Xiaoyun Qiu, and Yichong Zhang. All rights
+reserved. Short sections of text, not to exceed two paragraphs, may be quoted without explicit
+permission provided that full credit, including © notice, is given to the source.
+
+Estimating Selection Models without Instrument with Stata
+Xavier D'Haultfoeuille, Arnaud Maurel, Xiaoyun Qiu, and Yichong Zhang
+NBER Working Paper No. 25823
+May 2019
+JEL No. C21,C24,C87,J31
+ABSTRACT
+This article presents the eqregsel command for implementing the estimation and bootstrap
+inference of sample selection models via extremal quantile regression. The command estimates a
+semiparametric sample selection model without instrument or large support regressor, and
+outputs the point estimates of the homogenous linear coefficients, their bootstrap standard errors,
+as well as the p-value for a specification test.
+
+Xavier D'Haultfoeuille
+CREST
+5 avenue Henry Le Chatelier
+91764 Palaiseau cedex
+FRANCE
+xavier.dhaultfoeuille@ensae.fr
+Arnaud Maurel
+Department of Economics
+Duke University
+213 Social Sciences Building
+Box 90097
+Durham, NC 27708
+and NBER
+apm16@duke.edu
+
+Xiaoyun Qiu
+Toulouse School of Economics
+qiu.xyun@gmail.com
+Yichong Zhang
+School of Economics
+Singapore Management University
+90 Stamford Rd.
+Singapore 178903
+Singapore
+yczhang@smu.edu.sg
+
+Estimating Selection Models without Instrument with Stata∗
+Xavier D’Haultfœuille†
+
+Arnaud Maurel‡
+
+Xiaoyun Qiu§
+
+Yichong Zhang¶
+
+May 2019
+
+Abstract
+This article presents the eqregsel command for implementing the estimation and
+bootstrap inference of sample selection models via extremal quantile regression. The
+command estimates a semiparametric sample selection model without instrument or large
+support regressor, and outputs the point estimates of the homogenous linear coefficients,
+their bootstrap standard errors, as well as the p-value for a specification test.
+Keywords: eqregsel, sample selection models, extremal quantile regressions.
+
+1
+
+Introduction
+
+In this article, we present the command eqregsel for estimation and inference of endogenous sample selection models that implements the procedures developed in recent work by
+D’Haultfœuille et al. (2018).1 Prior methods proposed in the econometric literature to estimate endogenous sample selection models rely on instruments and/or large support regressors. For the former, see, among others, Heckman (1974, 1979, 1990), Ahn and Powell (1993),
+Donald (1995), Buchinsky (1998), Chen and Khan (2003), Das et al. (2003), Newey (2009)
+and Vella (1998) for a survey. Chamberlain (1986) and Lewbel (2007) develop identification
+strategies for sample selection models in the absence of an instrument for selection. These
+alternative methods rely on the existence of a large support regressor. However, in practice,
+valid instruments, as well as large support regressors are often difficult, if not impossible to
+find.
+∗
+
+Zhang acknowledges the financial support from Singapore Ministry of Education Tier 2 grant under grant
+
+no. MOE2018-T2-2-169.
+†
+CREST-ENSAE. xavier.dhaultfoeuille@ensae.fr.
+‡
+Duke University, NBER and IZA. arnaud.maurel@duke.edu.
+§
+Northwestern University. xiaoyun.qiu@u.northwestern.edu
+¶
+Singapore Management University. yczhang@smu.edu.sg.
+1
+The
+Stata
+command
+eqregsel
+can
+be
+downloaded
+http://www.amaurel.net/Packages.
+
+1
+
+from
+
+the
+
+following
+
+webpage:
+
+Instead, the method implemented in eqregsel does not require the presence of instruments
+or large support regressors.2 Identification relies instead on the strategy initially proposed by
+D’Haultfoeuille and Maurel (2013), which is based on the idea that, provided that selection
+is endogenous, one can expect the effect of the outcome on selection to dominate those of
+the covariates, for large values of the outcome. eqregsel builds on the estimation method
+proposed by D’Haultfœuille et al. (2018) and implements a series of quantile regressions in
+the tails of the outcome distribution (extremal quantile regressions).3 The command outputs
+estimates for a set of user-specified coefficients of interest, their standard errors (estimated via
+bootstrap), and a p-value for the specification test described in D’Haultfœuille et al. (2018).
+Our command complements the existing Stata command heckman for the estimation of sample
+selection models. In terms of underlying assumptions, eqregsel has at least three distinctive
+features compared to heckman. First, it does not require normality of the error term in the
+selection equation, nor linearity of the conditional expectation of the error term in the outcome
+equations. Second, it does not restrict the selection process, apart from an independence at
+infinity condition. Third, it allows for heterogeneous distributional effects of other control
+variables.
+The remainder of the paper is organized as follows. In Section 2, we recall the setup of the
+semiparametric endogenous sample selection model considered in D’Haultfœuille et al. (2018),
+and describe the data-driven procedure used to choose the quantile index for the extremal
+quantile regression. Section 3 describes how to implement the method in practice. Section 4
+presents the eqregsel command. Section 5 illustrates the use of our command by estimating
+the black-white wage gap on US young males of the 1979 and 1997 National Longitudinal
+Surveys of Youth. Section 6 concludes.
+
+2
+2.1
+
+The framework and estimation method
+Model and estimation
+
+We consider the following outcome equation:
+Y ∗ = X10 β1 + ε
+2
+See Honoré and Hu (2018) for a related recent work, also motivated by the difficulty of finding instruments
+for sample selection. As is the case here, they do not require exclusion restrictions nor large support regressors.
+However, their approach is based on a different set of assumptions and, in contrast to our framework, delivers
+set- rather than point-identification.
+3
+See Chernozhukov et al. (2017) for an overview of extremal quantile regression methods and recent applications.
+
+2
+
+where Y ∗ ∈ R and X1 ∈ Rd1 are the outcome and covariates of interest, respectively. In
+the following, we seek to identify and estimate β1 . For that purpose, we rely on two key
+conditions. The first is that for any τ ∈ (0, 1), the τ -th conditional quantile of ε satisfies
+Qε|X (τ |X) = β0 (τ ) + X20 β2 (τ ),
+
+(2.1)
+
+where X = (X10 , X20 )0 and X2 denotes other covariates. Then
+QY ∗ |X (τ ) = X10 β1 + β0 + X20 β2 (τ ).
+
+(2.2)
+
+The effect of X1 is thus assumed to be homogenous across different quantile indices, while the
+effect of the other covariates X2 is allowed to be heterogeneous across the distribution of Y ∗ .
+Y ∗ is not directly observed. Instead, and denoting by D the selection dummy, the econometrician only observes D, Y = DY ∗ and X. The second key condition is that conditional
+on having “large” outcomes, selection is independent of the covariates. More precisely, we
+assume that there exists a constant h ∈ (0, 1] such that for all x ∈ Supp(X),
+lim P (D = 1|X = x, Y ∗ = y) = h.
+
+y→∞
+
+(2.3)
+
+Combining (2.2) and (2.3), D’Haultfœuille et al. (2018, Theorem 1) shows that, under some
+regularity conditions on the upper tail of ε, as τ → 0,
+Q−Y |X (τ |X) = Q−Y ∗ |X (τ /h|X) + o(1)
+= −X10 β1 − β0 (1 − τ /h) − X20 β2 (1 − τ /h) + o(1).
+
+(2.4)
+
+Therefore, (2.4) suggests that we can estimate β1 by running a quantile regression of −Y on
+−X with a sufficiently small quantile index τ , i.e.,
+
+
+n
+0
+X
+0
+0 b
+0
+b
+b
+ρτ (−Yi + X i β),
+β1 , β0 (1 − τ /h), β2 (1 − τ /h) = arg min
+β
+
+(2.5)
+
+i=1
+
+where ρτ (u) = (τ − 1{u < 0})u is the check function used in quantile regressions and X i =
+(X 0 , 1, X 0 )0 . Intuitively, for βb1 to be consistent, τ should depend on n and tend to 0 as
+1i
+
+2i
+
+n tends to infinity. However, it should not tend too quickly to 0, otherwise the extremal
+quantile regression would be unstable. Formally, and letting τn denote the quantile index,
+D’Haultfœuille et al. (2018) establish that if τn → 0 and nτn → ∞,4 , and under additional
+4
+
+This corresponds to the so-called “intermediate order case” in extreme value theory, in contrast to “extreme
+order cases” where one would have nτn → k for some k > 0.
+
+3
+
+technical restrictions, βb1 is consistent and asymptotically normal.
+As is standard with extremal quantile regressions (see Chernozhukov et al., 2017), the rate of
+convergence is not the usual parametric root-n rate. Moreover, in this case, this rate depends
+on unknown features of the distribution of (D, Y ∗ , X).5 Importantly, D’Haultfœuille et al.
+(2018) show that the bootstrap is consistent for inference, and does not require the knowledge
+of the rate of convergence. To illustrate this, let qγ∗ denote the quantile of order γ of the
+bootstrap estimator βb∗ , assuming for simplicity that X1 is a scalar (d1 = 1). Then, Theorem
+1
+
+2 in D’Haultfœuille et al. (2018) implies that the percentile bootstrap confidence interval
+∗ , q∗
+[qα/2
+1−α/2 ] of β1 has an asymptotic coverage of 1 − α. Such an interval does not require the
+
+knowledge of the rate of convergence.
+The results above rely on two main conditions, namely (2.1) and (2.3). Importantly, we can
+develop a specification test of these conditions, based on the implication that the coefficient
+β1 in Q−Y |X (τn |X) is the same across different extremal quantile indices τn (see (2.4)). Then,
+if the model is correctly specified, the two estimators βb1 (`τn ) (with 0 < ` < 1) and βb1 (τn )
+of β1 , obtained respectively with τ = `τn and τ = τn , should be close. Following this idea,
+consider the following J-test statistic:
+b −1 (βb1 (τn ) − βb1 (`τn )),
+TJ (`) = [(1/`) − 1]2 (βb1 (τn ) − βb1 (`τn ))0 Ω
+
+(2.6)
+
+b is a (bootstrap) estimator of the asymptotic covariance of βb1 (τn ), properly normalized
+where Ω
+by the rate of convergence in view of the discussion above. Then we reject the test at the
+nominal level α whenever TJ (`) > qd1 (1 − α), where qd1 (1 − α) is the quantile of order 1 − α
+of a χ2 distribution with d1 degrees of freedom. Theorem 2.3 in D’Haultfœuille et al. (2018)
+establishes that for any 0 < ` < 1 the test has an asymptotic level of α. It also proves that
+under some local alternatives, the local power is maximized at `∗ = arg max`∈[0,1] `[ln(l)]2 /(1−
+`) ' 0.2.
+
+2.2
+
+Choice of the quantile index
+
+The performance of extremal quantile estimators depends on a trade-off between bias and
+variance, which is governed by the quantile index τn used in the extremal quantile regression.
+We present in the following the algorithm outlined in D’Haultfœuille et al. (2018), which
+selects a suitable quantile index based on estimators of the bias and the variance of βb1 .
+Specifically, consider the same test statistic as in (2.6), but where (`τn , τn ) are replaced by
+5
+
+We refer to the definition of the rate above Theorem 2.2 in D’Haultfœuille et al. (2018) for more details.
+
+4
+
+(`1 τn , `2 τn ), with `1 < 1 < `2 :
+b −1 (βb1 (`2 τ ) − βb1 (`1 τ )).
+TJ (τ ) = [1/`1 − 1/`2 ]2 (βb1 (`2 τ ) − βb1 (`1 τ ))0 Ω
+D’Haultfœuille et al. (2018) shows that the difference between the median of TJ (τ ) and the
+median of a chi-squared distribution with d1 degrees of freedom can serve as a proxy for the
+bias of the estimator.
+The idea, then, is to estimate this difference using subsampling.6 For each subsample and
+each quantile index τ within a grid G, one can compute TJ (τ ). Let Msub (τ ) denote the median
+of these test statistics over different subsamples for a given τ , and let Md1 denote the median
+of the chi-squared distribution with d1 degrees of freedom. Then, the proxy of the bias is
+defined as
+
+(τ ) − Md1 |
+c n (τ ) = |Msub√
+,
+diff
+bn τ
+
+where bn denotes the subsample size.
+Similarly, the asymptotic covariance matrix is estimated by the covariance matrix of the
+d n (τ )
+subsampling estimator of β1 , multiplied by the normalizing factor bn /n. Denote by Var
+the sum of the diagonal elements of this covariance matrix. The quantile index is selected to
+optimize the bias-variance trade-off:
+c n (τ ),
+d n (τ ) + diff
+τbn = arg min Var
+τ ∈G
+
+where G denotes a finite grid within (0, 1). This procedure results in undersmoothing in
+comparison with a more standard trade-off between variance and squared bias. Similarly
+to the case of nonparametric regressions, this is needed to control the asymptotic bias that
+would otherwise affect the limiting distribution of the estimator. We refer to D’Haultfœuille
+et al. (2018) for simulation-based evidence that this choice leads to estimators that are both
+accurate and only very mildly biased, thus leading to reliable inference on β1 .
+
+3
+
+Implementation
+
+We summarize how we implement the method described above in eqregsel.
+1. Draw B bootstrap samples and B subsamples of size bn .
+6
+
+We recall that subsampling corresponds to a bootstrap without replacement of size bn < n. Though often
+less accurate than the standard bootstrap, subsampling has the advantage of being consistent under much
+weaker conditions. See Politis et al. (1999) for an introduction.
+
+5
+
+2. For each τ ∈ G:
+(a) Compute the estimator of β(τ ) = (β10 , β0 (1 − τ /h), β20 (1 − τ /h))0 :
+b ) = arg min
+β(τ
+β
+
+n
+X
+
+0
+
+ρτ (−Yi + X i β).
+
+i=1
+
+b ).
+Let βb1 (τ ) denote the vector comprising the first d1 components of β(τ
+(b) Compute
+B
+1 X bb
+b
+Ω(τ ) =
+(β1 (τ ) − βb1 (τ ))(βb1b (τ ) − βb1 (τ ))0 ,
+B
+b=1
+
+with βb1b (τ ) the bootstrap estimator of β1 on the b-th bootstrap sample.
+(c) Compute, for each subsample s = 1 . . . B, the estimator of β1 (βb1s (τ )), and the
+J-test statistic:7
+b −1 (τ )(βbs (`2 τ ) − βbs (`1 τ )).
+TJs (τ ) = (bn /n)[1/`1 − 1/`2 ]2 (βb1s (`2 τ ) − βb1s (`1 τ ))0 Ω
+1
+1
+c n (τ ) = |Msub√(τ )−Md1 | where Msub (τ ) denotes the median of (T 1 (τ ), ..., T B (τ )).
+(d) Compute diff
+J
+J
+bn τ
+P
+b )kk , where Σ(τ
+b )kk is the k-th diagonal term
+d n (τ ) = (bn /n) d1 Σ(τ
+(e) Compute Var
+k=1
+of
+B
+X
+b )= 1
+Σ(τ
+(βb1s (τ ) − β 1 (τ ))(βb1s (τ ) − β 1 (τ ))0
+B
+
+with β 1 (τ ) =
+
+s=1
+
+B
+1 X bs
+β1 (τ ).
+B
+s=1
+
+c n (τ ).
+d n (τ ) + diff
+3. Compute τbn = arg minτ ∈G Var
+b = Ω(b
+b τn ). Confidence intervals CI1−α (β1k ) of level 1 − α on
+4. Define βb1 = βb1 (b
+τn ) and Ω
+the k-th component of β1 are then equal to
+
+
+q
+
+CI1−α (β1k ) = βb1k − z1−α/2
+
+b kk , βb1k + z1−α/2
+Ω
+
+
+q
+b
+Ωkk ,
+
+b kk is the k-th diagonal term of Ω
+b and z1−α/2 is the quantile of order 1 − α/2 of
+where Ω
+a standard normal variable.
+5. Compute βb1 (0.2b
+τn ) and then TJ (0.2), as defined in (2.6), to perform the specification
+test of the model.
+7
+
+The term bn /n accounts for the fact that the rate of convergence of the J statistic on the subsample is
+bn /n times the rate of convergence on the whole sample.
+
+6
+
+In practice, we consider an equally-spaced grid G with lower bound min(0.1, 80/bn ), upper
+bound 0.3 and a number of points equal to nG . The lower bound is motivated by the fact that if
+the effective subsampling size τ bn becomes too small, then the intermediate order asymptotic
+theory is likely to be a poor approximation (see Chernozhukov and Fernandez-Val, 2011 for
+a related discussion). To compute TJs (τ ) in Step 2.(c) above, we use (`1 , `2 ) = (0.9, 1.1).
+
+4
+
+The eqregsel command
+
+We describe below the syntax, options and saved results associated with the eqregsel command. Note that it relies on the moremata Stata package. If the latter is not already installed,
+one must type ssc install moremata in Stata command line. The eqregsel command is
+compatible with Stata 14 and later versions.
+
+4.1
+
+Syntax
+
+The syntax of eqregsel is as follows:
+eqregsel Y X1
+
+4.2
+
+X2
+
+
+
+if
+
+ 
+
+in
+
+ 
+
+, hom(#)
+
+subs(#) grid(#) rep(#)
+
+
+
+Description
+
+eqregsel computes βb1 in(2.2) based on the data-driven τn detailed in Section 2.2 above. It
+also reports its standard errors and 95% confidence intervals. Finally, it computes the p-value
+of this specification test using ` = 0.2.
+X1 is the list of variable entering in X1 in Model (2.2).
+X2 is the list of variable entering in X2 in Model (2.2).
+
+4.3
+
+Options
+
+hom(#) specifies d1 , the number of variables in X1 . The code then returns their estimated
+effects and standard errors. The default value is 1.
+subs(#) specifies the subsample size bn . Following D’Haultfœuille et al. (2018), and letting
+x+ = max(0, x), the default value is set to
+
+ln(2000)
+bn = 0.6n − 0.2(n − 500) − 0.2(n − 1000) − 0.2 1 −
+(n − 2000)+ .
+ln(n)
++
+
++
+
+
+
+grid(#) specifies nG , the number of grid points. The default value is 40.
+7
+
+rep(#) specifies B, the number of bootstrap and subsampling replications. The default value
+is 150.
+
+4.4
+
+Saved results
+
+The eqregsel command saves the following in e():
+1. e(tau0), a scalar containing the quantile index τbn .
+2. e(specificationtest), a scalar containing the p-value of the specification test.
+3. e(subs), a scalar containing the subsample size bn .
+4. e(homvar), a scalar containing d1 , the number of variable(s) with homogenous effect(s)
+on the outcome.
+5. e(beta hom), a d1 × 1 matrix containing the estimated coefficient(s) of interest.
+6. e(std b), a d1 × 1 matrix containing the standard error of the estimator(s).
+
+5
+
+Example
+
+We use the command eqregsel to estimate the black-white wage gap among young males
+from the National Longitudinal Surveys of Youth 1979 and 1997 (NLSY79 and NLSY97),
+revisiting the work of D’Haultfœuille et al. (2018) on this question. We are in particular
+interested in the evolution of the gap between these two cohorts. We use the same samples
+and definitions of variables as in D’Haultfœuille et al. (2018). In particular, we consider that
+an individual in the NLSY79 is a nonparticipant if he did not work in 1990 nor in 1991. The
+outcome of interest is the (potential) log-wage, which is defined as the log of the mean real
+wages in 1990 and 1991 for workers who worked both years, and the log of the real wage in
+the year of employment for those who worked only one year. We apply the same rules with
+the years 2007 and 2008 for individuals in the NLSY97.
+In our specification, we estimate for the two samples the effect of the Black dummy on the log
+of wages (log wage), controlling for Hispanic dummy (hispanic), age (age), AFQT (Armed
+Forces Qualification Test score) and AFQT squared (afqt and afqt2). The AFQT scores
+cannot be directly compared across both NLSY cohorts, in part because of changes in how
+the test was administered. To handle this issue, we use a modified version of the AFQT
+constructed using the equipercentile mapping proposed by Altonji et al. (2012). We also
+restrict the samples to the respondents who took the test when they were 16 or 17, to address
+8
+
+the issue that the rank within the AFQT distribution may vary with the age of the respondent
+at the time of the test. The final sample sizes are equal to 1, 077 and 1, 123 for the NLSY79
+and NLSY97 cohorts, respectively. The overall labor force participation rates for the two
+corresponding samples are equal to 95.1% and 89.7%. They only reach 90.6% and 81.4% for
+Black males, however.
+We report below the output of the eqregsel procedure applied to the NLSY79 and NLSY97
+samples, respectively. We use the default parameters. We can see from the estimation output
+that the default subsample sizes used in bootstrapping are 515 and 524, given the total sample
+size of 1,077 and 1,123. The procedure also displays the estimated computing time, along with
+a progress bar. Although in this example estimation is performed at a limited computational
+cost, this feature makes it possible for the user to stop the execution of the command. If
+needed, one can then save on execution time by setting a lower number of bootstrap and
+subsampling replications, or a lower number of grid points.8
+
+. use "bw_nlsy7997.dta",clear
+.
+. gen afqt2= afqt^2
+.
+. eqregsel log_wage black hispanic age afqt afqt2 if cohort79
+The estimation will take about 5.333333 minutes.
+|---------------|---------------|---------------|---------------|--------------|
+0
+20
+40
+60
+80
+100
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Number of observations =
+1077
+Optimal quantile index =
+.245
+J test(p-value) = .81287468
+Subsampling size used in bootstrapping =
+515
+Number of variables of interest =
+1
+
+Coef.
+black
+
+-.1185019
+
+Std. Err.
+.0431142
+
+z
+
+P>|z|
+
+-2.75
+
+0.006
+
+[95% Conf. Interval]
+-.2030043
+
+-.0339996
+
+8
+The computation times reported in these examples are obtained on an Intel Xeon CPU 2.40 GHz processor
+with 128 GB of RAM, using Stata MP 14.2.
+
+9
+
+. eqregsel log_wage black hispanic age afqt afqt2 if cohort97
+The estimation will take about 5.333333 minutes.
+|---------------|---------------|---------------|---------------|--------------|
+0
+20
+40
+60
+80
+100
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Number of observations =
+1123
+Optimal quantile index =
+.29
+J test(p-value) = .77565885
+Subsampling size used in bootstrapping =
+524
+Number of variables of interest =
+1
+
+Coef.
+black
+
+-.1588783
+
+Std. Err.
+.0406563
+
+z
+
+P>|z|
+
+-3.91
+
+0.000
+
+[95% Conf. Interval]
+-.2385632
+
+-.0791935
+
+The estimation results point to statistically as well as economically significant black-white
+wage gaps for the two cohorts. We also observe a wider black-white wage gap for the 1997
+cohort relative to the 1979 cohort, with an increase in the estimated gap from about 11.9% to
+15.9%. Note, however, that the difference is not significant at usual levels (p-value=0.51). Interestingly, the p-values of the specification tests imply that one cannot reject our specification
+for either cohort at any standard statistical level.
+It is interesting to compare the estimated black-white wage gap with the results of a simple
+OLS regression of the log of hourly wages on a black dummy and the same set of controls.
+The estimated black-white wage gap drops from 11.9% and 15.9%, for our specifications, to
+8.1% and 9.7% (with standard errors equal to 0.035 and 0.041), for the OLS specification
+that ignores selection. That the estimated wage gap is larger in magnitude when we use our
+method is consistent with the underlying sample selection issue. Indeed, among males, blacks
+are significantly more likely to dropout from the labor market (Juhn, 2003). Since dropouts
+tend to have lower potential wages, one can expect that not controlling for endogenous labor
+market participation will result in underestimating the black-white wage differential.9
+
+6
+
+Conclusion
+
+In this paper we have discussed how to use the eqregsel command to estimate and conduct
+inference on sample selection models, following D’Haultfœuille et al. (2018). Unlike alternative
+9
+
+We also estimate the wage gap using the Heckman two-step estimator, without any instrument. We obtain
+very imprecisely estimated gaps of 24.2% and -21.2%, with standard errors of 0.48 and 0.68. This could be
+expected: in the absence of instrument, this estimator strongly relies on functional form restrictions and is
+often unstable.
+
+10
+
+estimation methods that have been proposed in the literature, the method does not require
+the presence of instruments or large support regressors. The estimator is simply based on a
+quantile regression in the tail, but with a quantile index chosen in a data-driven fashion. The
+Stata command eqregsel makes it possible to easily use this procedure.
+
+11
+
+References
+Ahn, H., and J. L. Powell. 1993. Semiparametric estimation of censored selection models with
+a nonparametric selection mechanism. Journal of Econometrics 58(1-2): 3–29.
+Altonji, J., P. Bharadwaj, and F. Lange. 2012. Changes in the characteristics of American
+youth: Implications for adult outcomes. Journal of Labor Economics 30(4): 783–828.
+Buchinsky, M. 1998. The dynamics of changes in the female wage distribution in the USA: A
+quantile regression approach. Journal of Applied Econometrics 13(1): 1–30.
+Chamberlain, G. 1986. Asymptotic efficiency in semiparametric model with censoring. Journal
+of Econometrics 32(2): 189–218.
+Chen, S., and S. Khan. 2003. Semiparametric estimation of a heteroskedastic sample selection
+model. Econometric Theory 19(6): 1040–1064.
+Chernozhukov, V., and I. Fernandez-Val. 2011. Inference for extremal conditional quantile
+models, with an application to market and birthweight risks. Review of Economic Studies
+78(2): 559–589.
+Chernozhukov, V., I. Fernandez-Val, and T. Kaji. 2017. Extremal quantile regression: An
+overview. In Handbook of Quantile Regression, ed. R. Koenker, V. Chernozhukov, X. He,
+and L. Peng. Chapman and Hall/CRC.
+Das, M., W. Newey, and F. Vella. 2003. Nonparametric estimation of sample selection models.
+Review of Economic Studies 70(1): 33–58.
+D’Haultfoeuille, X., and A. Maurel. 2013. Another look at the identification at infinity of
+sample selection models. Econometric Theory 29(1): 213–224.
+D’Haultfœuille, X., A. Maurel, and Y. Zhang. 2018. Extremal quantile regressions for selection
+models and the black–white wage gap. Journal of Econometrics 203(1): 129–142.
+Donald, S. 1995. Two-step estimation of heteroskedastic sample selection models. Journal of
+Econometrics 65(2): 347–380.
+Heckman, J. J. 1974. Shadow prices, market wages, and labor supply. Econometrica 42(4):
+679–694.
+. 1979. Sample selection bias as a specification error. Econometrica 47(1): 153–161.
+
+12
+
+. 1990. Varieties of selection bias. The American Economic Review 80(2): 313–318.
+Honoré, B., and L. Hu. 2018. Selection without exclusion. Working paper.
+Juhn, C. 2003. Labor market dropouts and trends in the wages of black and white men.
+Industrial and Labor Relations Review 56(4): 643–662.
+Lewbel, A. 2007. Endogenous selection or treatment model estimation. Journal of Econometrics 141(2): 777–806.
+Newey, W. 2009. Two step series estimation of sample selection models. The Econometrics
+Journal 12(1): 217–229.
+Politis, D. N., J. P. Romano, and M. Wolf. 1999. Subsampling. Springer Science & Business
+Media.
+Vella, F. 1998. Estimating models with sample selection bias: A survey. Journal of Human
+Resources 33(1): 127–169.
+
+13
+
+

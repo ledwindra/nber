@@ -1,0 +1,7822 @@
+NBER WORKING PAPER SERIES
+
+THE BIGGER PICTURE:
+COMBINING ECONOMETRICS WITH ANALYTICS IMPROVE FORECASTS OF MOVIE SUCCESS
+Steven F. Lehrer
+Tian Xie
+Working Paper 24755
+http://www.nber.org/papers/w24755
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+June 2018
+
+We wish to thank Chris Hansen, seminar participants at the Young Econometricians around
+Pacific (YEAP) 2017 annual conference, the Canadian Econometrics Study Group (CESG) 2017
+annual conference, Carleton University, Chinese Academy of Sciences, Northeastern University,
+Renmin University, Xiamen University, and Zhejiang University for helpful comments and
+suggestions. Xie’s research is supported by the Natural Science Foundation of China (71701175),
+the Chinese Ministry of Education Project of Humanities and Social Sciences (17YJC790174),
+the Natural Science Foundation of Fujian Province of China (2018J01116), the Fundamental
+Research Funds for the Central Universities in China (20720171002, 20720171076, and
+20720181050), and Educational and Scientific Research Program for Young and Middleaged
+Instructor of Fujian Province (JAS170018). Lehrer wishes to thank SSHRC for research support.
+The usual caveat applies. The views expressed herein are those of the authors and do not
+necessarily reflect the views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2018 by Steven F. Lehrer and Tian Xie. All rights reserved. Short sections of text, not to
+exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+
+The Bigger Picture: Combining Econometrics with Analytics Improve Forecasts of Movie
+Success
+Steven F. Lehrer and Tian Xie
+NBER Working Paper No. 24755
+June 2018
+JEL No. C52,C53,C55
+ABSTRACT
+There exists significant hype regarding how much machine learning and incorporating social
+media data can improve forecast accuracy in commercial applications. To assess if the hype is
+warranted, we use data from the film industry in simulation experiments that contrast
+econometric approaches with tools from the predictive analytics literature. Further, we propose
+new strategies that combine elements from each literature in a bid to capture richer patterns of
+heterogeneity in the underlying relationship governing revenue. Our results demonstrate the
+importance of social media data and value from hybrid strategies that combine econometrics and
+machine learning when conducting forecasts with new big data sources. Specifically, while
+recursive partitioning strategies greatly outperform dimension reduction strategies and traditional
+econometric approaches in forecast accuracy, there are further significant gains from using hybrid
+approaches. Further, Monte Carlo experiments demonstrate that these benefits arise from the
+significant heterogeneity in how social media measures and other film characteristics influence
+box office outcomes.
+
+Steven F. Lehrer
+School of Policy Studies
+and Department of Economics
+Queen's University
+Kingston, ON K7L 3N6
+CANADA
+and NBER
+lehrers@queensu.ca
+Tian Xie
+Wang Yanan Institute for Studies in Economics
+Department of Finance, MOE Key Lab of Econometric
+Xiamen, Fujian 361005, China
+xietian001@hotmail.com
+
+1
+
+Introduction
+
+Many speculate that in the near future, movie studios will find that predictive analytics
+may play just as large of a role as either the producer, director, and/or stars of the film
+when determining if it will be a success. Currently, predictive analytics that incorporate
+social media data are being predominately used for demand forecasting exercises in the
+film industry. Improved forecasts are valuable since they not only could increase capital
+investments by reducing investor uncertainty of the box office consequences, but also
+help marketing teams tailor effective advertising campaigns. However, there remains
+both skepticism as to whether social media data truly adds value to these forecasting
+exercises, and debate if the hype of its potential is truly warranted.
+In this paper we introduce new strategies for predictive analytics that are contrasted
+with existing tools from both the econometrics and machine learning literature to first
+give guidance on how to improve forecast accuracy in applications within the film industry.1 Second, we consider the value of different measures of social media data in our
+application. We examine if there is additional value from analyzing individual social media messages for trends in sentiment that are beyond simply collecting the amount of
+social media chatter surrounding individual movies.
+This paper contributes to a burgeoning literature in the emerging fields of data science
+and analytics that focuses on developing methods to improve empirical practice including forecast accuracy.2 Motivating our strategies is that in many forecasting exercises
+involving social media data we would anticipate heteroskedasticity for at least two reasons. First, the characteristics of individuals attracted to different films will differ sharply
+leading the data to appear as if coming from different distributions. Second, online respondents may have greater unobserved variability in their opinions of different films.
+1 As discussed in the next section, traditional econometric strategies generally differ from machine learn-
+
+ing approaches by first writing an explicit model for how covariates influence outcomes.
+2 For example, among other developments, Vasilios, Theophilos, and Periklis (2015) examine the forecasting accuracy of machine learning techniques on forecasting daily and monthly exchange rates, Wager
+and Athey (2017) propose variants of random forests to estimate causal effects, and Ban, Karoui, and Lim
+(2018) adopted machine learning methods for portfolio optimization.
+
+2
+
+Econometricians have long been well aware that heteroskedasticity of data impacts
+the predictive ability of many traditional estimators. With recursive partitioning strategies such as regression trees that underlie ensemble methods such as random forests or
+bagging, researchers do not specify a structure for the model to forecast the mean, but
+implicitly assume homogeneous variance across the entire explanatory-variable space.3
+We propose two new empirical strategies for this setting. First, we develop computationally efficient methods to implement model averaging estimators with heteroskedastic
+data. Specifically, we extend the theoretical results of Zhang, Yu, Zou, and Liang (2016)
+and prove the asymptotic optimality of Mallows-type model averaging estimators using
+a set of screened candidate models.4 Second, we propose a hybrid strategy that uses
+recursive partitioning methods to develop subgroups and then undertake model averaging within these groups to generate forecasts. Traditionally, forecasts from regression
+trees assume homogeneity in outcomes within individual leafs. By allowing for model
+uncertainty in the leaves, richer forms of heterogeneity in the relationships between independent variables and outcomes within each subgroup in a leaf is allowed.
+To examine the empirical performance of these alternative approaches we first extend
+the prediction exercise in Lehrer and Xie (2017) by removing the sampling criteria based
+on the budget. All movies released over a three-year period ranging from art-house to
+blockbuster are now included. By relaxing this restriction, the data exhibits strong heteroskedasticity,5 which likely arises since different films appeal to populations drawn
+3 More
+
+generally, both OLS, regression trees and Lasso methods rely on the unweighted sum of squares
+criterion (SSR), which implicitly assumes homoskedastic errors. It is well known that when this condition
+is violated and heteroskedasticity is present, the standard errors are biased influencing statistical inference
+procedures. Further, the objective function ensures that areas of high variability will contribute more to
+minimizing the unweighted SSR, and will therefore play a larger role when making predictions at the
+mean. As such, predictions for low-variance areas are expected to be less accurate relative to high variance
+areas. This is why heteroskedasticity might affect predictions at the mean, since the implicit weights to the
+data are determined by the local variance. Recent developments continue to use the SSR as a loss function
+but can generally accommodate richer forms of heterogeneity relative to parametric econometric models
+by accounting for limited forms of parameter heterogeneity.
+4 Specifically, we consider three model averaging estimators: the MMA estimator of Hansen (2007), the
+PMA estimator of Xie (2015), and the HRC p of Liu and Okui (2013).
+5 Results from Breusch-Pagan test are presented in appendix E.1. We should stress that a reason one
+needs to account for heteroskedasticity is parameter heterogeneity, which is a form of an omitted variables
+
+3
+
+from different distributions.
+Our results provide new insights on the trade-offs researchers face when choosing
+a forecasting method. Recursive partitioning strategies including regression trees, bagging and random forests yield on average a 30-40% gains in forecast accuracy relative
+to econometric approaches that either use a model selection criteria or model averaging
+approach. These large gains from statistical learning methods even relative to econometric estimators and penalization methods that implicitly account for heteroskedastic data,
+demonstrate the restrictiveness of linear parametric econometric models. These models
+remain popular in econometrics since as Manski (2004) writes “statisticians studying estimation have long made progress by restricting attention to tractable classes of estimators;
+for example, linear unbiased or asymptotic normal ones”.
+Second, we find additional gains of roughly 10% in forecast accuracy from our proposed strategy that allows for model uncertainty in each leaf of a regression tree relative
+to popular recursive partitioning algorithms such as random forest and bagging.6 Monte
+Carlo experiments clarify why these gains arise in our empirical application. We find
+hybrid strategies are quite useful in settings where heteroskedasticy arises due to significant parameter heterogeneity, perhaps due to jumps or threshold effects, or simply
+neglected parameter heterogeneity in the underlying behavioral relationships. In this setting, hybrid strategies can explain a portion of the significant amount of heterogeneity in
+outcomes within each leaf of a bagging tree. In contrast, when heteroskedasticy is due to
+random factors, we do not observe significant benefits from the hybrid strategies.
+Third, our analysis finds tremendous value from incorporating social media data in
+forecasting exercises. Econometric approaches show that the inclusion of social media
+problem. However, the link between neglected parameter heterogeneity and heteroskedasticity are not well
+known among practitioners, but can be easily explained with the following example. If regression coefficients vary across films (perhaps the role of Twitter volume on box office revenue differs for a blockbuster
+science fiction film relative to an art house drama), then the variance of the error term varies too for a fixedcoefficient model. This link between neglected heterogeneity and heteroskedasticity has implications for
+specification tests and Chesher (1984) demonstrates that the well-known information matrix (IM) test due
+to White (1982) can be interpreted as a test against random parameter variation.
+6 Note, our analysis finds that adding model averaging post variable selection by penalization methods
+or using a model screening approach leads to small gains relative to traditional econometric approaches.
+
+4
+
+data leads to large gains in forecast accuracy. Calculations of variable importance from
+recursive partitioning methods show that measures of social media message volume account for 6 of the 10 most influential variables when forecasting either box office or retail
+movie unit sales revenue.
+This paper is organized as follows. In the next section, we first review traditional
+econometric and machine learning strategies to conduct forecasting and then propose
+two new strategies to aid managerial decision making. The strategies are designed to
+be computationally efficient and can accommodate more general forms of heterogeneity
+than traditional forecasting methods. The data used and design of the simulation experiments that compares forecasting methods is outlined in section 3. Section 4 presents
+and discusses our main results that show the value of social media data and combining
+machine learning with econometrics when undertaking forecasts. Further, we conduct
+additional Monte Carlo experiments to elucidate why an understanding of the source
+of heteroskedasticity is useful when selecting a forecasting method. We summarize our
+findings and conclude in the final section.
+
+2
+
+Empirical Tools for Forecasting
+
+Forecasting involves a choice of a method to identify the underlying factors that might
+influence the variable being predicted. Econometric approaches begin by considering a
+linear parametric form for the data generating process (DGP) of this variable as
+∞
+
+y i = µ i + ei ,
+
+µi =
+
+∑ β j xij ,
+
+E( ei | x i ) = 0
+
+(1)
+
+j =1
+
+for i = 1, ..., n and µi can be considered as the conditional mean µi = µ( xi ) = E(yi | xi )
+that is converging in mean square.7 The error term can be heteroskedastic, where σi2 =
+E(ei2 | xi ) denote the conditional variance that depends on xi . Since the DGP in equation
+7 Convergence
+
+in mean square implies that E(µi − ∑kj=1 β j xij )2 → 0 as k → ∞.
+
+5
+
+(1) is unknown, econometricians often approximate it with a set of M candidate models:
+km
+
+yi =
+
+∑ βmj xijm + ui ,
+
+(2)
+
+j =1
+
+for m = 1, ..., M, where xijm for j = 1, ..., km denotes the regressors, βm
+j denotes the coefficients. The residual now contains both the original error term and a modeling bias term
+m
+
+m
+denoted as bim ≡ µi − ∑kj=1 βm
+j xij . In practice, econometricians often use specification tests
+
+such as the Akaike information criterion to determine a single preferred model.
+In the machine learning literature, many popular algorithms select variables rather
+than models. For example, recursive partitioning methods such as classification and regression decision trees (CART) use a fast divide and conquer greedy algorithm that recursively partitions the data into smaller subsets.8 A node τ containing nτ observations with
+mean outcome ȳ(τ ) can only by split by one selected variable into two leaves, denoted as
+τL and τR . The split is made at the variable where ∆ =SSR(τ )−SSR(τL )−SSR(τR ), reaches
+its global maximum;9 where the within-node sum of squares is SSR(τ ) = ∑inτ (yi − ȳτ )2 .
+This splitting process continues at each new node until the ȳ(τ ) at nodes can no longer
+be split since it will not add any additional value to the prediction. Forecasts at each final
+leaf l are the fitted value from a regression model of
+yi = a + ui ,
+
+i ∈ l,
+
+(3)
+
+where ui is the error term and a stands for a constant term. The least square estimate of
+â = ȳi∈l . In other words, after partitioning the dataset into numerous final leaf nodes, the
+8 Regression
+
+trees are applied to real number predicted outcomes and differ sharply from econometric
+strategies by not linearizing the relationship in (1). These strategies aim to estimate y = f ( x ) while trying
+to avoid overfitting. Further, smoothness conditions are not required in contrast to many nonparametric
+approaches in econometrics. Work on tree-based regression models traces back to Morgan and Sonquist
+(1963) and within machine learning, most research efforts concentrate on classification (or decision) trees
+(Hunt, Martin, and Stone, 1966, Quinlan, 1986) and work on regression trees started with RETIS (Karalic
+and Cestnik, 1991) and M5 (Quinlan, 1992).
+9 Implicitly it is assumed that there are no unobservables relevant to the estimation. That said, the standard methodology to induce regression trees is based on the minimization of the squared error.
+
+6
+
+forecast assumes any heterogeneity in outcomes within each subgroup is random. From
+the perspective of the econometrician, this can appear unsatisfying.
+In addition, Hastie, Tibshirani, and Friedman (2009) discuss that individual regression trees are not powerful predictors relative to ensemble methods since they exhibit
+large variance. Ensemble methods that combine estimates from multiple models or trees
+exist in both the machine learning and econometrics literature. The model averaging
+literature in econometrics assumes that a weighted average of M linear candidate models can approximate the DGP in equation (1).10 This strategy can also be motivated by
+the researcher being uncertain about the appropriate specification. Since M models approximate the DGP as given by y = µ + e, where y = [y1 , ..., y M ]> , µ = [µ1 , ..., µ M ]> ,
+e = [e1 , ..., e M ]> and we define the variable w = [w1 , w2 , ..., w M ]> as a weight vector in the
+unit simplex in R M ,
+(
+
+H≡
+
+wm ∈ [0, 1]
+
+M
+
+M
+
+:
+
+∑
+
+)
+wm = 1 .
+
+(4)
+
+m =1
+
+There are numerous optimization routines used to estimate these weights and each aims
+to strike a balance between model performance and complexity of the individual models.11 Once the optimal weights are obtained, the forecast from the model averaging estimator of µ is
+M
+
+µ̂(w) =
+
+∑
+
+m =1
+
+m
+
+wm µ̂ =
+
+M
+
+∑
+
+wm Pm y = P (w)y.
+
+(5)
+
+m =1
+
+This forecast is a weighted average of the forecasts of the individual candidate models.
+Within machine learning, bootstrap aggregating decision trees (aka bagging) proposed
+in Breiman (1996) and random forest developed in Breiman (2001) are randomizationbased ensemble methods that draw a parallel to model averaging.12 In bagging, trees are
+ −1 m >
+is, define the estimator of the mth individual model is given as µ̂m = X m X m > X m
+X y =
+Pm y, where X m is a full rank n × km matrix of independent variables with (i, j)th element being xijm and
+10 That
+
+Pm = X m ( X m > X m )−1 X m > . Similarly, the residual is êm = y − µ̂m = ( I n − Pm )y for all m.
+11 Several of these methods are considered in our empirical exercise and described in the appendix.
+12 The main idea is to introduce random perturbations into the learning procedure by growing multiple
+different decision trees from a single learning set and then an aggregation technique is used to combine the
+predictions from all these trees.These perturbations help remedy the fact that a single tree may suffer from
+
+7
+
+built on random bootstrap copies of the original data, producing multiple different trees.
+Bagging differs from random forest only in the set of explanatory factors being considered
+in each tree. That is, rather than consider which among the full set of explanatory variables leads to the best split at a node of the tree, random forests only consider a random
+subset of the predictor variables for the best split. With both strategies, the final forecast
+is obtained as an equal weight average of the individual tree forecasts.
+Forecasts from recursive partitioning and model averaging methods are computationally expensive but differ in three important ways. The first difference relates to how the
+DGP in equation (1) is approximated and both bagging and random forest do not make
+any assumptions about the probabilistic structure of the data. The remaining two differences relate to how predictions are weighted across the different models/trees. Optimal
+weights across models are calculated using equation (4) from predictions using the full
+sample in model averaging strategies. The weight of each leaf in the tree forecast is simply determined by the sample proportion in each leaf. Second, final predictions from
+regression trees rule out any model uncertainty in each final leaf ȳ(τ ) of the tree.
+This lack of heterogeneity and computational considerations motivate our two proposed extensions for forecasting with social media data. The first extension considers an
+improved method to select candidate models for model averaging estimators. The second
+extension proposes a hybrid strategy that combines recursive partitioning with model averaging to allow for heterogeneity in forecasts when the final leaf subgroup consists of
+observations that differ in some observed covariates.
+
+2.1
+
+A New Strategy for Model Screening
+
+The empirical performance of any model averaging estimator crucially depends on the
+candidate model set. Let M denote the candidate model set before screening. In practice,
+one possible approach to construct the candidate model set is to consider a full permuhigh variance and display poor forecast accuracy. See appendix A for more details.
+
+8
+
+tation of all regressors. One obvious drawback of this approach is that the total number
+of candidate models increases exponentially with the number of regressors. As shown in
+Wan, Zhang, and Zou (2010), Xie (2015), Zhang, Zou, and Carroll (2015), among others, by
+either keeping the total number of candidate models to be small or letting the total number of candidate models converge to infinity slow enough, provides a necessary condition
+to maintain the asymptotic optimality of model averaging estimators.13 While most existing research assumes a pre-determined candidate model set, a recent paper by Zhang,
+Yu, Zou, and Liang (2016) established the asymptotic optimality of Kullback-Leibler (KL)
+loss based model averaging estimators with screened candidate models. Following this
+insight, we define M̃ to be the candidate model set following model screening, in which
+
+M̃ ⊆ M. The weight vector space solved via an optimization routine under M̃ can be
+written as
+
+(
+
+H̃ =
+
+w ∈ [0, 1] M :
+
+∑
+
+wm = 1 and
+
+m∈M̃
+
+∑
+
+)
+wm = 0 .
+
+(6)
+
+m/
+∈M̃
+
+Note that the weight vector under M̃ is still M × 1, however, models that do not belong
+in M̃ are assigned zero weight.
+We define the average squared loss as L(w) = (µ̂(w) − µ) T (µ̂(w) − µ) where µ̂(w) is
+defined in (A21). We present the following set of assumptions
+Assumption 1 We assume that there exist a non-negative series of vn and a weight series of
+wn ∈ H such that
+(i) vn ≡ L(wn ) − infw∈H L(w),
+(ii) ξ n−1 vn → 0,
+(iii) Pr(wn ∈ H̃) → 1 as n → ∞,
+where H̃ is defined in (6) and ξ n is the (lowest) modified model risk defined in equation (A6).
+13 Moreover,
+
+Hansen (2014) and Zhang, Ullah, and Zhao (2016) point out that to satisfy the conditions on
+the global dominance of averaging estimators over the unrestricted least-squares estimator, the number of
+candidate models should be limited by screening and every possible model should not be estimated.
+
+9
+
+Assumption 1(i) is the definition of vn , which is the distance between a model risk by
+wn and the lowest possible model risk. Assumption 1(ii) is a convergence condition. It
+requires that ξ n goes to infinity faster than vn . The final item of Assumption 1 implies
+the validity of our selected model screening techniques. When the sample size goes to
+infinity, the chance that the model screening techniques accidentally omit at least one
+useful model goes to 0. This condition is easily satisfied by imposing mild screening
+conditions, while keeping the candidate models in M̃ to be as many as allowed.
+The following theorem establishes the asymptotic optimality of Mallows-type model
+averaging estimators under screened model set.
+Theorem 1 Let Assumption 1 be satisfied, then under the conditions that sustain the asymptotic
+optimality of Mallows-type model averaging estimators under given (unscreened) candidate model
+set, we have
+p
+L(w̃)
+→ 1,
+(7)
+infw∈H L(w)
+as n → ∞.
+The proof appears in appendix C. Theorem 1 states that using screened model set M̃,
+the model averaging estimator w̃ is asymptotically optimal in the sense of achieving the
+lowest possible mean squared error (model risk); even compared to a model averaging
+estimator that used all potential candidate models in its set.
+
+2.2
+
+New Hybrid Approaches: Model Averaging Learning Methods
+
+Building off the idea of Belloni and Chernozhukov (2013) who suggest using OLS estimates after variable selection by the Lasso,14 Lehrer and Xie (2017) proposed model
+averaging from models constructed with variables selected by the Lasso. We suggest that
+at each tree leaf in the forest, there may be a sequence of m = 1, ..., M linear candidate
+models, in which regressors of each model m is a subset of the regressors belonging to
+14 Penalization methods such as the Lasso have objective functions designed to reduce the dimensionality
+of explanatory variables.
+
+10
+
+that tree leaf. The regressors X im∈l for each candidate model within each tree leaf is constructed such that the number of regressors km
+l  nl for all m. Using these candidate
+models, we perform model averaging estimation and obtain
+M
+
+β̂l (w) =
+( K ×1)
+
+∑
+
+m
+
+wm β̃l ,
+
+(8)
+
+( K ×1)
+
+m =1
+
+m
+
+which is a weighted averaged of the “stretched” estimated coefficient β̃l for each candim
+
+date model m. Note that the K × 1 sparse coefficient β̃l is constructed from the km
+l ×1
+m
+
+least squares coefficient β̂l by filling the extra K − km
+l elements with 0s. The forecast for
+all observations can then be obtained as
+p
+
+ŷt∈l = X t∈l β̂l (w).
+
+(9)
+
+This strategy preserves the original classification process and within each leaf allows observations that differ in characteristics to generate different forecasts ŷt∈l .
+Model averaging bagging (MAB) applies this process to each of the B samples used
+to construct a bagging tree. The final MAB forecast remains the equal weight average
+of the B model averaged tree forecasts. Model averaging random forest (MARF) operates similarly with the exception that only k predictors out of the total K predictors are
+considered for the split at each node. With fewer predictors, the candidate model set for
+each leaf does not potentially consider each of the K regressors as in MAB, but rather is
+constructed with the k regressors used to split the nodes that generated this leaf l.15 This
+restriction affects how β̂l (w) is calculated as it is averaged only over those leafs where it
+was randomly selected.
+p
+
+15 In
+
+a forecast exercise, the predicting observations X t with t = 1, 2, ..., T are dropped down the regresp
+sion tree. For each X t , after several steps of classification, we end up with one particular tree leaf l. We
+p
+denote the predicting observations that are classified in tree leaf l as X t∈l . If the full sample contains n
+observations, the tree leaf l contains a subset nl < n of the full sample of y, denoted as yi with i ∈ l. Also,
+the sum of all nl for each tree leaf equals n. The mean of yi∈l is calculated, denoted as ȳi∈l . The value ȳi∈l
+p
+p
+p
+is the forecast estimate of X t∈l . It is quite possible that different predicting observations X t and X s with
+t 6= s will end up with the same tree leaf, therefore, generates identical forecasts.
+
+11
+
+3
+
+Data and Empirical Exercise
+
+We collected data on the universe of movies released in North America between October
+1, 2010 and June 30, 2013. We extend the analysis in Lehrer and Xie (2017) that concentrated solely on movies with budgets ranging from 20 to 100 million dollars and consider
+the full suite of films released during this period.16 With the assistance of the IHS film
+consulting unit the characteristics of each film were characterized by a series of indicator variables to describe the film’s genre,17 the rating of a film’s content provided by the
+Motion Picture Association of America’s system,18 film budget excluding advertising and
+both the pre-determined number of weeks and screens the film studio forecasted the specific film will be in theatres measured approximately six weeks prior to opening. In our
+analysis, we examine the initial demand by using the actual opening weekend box office
+and total sales of both DVD and Blu-Rays upon initial release.
+To measure purchasing intentions from the universe of Twitter messages (on average,
+approximately 350 million tweets per day) we consider two measures. First, the sentiment specific to a particular film is calculated using an algorithm based on Hannak et
+al. (2012) that involves textual analysis of movie titles and movie key words.19 In each
+Twitter message that mentions a specific film title or key word, sentiment is calculated by
+examining the emotion words and icons that are captured within.20 The sentiment index
+for a film is the average of the sentiment of the scored words in all of the messages associated with a specific film. Second, we calculate the total unweighted volume of Twitter
+16 Movies
+
+with budgets above 100 million dollars are usually regarded as “Blockbusters” and many “Arthouse” movies usually have budgets below 20 million dollars.
+17 In total, we have 14 genres: Action, Adventure, Animation, Biography, Comedy, Crime, Drama, Family,
+Fantasy, Horror, Mystery, Romance, Sci-Fi, and Thriller.
+18 Specifically, films in our sample were assigned ratings of PG, PG13, and R. There are very few movies
+in our data set that were given a G rating.
+19 This algorithm developed by Janys Analytics for IHS-Markit was also used for the initial reported
+measures of the Wall Street Journal-IHS U.S. Sentiment Index
+20 In total, each of 75,065 unique emotion words and icons that appeared in at least 20 tweets between
+January 1st, 2009 to September 1st, 2009 is given a specific value that is determined using emotional valence.
+Note that Twitter messages were capped at 140 characters throughout this period. These messages often
+contain acronyms and Twitter specific syntax such as hashtags that may present challenges to traditional
+sentiment inference algorithms.
+
+12
+
+messages for each specific film. We consider volume separate from sentiment in our analyses since the latter may capture perceptions of quality, whereas volume may just proxy
+for popularity.21
+Across all the films in our sample, there is a total of 4,155,688 messages to be assessed.
+There is a large amount of time-varying fluctuations in both the number of, and sentiment
+within the Twitter messages regarding each film. Some of this variation reflects responses
+to the release of different marketing campaigns designed to both build awareness and
+increase anticipation of each film. Thus, in our application we define measures from
+social media data over different time periods. That is, suppose the movie release date is
+T, we separately calculate sentiment in ranges of days within the window corresponding
+to 4 weeks prior to and subsequent the release date.22
+Summary statistics are presented in table 1. The mean budget of films is respectively
+approximately 61 and 63 million for the open box office and retail unit sales outcome.
+On average, these films were in the theatre for 14 weeks and played on roughly 3000
+screens. Not surprisingly, given trends in advertising, the volume of Tweets increases
+sharply close to the release date and peaks that day. Following a film’s release we find a
+steady decline in the amount of social web activity corresponding to a film.
+
+3.1
+
+Simulation Experiment Design
+
+To examine the importance of incorporating data from the social web either using traditional estimators or an approach from the machine learning literature, we follow Hansen
+and Racine (2012) and conduct the following experiment to assess the relative prediction
+21 We
+
+consider both measures since prior work by Liu (2006) and Chintagunta, Gopinath, and Venkataraman (2010) suggest that sentiment in reviews affect subsequent box office revenue. Similarly, Xiong and
+Bharadwaj (2014) finds that pre-launch blog volume reflects the enthusiasts’ interest, excitement and expectations about the new product and Gopinath, Chintagunta, and Venkataraman (2013) study the effects
+of blogs and advertising on local-market movie box office performance.
+22 For a typical range, T–a/–b, it stands for a days before date T (release date) to b days before date T. We
+use the sentiment data before the release date in equations that forecast the opening weekend box office.
+After all, reverse causality issues would exist if we include sentiment data after the release date. Similarly,
+T+c/+d means c days to d days after date T, which are additionally used for forecasting the retail unit sales.
+
+13
+
+Table 1: Summary Statistics
+Variable
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core Parameters
+Budget (in million)
+Weeks
+Screens (in thousand)
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+
+Open Box Office
+Mean
+Std. Dev.
+
+Retail Unit Sales
+Mean
+Std. Dev.
+
+0.3202
+0.2416
+0.0843
+0.0393
+0.3652
+0.1966
+0.3483
+0.0562
+0.1011
+0.1180
+0.0899
+0.1124
+0.1124
+0.2416
+
+0.4679
+0.4292
+0.2786
+0.1949
+0.4828
+0.3986
+0.4778
+0.2309
+0.3023
+0.3235
+0.2868
+0.3167
+0.3167
+0.4292
+
+0.3357
+0.2378
+0.0909
+0.0420
+0.3776
+0.1818
+0.3706
+0.0629
+0.0909
+0.1049
+0.0909
+0.0979
+0.1119
+0.2517
+
+0.4739
+0.4272
+0.2885
+0.2012
+0.4865
+0.3871
+0.4847
+0.2437
+0.2885
+0.3075
+0.2885
+0.2982
+0.3163
+0.4355
+
+0.1461
+0.4213
+0.4270
+
+0.3542
+0.4952
+0.4960
+
+0.1608
+0.4126
+0.4196
+
+0.3687
+0.4940
+0.4952
+
+60.9152
+13.9446
+2.9143
+
+56.9417
+5.4486
+0.8344
+
+63.1287
+14.4056
+2.9124
+
+56.5959
+5.7522
+0.8498
+
+73.5896
+73.6999
+73.8865
+73.9027
+73.8678
+
+3.2758
+3.0847
+2.6937
+2.7239
+2.8676
+
+73.4497
+73.7530
+73.9411
+73.8931
+73.7937
+73.8662
+73.8241
+73.4367
+73.7001
+74.0090
+
+3.5597
+3.0907
+2.6163
+2.8637
+3.0508
+3.0887
+3.1037
+3.8272
+3.3454
+2.7392
+
+0.1336
+0.1599
+0.1918
+0.2324
+0.4553
+
+0.6790
+0.6649
+0.6647
+0.8400
+0.9592
+
+0.1499
+0.1781
+0.2071
+0.2494
+0.4952
+1.5233
+0.6586
+0.3059
+0.2180
+0.1660
+
+0.7564
+0.7404
+0.7377
+0.9304
+1.0538
+3.2849
+1.1838
+0.8290
+0.7314
+0.7204
+
+14
+
+efficiency of different estimators with different sets of covariates. The estimation strategies that we contrast can be grouped into the following categories (i) traditional econometric approaches, (ii) model screening approaches, (iii) machine learning approaches,
+and (iv) newly proposed methods that combine econometrics with machine learning algorithms to capture richer patterns of heterogeneity. Table 2 lists each estimator analyzed
+in the exercise and the online appendix provides further details on their implementation.
+The experiment shuffles the original data with sample n, into a training set of n T and
+an evaluation set of size n E = n − n T . Using the training set, we obtain the estimates from
+each strategy and then forecast the outcomes for the evaluation set. With these forecasts,
+we evaluate each of the forecasting strategies by calculating mean squared forecast error
+(MSFE) and mean absolute forecast error (MAFE):
+1
+(y E − x E β̂ T )> (y E − x E β̂ T ),
+nE
+1
+>
+y E − x E β̂ T ι E ,
+MAFE =
+nE
+MSFE =
+
+where (y E , x E ) is the evaluation set, n E is the number of observations of the evaluation
+set, β̂ T is the estimated coefficients by a particular model based on the training set, and
+ι E is a n E × 1 vector of ones. In total, this exercise is carried out 10,001 times for different
+sizes of the evaluation set, n E = 10, 20, 30, 40.
+In total, there are 223 = 8, 388, 608 and 229 = 536, 870, 912 potential candidate models for open box office and movie unit sales respectively. This presents computational
+challenges for the HRC p and other model averaging estimators. Thus, we conducted the
+following model screening procedure based on the GETS method to reduce the set of potential candidate models for model selection and model averaging methods. First, based
+on the OLS results presented in table A1, we restrict that each potential model contains a
+constant term and 7 (11) relatively significant parameters for open box office (movie unit
+sales). Second, to control the total number of potential models, a simplified version of the
+automatic general-to-specific approach of Campos, Hendry, and Krolzig (2003) is used for
+15
+
+16
+
+Three threshold p-values are selected, as p = 0.24, 0.28, and 0.32 for open box office, and p = 0.30, 0.34, and 0.38 for movie unit sales
+The modified hetero-robust adaptive regression by mixing with model screening method of Yuan and Yang (2005)
+The hetero-robust model screening of Xie (2017)
+We set all tuning parameters in the two steps as equal, and we control the tuning parameter so as to select a total of 10, 12, and 15 parameters
+The GETS method we used in previous experiments, that is, p = 0.3 and 0.35 for open box office and movie unit sales, respectively
+
+Panel D: Hybrid Methods
+(1)
+MAB
+Hybrid applying the PMA method on subgroups created by BAG, B = 1000 bootstrap samples and all of the K total covariates
+(2)
+MARF
+Hybrid applying the PMA method on subgroups created by RF, B = 1000 bootstrap samples and q = b1/3K total c covariates
+
+Panel C: Machine Learning Methods
+(1)
+RT
+Regression tree of Breiman, Friedman, and Stone (1984)
+(2)
+BAG
+Bootstrap aggregation of Breiman (1996) with B = 1000 bootstrap samples and all of the K total covariates
+(3)
+RF
+Random forest of Breiman (2001) with B = 1000 bootstrap samples and q = b1/3K total c covariates
+
+Panel B: Model Screening
+(1)
+GETSs
+(2)
+ARMSH
+(3)
+HRMS
+(4)
+Double-Lasso
+(5)
+Benchmark
+
+Panel A: Econometric Methods
+(1)
+GUM
+A general unrestricted model that utilize all the independent variables described above
+(2)
+MTV
+A general unrestricted model that does not incorporate the Twitter based sentiment and volume variables
+(3)
+GETS
+A model developed using the general to specific method of Hendry and Nielsen (2007)
+(4)
+AIC
+A model selected using the Akaike Information Criterion method
+(5)
+PMA
+The model selected using the prediction model averaging proposed by Xie (2015)
+(6)
+HPMA
+The model selected using a heteroskedasticity-robust version of the PMA method discussed in appendix D
+(7)
+JMA
+The model selected by the jackknife model averaging (Hansen and Racine, 2012)
+(8)
+HRC p
+The model selected by hetero-robust C p (Liu and Okui, 2013)
+(9)
+OLS10,12,15
+The OLS post Lasso estimator of Belloni and Chernozhukov (2013) with 10, 12, and 15 explanatory variables selected by the Lasso
+p
+(10)
+HRC10,12,15
+The HRC p model averaging post Lasso estimation strategy with 10, 12, and 15 explanatory variables selected by the Lasso
+
+Table 2: List of Estimators Evaluated in the Prediction Error Experiments
+
+model screening.23 While this restriction that rules out many potential candidate model
+may appear severe, it has been found in numerous applications including Lehrer and Xie
+(2017), that only a handful of models account for more than 95% of the total weight of the
+model averaging estimate.24
+
+4
+
+Empirical Results
+
+The two panels of table 3 report the median MSFE and MAFE from the prediction error
+exercise outlined in the preceding section for the 10 different econometric strategies listed
+in panel A of table 2. Each row of the table considers a different size for the evaluation
+set and to ease interpretation all MSFEs and MAFEs are normalized by the MSFE and
+MAFE of the HRC p . Panel A of table 3 presents results for forecasting open box office and
+panel B demonstrates results corresponding to forecasting retail movie unit sales. Notice
+that for open box office, all remaining entries for MSFE are larger than one, indicating
+inferior performance of the respective estimator relative to HRC p . In general, the three
+model averaging approaches and the model selected by AIC perform nearly as well as
+HRC p . For movie unit sales, HPMA yields the best results in the majority of experiments.
+However, the gains from using HPMA in place of PMA appear quite small.
+The results in table 3 also stress the importance of social media data for forecast
+accuracy. Models that ignore social media data (MTV) perform poorly relative to all
+other strategies. Additional experiments makes clear that both social media measures are
+23 This
+
+approach explores through the whole set of potential models and examine each model using the
+following rule: we first estimate the p-values for testing each parameter in the model to 0. If the maximum
+of these p-values exceeds our benchmark value, we exclude the corresponding model. In this way, we are
+deleting models with weak parameters from our model set. We set the benchmark value to equal to 0.3
+and 0.35 for open box office and movie unit sales respectively, which is a very mild restriction. These preselection restrictions lead us to retain 105 and 115 potential models for open box office and retail movie unit
+sales respectively. Note, we did investigate the robustness of our results to alternative benchmark values
+and in each case the results presented in the next section are quite similar.
+24 See appendix E.5 for a detailed discussion of the model averaging weights and top 5 models for both
+open box office and movie unit sales in our experiment.
+
+17
+
+needed.25 In contrast to Lehrer and Xie (2017) we find that the post-Lasso methods listed
+in table 2,26 including the double-Lasso method, OLS post Lasso and model averaging
+post Lasso perform poorly relative to HRC p in this application.
+Table 4 considers the performance of alternative model screening strategies listed in
+panel B of table 2 relative to HRC p . We observe small gains in forecast accuracy from
+model screening relative to the benchmark HRC p . The hetero-robust methods yields
+slightly better results than homo-efficient methods for forecasts of box office opening.
+In contrast, when forecasting retail movie unit sales, the homo-efficient ARMS demonstrates better results than the other screening methods.27 Taking these findings together
+with the results contrasting PMA to HPMA table 3 illustrate that there are small gains in
+practice from using econometric approaches that accommodate heteroskedasticity.28
+Table 5 demonstrates that are very large gains in prediction efficiency of the recursive
+partitioning algorithms relative to the benchmark HRC p . For both outcomes when n E is
+small, machine learning methods have dominating performance over the HRC p . Popular
+approaches such as bagging and random forest greatly outperform the benchmark. However, our proposed MAB has the best performance when evaluating by MSFEs and adding
+model averaging tends to lead to gains of 10% between bagging and MAB.29 While regression tree yields the lowest relative MAFE, random forest methods, both conventional and
+model averaging, have moderate performance in all cases. Note that as n E increases, all
+25 In
+
+appendices E.3 and E.4.1 and E.6, we carried out additional prediction experiments to evaluate the
+forecast accuracy of alternative strategies with only a single social media measure. In each case, the evidence demonstrates markedly lower degrees of forecast accuracy relative to the corresponding exercise
+with two measures, thereby providing robust evidence of the need to account for both sentiment and volume.
+26 The post Lasso strategy can be viewed as a model screening method since it limits the number of explanatory variables and hence dimensionality of the candidate models. Full details on how these estimators
+are implemented is available in appendix B.4.
+27 Interestingly as presented in appendix E.7, the ARMS and ARMSH approaches select nearly identical
+weights and models.
+28 In appendix E.4, we use the Monte Carlo design introduced in section 4.2 to additionally evaluate
+whether the source of heteroskedasticity can explain some of these surprising results. This includes (i) the
+difference in the performance between PMA and HRC p in table 3 when forecasting retail movie unit sales,
+and (ii) the relative improved performance of ARMS presented in table 4.
+29 In appendix E.9, we present results from the SPA test of Hansen (2005) that provide significant evidence
+of the superior predictive ability of the MAB method over all the other considered.
+
+18
+
+19
+
+GUM
+
+MTV
+
+1.0597
+1.0751
+1.0814
+1.0929
+
+10
+20
+30
+40
+
+1.5235
+1.5317
+1.5251
+1.5275
+
+2.3032
+2.5704
+2.5402
+2.4835
+
+1.1507
+1.1863
+1.2333
+1.2828
+
+10
+20
+30
+40
+
+1.5950
+1.5342
+1.5388
+1.4793
+
+2.4468
+2.2299
+2.1005
+1.9312
+
+1.2693
+1.2792
+1.2886
+1.2861
+
+1.5231
+1.5895
+1.5836
+1.5235
+
+1.1300
+1.1258
+1.1373
+1.1376
+
+1.2357
+1.2208
+1.2305
+1.2198
+
+GETS
+
+1.0296
+1.0266
+1.0312
+1.0244
+
+1.0499
+1.0514
+1.0455
+1.0444
+
+1.0194
+1.0174
+1.0168
+1.0207
+
+1.0274
+1.0246
+1.0253
+1.0215
+
+AIC
+
+OLS12
+
+OLS15
+
+1.3531
+1.2617
+1.2071
+1.1364
+
+1.1634
+1.1365
+1.1165
+1.0952
+
+Mean Squared Forecast Error (MSFE)
+1.0013
+1.0019
+1.0183
+1.3730
+1.3481
+0.9979
+0.9998
+1.0263
+1.3951
+1.2665
+0.9943
+0.9981
+1.0218
+1.3341
+1.2393
+0.9964
+1.0013
+1.0227
+1.2205
+1.1579
+Mean Absolute Forecast Error (MAFE)
+1.0015
+1.0016
+1.0149
+1.2354
+1.2284
+1.0007
+1.0009
+1.0146
+1.2047
+1.1852
+1.0024
+1.0013
+1.0144
+1.1904
+1.1735
+0.9983
+1.0009
+1.0157
+1.1551
+1.1435
+
+1.0669
+1.0602
+1.0548
+1.0564
+
+OLS10
+
+Mean Absolute Forecast Error (MAFE)
+1.0012
+0.9999
+1.0060
+1.0515
+1.0589
+1.0013
+0.9998
+1.0084
+1.0543
+1.0604
+1.0026
+1.0003
+1.0137
+1.0571
+1.0681
+1.0002
+1.0013
+1.0038
+1.0551
+1.0665
+
+JMA
+
+1.1208
+1.0833
+1.0769
+1.0580
+
+HPMA
+
+Mean Squared Forecast Error (MSFE)
+1.0022
+1.0018
+1.0274
+1.1223
+1.1390
+1.0030
+1.0028
+1.0221
+1.1634
+1.1757
+1.0022
+1.0012
+1.0153
+1.2067
+1.2284
+1.0018
+1.0016
+1.0054
+1.2160
+1.2338
+
+PMA
+
+p
+
+1.2297
+1.1980
+1.1791
+1.1458
+
+1.3524
+1.3695
+1.3104
+1.1947
+
+1.0543
+1.0562
+1.0588
+1.0560
+
+1.1205
+1.1638
+1.2021
+1.2161
+
+HRC10
+
+1.2211
+1.1772
+1.1642
+1.1365
+
+1.3302
+1.2546
+1.2348
+1.1420
+
+1.0591
+1.0611
+1.0658
+1.0666
+
+1.1335
+1.1717
+1.2209
+1.2314
+
+p
+
+HRC12
+
+1.1599
+1.1310
+1.1137
+1.0900
+
+1.3449
+1.2498
+1.2047
+1.1252
+
+1.0691
+1.0615
+1.0564
+1.0555
+
+1.1068
+1.0863
+1.0807
+1.0556
+
+p
+
+HRC15
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+HRC p
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide the ratio of the
+degree of the respective forecast error metric of the estimator using specific estimation approach denoted in the column relative to results using
+the HRC p method presented in the last column.
+
+1.4183
+1.5010
+1.6988
+1.8518
+
+10
+20
+30
+40
+
+Panel B: Movie Unit Sales
+
+1.1035
+1.1328
+1.1561
+1.1892
+
+10
+20
+30
+40
+
+Panel A: Open Box Office
+
+nE
+
+Table 3: Results of Relative Prediction Efficiency by MSFE and MAFE
+
+20
+
+1.0019
+0.9955
+0.9992
+0.9974
+
+10
+20
+30
+40
+
+1.0034
+0.9994
+1.0015
+1.0031
+
+1.0040
+1.0005
+0.9991
+0.9983
+
+1.0122
+1.0215
+1.0203
+1.0134
+
+10
+20
+30
+40
+
+0.9988
+1.0001
+1.0000
+0.9997
+
+1.0008
+1.0002
+1.0003
+0.9977
+
+0.9923
+0.9953
+0.9966
+0.9956
+
+0.9940
+0.9912
+0.9913
+0.9985
+
+1.0025
+0.9986
+1.0011
+1.0020
+
+1.0036
+1.0059
+1.0038
+1.0213
+
+1.0338
+1.0374
+1.0290
+1.0063
+
+0.9809
+0.9932
+0.9814
+0.9912
+
+0.9954
+0.9809
+0.9939
+0.9671
+
+0.9881
+1.0025
+1.0000
+1.0079
+
+0.9799
+1.0033
+1.0010
+1.0023
+
+1.0114
+0.9978
+1.0124
+1.0113
+
+0.9989
+0.9971
+1.0019
+0.9990
+
+0.9904
+0.9898
+0.9988
+0.9950
+
+Mean Absolute Forecast Error (MAFE)
+1.0037
+0.9890
+0.9930
+1.0002
+1.0118
+0.9944
+0.9968
+0.9956
+0.9881
+0.9990
+0.9976
+1.0022
+0.9930
+0.9954
+0.9886
+0.9930
+
+0.9613
+0.9482
+0.9471
+0.9316
+
+0.9819
+0.9814
+0.9915
+0.9725
+
+Mean Squared Forecast Error (MSFE)
+0.9620
+0.9577
+0.9598
+0.9675
+0.9713
+0.9682
+0.9765
+0.9811
+0.9843
+0.9600
+0.9519
+0.9615
+
+Mean Absolute Forecast Error (MAFE)
+0.9926
+0.9778
+0.9728
+0.9681
+0.9859
+0.9818
+0.9818
+0.9808
+1.0026
+1.0014
+0.9952
+0.9919
+1.0011
+0.9809
+0.9742
+0.9722
+
+0.9880
+1.0097
+1.0019
+1.0004
+
+0.9820
+1.0005
+0.9987
+1.0010
+
+25)
+
+0.9828
+0.9809
+0.9920
+0.9714
+
+0.9504
+0.9318
+0.9394
+0.9370
+
+0.9875
+0.9894
+0.9966
+0.9938
+
+0.9834
+1.0000
+1.0015
+1.0094
+
+0.9773
+0.9766
+0.9866
+0.9689
+
+0.9328
+0.9271
+0.9344
+0.9202
+
+1.0008
+0.9863
+0.9972
+0.9914
+
+0.9926
+0.9951
+0.9998
+1.0066
+
+Homo-efficient
+( L = 100
+50
+25)
+
+ARMS
+
+Mean Squared Forecast Error (MSFE)
+0.9825
+0.9813
+0.9751
+0.9994
+0.9971
+0.9908
+0.9947
+0.9929
+1.0006
+1.0045
+0.9874
+0.9842
+
+1.0021
+1.0190
+0.9997
+1.0075
+
+Hetero-robust
+( L = 100
+50
+
+1.0242
+1.0544
+1.0637
+1.0787
+
+1.0481
+1.1770
+1.1491
+1.2418
+
+1.0135
+1.0042
+1.0098
+1.0172
+
+1.0121
+1.0143
+1.0466
+1.0449
+
+HRMS
+
+1.0067
+1.0340
+1.0477
+1.0664
+
+1.0380
+1.1245
+1.1072
+1.1842
+
+1.0143
+1.0000
+1.0059
+1.0072
+
+1.0172
+1.0136
+1.0283
+1.0296
+
+HEMS
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Benchmark
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide the ratio of the degree of the respective forecast error
+metric of the estimator using specific estimation approach denoted in the column relative to results using the HRC p method presented in the last column.
+
+1.0370
+1.0388
+1.0309
+1.0113
+
+10
+20
+30
+40
+
+Panel B: Movie Unit Sales
+
+0.9992
+0.9878
+0.9927
+0.9921
+
+10
+20
+30
+40
+
+0.9999
+0.9996
+1.0007
+1.0025
+
+GETS
+Hetero-robust
+Homo-efficient
+( p = 0.24
+0.28
+0.32)
+( p = 0.24
+0.28
+0.32)†
+( p = 0.30
+0.34
+0.38)
+( p = 0.30
+0.34
+0.38)‡
+
+Panel A: Open Box Office
+
+nE
+
+Table 4: Comparing Hetero-robust and Homo-efficient Model Screening Methods
+
+learning methods observe decreases in performance. Last, note that the large gains in
+performance of all strategies in table 5 relative to the results presented in tables 3 and 4.
+A potential explanation for the improved performance of statistical learning approaches
+relative to all of the econometric strategies is that the full suite of predictors is considered.
+Recall, that due to computational challenges we undertook model screening to reduce the
+number of candidate models for model averaging estimators and by so doing reduced the
+number of predictors. In appendix E.8, we reconsider table 5 where we restrict the set of
+predictors to be identical for the recursive partitioning strategies as the model screening
+and model averaging approaches. We continue to find large gains in forecast accuracy
+from random forest and bagging relative to the econometric approaches. This suggests
+that the gains in forecast accuracy are not from allowing a larger dimension of predictor
+variables, but rather likely are obtained by relaxing the linearity assumption imposed by
+the econometric estimator considered when constructing candidate models.
+
+4.1
+
+Relative Importance of the Factors
+
+While recursive partitioning algorithms were developed to make predictions and not understand the underlying process of how predictors influence outcomes, strategies have
+since been developed to identify which predictor variables are the most important in
+making forecasts.30 The importance of each predictor variable is first computed at the
+tree level, and the scores are averaged across all trees to obtain the final, global importance score for the variable.31 The most important variables are the ones leading to the
+30 Variable
+
+importance is often computed by applied researchers but the theoretical properties and statistical mechanisms of these algorithms are not well studied. To the best of our knowledge, Ishwaran (2007)
+presents the sole theoretical study of tree-based variable importance measures.
+31 With bagging and random forests, each tree is grown with its respective randomly drawn bootstrap
+sample and the excluded data from the Out-Of-Bag sample (OOB) for that tree. The OOB sample can
+be used to evaluate the tree without the risk of overfitting since the observations did not build the tree. To
+determine importance, a given predictor is randomly permuted in the OOB sample and the prediction error
+of the tree on the modified OOB sample is compared with the prediction error of the tree in the untouched
+OOB sample. This process is repeated for both each tree and each predictor variable. The average of this
+gap in prediction errors across all OOB samples provides an estimate of the overall decrease in accuracy
+that the permutation of removing a specific predictor induced.
+
+21
+
+22
+
+Reg.Tree
+
+Bagging
+
+0.6600
+0.7494
+0.7780
+0.8276
+
+10
+20
+30
+40
+
+0.7246
+0.8024
+0.8079
+0.8328
+
+0.6724
+0.9145
+0.9622
+1.0225
+
+0.8075
+0.8722
+0.8945
+0.9143
+
+10
+20
+30
+40
+
+0.8407
+0.8759
+0.8921
+0.9109
+
+0.8243
+0.9322
+0.9598
+1.0027
+
+0.9471
+0.9896
+1.0009
+1.0162
+
+0.9967
+1.1735
+1.2066
+1.2310
+
+0.7577
+0.8214
+0.8408
+0.8689
+
+0.6786
+0.8892
+0.9660
+1.0615
+
+0.9298
+1.0647
+1.0890
+1.1180
+
+0.8984
+0.9397
+0.9507
+0.9691
+
+Mean Squared Forecast Error (MSFE)
+0.9338
+0.8646
+0.8114
+1.0026
+1.0631
+1.0197
+0.8914
+1.1720
+1.0852
+1.0592
+0.9270
+1.2086
+1.1179
+1.0755
+0.9734
+1.2284
+Mean Absolute Forecast Error (MAFE)
+0.8978
+0.8688
+0.7740
+0.9461
+0.9388
+0.9145
+0.8192
+0.9891
+0.9515
+0.9298
+0.8269
+1.0003
+0.9700
+0.9418
+0.8470
+1.0166
+
+0.7291
+0.7956
+0.8137
+0.8440
+
+0.8683
+0.9144
+0.9314
+0.9413
+
+0.8686
+1.0244
+1.0622
+1.0777
+
+0.7158
+0.7895
+0.8090
+0.8435
+
+0.6542
+0.8901
+0.9428
+1.0377
+
+Random Forest
+MARF15
+MARF20
+
+Mean Absolute Forecast Error (MAFE)
+0.7418
+0.7327
+0.6538
+0.7449
+0.8005
+0.7912
+0.7296
+0.8124
+0.8163
+0.8100
+0.7541
+0.8433
+0.8417
+0.8337
+0.7890
+0.8688
+
+MARF10
+
+0.6745
+0.8861
+0.9487
+1.0391
+
+MAB
+
+Mean Squared Forecast Error (MSFE)
+0.6683
+0.6591
+0.6045
+0.6761
+0.8821
+0.8652
+0.8098
+0.9047
+0.9267
+0.9125
+0.9123
+0.9728
+1.0130
+1.0032
+1.0281
+1.0869
+
+Random Forest
+RF10
+RF15
+RF20
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Benchmark
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide
+the ratio of the degree of the respective forecast error metric of the estimator using specific estimation approach denoted in
+the column relative to results using the HRC p method presented in the last column.
+
+0.9732
+1.0625
+1.1463
+1.1714
+
+10
+20
+30
+40
+
+Panel B: Movie Unit Sales
+
+0.6285
+0.8852
+0.9927
+1.2060
+
+10
+20
+30
+40
+
+Panel A: Open Box Office
+
+nE
+
+Table 5: Results of Relative Prediction Efficiency Between Machine Learning and Model Averaging Learning
+
+greatest losses in accuracy.
+We calculate variable importance scores using the MAB and MARF strategies where
+we include and exclude the social media variables as predictors.32 Table 6 reports the top
+10 most important predictors for open box office and movie unit sales in panels A and B,
+respectively. The results with both strategies reinforce the importance of social media data
+and volume related variables are found to have a greater influence on revenue outcomes
+than sentiment measures. Further, and perhaps unsurprising is the predetermined budget
+and screens as well as weeks in theatre are important predictors. Taken together, these
+results suggest that the amount of social media buzz is more important than the emotional
+content when forecasting revenue outcomes.
+Table 6: Relative Importance of the Predictors
+Ranking
+
+With Twitter Variables
+MAB
+MARF
+
+Without Twitter Variables
+MAB
+MARF
+
+Panel A: Open Box Office
+1
+Screens
+2
+Budget
+3
+Volume: T-1/-3
+4
+Volume: T-4/-6
+5
+Volume: T-7/-13
+6
+Volume: T-21/-27
+7
+Volume: T-14/-20
+8
+Sentiment: T-1/-3
+9
+Weeks
+10
+Rating: R
+
+Screens
+Budget
+Volume: T-1/-3
+Volume: T-4/-6
+Volume: T-7/-13
+Volume: T-14/-20
+Genre: Adventure
+Volume: T-21/-27
+Weeks
+Genre: Horror
+
+Screens
+Rating: R
+Genre: Horror
+Genre: Adventure
+Budget
+Rating: PG
+Genre: Comedy
+Genre: Animation
+Rating: PG13
+Genre: Fantasy
+
+Screens
+Budget
+Genre: Horror
+Weeks
+Genre: Adventure
+Genre: Fantasy
+Rating: PG13
+Rating: R
+Genre: Comedy
+Rating: PG
+
+Panel B: Movie Unit Sales
+1
+Screens
+2
+Budget
+3
+Weeks
+4
+Volume: T+0
+5
+Volume: T+8/+14
+6
+Volume: T+15/+21
+7
+Volume: T-21/-27
+8
+Volume: T+22/+28
+9
+Volume: T+1/+7
+10
+Volume: T-1/-3
+
+Screens
+Budget
+Weeks
+Volume:
+Volume:
+Volume:
+Volume:
+Volume:
+Volume:
+Volume:
+
+Screens
+Weeks
+Budget
+Genre: Comedy
+Rating: R
+Genre: Horror
+Genre: Fantasy
+Rating: PG
+Genre: Thriller
+Genre: Adventure
+
+Screens
+Budget
+Weeks
+Genre: Fantasy
+Genre: Adventure
+Rating: R
+Genre: Drama
+Genre: Family
+Genre: Comedy
+Genre: Animation
+
+T+0
+T+8/+14
+T+1/+7
+T-1/-3
+T+15/+21
+T-4/-6
+T-21/-27
+
+Note: This table presents the rank order of the importance of the predictors for film revenue by the
+respective machine learning.
+32 We consider both MAB and MARF since Strobl et al.
+
+(2008) showed that using mean decreased accuracy
+in variable importance with random forests is biased and could overestimate the importance of correlated
+variables. This bias exists if random forest did not select the correct covariate, but rather chose a highly
+correlated counterpart in a bootstrapped sample. This bias should not exist with bagging strategies that
+use all available predictors. However, it should also be noted that the finding in Strobl et al. (2008) were
+not replicated in Genuer, Poggi, and Tuleau-Malot (2010).
+
+23
+
+To examine whether sentiment plays a larger role for small budget films that may
+benefit more from word of mouth or critical reviews, we calculated variable importance
+scores for films located in different budget quartile. The results are presented in table 7.
+Notice that constructed buzz measures are highly important for large budget films, but
+the messages are important for many films ranked in lower quartiles.
+While the Lasso can be used to select variables to include in a regression model it does
+not rank them. In table 8, we report the numbers of Twitter sentiment and volume variables selected by Lasso in various samples. The results show that the Lasso favors the
+inclusion of sentiment variables in almost all subsamples. This difference in the importance of social media variables selected may explain the uneven prediction performance
+of Lasso-related estimators in tables 3 and 4. In summary, the evidence in this study continues to point to the inclusion of both social media measures and different forecasting
+strategies yield different rankings of the importance of each measure.
+
+4.2
+
+Monte Carlo Evidence: Contrasting Random Heteroskedasticity from
+Parameter Heterogeneity
+
+To provide insights on when allowing for model uncertainty may improve forecasts from
+recursive partioning strategies, we conduct the following Monte Carlo study. Similar to
+Liu and Okui (2013),33 we consider the following DGP
+∞
+
+yt = µt + et =
+
+∑ ( β j + r · σt )x jt + et
+
+(10)
+
+j =1
+
+for t = 1, ..., n. The coefficients are generated by β j = cj−1 , where c is a parameter that we
+control, such that R2 = c2 /(1 + c2 ) that varies in {0.1, ..., 0.9}. The parameter σt is drawn
+from a N (0, 1) and introduces potential heterogeneity (depends on values of the scale
+variable r) to the model. We set x1t = 1 and other x jt s follow N(0, 1). Since the infinite
+33 The
+
+simulation design aims to mimic a big data environment, where the number of explanatory variables is large.
+
+24
+
+25
+Screens
+Weeks
+Genre: Family
+VOL: T+1/+7
+Genre: Mystery
+SEN: T-4/-6
+Genre: Drama
+Constant
+Genre: Adventure
+Genre: Animation
+
+MARF
+
+Weeks
+Screens
+VOL: T-21/-27
+SEN: T-7/-13
+SEN: T-1/-3
+VOL: T-14/-20
+SEN: T-4/-6
+SEN: T+1/+7
+Genre: Family
+Genre: Drama
+
+Screens
+Weeks
+VOL: T-21/-27
+Genre: Thriller
+VOL: T-14/-20
+SEN: T-7/-13
+SEN: T-4/-6
+SEN: T-1/-3
+SEN: T-14/-20
+SEN: T-21/-27
+
+2nd Quartile
+
+Screens
+Weeks
+VOL: T-21/-27
+SEN: T-14/-20
+Rating: PG
+Genre: Crime
+SEN: T-21/-27
+Genre: Drama
+VOL: T-14/-20
+Genre: Thriller
+
+MAB
+
+VOL: T+8/+14
+Weeks
+VOL: T+0
+VOL: T+1/+7
+VOL: T-7/-13
+VOL: T+15/+21
+VOL: T-21/-27
+Screens
+VOL: T-1/-3
+VOL: T-4/-6
+
+MARF
+
+VOL: T+8/+14
+Weeks
+VOL: T+1/+7
+VOL: T+0
+VOL: T-7/-13
+VOL: T+15/+21
+VOL: T-4/-6
+Screens
+VOL: T-1/-3
+VOL: T+22/+28
+
+Screens
+VOL: T-7/-13
+VOL: T-4/-6
+VOL: T-21/-27
+Weeks
+VOL: T-1/-3
+VOL: T-14/-20
+SEN: T-4/-6
+Budget
+SEN: T-1/-3
+
+3rd Quartile
+
+Screens
+VOL: T-7/-13
+VOL: T-4/-6
+VOL: T-21/-27
+Weeks
+VOL: T-1/-3
+VOL: T-14/-20
+Rating: PG
+Genre: Sci-Fi
+Genre: Family
+
+MAB
+
+Screens
+VOL: T-21/-27
+VOL: T+8/+14
+VOL: T-4/-6
+VOL: T-14/-20
+VOL: T-1/-3
+VOL: T-7/-13
+Genre: Animation
+VOL: T+1/+7
+VOL: T+0
+
+MARF
+
+Screens
+VOL: T-21/-27
+VOL: T+8/+14
+VOL: T-4/-6
+VOL: T-7/-13
+VOL: T-14/-20
+VOL: T-1/-3
+VOL: T+1/+7
+VOL: T+0
+Genre: Animation
+
+VOL: T-7/-13
+VOL: T-1/-3
+VOL: T-4/-6
+Screens
+VOL: T-14/-20
+VOL: T-21/-27
+Budget
+SEN: T-14/-20
+SEN: T-1/-3
+Rating: PG13
+
+4th Quartile
+
+VOL: T-7/-13
+Screens
+VOL: T-14/-20
+VOL: T-1/-3
+VOL: T-4/-6
+Budget
+VOL: T-21/-27
+SEN: T-14/-20
+Genre: Adventure
+SEN: T-1/-3
+
+MAB
+
+Note: This table presents the rank order of the importance of the predictors for film revenue by the respective machine learning in each budget subsample.
+
+Screens
+SEN: T+22/+28
+VOL: T-4/-6
+SEN: T+1/+7
+VOL: T+1/+7
+VOL: T-14/-20
+VOL: T+8/+14
+VOL: T+15/+21
+SEN: T-4/-6
+SEN: T-7/-13
+
+MARF
+
+Panel B: Movie Unit Sales
+1
+Screens
+2
+SEN: T+22/+28
+3
+Weeks
+4
+VOL: T+15/+21
+5
+SEN: T-7/-13
+6
+VOL: T-4/-6
+7
+SEN: T+1/+7
+8
+SEN: T-4/-6
+9
+VOL: T-14/-20
+10
+VOL: T-7/-13
+
+1st Quartile
+
+Screens
+VOL: T-14/-20
+VOL: T-1/-3
+VOL: T-7/-13
+Genre: Horror
+VOL: T-21/-27
+VOL: T-4/-6
+SEN: T-14/-20
+Genre: Drama
+Weeks
+
+MAB
+
+Panel A: Open Box Office
+1
+Screens
+2
+VOL: T-1/-3
+3
+Genre: Horror
+4
+VOL: T-14/-20
+5
+VOL: T-7/-13
+6
+Genre: Thriller
+7
+SEN: T-21/-27
+8
+Genre: Comedy
+9
+Weeks
+10
+SEN: T-14/-20
+
+Ranking
+
+Table 7: Heterogeneity in the Relative Importance of Predictors by Film Budget
+
+Table 8: Describing the Selected Parameters by OLS-post-Lasso
+Method
+
+1st Quartile
+Sentiment Volume
+
+Panel A: Open Box Office
+OLS10
+5
+OLS12
+6
+OLS15
+7
+
+2nd Quartile
+Sentiment Volume
+
+3rd Quartile
+Sentiment Volume
+
+4th Quartile
+Sentiment Volume
+
+Full Sample
+Sentiment Volume
+
+1
+1
+2
+
+3
+5
+6
+
+2
+2
+2
+
+4
+4
+5
+
+1
+1
+1
+
+5
+6
+6
+
+2
+2
+2
+
+6
+7
+8
+
+2
+2
+3
+
+Panel B: Movie Unit Sales
+OLS10
+7
+1
+OLS12
+9
+1
+OLS15
+11
+1
+
+8
+9
+10
+
+1
+1
+1
+
+8
+9
+10
+
+2
+2
+2
+
+6
+8
+11
+
+2
+2
+2
+
+7
+8
+10
+
+2
+2
+2
+
+Note: Each entry in the table lists the number of respective social media variables chosen as one of the first 10 predictors among all
+variables in different budget subsamples 10, 12, or 15.
+
+series of x jt is infeasible in practice, we truncate the process at jmax = 10, 000 without
+violating our assumption on the model set-up.34 We assume that the whole 10,000 x jt s
+set is not entirely feasible and we can only observe the first 20 regressors. Two scenarios
+designed to represent pure random heteroskedasticity and heteroskedasticity that arises
+due to neglected parameter heterogeneity are considered. Formally,
+1. Random Heteroskedasticity: we set the parameter r = 0, eliminating heterogeneity
+2 ).
+and pure random heteroskedasticity is created by drawing et ∼ N (0, x2t
+
+2. Parameter Heterogeneity: heterogeneity in β for each observation is created by setting r = 1/10 and drawing et ∼ N (0, 1).35
+With this DGP, we compare the performance of conventional learning methods and
+model averaging learning methods using their risks.36 We assume that the first K = 5
+34 Note
+
+that we can ignore variables with close-to-0 coefficients, as they have little influence on the dependent variable. Such is the case for x jt with j > jmax .
+35 Our results are robust to alternative values of r.
+2
+36 Specifically, Risk ≡ 1 n
+L
+i
+n ∑i =1 µ̂i − µi , where µi is the true fitted value (feasible in simulation) and
+µ̂iL is the fitted value obtained by a specific learning method for for L = Regression Tree, Bagging, MAB,
+Random Forest, and MARF. For each sample size, we compute the risk for all methods and average across
+1,000 simulation draws. For bagging and random forest, we set the total number of bootstraps as B = 20.
+For random forest, we randomly draw 2 regressors out of 5 to split each node. The same settings apply to
+the model averaging learning methods. For all model averaging learning methods, the candidate model set
+for each leaf contains all feasible combinations of the regressors. To ease interpretation, we normalize all
+risks by the risk of the generalized unrestricted model.
+
+26
+
+regressors are observed in both scenarios and fix the control parameter c = 2 when generating the true coefficients. Figure 1 panels A and B present results respectively for
+the random heteroskedasticity and parameter heterogeneity scenario. In each figure, the
+number of observations is presented on the horizontal axis, the relative risk is displayed
+on the vertical axis and dash-dotted (solid) lines respectively represent bagging and random forest (the model averaging counterpart). The results indicate that: i) the model averaging learning method performs much better than their respective conventional learning
+method in all values of n; ii) as sample sizes increase, all methods tend to yield smaller
+risks; and iii) MARF has the best relative performance in all cases. Overall, we observe
+smaller relative risks in the parameter heterogeneity scenario.
+Figure 1: Relative Performance of Conventional and Model Averaging Learning
+A. Random Heteroskedasticity
+(a) Bagging
+Bagging
+MAB
+
+0.9
+
+(b) Random Forest
+
+1.2
+
+Rand.Forest
+MARF
+
+1.1
+
+Relative Risk
+
+Relative Risk
+
+1
+
+0.8
+
+1
+0.9
+0.8
+
+0.7
+0.7
+0.6
+
+0.6
+200
+
+400
+
+600
+
+800
+
+1000
+
+200
+
+Number of Observations
+
+400
+
+600
+
+800
+
+1000
+
+Number of Observations
+
+B. Parameter Heterogeneity
+(a) Bagging
+Bagging
+MAB
+
+0.9
+
+(b) Random Forest
+
+1.2
+
+Relative Risk
+
+Relative Risk
+
+1
+
+0.8
+
+0.7
+
+0.6
+
+Rand.Forest
+MARF
+
+1
+
+0.8
+
+0.6
+
+0.4
+200
+
+400
+
+600
+
+800
+
+1000
+
+200
+
+Number of Observations
+
+400
+
+600
+
+800
+
+Number of Observations
+
+27
+
+1000
+
+Since the results in figure 1 panel A are relative to generalized unrestricted model,
+we next present absolute risks for all model averaging learning methods along with the
+risks of the generalized unrestricted model in figure 2. Figure 2(a) and (b) presents results
+for the absolute risks under random heteroskedasticity and parameter heterogeneity, respectively. In each figure, MAB, MARF, and GUM are presented by circle-, and star-solid
+lines, respectively. The ranking of the methods is identical and GUM yields significantly
+higher risks in the parameter heterogeneity scenario. This suggests that conventional
+regressions suffer from efficiency loss in the presence of heterogeneity. Yet the statistical learning methods are immune to heterogeneity, since it has been acknowledged and
+treated during the classification process.
+Figure 2: Risk Comparison under Different Scenarios
+130
+
+(a) Random Heteroskedasticity
+MAB
+MARF
+GUM
+
+120
+110
+
+(b) Parameter Heterogeneity
+MAB
+MARF
+GUM
+
+120
+110
+
+100
+
+Risk
+
+Risk
+
+130
+
+90
+
+100
+90
+
+80
+
+80
+
+70
+
+70
+
+60
+
+60
+200
+
+400
+
+600
+
+800
+
+1000
+
+200
+
+Number of Observations
+
+400
+
+600
+
+800
+
+1000
+
+Number of Observations
+
+In summary, the results from the Monte Carlo experiments suggest that in settings
+where there may be significant parameter heterogeneity, perhaps due to jumps or threshold effects, or simply parameter heterogeneity in the underlying behavioral relationships,
+hybrid strategies may be quite useful. Econometric strategies that use of mean or average
+marginal effects simply do not allow for good forecasts when there is large heterogeneity in effects both within and across subgroups. Intuitively, this additional heterogeneity
+shifts to the residual, creating new outliers that change the effective weighting on different observations. In contrast, the recursive partitioning methods provide equal weights
+to observation within each constructed leaf subgroup, thereby ruling out heterogeneity
+
+28
+
+within groups.37
+
+5
+
+Conclusion
+
+Several high profile economists have recently speculated that machine learning may soon
+transform applied econometrics in a manner similar to how economic imperialism38 changed
+the evolution of research in several other social science disciplines.39 There is also much
+excitement about using new sources of data from social media products in forecasting
+exercises. Using data from the film industry, we present evidence that this excitement
+for both machine learning and social media data is warranted. Specifically, recursive
+partitioning strategies greatly outperform dimension reduction strategies and traditional
+econometrics approaches in forecast accuracy. Incorporating social media data in forecasting exercises increases accuracy sharply, in part since recursive partitioning methods
+find that 6 of the 10 most influential variables when forecasting either box office or retail
+movie unit sales outcomes are from this new source.
+Despite these enthusiastic findings for machine learning and social media data, we
+also find that even even in the era of big data, heteroskedastic data will continue to present
+challenges for forecasters. On the one hand, our investigation cast doubt that there are
+significant gains from modifying traditional econometric approaches, penalization methods or model screening methods to account for heteroskedasticity.
+37 The
+
+theoretical benefits related to most model screening methods are related to efficiency and there
+appears to be benefits from using machine learning approaches to shrink the number of potential models
+since recursive partitioning models divide the data repeatedly based on identifying differences. Model
+screening approaches and model averaging or Lasso methods that additionally consider heteroskedasticity
+do not seem to perform differently whatever the source of heteroskedasticity, and in practice yield minimal
+gains to approaches that treat the data as homoskedastic.
+38 Economic imperialism refers to economic analysis of seemingly non-economic aspects of life, such as
+politics, sociology, religion, etc. It has been asserted that these and a focus on economic efficiency have been
+ignored in other social sciences and “allowed economics to invade intellectual territory that was previously
+deemed to be outside the discipline’s realm.” See Mäki (2009) for a detailed discussion.
+39 Recent articles by Varian (2014), Bajari, Nekipelov, Ryan, and Yang (2015), and Athey and Imbens (2015)
+have discussed the possibility that computer science based analytics tools such as machine learning would
+make conventional statistical and econometric techniques, such as regression, obsolete.
+
+29
+
+On the other hand, we propose a hybrid strategy that applies model averaging to
+observations in each leaf subgroup created by either bagging or random forest and find
+that it leads to significant gains in forecast accuracy. These gains exist over econometric
+strategies and popular machine learning strategies such as random forest. To shed light
+on these additional gains, Monte Carlo evidence indicates that when neglected parameter
+heterogeneity is the underlying rationale for heteroskedasticity, gains from allowing for
+model uncertainty with recursive partioning are obtained. Future work is needed to not
+only understand the properties of hybrid strategies that combine machine learning with
+econometrics as well as developing tests that can detect the source of heteroskedasticity
+in settings with many covariates, to help guide practitioners choice of tools to undertake
+forecasts with social media data.
+
+30
+
+References
+A KAIKE , H. (1973): “Information theory and an extension of the maximum likelihood
+principle,” Second International Symposium on Information Theory, pp. 267–281.
+A MEMIYA , T. (1980): “Selection of Regressors,” International Economic Review, 21(2), 331–
+354.
+ATHEY, S., AND G. W. I MBENS (2015): “Machine Learning for Estimating Heretogeneous
+Casual Effects,” Working Paper.
+B AJARI , P., D. N EKIPELOV, S. P. RYAN , AND M. YANG (2015): “Machine Learning Methods for Demand Estimation,” American Economic Review, 105(5), 481–485.
+B AN , G.-Y., N. E. K AROUI , AND A. E. B. L IM (2018): “Machine Learning and Portfolio
+Optimization,” Management Science, 64(3), 1136–1154.
+B ARNARD , G. A. (1963): “New methods of quality control,” Journal of Royal Statistical
+Society Series: A, 126, 255.
+B ELLONI , A., D. C HEN , V. C HERNOZHUKOV, AND C. H ANSEN (2012): “Sparse Models and Methods for Optimal Instruments With an Application to Eminent Domain,”
+Econometrica, 80(6), 2369–2429.
+B ELLONI , A., AND V. C HERNOZHUKOV (2013): “Least Squares after Model Selection in
+High-Dimensional Sparse Models,” Bernoulli, 19(2), 521–547.
+B ELLONI , A., V. C HERNOZHUKOV, AND L. WANG (2011): “Square-Root Lasso: Pivotal
+Recovery of Sparse Signals via Conic Programming,” Biometrika, 98(4), 791–806.
+(2014): “Pivotal Estimation via Square-root Lasso in Nonparametric Regression,”
+Annals of Statistics, 42(2), 757–788.
+B OLLEN , J., H. M AO , AND X. Z HENG (2011): “Twitter Mood Predicts the Stock Market,”
+Journal of Computational Science, 2(1), 1–8.
+B REIMAN , L. (1996): “Bagging Predictors,” Machine Learning, 26, 123–140.
+(2001): “Random Forests,” Machine Learning, 45, 5–32.
+B REIMAN , L., J. F RIEDMAN ,
+Chapman and Hall/CRC.
+
+AND
+
+C. J. S TONE (1984): Classification and Regression Trees.
+
+B REUSCH , T. S., AND A. R. PAGAN (1979): “A Simple Test for Heteroscedasticity and
+Random Coefficient Variation,” Econometrica, 47(5), 1287–1294.
+B UCKLAND , S. T., K. P. B URNHAM , AND N. H. A UGUSTIN (1997): “Model Selection: An
+Integral Part of Inference,” Biometrics, 53(2), pp. 603–618.
+31
+
+C AMPOS , J., D. F. H ENDRY, AND H.-M. K ROLZIG (2003): “Consistent Model Selection by
+an Automatic Gets Approach,” Oxford Bulletin of Economics and Statistics, 65(s1), 803–
+819.
+C HERNOZHUKOV, V., C. H ANSEN , AND Y. L IAO (2016): “A Lava Attack on the Recovery
+of Sums of Sparse and Dense Signals,” Annals of Statistics, forthcoming.
+C HESHER , A. (1984): “Testing for Neglected Heterogeneity,” Econometrica, 52(4), 865–872.
+C HINTAGUNTA , P. K., S. G OPINATH , AND S. V ENKATARAMAN (2010): “The Effects of
+Online User Reviews on Movie Box Office Performance: Accounting for Sequential
+Rollout and Aggregation Across Local Markets,” Marketing Science, 29(5), 944–957.
+C LAESKENS , G., AND N. L. H JORT (2003): “The Focused Information Criterion,” Journal
+of the American Statistical Association, 98(464), 900–945.
+D URLAUF, S. N., S. N AVARRO , AND D. A. R IVERS (2016): “Model uncertainty and the
+effect of shall-issue right-to-carry laws on crime,” European Economic Review, 81, 32 – 67.
+F IRPO , S., N. M. F ORTIN , AND T. L EMIEUX (2009): “Unconditional Quantile Regressions,”
+Econometrica, 77(3), 953–973.
+G ENUER , R., J.-M. P OGGI , AND C. T ULEAU -M ALOT (2010): “Variable Selection Using
+Random Forests,” Pattern Recognition Letters, 31(14), 2225 – 2236.
+G OPINATH , S., P. K. C HINTAGUNTA , AND S. V ENKATARAMAN (2013): “Blogs, Advertising, and Local-Market Movie Box Office Performance,” Management Science, 59(12),
+2635–2654.
+H ANNAK , A., E. A NDERSON , L. F. B ARRETT, S. L EHMANN , A. M ISLOVE , AND M. R IEDE WALD (2012): “Tweetin ’ in the Rain: Exploring Societal-scale Effects of Weather on
+Mood,” Proceedings of the Sixth International AAAI Conference on Weblogs and Social Media, pp. 479–482.
+H ANSEN , B. (2014): “Model Averaging, Asymptotic Risk, and Regressor Groups,” Quantitative Economics, 5, 495–530.
+H ANSEN , B. E. (2007): “Least Squares Model Averaging,” Econometrica, 75(4), 1175–1189.
+H ANSEN , B. E., AND J. S. R ACINE (2012): “Jackknife Model Averaging,” Journal of Econometrics, 167(1), 38–46.
+H ANSEN , P. R. (2005): “A Test for Superior Predictive Ability,” Journal of Business & Economic Statistics, 23(4), 365–380.
+H ASTIE , T., R. T IBSHIRANI , AND J. F RIEDMAN (2009): The Elements of Statistical Learning:
+Data Mining, Inference, and Prediction, Springer Series in Statistics. Springer New York
+Inc., New York, NY, USA.
+32
+
+H ENDRY, D. F., AND B. N IELSEN (2007): Econometric Modeling: A Likelihood Approach, chap. 19, pp. 286–301. Princeton University Press.
+H OETING , J. A., D. M ADIAN , A. E. R AFTERY, AND C. T. V OLINSKY (1999): “Bayesian
+Model Averaging: A Tutorial,” Statistical Science, 14(4), 382–417.
+H UNT, E., J. M ARTIN ,
+New York.
+
+AND
+
+P. S TONE (1966): Experiments in Induction. Academic Press,
+
+I SHWARAN , H. (2007): “Variable Importance in Binary Regression Trees and Forests,”
+Electronic Journal of Statistics, 1, 519–537.
+K ARABULUT, Y. (2013): “Can Facebook Predict Stock Market Activity?,” Working Paper.
+K ARALIC , A., AND B. C ESTNIK (1991): “The Bayesian Approach to Tree-structured Regression,” Proceedings of Information Technology Interfaces 091.
+L EAMER , E. (1978): Specification Searches. Wiley, New York.
+L EHRER , S. F., AND T. X IE (2017): “Box Office Buzz: Does Social Media Data Steal the
+Show from Model Uncertainty When Forecasting for Hollywood?,” The Review of Economics and Statistics, 99(5), 749–755.
+L IANG , H., G. Z OU , A. T. K. WAN , AND X. Z HANG (2011): “Optimal Weight Choice for
+Frequentist Model Average Estimators,” Journal of the American Statistical Association,
+106(495), 1053–1066.
+L IU , C.-A. (2015): “Distribution Theory of the Least Squares Averaging Estimator,” Journal of Econometrics, 186, 142–159.
+L IU , Q., AND R. O KUI (2013): “Heteroskedasticity-robust C p Model Averaging,” The
+Econometrics Journal, 16, 463–472.
+L IU , Y. (2006): “Word of Mouth for Movies: Its Dynamics and Impact on Box Office
+Revenue,” Journal of Marketing, 70(3), 74–89.
+M ÄKI , U. (2009): “Economics Imperialism: Concept and Constraints,” Philosophy of the
+Social Sciences, 39(3), 351–380.
+M ALLOWS , C. L. (1973): “Some Comments on C p ,” Technometrics, 15(4), 661–675.
+M ANSKI , C. F. (2004): “Statistical Treatment Rules for Heterogeneous Populations,”
+Econometrica, 72(4), 1221–1246.
+M ISHNE , G., AND N. G LANCE (2006): “Predicting Movie Sales from Blogger Sentiment,”
+AAAI 2006 Spring Symposium on Computational Approaches to Analysing Weblogs.
+
+33
+
+M ORGAN , J. N., AND J. A. S ONQUIST (1963): “Problems in the Analysis of Survey Data,
+and a Proposal,” Journal of the American Statistical Association, 58(302), 415–434.
+Q UINLAN , J. R. (1986): “Induction of Decision Trees,” Machine Learning, 1(1), 81–106.
+(1992): “Learning With Continuous Classes,” pp. 343–348. World Scientific.
+S CHWARZ , G. (1978): “Estimating the Dimension of a Model,” The Annals of Statistics,
+6(2), 461–464.
+S TROBL , C., A.-L. B OULESTEIX , T. K NEIB , T. A UGUSTIN , AND A. Z EILEIS (2008): “Conditional Variable Importance for Random Forests,” BMC Bioinformatics, 9(1), 307.
+T IBSHIRANI , R. (1996): “Regression Shrinkage and Selection Via the Lasso,” Journal of the
+Royal Statistical Society, Series B, 58, 267–288.
+VARIAN , H. R. (2014): “Big Data: New Tricks for Econometrics,” Journal of Economic Perspectives, 28(2), 3–28.
+VASILIOS , P., P. T HEOPHILOS , AND G. P ERIKLIS (2015): “Forecasting Daily and Monthly
+Exchange Rates with Machine Learning Techniques,” Journal of Forecasting, 34(7), 560–
+573.
+WAGER , S., AND S. ATHEY (2017): “Estimation and Inference of Heterogeneous Treatment
+Effects using Random Forests,” Journal of the American Statistical Association, forthcoming.
+WAN , A. T., X. Z HANG , AND G. Z OU (2010): “Least squares model averaging by Mallows
+criterion,” Journal of Econometrics, 156(2), 277–283.
+W HITE , H. (1980): “A Heteroskedasticity-Consistent Covariance Matrix Estimator and a
+Direct Test for Heteroskedasticity,” Econometrica, 48(4), 817–838.
+(1982): “Maximum Likelihood Estimation of Misspecified Models,” Econometrica,
+50(1), 1–25.
+W HITTLE , P. (1960): “Bounds for the Moments of Linear and Quadratic Forms in Independent Variables,” Theory of Probability and Its Applications, pp. 302–305.
+X IE , T. (2015): “Prediction Model Averaging Estimator,” Economics Letters, 131, 5–8.
+(2017): “Heteroscedasticity-robust Model Screening: A Useful Toolkit for Model
+Averaging in Big Data Analytics,” Economics Letter, 151, 119–122.
+X IONG , G., AND S. B HARADWAJ (2014): “Prerelease Buzz Evolution Patterns and New
+Product Performance,” Marketing Science, 33(3), 401–421.
+
+34
+
+Y UAN , Z., AND Y. YANG (2005): “Combining Linear Regression Models: When and
+How?,” Journal of the American Statistical Association, 100(472), 1202–1214.
+Z HANG , X., A. U LLAH , AND S. Z HAO (2016): “On the dominance of Mallows model
+averaging estimator over ordinary least squares estimator,” Economics Letters, 142, 69–
+73.
+Z HANG , X., D. Y U , G. Z OU , AND H. L IANG (2016): “Optimal Model Averaging Estimation for Generalized Linear Models and Generalized Linear Mixed-Effects Models,”
+Journal of the American Statistical Association, 111(516), 1775–1790.
+Z HANG , X., G. Z OU , AND R. J. C ARROLL (2015): “Model Averaging Based on KullbackLeibler Distance,” Statistica Sinica, 25, 1583.
+Z HAO , S., X. Z HANG , AND Y. G AO (2016): “Model Averaging with Averaging Covariance
+Matrix,” Economics Letters, 145, 214–217.
+
+35
+
+APPENDIX
+A
+
+Review of Popular Machine Learning Tools for Forecasting
+
+Algorithms in machine learning build forecasting models by a series of data-driven decisions that optimize what can be learnt from the data to subsequently make predictions.
+Proponents of machine learning algorithms point to their improved performance in out
+of sample forecast exercises and stress the intuition on why they perform well, but do not
+consider their small sample or asymptotic properties.
+The majority of machine learning tools used for forecasting explicitly assume homoskedasticity and ex ante we would expect their performance to deteriorate with heteroskedastic data. In this section we summarize why we make this conjecture with six
+alternative strategies. First, estimates from the least absolute selection and shrinkage operator (Lasso) are obtained by minimizing the l1 -penalized least squares criterion. The criterion involves the unweighted sum of squares and a penalty to make the model sparse.
+Further, as some parameter estimates are shrunk relative to traditional OLS estimates,
+some omitted variable bias may arise.
+Breiman, Friedman, and Stone (1984) introduced the classification and regression decision trees (CART). A decision tree is a flowchart-like structure in which each internal
+node represents a “test” on an attribute , each branch (or tree leaf) represents the outcome
+of the test and each leaf node represents a class label (decision taken after computing all
+attributes). The paths from root to leaf represents classification rules. In the application
+in the paper, we concentrate on the regression tree case, since our predicted outcomes are
+real number.
+A regression tree (RT) recursively partition data into groups that are as different as
+possible and fit the mean response for each group as its prediction. The variable and
+splitting point are chosen to reduce the residual sum of squares (SSR) as much as possible
+after the split as compared to before the split.40 That is, similar to stepwise regression
+the first split is akin to choosing which variable should be first included in the model.
+With regression trees, splits can continue within each subgroup until some stopping rule
+is reached. This could lead to overfitting and as such, in practice the full trees are pruned
+40 As
+
+mentioned in the main text, in RT, a node τ contains nτ of observations. Each node can only by split
+into two leaves, denoted as τL and τR , each contains subsets of n L and n R observations with nτ = n L + n R .
+2
+Define the within-node sum of squares as SSR(τ ) = ∑inτ (yi − (ȳτ ))¯ , where ȳ(τ ) is the mean of those cases.
+We split the nτ observations of node τ into τL and τR if the following value reach its global maximum:
+∆ = SSR(τ ) − SSR(τL ) − SSR(τR ). Each tree leaf τL or τR can be treated as a new node and continue with
+the splitting process. We start from the top of the tree (full sample) and apply the same approach to all
+subsequent nodes. Once a tree is constructed, the full sample is split into a number of leaves. Each leaf
+contains a subset of the full sample and the accumulation of all leaves is the full sample.
+
+36
+
+using a cost-complexity criterion. This criterion takes into account the amount of squared
+error explained by each sub-tree plus a penalty chosen by cross-validation for the number
+of terminal nodes in the sub-tree in an attempt to trade-off tree size and over-fitting.
+Forecasts from RT involve calculating the average of the associated observations of the
+dependent variable in each leaf calculated and treated as the fitted value of the regression
+tree. Hastie, Tibshirani, and Friedman (2009) provide evidence that in practice, predictions from RT have low bias but large variance. This variance arises due to the instability
+of RT as very small changes in the observed data can lead to a dramatically different sequence of splits, and hence a different prediction. This instability is due to the hierarchical
+nature; once a split is made, it is permanent and can never be “unmade” further down in
+the tree. Variations of RT have been shown to have better predictive abilities and we now
+briefly outline the procedures of two popular approaches known as bagging and random
+forest.
+Bootstrap aggregating decision trees, or bagging, was proposed by Breiman (1996) to
+improve the classification by combining classifications of randomly generated training
+sets. Given a standard data set {yi , X i } with i = 1, ..., n, bagging generates B new training
+sets {yi , X i }b for b = 1, ..., B, in which each set is a random sample of size n replacement
+from the original training set {yi , X i }. By sampling with replacement, some observations may be repeated and for large n the set {yi , X i }b is expected to have the fraction
+(1 − 1/e) ≈ 63.2% of the unique examples of {yi , X i }. Each data set will construct one regression tree that is grown deep and not pruned. In a forecasting exercise, we first obtain
+forecasts from each tree that similar to RT has a high variance with low bias. The final
+forecast takes the equal weight averages of these tree forecasts and by averaging across
+trees, the variability of the prediction declines. Much research has found that bagging,
+which combines hundreds or thousands of trees, leads to sharp improvements by over a
+single RT.
+A challenge that bagging faces is that each tree is identically distributed and in the
+presence of a single strong predictor in the data set, all bagged trees will select the strong
+predictor at the first node of the tree. Thus, all trees will look similar and be correlated.
+The bias of bagged trees is identical to the bias of the individual trees but the variance
+declines even when trees are correlated as B increases.
+To reduce the chance of getting correlated trees, Breiman (2001) developed the random
+forest method. Random forest is similar to bagging, as both involve constructing B new
+trees with bootstrap samples from the original data set. But for random forest, as each
+tree is constructed, we take a random sample (without replacement) of q predictors out
+of the total K total (q < K total ) predictors before each node is split. This process is repeated
+for each node and the default value for q is b1/3K total c. Note that if q = K total , random
+forest is equivalent to bagging. Eventually, we end up with B trees and the final random
+forecast estimate is calculated as the simple average of forecasts from each tree.
+Research has found that random forests do a good job at forecasting when the number
+of relevant variables in the set K is large. After all, if there are many irrelevant variables
+37
+
+the chance of a split on something relevant becomes low. Yet, by randomly selecting
+predictors they produce trees with much lower degrees of correlation than bagging.
+For space considerations, we did not consider four other methods developed in the
+machine learning literature. Boosted regression trees use a sequential process of fitting
+regression trees (without bootstrap sampling) to determine the weights of each tree in
+the forest. This relaxes the equal weight assumption implicit in the final forecast of random forest and bagging, but the method still relies on homoskedasticity in determining
+the splits at each node. Artificial neural networks and multivariate adaptive regression
+splines also have algorithms that make decisions assuming homoskedasticity.41 Strategies
+based on Bayesian adaptive regression tree require researchers to assign priors including
+a functional form of the residual. In summary, heteroskedastic data is not considered with
+many popular tools in the machine learning literature.
+
+B
+
+Review of Existing Methods
+
+In this section, we review several existing heteroskedasticity-robust model averaging
+methods and several the Lasso methods. We summarize the theoretical conclusions and
+provide details on the computational algorithm used for each method.
+
+B.1
+
+Jackknife Model Averaging
+
+Hansen and Racine (2012) proposed a jackknife model averaging (JMA) estimator for
+the linear regression model. The model set-up is identical to that provided in section 2.
+Hansen and Racine (2012) demonstrate the asymptotic optimality of the JMA estimator
+in the presence of heteroskedasticity and suggest selecting the weights by minimizing a
+leave-one-out cross-validation criterion
+JMA(w) =
+
+1 > >
+w Ẽ Ẽw
+n
+
+with
+
+ŵ = arg min JMA(w),
+w∈ H ∗
+
+(A1)
+
+where Ẽ = [ẽ1 , ..., ẽ M ]> is an n × M matrix of jackknife residuals and ẽm stands for the
+jackknife residuals of model m.
+The jackknife residual vector ẽm = y − µ̃m for model m requires the estimate of µ̃m ,
+where its ith element, µ̃im , is the least squares estimator µ̂im computed with the ith observation deleted. In practice, ẽm can be conveniently written as ẽm = D m êm , where êm is the
+41 Briefly,
+
+with artificial neural networks the weights for each node that correspond to different explanatory variables are estimated by minimizing the residual sum of squares; this approach is called backpropagation. With multivariate adaptive regression splines, terms are added to the regression model if
+they give the largest reduction in the residual sum of squares and to prevent over-fitting a backward deletion process is used to make the model sparse.
+
+38
+
+least squares residual vector and D m is the n × n diagonal matrix with the ith diagonal
+element equal to (1 − him )−1 . The term him is the ith diagonal element of the projection
+matrix Pm .
+
+Hansen and Racine (2012) assume H ∗ to be a discrete set of 0, N1 , N2 , ..., 1 for some
+positive integer N. Obtaining w following equation (A1) with condition w ∈ H ∗ , is a
+quadratic optimization process. Note that while there is a difference between our continuous H set defined in equation (A20) and H∗ , this should be neglectable in practice since
+N can take any value.
+
+B.2
+
+Heteroskedasticity-Robust C p Model Averaging
+
+Liu and Okui (2013) also use the same model set-up to propose the heteroskedasticityrobust C p (HRC p ) model averaging estimator for linear regression models with heteroskedastic errors. They demonstrate the asymptotic optimality of the HRC p estimator when
+the error term exhibits heteroskedasticity. Liu and Okui (2013) propose computing the
+weights by the following feasible HRC p criterion
+n
+
+HRC p (w) = ky − P (w)yk2 + 2 ∑ ê2i pii (w)
+
+(A2)
+
+i =1
+
+with ŵ = arg min HRC p (w). Obtaining w following (A2) with condition w ∈ H is a
+w∈H
+
+quadratic optimization process.
+Equation (A2) includes a preliminary estimate êi that must be obtained prior to estimation. Liu and Okui (2013) discuss several ways to obtain êi in practice. When the models are nested, Liu and Okui (2013) suggest using the residuals from the largest model.
+When the models are non-nested, they recommended constructing a model that contains
+all the regressors in the potential models and use the predicted residuals from the estimated model. In addition, a degree-of-freedom correction on êi is reccomended to improve finite-sample properties. For example, when the mth model is used to obtain êi , we
+can use
+q
+ê = n/(n − km )( I − Pm )y
+instead of ( I − Pm )y to generate the preliminary estimate êi .
+
+B.3
+
+Iterative HRC p Model Averaging
+
+Liu and Okui (2013) also consider an iterative procedure in the presence of too many
+regressors, a common feature of big data sources. The procedure takes the following
+steps
+
+39
+
+1. Begin with an initial estimate σ̂i using one selected model (Liu and Okui (2013)
+recommended using the largest model). This initial estimate can always be written
+as σ̂i (ŵ0 ), with w0 being a special weight vector such that the selected model is
+assigned weight 1 and 0s for all other models.
+2. Plug σ̂i (ŵ0 ) in the HRC p criterion function defined in equation (A2) and obtain the
+next round ŵ1 .
+3. Using ŵ1 , we obtain the average residual êi (ŵ1 ) and hence σ̂i (w1 ). We then use
+σ̂i (w1 ) to generate the next round weight vector.
+
+\p (ŵ j ) −
+4. Repeat steps (2) and (3) until weight vector ŵ j is obtained that satisfies HRC
+\p (ŵ j−1 ) ≤ ϕ, where ϕ is a predetermined tolerance level (usually a small
+HRC
+number).
+A problem with this iterative process is that it can be computationally demanding,
+since multiple steps of quadratic optimization are required. To overcome this problem,
+we can either choose a relatively large ϕ or fix the total number of iterations.
+
+B.4
+
+Lasso, Post Model Selection by Lasso, and Double Lasso
+
+Consider the linear regression model:
+p
+
+yi =
+
+>
+β0
+x0i
+
++ ∑ x ji β j + ui
+j =1
+
+for i = 1, ..., n, where x0i is k0 × 1 and x ji is scalar for j ≥ 1. Let
+i>
+
+β =
+
+h
+
+β0> , β 1 , ..., β p
+
+xi =
+
+h
+
+x0> , x1i , ..., x pi
+
+i>
+
+and define the matrices X and y by stacking observations. The OLS estimate of β is β̂ =
+( X > X )−1 X > y. Consider a constrained least-squares estimate β̃ subject to the constraint
+β 1 = β 2 = ... = 0. The Lasso estimator shrinks β̂ towards β̃ by solving
+p
+
+1 n
+(yi − xi> β)2 + λ ∑ | β j |,
+β̂ = arg min
+∑
+2n i=1
+β
+j =1
+L
+
+(A3)
+
+where λ is the tuning parameter that controls the penalty term. In practice, researchers
+either assign λ to take on a specific value or use k-fold cross-validation to determine the
+40
+
+optimal λ. A common choice is to pick λ to minimize 5-fold cross-validation. In general,
+the benefits from applying the Lasso in place of OLS exist in settings where either the
+number of regressors exceeds the number of observations since it involves shrinkage, or
+in settings where the number of parameters is not small relative to the sample size and
+some form of regularization is necessary.
+The drawback of k-fold cross-validation is its lack of computational efficiency. For example, using five-fold cross-validation, the Lasso computation procedure will need to be
+carried out over 200 times. This computational inefficiency becomes especially significant
+when either the sample size is large or the number of variables is large. Thus, we follow
+Belloni and Chernozhukov (2013) and ex ante pick the number of explanatory variables
+that will not have their coefficient shrunk to zero, a form of post model selection by Lasso.
+The double-lasso regression is similar to the post model selection by Lasso. The goal
+is to identify covariates for inclusion in two steps, finding those that predict the dependent variable and those that predict the independent variable of interest. Without loss of
+generality, we focus on the case with a single focal independent variable of interest, x0i ,
+and we want to know how it relates to dependent variable yi . The double-Lasso variable
+selection procedure can be carried out as follows:
+Step 1. Fit a lasso regression predicting the dependent variable, and keeping track of the
+variables with non-zero estimated coefficients:
+p
+
+yi = c1 + ∑ x ji β j + ui ,
+j =1
+
+where c1 is a constant.
+Step 2. Fit a lasso regression predicting the focal independent variable, keeping track of
+the variables with non-zero estimated coefficients:
+p
+
+x0i = c2 + ∑ x ji β j + ui ,
+j =1
+
+where c2 is a constant. If x0i is an effectively randomized treatment, no covariates
+should be selected in this step.
+Step 3. Fit a linear regression of the dependent variable on the focal independent variable,
+including the covariates selected in either of the first two steps:
+yi = c3 + x0i β 0 +
+
+∑ xki βk + ui ,
+
+k∈ A
+
+where c3 is a constant, A is the union of the variables estimated to have non-zero
+coefficients in Steps 1 and 2.
+41
+
+C
+
+More Details on the Econometric Theory
+
+In this section, we prove the asymptotic optimality of Mallows-type model averaging estimator under the constraint of screened model set. Our proof is inspired by the work of
+Zhang, Zou, and Carroll (2015) who demonstrated the asymptotic optimality of KullbackLeibler (KL) type model averaging estimators under screened model set. We extend their
+results, allowing their findings to be applied to a broader set of model averaging estimators.
+We first lay out the following conditions that have been verified in the existing literature such as White (1982).
+Condition 1 We have k X > µ0 k = O(n) and k X > ek = O p (n1/2 ).
+Note that our proof is built upon the conditions that sustain the asymptotic optimality
+of Mallows-type model averaging estimators under given unscreened candidate model
+set. For example, see either equations (7) and (8) in Wan, Zhang, and Zou (2010), or
+assumptions 1 to 3 in Xie (2015), or assumptions 2.1 to 2.7 in Liu and Okui (2013). Condition 2 corresponds to these suppositions and would change slightly as we adopt different
+model averaging estimators.
+Condition 2 Conditions that sustain the asymptotic optimality of Mallows-type model averaging estimators (homoskedasticity or heteroskedasticity-robust) under given unscreened candidate
+model set in the original paper.
+For each approximation model m, we can define its mean squared error as
+L ( β m ) ≡ ( µ ( β m ) − µ0 ) > ( µ ( β m ) − µ0 ) ,
+
+(A4)
+
+where µ0 is the true value and µ( βm ) = X βm . Note that in our definition, all βm for
+m = 1, ..., M are k × 1 vector, in which certain coefficients are set to 0 if the associated
+independent variables are not included in model m. Let β∗m be the coefficient that minimizes equation (A4) such that β∗m = arg min L( βm ). The coefficient vector β∗m minimizes
+the mean squared error of model m with respect to the true prediction value µ0 , which is
+different from β̂m that minimizes the sum squared residual (SSR) of model m.
+We define the following averaged coefficients
+M
+
+β̂(w) ≡
+
+∑
+
+wm β̂m
+
+and
+
+m =1
+
+β∗ (w) ≡
+
+M
+
+∑
+
+m =1
+
+42
+
+wm β∗m
+
+∗
+M
+M
+∗
+Since µ(w) = ∑m
+=1 wm X β̂m = X ∑m=1 wm β̂m = X β̂ ( w ), we define µ ( w ) ≡ X β ( w )
+and the associated mean squared error can be written as
+
+L ∗ ( w ) = µ ∗ ( w ) − µ0
+We then define the ξ n as
+
+>
+
+
+µ ∗ ( w ) − µ0 .
+
+ξ n = inf L∗ (w),
+w∈H
+
+(A5)
+(A6)
+
+which is the lowest possible value of L∗ (w) under set H.
+Although the mean squared error L∗ (w) is based on a different averaged coefficients
+∗
+β̂ (w), it is closely related to the L(w) defined in (A24).
+Lemma 1 Given Conditions 1 and 2, we have
+
+| L(w) − L∗ (w)|
+= o p (1),
+sup
+L∗ (w)
+w∈H
+
+(A7)
+
+|C (w) − ∑in=1 σi2 − L∗ (w)|
+sup
+= o p (1).
+L∗ (w)
+w∈H
+
+(A8)
+
+Proof of Lemma 1 In line with the Theorem 3.2 of White (1982), under standard regularity conditions, it is straightforward to show that β̂m − β∗m = O p (n−1/2 ). Therefore,
+β̂(w) − β∗ (w) =
+
+M
+
+∑
+
+
+wm β̂m − β∗m = O p (n−1/2 )
+
+(A9)
+
+m =1
+
+holds uniformly for w ∈ H.
+By Taylor expansion and Condition 1,
+L∗ (w) = L(w) + 2X > X β̂(w) − µ0
+
+
+
+
+β∗ (w) − β̂(w) + o p (1)
+
+= L(w) + O p (n1/2 ) + o p (1),
+which implies supw∈H | L(w) − L∗ (w)| ≤ O p (n1/2 ). Since supw∈H | L(w) − L∗ (w)| is in a
+smaller order than L∗ (w), we obtain (A7).
+Moreover, for Mallows-type criterion, we have
+>
+
+
+y − µ̂(w) + 2σ2 k
+
+= L(w) + e> e + 2e> µ0 − µ̂(w) + 2σ2 k
+
+
+= L∗ (w) + L(w) − L∗ (w) + e> e + 2e> X β0 − β̂(w) + 2σ2 k.
+
+C (w) =
+
+y − µ̂(w)
+
+43
+
+Therefore, by Condition 2,
+n
+
+sup |C (w) − L∗ (w)| ≤ sup | L(w) − L∗ (w)| + 2 sup |e> X β0 − β̂(w) | + ∑ σi2 + o p (1).
+
+w∈H
+
+w∈H
+
+w∈H
+
+i =1
+
+Note that the term ∑in=1 σi2 can be simplified as nσ2 if we assume homoskedasticity. Following Condition 1 and results in (A7), we have supw∈H |C (w) − ∑in=1 σi2 − L∗ (w)| ≤
+O p (n1/2 ). Hence, we obtain (A8) and complete the proof.
+Once Lemma 1 is established, we can prove Theorem 1 with the following steps.
+Proof of Theorem 1 Our proof follows Zhang, Yu, Zou, and Liang (2016). Define a(w) =
+C (w) − ∑in=1 σi2 − L(w). As demonstrated in Lemma 1, Assumption 1, and Conditions 1
+and 2, it is straightforward to show that, as n → ∞
+sup
+w∈H
+
+sup
+w∈H
+
+sup
+w∈H
+
+a(w)
+L∗ (w)
+
+→ 0,
+
+vn
+∗
+L (w)
+
+→ 0,
+
+L∗ (w)
+L(w)
+
+→ 1.
+
+p
+
+(A10)
+
+p
+
+(A11)
+
+p
+
+(A12)
+
+Therefore,
+L∗ (w)
+sup
+≤
+w∈H L ( w ) − vn
+
+(
+
+L(w) − L∗ (w)|
+vn
+1 − sup
+− sup ∗
+∗
+L (w)
+w∈H
+w∈H L ( w )
+
+) −1
+
+p
+
+→ 0,
+
+(A13)
+
+as n → ∞. Then, we expand equation (7) of Theorem 1 as
+
+
+infw∈H L(w)
+−1 > δ
+Pr
+L(w̃)
+(
+)
+
+infw∈H̃ L(w) + a(w) − a(w̃) − infw∈H L(w)
+= Pr
+>δ
+L(w̃)
+(
+)
+
+infw∈H̃ L(w) + a(w) − a(w̃) − infw∈H L(w)
+= Pr
+> δ, wn ∈ H̃
+L(w̃)
+)
+(
+
+infw∈H̃ L(w) + a(w) − a(w̃) − infw∈H L(w)
+> δ, wn ∈
+/ H̃ (A14)
+.
++ Pr
+L(w̃)
+By definitions of conditional and joint probabilities, we have
+RHS of equation (A14)
+44
+
+(
+
+≤ Pr
+
+)
+
+infw∈H̃ L(w) + a(w) − a(w̃) − infw∈H L(w)
+> δ wn ∈ H̃ Pr(wn ∈ H̃)
+L(w̃)
+
++ Pr(wn ∈
+/ H̃)
+
+L(wn ) + a(wn ) − a(w̃) − infw∈H L(w)
+≤ Pr
+> δ wn ∈ H̃ Pr(wn ∈ H̃) + Pr(wn ∈
+/ H̃)
+L(w̃)
+
+
+L(wn ) + a(wn ) − a(w̃) − infw∈H L(w)
+> δ + Pr(wn ∈
+/ H̃).
+(A15)
+≤ Pr
+L(w̃)
+
+
+Following the definition of vn defined in Assumption 1(i), we have
+
+=
+≤
+≤
+≤
+
+RHS of equation (A15)
+
+
+vn + a(wn ) − a(w̃)
+Pr
+> δ + Pr(wn ∈
+/ H̃)
+L(w̃)
+
+
+vn
+a(wn )
+a(w̃)
+Pr
++
++
+> δ + Pr(wn ∈
+/ H̃)
+L(w̃)
+L(w̃)
+L(w̃)
+)
+(
+a(wn )
+a(w)
+vn
++
++ sup
+> δ + Pr(wn ∈
+/ H̃)
+Pr sup
+infw∈H L(w)
+w∈H L ( w )
+w∈H L ( w )
+(
+vn
+L∗ (w)
+a(w)
+L∗ (w)
+Pr sup ∗
+sup
++ sup ∗
+sup
+w∈H L ( w ) w∈H L ( w )
+w∈H L ( w ) w∈H L ( w ) − vn
+)
+L∗ (w)
+a(w)
+sup
+> δ + Pr(wn ∈
+/ H̃).
+(A16)
++ sup ∗
+w∈H L ( w ) w∈H L ( w )
+
+According to Conditions (A10), (A11), (A12), (A13), and Assumption 1(iii), we obtain that
+the RHS of equation (A16) converge to 0 as n → ∞. This completes the proof.
+
+D
+
+Heteroskedasticity-robust Prediction Model Averaging
+(HPMA) Method
+
+Our setup is similar to both Wan, Zhang, and Zou (2010) and Liu and Okui (2013) by
+allowing the candidate models to be non-nonested. We observe a random sample (yi , xi )
+for i = 1, ..., n, in which yi is a scalar and xi = ( xi1 , xi2 , ...) is countably infinite. We
+consider the following data generating process (DGP)
+∞
+
+y i = µ i + ei ,
+
+µi =
+
+∑ β j xij ,
+
+j =1
+
+45
+
+E( ei | x i ) = 0
+
+(A17)
+
+for i = 1, ..., n and µi can be considered as the conditional mean µi = µ( xi ) = E(yi | xi )
+that is converging in mean square.42 We assume the error term to be heteroskedastic by
+letting σi2 = E(ei2 | xi ) denotes the conditional variance which is allowed to depend on xi .
+Now we consider a set of M candidate models. We allow the M models to be nonnested. The mth candidate model that approximates the DGP in equation (A17) is
+km
+
+yi =
+
+∑ βmj xijm + bim + ei ,
+
+(A18)
+
+j =1
+
+for m = 1, ..., M, where xijm for j = 1, ..., km denotes the regressors, βm
+j denotes the coeffim
+
+m
+cients, and bim ≡ µi − ∑kj=1 βm
+j xij is the modeling bias.
+
+Define y = [y1 , ..., yn ]> , µ = [µ1 , ..., µn ]> , and e = [e1 , ..., en ]> . The DGP in equation
+(A17) can be presented by y = µ + e. Let X m be a full rank n × km matrix of independent
+variables with (i, j)th element being xijm . The estimator of µ from the mth model is
+µ̂m = X m X m > X m
+
+ −1
+
+X m > y = Pm y,
+
+where Pm = X m ( X m > X m )−1 X m > for all M. Similarly, the residual is êm = y − µ̂m =
+( I n − Pm )y for all m. Since Pm is n × n for each m, we follow standard model averaging
+procedure and construct an averaged projection matrix P (w):
+M
+
+∑
+
+P (w) =
+
+wm Pm ,
+
+(A19)
+
+m =1
+
+where P (w) is a weighted average of all potential Pm . Due to its structure, P (w) is symmetric but not idempotent. The variable w = [w1 , w2 , ..., w M ]> is a weight vector we
+defined in the unit simplex in R M ,
+(
+)
+M
+
+w ∈ [0, 1] M :
+
+H≡
+
+∑
+
+wm = 1 .
+
+(A20)
+
+wm Pm y = P (w)y.
+
+(A21)
+
+m =1
+
+Then, the model averaging estimator of µ is
+M
+
+µ̂(w) =
+
+∑
+
+m =1
+42 Convergence
+
+wm µ̂m =
+
+M
+
+∑
+
+m =1
+
+in mean square implies that E(µi − ∑kj=1 β j xij )2 → 0 as k → ∞.
+
+46
+
+Similarly, we define the averaged residual as
+M
+
+ê(w) =
+
+∑
+
+wm êm = ( I − P (w))y.
+
+(A22)
+
+m =1
+
+The performance of a model averaging estimator crucially depends on its choice of
+the weight vector w. Xie (2015) proposed a predictive model averaging (PMA) method
+that selects w through a convex optimization of a PMA criterion function of Amemiya
+(1980). One merit of the PMA method is that no preliminary estimates are required. The
+limitation of the PMA method is that the error term is required to be homoskedastic.
+In the spirit of Liu and Okui (2013), we extend the PMA method to a heteroskedasticrobust predictive model averaging (HPMA) method with the following criterion function
+n
+
+2
+HPMA(w) = ky − P (w)yk + 2 ∑ êi (w) pii (w),
+2
+
+(A23)
+
+i =1
+
+where P (w) is defined in (A19), êi (w) is the ith element in ê(w) defined in equation (A22),
+pii (w) is the ith diagonal term in P (w). We estimate the weighting vector following
+ŵ = arg min HPMA(w).
+w∈H
+
+Similar to PMA, obtaining ŵ from HPMA with restrictions w ∈ H is a convex optimization process.
+
+D.1
+
+Asymptotic Optimality
+
+In this subsection, we investigate the asymptotic properties of the HPMA estimator of
+w. We demonstrate that the proposed HPMA estimator is asymptotically optimal, in the
+sense of achieving the lowest possible mean squared error.
+Let the average squared error loss and the corresponding l2 type risk be
+L(w) = (µ̂(w) − µ)> (µ̂(w) − µ),
+R(w) = EL(w),
+
+(A24)
+(A25)
+
+where µ̂(w) is defined in equation (A21). To prove the optimality of HPMA, we assume
+the following regularity conditions similar to those demonstrated in Liu and Okui (2013),
+Assumption A1 There exists e > 0 such that min1≤i≤n σi2 > e.
+Assumption A2 E(ei4G | xi ) ≤ κ < ∞ for some integer 1 ≤ G < ∞ and for some κ.
+47
+
+
+M
+0 ) G → 0 as n → ∞, where ξ ≡ inf
+0
+Assumption A3 Mξ −2G ∑m
+R
+(
+w
+w∈H R ( w ) and wm
+m
+=1
+is a vector whose mth element is 1 and all other elements are 0s.
+Assumption A4 max1≤m≤ M max1≤i≤n piim = O(n−1/2 ), piim is the ith diagonal element of Pm .
+Assumptions A1-A4 correspond to Assumptions 2.1-2.4 in Liu and Okui (2013). Assumptions A1 and A2 establish bounds on the error terms and conditional moments.
+Assumptions A3 is a convergence condition that requires ξ goes to infinity faster than M
+and maxm R(w0m ). Assumptions A4 is a standard convergence condition on projection
+matrices.
+p
+
+Assumption A5 max1≤m≤ M ξ −1 p̃µ> ( I − Pm )µ → 0 and max1≤m≤ M M2 ξ −2G p̃2G µ> ( I −
+G p
+Pm )µ → 0, where p̃ ≡ supw∈H max1≤i≤n ( pii (w)).
+p
+
+p
+
+Assumption A6 max1≤m≤ M ξ −1 p̃e> Pm e → 0, max1≤m≤ M ξ −1 p̃tr(Pm Ω) → 0, and
+G p
+max1≤m≤ M M2 ξ −2G p̃2G tr(Pm )
+→ 0, where p̃ is defined in Assumption A5 and Ω is an
+2
+n × n diagonal matrix with σi being its ith diagonal element. .
+Assumption A5 requires that the bias from the worst potential model is small and
+Assumption A6 states that the associated variance be small. Similar requirements can be
+found in Wan, Zhang, and Zou (2010), which implies that some pre-selection procedures
+are always needed not just for the sake of computational efficiency, but also to maintain
+asymptotic optimality.43 Finally, we demonstrate the optimality of HPMA estimator in
+the following Theorem.
+Theorem 2 Let Assumptions A1-A6 hold, as n → ∞, we have
+p
+L(ŵ)
+→ 1,
+infw∈H L(w)
+
+(A26)
+
+where L(w) is defined in equation (A24) and ŵ is the HPMA estimator.
+43 Frequentist
+
+model averaging usually involves a constraint optimization (quadratic, convex, etc.) process that can be quite computationally demanding when the set of approximation models is large. A preselection procedure can reduce the total number of models by removing some poorly constructed models
+following certain criteria, therefore, improves computation efficiency. On the other hand, conditions like
+Assumptions A5 and A6 are frequently used (Wan, Zhang, and Zou (2010), Liu and Okui (2013), Xie (2015),
+etc) in demonstrating asymptotic optimality. As argued in Wan, Zhang, and Zou (2010), a necessary condition for Assumptions A5 and A6 type conditions to hold is removing some poorly constructed models (by
+a pre-selection procedure) before commencing the model averaging process. See Xie (2017) for a detailed
+discussion of various pre-selection methods for frequentist model averaging.
+
+48
+
+Proof of Theorem 2 Our proof follows Liu and Okui (2013) and Xie (2015). Let P̄ (w) be
+a diagonal matrix whose ith diagonal element is pii (w). Let êi (w) as the ith element of
+ê(w). Because:
+n
+
+\ (w) = (y − µ̂(w))> (y − µ̂(w)) + 2 ∑ ê2i (w) pii (w)
+HPMA
+i =1
+
+n
+
+= HRC p (w) + 2
+
+∑ êi2 (w) pii (w) − tr(ΩP(w))
+
+!
+.
+
+i =1
+
+where HPC p (w) takes another form of the heteroskedasticity-robust model averaging
+method Liu and Okui (2013) proposed in (A2) such that
+
+HPC p (w) = ky − P (w)yk2 + 2tr ΩP (w) ,
+
+(A27)
+
+where Ω is an n × n diagonal matrix with σi2 being its ith diagonal element.
+Theorem 1 of Liu and Okui (2013) showed that under Assumptions A1 to A3
+n
+.
+o p
+sup HRC p (w) R(w) → 0.
+w∈H
+
+Therefore, we just need to prove that
+(
+n
+
+∑ êi2 (w) pii (w) − tr(ΩP(w))
+
+sup
+w∈H
+
+n
+
+w∈H
+
+)
+R(w)
+
+p
+
+→ 0
+
+(A28)
+
+i =1
+
+LHS of equation (A28) can be rewritten as
+(
+sup
+
+.
+
+∑ ê2i (w) pii (w) − tr(ΩP(w))
+
+.
+
+)
+R(w)
+
+i =1
+
+≤ sup |ê(w)> P̄(w)ê(w) − E(e> P̄(w)e)|/ξ
+w∈H
+
+≤ sup {|ê(w)> P̄(w)ê − e> P̄(w)e| + |e> P̄(w)e − E(e> P̄(w)e)|}/ξ.
+
+(A29)
+
+w∈H
+
+where e(w) is defined in (A22), P̄ (w) is an n × n diagonal matrix with pii (w) being its ith
+diagonal element, and ξ is defined in Assumption A3. The first term in (A29) is
+ê(w)> P̄ (w)ê(w) − e> P̄ (w)e
+
+= µ> ( I − P(w))P̄(w)( I − P(w))µ + 2µ> ( I − P(w))P̄(w)( I − P(w))e
++ e> ( I − P(w))P̄(w)( I − P(w))e − e> P̄(w)e.
+
+49
+
+We have
+p
+
+sup µ> ( I − P (w))P̄ (w)( I − P (w))µ/ξ ≤ p̃ max µ> ( I − Pm )µ/ξ → 0
+
+(A30)
+
+1≤ m ≤ M
+
+w∈H
+
+by Assumption A6. Next, we consider the term
+e> ( I − P (w))P̄ (w)( I − P (w))e − e> P̄ (w)e = −2e> P (w)P̄ (w)e + e> P (w)P̄ (w)P (w)e,
+where
+
+p
+
+sup e> P (w)P̄ (w)P (w)e/ξ ≤ p̃ max e> Pm e/ξ → 0.
+
+(A31)
+
+1≤ n ≤ M
+
+w∈H
+
+by Assumption A6. For the term e> P (w)P̄ (w)e, we note that
+!
+M
+
+E(e> P (w)P̄ (w)e) = E e>
+
+∑
+
+wm Pm P̄ (w)e
+
+m =1
+M
+
+=
+=
+
+∑
+
+E(e> wm Pm P̄ (w)e)
+
+m =1
+
+∑
+
+E(wm e> Pm P̄ (w)e) =
+
+∑
+
+wm tr (P̄ (w)Pm Ω).
+
+m =1
+M
+
+M
+
+=
+M
+
+∑
+
+E(wm tr (Pm P̄ (w)ee> )
+
+m =1
+
+m =1
+
+Therefore,
+
+p
+
+sup E(e> P (w)P̄ (w)e)/ξ ≤ max ξ −1 p̃tr (Pm Ω) → 0
+1≤ m ≤ M
+
+w∈H
+
+by Assumption A6. Moreover, using Chebyshev’s inequality and Theorem 2 of Whittle
+(1960), for any δ > 0, we have
+)
+(
+Pr
+
+sup (e> P (w)P̄ (w)e) − E(e> P (w)P̄ (w)e) /ξ > δ
+w∈H
+
+M
+
+≤
+
+M
+
+∑∑
+
+(
+E
+
+l =1 m =1
+
+≤ δ
+
+−2G −2G
+
+ξ
+
+[(e> P(l ) P̄(w0m )e) − E(e> P(l ) P̄(w0m )e)]2G
+δ2G ξ 2G
+(
+
+M
+
+M
+
+∑∑
+
+n
+
+C1
+
+l =1 m =1
+
+≤ C1 max
+
+1≤ j ≤ n
+
+n
+
+∑∑
+
+i =1 j =1
+
+= C2 max δ
+1≤ l ≤ M
+
+ξ
+
+2 2G
+
+M p̃
+
+)G
+
+(l )
+( pij )2 p2ii (w0m )[E(ei4G )]1/2G [E(ei4G )]1/2G
+
+E(ei4G )δ−2G ξ −2G p̃2G
+−2G −2G
+
+)
+
+M
+
+M
+
+(
+
+n
+
+n
+
+∑ ∑ ∑∑
+
+l =1 m =1
+(l ) G
+
+i =1 i =1
+
+)G
+(l )
+( pij )2
+
+[tr(P )] → 0
+
+by Assumption A6, where C1 is a constant and C2 ≡ C1 max1≤i≤n E(ei4G ) is a bounded
+50
+
+constant according to Assumption A2. It follows that
+sup (e> P (w)P̄ (w)e)/ξ = o p (1).
+
+(A32)
+
+w∈H
+
+Noting that E[µ> ( I − P (w))P̄ (w)( I − P (w))e] = 0, we again use Chebyshev’s inequality
+and Theorem 2 of Whittle (1960) to show that
+(
+)
+sup µ> ( I − P (w))P̄ (w)( I − P (w))e /ξ > δ
+
+Pr
+
+w∈H
+M
+
+∑∑
+
+≤
+
+(
+
+M
+
+E
+
+l =1 m =1
+
+[µ> ( I − P(l ) )P̄(w0m )( I − P(l ) )e]2G
+δ2G ξ 2G
+(
+)G
+
+≤ δ−2G ξ −2G M
+
+M
+
+∑
+
+)
+
+n
+
+C3
+
+m =1
+
+2
+[E(ei2G )]1/G
+∑ γim
+
+,
+
+i =1
+
+where γim is the ith element of max1≤l ≤ M µ> ( I − P(l ) )P̄ (w0m )( I − P(l ) ), and C3 is a constant. We now have that
+(
+(
+)G
+)G
+M
+
+δ−2G ξ −2G M
+
+∑
+
+n
+
+C3
+
+m =1
+
+2
+[E(ei2G )]1/G
+∑ γim
+
+≤ δ−2G ξ −2G M
+
+n
+
+M
+
+∑
+
+C4
+
+m =1
+
+i =1
+
+2
+∑ γim
+
+,
+
+i =1
+
+where C4 ≡ C3 max1≤i≤n E(ei2G ) is a bounded constant according to Assumption A2 and
+n
+
+2
+∑ γim
+
+=
+
+i =1
+
+≤
+
+max µ> ( I − P(l ) )P̄ (w0m )( I − P(l ) )( I − P(l ) )P̄ (w0m )( I − P(l ) )µ
+
+1≤ l ≤ M
+
+max ( p̃)2 µ> ( I − P(l ) )µ.
+
+1≤ l ≤ M
+
+Therefore, it holds that
+δ
+
+−2G −2G
+
+ξ
+
+(
+
+M
+
+∑
+
+m =1
+
+C4
+
+n
+
+∑
+
+)G
+γ2jm
+
+i =1
+
+≤ max δ
+
+−2G −2G
+
+1≤ l ≤ M
+
+ξ
+
+C4 p̃
+
+2G
+
+M
+
+2
+
+n
+
+>
+
+m
+
+µ ( I − P )µ
+
+oG
+
+→0
+
+by Assumption A5. Therefore, we have
+p
+
+sup µ> ( I − P (w))P̄ (w)( I − P (w))e /ξ → 0.
+
+(A33)
+
+w∈H
+
+By (A30), (A31), (A32), and (A33), we have that the first term in (A29)
+p
+
+sup ê(w)> P̄ (w)ê(w) − e> P̄ (w)e /ξ → 0.
+w∈H
+
+51
+
+(A34)
+
+Similarly, for the second term in (A29), using Chebyshev’s inequality and Theorem 2 of
+Whittle (1960), for any δ > 0, we have
+(
+)
+
+
+Pr sup e> P̄ (w)e − E e> P̄ (w)e /ξ > δ
+w∈H
+
+(
+
+M
+
+≤
+
+∑
+
+E
+
+m =1
+
+ )
+[e> P̄(w0m )e − E e> P̄(w0m )e ]2G
+δ2G ξ 2G
+(
+)G
+
+≤ δ−2G ξ −2G
+
+M
+
+∑
+
+n
+
+∑ p2ii (w0m )[E(ei4G )]1/G
+
+C5
+
+m =1
+
+≤ C6 max
+
+1≤ j ≤ n
+
+i =1
+
+E(ei4G )δ−2G ξ −2G
+
+≤ C6 δ−2G ξ −2G
+
+(
+
+M
+
+∑ ∑
+
+m =1
+M
+
+∑ [tr[
+
+
+
+n
+
+P (w0m )
+
+2
+
+)G
+p2ii (w0m )
+
+i =1
+
+]]G
+
+m =1
+
+= C6 δ
+≤ C6 δ
+
+−2G −2G
+
+
+inf
+
+ξ
+
+−2G −2G
+
+1≤ i ≤ M
+
+
+inf
+
+ξ
+
+= C6 δ−2G ξ −2G
+≤ C6 δ−2G ξ −2G
+
+1≤ i ≤ M
+
+
+
+σi2
+σi2
+
+inf σi2
+
+−G
+
+∑
+
+h
+
+
+2
+2
+0
+[
+tr
+[
+inf
+σ
+P
+(
+w
+)
+]]G
+∑
+m
+i
+
+−G
+
+m =1
+M
+
+−G
+
+m =1
+M
+
+1≤ i ≤ M
+M
+
+M
+
+1≤ i ≤ M
+
+∑ [tr[Ω
+
+
+
+P (w0m )
+
+2
+
+]]G
+
+∑ [tr[ΩP(w0m )]]G
+
+m =1
+
+R(w0m )
+
+iG
+
+→ 0,
+
+m =1
+
+where C5 is a constant and C6 ≡ C5 max1≤i≤n E(ei4G ) is a bounded constant according to
+Assumption A2. The last inequality is due to
+
+
+h
+i
+R(w0m ) = E( L w0m ) = E (Pm y − µ)> (Pm y − µ)
+i
+h
+>
+m
+m
+= E (P (µ + e) − µ) (P (µ + e) − µ)
+h
+i
+= E ((Pm − I ) µ − Pm e)> ((Pm − I ) µ − Pm e)
+h
+i
+h
+i
+>
+> m
+>
+m
+m
+>
+m
+> m
+= µ (P − I ) (P − I ) µ − 2E µ (P − I ) P e + E e P e
+
+= µ> (Pm − I )> (Pm − I ) µ + tr[ΩPm ]
+= µ> (Pm − I )> (Pm − I ) µ + tr[ΩP(w0m )]
+≥ tr[ΩP(w0m )],
+
+52
+
+where P (w0m ) = Pm and the expectation is conditional on X. Therefore, we have
+
+
+p
+sup e> P̄ (w)e − E e> P̄ (w)e /ξ → 0.
+
+(A35)
+
+w∈H
+
+Results of (A34) and (A35) imply that condition (A28) hold. This completes the proof.
+
+E
+
+More Empirical Results
+
+This appendix consists of numerous subsections that provide further analyses and robustness checks of our main findings. OLS estimates of the GUM model are provided in
+subsection E.1. Breusch-pagan tests are provided in Table A1 show strong evidence of
+heteroskesdasticity for both open box office and movie unit sales.
+The first piece of evidence pertaining to using two social media measures versus one
+is obtained by comparing estimates across tables in subsection E.3 (see tables A3 and A4).
+In subsection E.2 and E.6 we provide evidence of the relative prediction efficiency for
+double Lasso and Lasso based Strategies respectively. As observed in tables A2 and A8 –
+A10, the benchmark HRC p outperforms all Lasso based methods considered. Finally, the
+evidence contrasting tables A8 – A10 present further evidence for why two social media
+measures are preferred to either one.
+In subsection E.4, a Monte Carlo study is used to shed further light on the relative performance of ARMS and ARMSH under different scenarios related to what is the source
+of heteroskedasticity. Related, in subsection E.7 we present additional analyses that contrasts which models (and their contents) are selected by ARMS to ARMSH. These sections
+explain when differences between these methods could occur and why in our application,
+there were many similarities. Related to E.7, in subsection E.5 we present weights of, and
+contents of the top 5 models selected by the HRC p estimator. These results continue to
+show that in practice, the model averaging estimator gives lots of weight to very few of all
+the potential models and is consistent with other applications of these methods including
+in policy oriented applications such as crime deterrence (Durlauf, Navarro, and Rivers,
+2016).
+In subsection E.8, we provide evidence that even when we restrict machine learning
+strategies to use the identical set of predictors as model screening choices made for model
+averaging that recursive partitioning methods yield more accurate forecasts. This shows
+that much of the gains we observed in our application come from the restrictiveness of
+the linear model and that additional gains can still be obtained by allowing for model
+uncertainty and considering that the data is heteroskedastic. Subsection E.9 provides formal evidence that the proposed MAB method significantly outperforms other forecasting
+strategies considered in the main text (tables 3 – 5).
+
+53
+
+Last, subsection E.10 considers adding a model averaging flavor to a single regression
+tree (MART). For space considerations, we did not include this in the main text since as
+seen in the single figure A2 presented in subsection E.10, the MART method is outperformed by both MAB and MARF by a large margin in both heteroskedasticity scenarios.
+Thus, similar to the discussion in the statistical learning literature that forecasts from RT
+are unreliable and both bagging and random forest present improvement, we advocate
+only adding model averaging to strategies that used bagging or random forest to create
+subgroups.
+
+54
+
+E.1
+
+OLS Estimates of the GUM Model
+Table A1: OLS Estimates of the Generalized Unrestricted Model
+Variable
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core Parameters
+Budget
+Weeks
+Screens
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+Breusch-Pagan Statistic
+Breusch-Pagan p-value
+R-square
+
+Open Box Office
+Coefficient
+Robust S.E.
+
+Movie Unit Sales
+Coefficient
+Robust S.E.
+
+-1.6895
+4.6542
+-1.9354
+0.1229
+-0.9595
+2.6461
+-1.7884
+2.6236
+12.8881*
+3.0486
+3.3377
+-2.5919
+-0.3705
+0.8643
+
+3.0838
+3.7732
+5.6046
+4.2324
+3.7382
+2.7335
+3.6083
+6.7679
+4.9159
+2.4376
+2.4852
+3.3696
+2.6569
+2.9379
+
+-0.0622
+-0.0967
+0.8167*
+-0.0109
+-0.1287
+-0.0931
+0.0139
+-0.4118
+0.5634
+-0.3655*
+0.1414
+-0.0986
+0.0336
+0.0306
+
+0.1194
+0.1588
+0.3609
+0.2015
+0.1859
+0.1052
+0.1092
+0.3503
+0.3937
+0.1441
+0.1243
+0.0921
+0.1391
+0.1301
+
+2.8901
+1.8691
+2.6378
+
+5.4757
+6.8517
+6.6841
+
+-0.6290
+-0.8369
+-0.7490
+
+0.4196
+0.5112
+0.4964
+
+0.1182*
+0.3738
+6.1694*
+
+0.0399
+0.2768
+1.3899
+
+0.0035*
+0.0447*
+0.3215*
+
+0.0016
+0.0109
+0.0526
+
+-0.1570
+-0.9835
+-1.2435
+0.2277
+2.5070*
+
+0.6610
+0.9393
+1.0695
+1.1775
+0.7509
+
+-0.0148
+-0.0040
+0.1802
+-0.1708*
+-0.0422
+0.2172*
+-0.0927*
+0.0212
+0.0085
+-0.0808
+
+0.0241
+0.0304
+0.1104
+0.0842
+0.0839
+0.0864
+0.0399
+0.0234
+0.0291
+0.1072
+
+-97.5186*
+19.4109
+-45.2885
+86.2881*
+18.9664*
+
+31.6624
+38.6929
+30.9011
+27.2008
+5.1687
+
+-1.6863
+0.0724
+-1.8770
+2.5302*
+-1.2437*
+0.4423*
+-0.2006
+1.1195
+0.4945
+-0.3414
+
+0.9608
+1.1598
+1.1417
+0.7184
+0.4167
+0.1064
+0.2404
+0.9779
+0.6281
+0.3104
+
+249.9485
+<0.0001
+0.7973
+
+Note: * indicates the associated variable is significant at 5% level.
+
+55
+
+207.3698
+<0.0001
+0.8016
+
+E.2
+
+Performance of Double-Lasso Strategy in Simulation Experiment
+
+Table A2: Comparing Hetero-robust and Homo-efficient Model Screening Methods
+nE
+
+OLS10
+
+OLS12
+
+OLS15
+
+p
+
+HRC10
+
+p
+
+HRC12
+
+p
+
+HRC15
+
+Benchmark
+
+Panel A: Open Box Office
+Mean Squared Forecast Error (MSFE)
+10
+1.4388
+1.5229 1.1787
+1.4181
+1.5075
+1.1564
+20
+1.6213
+1.6090
+1.2135
+1.5898
+1.5814
+1.1854
+30
+1.7625
+1.6869
+1.2597
+1.7322
+1.6714
+1.2344
+40
+1.8172
+1.7028
+1.2622
+1.7745
+1.6768
+1.2548
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+1.2131 1.0778
+1.1962
+1.2054
+1.0680
+1.2208
+1.0880
+1.2262
+1.2173
+1.0841
+1.2273
+1.0882
+1.2331
+1.2192
+1.0833
+1.2330
+1.0845
+1.2360
+1.2187
+1.0766
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+Mean Squared Forecast Error (MSFE)
+10
+1.3855
+1.4254 1.4699
+1.3645
+1.3892
+1.4364
+20
+1.3562
+1.3960
+1.4022
+1.3321
+1.3651
+1.3730
+30
+1.2831
+1.3096
+1.3088
+1.2733
+1.2909
+1.2821
+40
+1.1793
+1.2094
+1.2499
+1.1573
+1.1807
+1.2210
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+1.2731 1.2840
+1.2514
+1.2616
+1.2683
+1.2541
+1.2626
+1.2273
+1.2365
+1.2472
+1.2190
+1.2314
+1.1920
+1.2053
+1.2169
+1.1878
+1.2051
+1.1565
+1.1706
+1.1880
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+10
+20
+30
+40
+
+1.2064
+1.2356
+1.2420
+1.2475
+
+1.2604
+1.2345
+1.2014
+1.1682
+
+Note: Bold numbers denote the strategy with the best performance in that row of
+the table. The remaining entries provide the ratio of the degree of the respective
+forecast error metric of the estimator using specific estimation approach denoted
+in the column relative to results using the HRC p method presented in the last
+column.
+
+56
+
+E.3
+
+Additional Evidence on the Importance of Social Media Data
+Table A3: OLS Estimates of Models with Sentiment Only
+Variable
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core Parameters
+Budget
+Weeks
+Screens
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+R-square
+
+Open Box
+Coefficient
+Robust S.E.
+
+Movie Unit
+Coefficient
+Robust S.E.
+
+-11.8297
+1.8903
+-8.6157
+-10.6777
+-6.1906
+5.6338
+-4.3020
+-1.3797
+19.2129
+-0.8574
+-4.1597
+-1.3851
+0.6611
+1.4062
+
+5.1756
+9.0801
+7.2188
+7.3202
+4.4094
+3.7323
+4.9879
+8.0709
+10.5968
+4.6042
+3.1965
+4.4953
+6.1694
+5.2588
+
+-0.5991
+-0.2221
+0.3618
+-0.3815
+-0.3875
+0.1658
+-0.2661
+-0.3123
+0.8570
+-0.6504
+-0.1284
+0.1232
+0.1187
+0.0971
+
+0.2118
+0.3721
+0.3987
+0.3079
+0.2136
+0.1751
+0.1924
+0.3741
+0.4906
+0.2190
+0.1412
+0.1784
+0.2989
+0.2140
+
+7.6872
+21.6049
+19.5326
+
+7.0093
+10.7996
+10.5227
+
+-1.0293
+-0.5286
+-0.5796
+
+0.4639
+0.5447
+0.5433
+
+0.1525
+1.3267
+13.8708
+
+0.0827
+0.5057
+2.9586
+
+0.0064
+0.0943
+0.5949
+
+0.0033
+0.0204
+0.1233
+
+0.9289
+-0.7583
+-1.1656
+0.9664
+-0.1460
+
+0.7021
+0.7503
+1.6137
+2.1090
+1.1729
+
+0.5322
+
+-0.0195
+0.0373
+0.3103
+-0.0694
+-0.0401
+0.1238
+-0.1016
+0.0649
+-0.0992
+-0.1859
+0.6488
+
+Note: * indicates the associated variable is significant at 5% level.
+
+57
+
+0.0292
+0.0366
+0.1303
+0.1113
+0.1418
+0.1668
+0.0603
+0.0372
+0.0411
+0.1286
+
+Table A4: OLS Estimates of Models with Volume Only
+Variable
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core Parameters
+Budget
+Weeks
+Screens
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+R-square
+
+Open Box
+Coefficient
+Robust S.E.
+
+Movie Unit
+Coefficient
+Robust S.E.
+
+-1.7845
+4.8425
+-3.8178
+0.5099
+-0.5934
+3.1958
+-1.9479
+3.6903
+13.3327
+3.6698
+2.6945
+-2.5929
+-0.5145
+0.6968
+
+3.0495
+3.7630
+5.2420
+4.4590
+3.8404
+2.6371
+3.5767
+6.5546
+4.9812
+2.5120
+2.5712
+3.4036
+2.7094
+3.0682
+
+-0.1049
+0.0347
+0.6189
+-0.1050
+-0.1896
+0.0043
+-0.0280
+-0.3090
+0.5544
+-0.2299
+-0.0145
+-0.0859
+0.0015
+-0.0407
+
+0.1163
+0.1508
+0.3508
+0.2038
+0.1556
+0.0961
+0.1078
+0.3424
+0.3864
+0.1305
+0.1100
+0.0909
+0.1279
+0.1181
+
+1.8990
+1.6943
+2.3396
+
+5.2023
+6.7034
+6.4815
+
+-0.3739
+-0.5650
+-0.5206
+
+0.3662
+0.4418
+0.4475
+
+0.1142
+0.4335
+6.9067
+
+0.0396
+0.2705
+1.4856
+
+0.0029
+0.0424
+0.3422
+
+0.0016
+0.0114
+0.0557
+
+-97.6733
+21.1375
+-39.7233
+81.3088
+18.1939
+
+30.6043
+36.7023
+31.2763
+27.3566
+4.9561
+
+0.8224
+
+-1.5188
+-0.0649
+-1.6555
+2.1988
+-1.4011
+0.4675
+-0.2659
+1.6392
+0.2306
+-0.2764
+0.8445
+
+Note: * indicates the associated variable is significant at 5% level.
+
+58
+
+0.9072
+1.1053
+1.1440
+0.6776
+0.3762
+0.1007
+0.2455
+0.8910
+0.5984
+0.3631
+
+E.4
+
+Using Monte Carlo Study to Understand How Different Sources
+for Heteroskedasticity Affect Strategies
+
+We found in forecasts of retail movie unit sales that the difference in the performance between PMA and HRC p in table 3 in conjunction with the relative improved performance
+of ARMS presented in table 4 to be surprising. A potential explanation for these findings
+is the source of heteroskedasticity in the data. We examine the performance of five different model screening methods that are implied in the subscripts of the following model
+K
+K
+K
+K
+K
+.44 Using data generated by the
+, and MHRMS
+, MARMSH
+, MLasso
+, MARMS
+sets: MGETS
+Monte Carlo design described in section 4.2, we compare the risks of each method:
+Riski ≡
+
+2
+1 n
+µ̂t (MiK ) − µt
+∑
+n t =1
+
+for i = GETS, Lasso, ARMS, ARMSH, and HRMS,
+
+where µt is the true fitted value (feasible in simulation) and µ̂t (MiK ) is the average fitted
+value obtained by HRC p using specific candidate model set. Four different sample sizes
+(n = 100, 200, 300, and 400) are considered and the risk for each method - sample size pair
+is averaged across 10,000 simulation draws.
+Figures A1 presents the results from this exercise where we normalize the risks by the
+risk of the infeasible optimal model. Each line presents the relative risks of each model
+screening method associated with R2 from 0.1 to 0.9, respectively. Each sub-panel (a) to
+(d) presents the results for different sample sizes.
+In virtually every panel of figures A1, HRMS has the best performance. In the random
+heteroskedasticity scenario, GETS and Lasso perform well only when R2 is low. As R2 increases, the relative improved performance of ARMS, ARMSH, and HRMS emerges. The
+performance of both ARMS and ARMSH more closely mimics HRMS at larger sample
+sizes. However, in simulations where heteroskedasticity arises due to neglected parameter heterogeneity both GETS and Lasso perform poorly, particularly when there is strong
+correlation among the regressors. The performance of both screening methods is relatively poorer when either the sample size or R2 increases. In contrast, ARMS and ARMSH
+yield consistently better results that are similar with increasing n and R2 . Note that for
+both cases, ARMS and ARMSH yield quite similar results. The results in figures A1 point
+out that the performance of both GETS and Lasso rely heavily on homoskedasticity.
+
+44 A
+
+full permutation of the K = 20 regressors leads to a total of 1,048,575 candidate models (the null
+model is ignored). In our experiments, the pre-determined parameters for GETS and ARMS(H) are p = 0.1
+and M0 = 20 respectively, whereas we manipulate the tuning parameter for Lasso and select 5 predictors.
+We construct 25 − 1 = 31 models based on permutation of the selected parameters.
+
+59
+
+Figure A1: Comparing Model Screening Methods with Simulated Data
+Scenario A. Random Heteroskedasticity
+(a) n = 100
+
+(b) n = 200
+
+GETS
+LASSO
+ARMS
+ARMSH
+HRMS
+
+1.8
+1.6
+1.4
+
+1.8
+1.6
+1.4
+
+1.2
+
+1.2
+
+1
+
+1
+
+0.8
+
+0.8
+
+0.6
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.6
+0.1
+
+0.8
+
+0.2
+
+0.3
+
+(c) n = 300
+1.8
+
+1.6
+
+1.6
+
+1.4
+
+1.4
+
+1.2
+
+1.2
+
+1
+
+1
+
+0.8
+
+0.8
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.5
+
+0.6
+
+0.7
+
+0.8
+
+0.7
+
+0.8
+
+0.7
+
+0.8
+
+0.7
+
+0.8
+
+(d) n = 400
+
+1.8
+
+0.6
+0.1
+
+0.4
+
+0.7
+
+0.6
+0.1
+
+0.8
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+Scenario B. Parameter Heterogeneity
+(a) n = 100
+
+(b) n = 200
+
+GETS
+LASSO
+ARMS
+ARMSH
+HRMS
+
+1.8
+1.6
+1.4
+
+1.8
+1.6
+1.4
+
+1.2
+
+1.2
+
+1
+
+1
+
+0.8
+
+0.8
+
+0.6
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.7
+
+0.6
+0.1
+
+0.8
+
+0.2
+
+0.3
+
+(c) n = 300
+1.8
+
+1.6
+
+1.6
+
+1.4
+
+1.4
+
+1.2
+
+1.2
+
+1
+
+1
+
+0.8
+
+0.8
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+0.5
+
+0.6
+
+(d) n = 400
+
+1.8
+
+0.6
+0.1
+
+0.4
+
+0.7
+
+0.6
+0.1
+
+0.8
+
+60
+
+0.2
+
+0.3
+
+0.4
+
+0.5
+
+0.6
+
+E.4.1
+
+Prediction Comparison Using One Set of Measures
+Table A5: Evaluating the Importance of Twitter Variable using MAB
+nE
+
+Include None
+
+Benchmark
+
+Panel A: Open Box Office
+Mean Squared Forecast Error (MSFE)
+10
+0.6045
+0.8659
+0.6009
+20
+0.8098
+1.2111
+0.8242
+30
+0.9123
+1.4463
+0.9654
+40
+1.0281
+1.6934
+1.0810
+
+1.5271
+1.6091
+1.8287
+2.1822
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+0.7505
+0.6635
+0.8531
+0.7428
+0.9057
+0.7940
+0.9653
+0.8151
+
+0.9881
+1.0911
+1.2939
+1.3988
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+Mean Squared Forecast Error (MSFE)
+10
+0.8114
+0.9235
+0.8683
+20
+0.8914
+1.0621
+0.9038
+30
+0.9270
+1.1196
+0.9325
+40
+0.9734
+1.1244
+0.9757
+
+1.4882
+1.6761
+1.7988
+1.9982
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+0.8397
+0.7970
+0.8861
+0.8287
+0.9052
+0.8525
+0.9311
+0.8617
+
+1.0981
+1.1532
+1.2887
+1.4109
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+10
+20
+30
+40
+
+Include Both
+
+0.6538
+0.7296
+0.7541
+0.7890
+
+0.7740
+0.8192
+0.8269
+0.8470
+
+Sentiment Only
+
+Volume Only
+
+Note: Bold numbers denote the strategy with the best performance in that row of the
+table. The remaining entries provide the ratio of the degree of the respective forecast error
+metric of the estimator using specific estimation approach denoted in the column relative
+to results using the HRC p method presented in the last column.
+
+61
+
+E.5
+
+Weights of, and Contents of the Top 5 Models Selected by the HRC p
+Estimator
+Table A6: Describing the 5 Highest Weight Models: Open Box Office
+Weight in HRC p
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core
+Budget
+Weeks
+Screens
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+R2 w/ SV.
+R2 w/o SV.
+
+Model 1
+0.3862
+
+Model 2
+0.2159
+
+Model 3
+0.1755
+
+Model 4
+0.0945
+
+Model 5
+0.0816
+
+x
+x
+
+x
+
+x
+
+x
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+
+x
+
+x
+x
+
+x
+x
+x
+
+HRC p
+
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+x
+x
+0.8265
+0.4836
+
+x
+x
+x
+0.8249
+0.4796
+
+x
+x
+x
+0.8258
+0.4789
+
+x
+x
+x
+0.8248
+0.4911
+
+x
+x
+x
+0.8259
+0.4795
+
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+0.8230
+0.7383
+
+Note: x denotes that explanatory variable is included in the particular model, SV denotes
+social media data and HRC p refers to a specific model averaging method.
+
+62
+
+Table A7: Describing the 5 Highest Weight Models: Retail Movie Unit Sales
+HRC p
+
+Weight in
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core
+Budget
+Weeks
+Screens
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+T+0
+T+1/+7
+T+8/+14
+T+15/+21
+T+22/+28
+R2 w/ SV.
+R2 w/o SV.
+
+Model 1
+0.2977
+
+x
+
+Model 2
+0.1645
+
+Model 3
+0.1558
+
+x
+
+x
+
+Model 4
+0.1447
+
+Model 5
+0.0989
+
+x
+
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+
+HRC p
+
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+
+x
+x
+
+x
+x
+x
+
+x
+x
+
+x
+x
+
+x
+x
+x
+
+x
+x
+
+x
+x
+
+x
+x
+x
+x
+
+x
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+x
+x
+x
+
+x
+
+x
+
+0.8530
+0.6027
+
+0.8503
+0.5976
+
+x
+x
+0.8512
+0.5976
+
+0.8517
+0.6024
+
+0.8362
+0.5918
+
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+x
+0.8450
+0.7002
+
+Note: x denotes that explanatory variable is included in the particular model, SV denotes
+social media data and HRC p refers to a specific model averaging method.
+
+63
+
+E.6
+
+Further Comparison of the Relative Prediction Efficiency for Lassobased Strategies
+
+Table A8: Further Comparison of the Relative Prediction Efficiency (with Both Sentiment
+and Volume)
+nE
+
+OLS10
+
+OLS11
+
+p
+
+p
+
+p
+
+p
+
+p
+
+p
+
+OLS12
+
+OLS13
+
+OLS14
+
+HRC12
+
+HRC13
+
+HRC14
+
+HRC15
+
+HRC p
+
+OLS15
+
+HRC10
+
+HRC11
+
+Panel A: Open Box Office
+10
+20
+30
+40
+
+1.1464
+1.1620
+1.1922
+1.2076
+
+1.1704
+1.1809
+1.2092
+1.2295
+
+1.1671
+1.1803
+1.2067
+1.2174
+
+1.1778
+1.1830
+1.2113
+1.2233
+
+Mean Squared Forecast Error (MSFE)
+1.1132
+1.1221
+1.1462
+1.1642
+1.1647
+1.0943
+1.0992
+1.1606
+1.1771
+1.1797
+1.0731
+1.0696
+1.1899
+1.2068
+1.2037
+1.0608
+1.0633
+1.2027
+1.2197
+1.2141
+
+1.1717
+1.1755
+1.2092
+1.2199
+
+1.1094
+1.0815
+1.0636
+1.0573
+
+1.1203
+1.0826
+1.0624
+1.0537
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.0529
+1.0603
+1.0568
+1.0591
+
+1.0591
+1.0657
+1.0619
+1.0663
+
+1.0669
+1.0692
+1.0669
+1.0673
+
+1.0689
+1.0767
+1.0722
+1.0734
+
+Mean Absolute Forecast Error (MAFE)
+1.0623
+1.0632
+1.0430
+1.0595
+1.0576
+1.0556
+1.0549
+1.0506
+1.0631
+1.0689
+1.0560
+1.0558
+1.0473
+1.0528
+1.0576
+1.0549
+1.0537
+1.0578
+1.0654
+1.0641
+
+1.0687
+1.0750
+1.0719
+1.0720
+
+1.0593
+1.0551
+1.0542
+1.0536
+
+1.0594
+1.0546
+1.0538
+1.0530
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+10
+20
+30
+40
+
+1.3737
+1.3756
+1.3001
+1.2306
+
+1.2921
+1.2772
+1.2388
+1.1718
+
+1.3495
+1.2811
+1.2086
+1.1609
+
+1.3456
+1.2457
+1.1616
+1.1135
+
+Mean Squared Forecast Error (MSFE)
+1.3621
+1.3757
+1.3558
+1.2784
+1.3354
+1.2578
+1.2768
+1.3448
+1.2459
+1.2697
+1.1666
+1.1814
+1.2728
+1.2282
+1.2012
+1.1364
+1.1454
+1.2069
+1.1565
+1.1486
+
+1.3434
+1.2432
+1.1530
+1.1093
+
+1.3512
+1.2568
+1.1644
+1.1281
+
+1.3704
+1.2651
+1.1822
+1.1398
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.2303
+1.2096
+1.1887
+1.1704
+
+1.2058
+1.1844
+1.1656
+1.1469
+
+1.2161
+1.1958
+1.1735
+1.1557
+
+1.1581
+1.1386
+1.1182
+1.0989
+
+Mean Absolute Forecast Error (MAFE)
+1.1534
+1.1600
+1.2229
+1.1974
+1.2155
+1.1427
+1.1436
+1.2036
+1.1760
+1.1890
+1.1204
+1.1195
+1.1794
+1.1569
+1.1675
+1.1064
+1.1086
+1.1600
+1.1364
+1.1459
+
+1.1575
+1.1369
+1.1161
+1.0959
+
+1.1523
+1.1411
+1.1180
+1.1005
+
+1.1564
+1.1398
+1.1149
+1.1027
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide the ratio of
+the degree of the respective forecast error metric of the estimator using specific estimation approach denoted in the column relative to
+results using the HRC p method presented in the last column.
+
+64
+
+Table A9: Further Comparison of the Relative Prediction Efficiency (with Sentiment Only)
+nE
+
+OLS10
+
+OLS11
+
+p
+
+p
+
+p
+
+p
+
+p
+
+p
+
+OLS12
+
+OLS13
+
+OLS14
+
+HRC12
+
+HRC13
+
+HRC14
+
+HRC15
+
+HRC p
+
+OLS15
+
+HRC10
+
+HRC11
+
+Panel A: Open Box Office
+10
+20
+30
+40
+
+1.1111
+1.0836
+1.0648
+1.0732
+
+1.1240
+1.0940
+1.0700
+1.0779
+
+1.1428
+1.1102
+1.0888
+1.1027
+
+1.1403
+1.1121
+1.0871
+1.1099
+
+Mean Squared Forecast Error (MSFE)
+1.1389
+1.1528
+1.0865
+1.0922
+1.1077
+1.0887
+1.0896
+1.0802
+1.0766
+1.0912
+1.0799
+1.0840
+1.0641
+1.0643
+1.0787
+1.0902
+1.0909
+1.0727
+1.0768
+1.0939
+
+1.1022
+1.1010
+1.0809
+1.0916
+
+1.1068
+1.0795
+1.0702
+1.0777
+
+1.1084
+1.0842
+1.0772
+1.0795
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.0305
+1.0314
+1.0303
+1.0355
+
+1.0422
+1.0399
+1.0378
+1.0468
+
+1.0485
+1.0467
+1.0474
+1.0542
+
+1.0528
+1.0535
+1.0522
+1.0615
+
+Mean Absolute Forecast Error (MAFE)
+1.0552
+1.0652
+1.0302
+1.0325
+1.0368
+1.0556
+1.0647
+1.0276
+1.0311
+1.0323
+1.0542
+1.0669
+1.0256
+1.0298
+1.0318
+1.0592
+1.0719
+1.0281
+1.0343
+1.0398
+
+1.0281
+1.0369
+1.0364
+1.0402
+
+1.0318
+1.0413
+1.0382
+1.0411
+
+1.0457
+1.0456
+1.0421
+1.0475
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+10
+20
+30
+40
+
+1.0179
+1.0462
+1.0308
+1.0111
+
+1.0323
+1.0589
+1.0406
+1.0214
+
+1.0391
+1.0635
+1.0501
+1.0307
+
+1.0299
+1.0528
+1.0376
+1.0291
+
+Mean Squared Forecast Error (MSFE)
+1.0494
+1.0257
+1.0152
+1.0037
+1.0030
+1.0639
+1.0362
+1.0388
+1.0515
+1.0557
+1.0445
+1.0199
+1.0273
+1.0296
+1.0342
+1.0309
+1.0094
+1.0019
+1.0204
+1.0263
+
+1.0192
+1.0429
+1.0338
+1.0227
+
+1.0151
+1.0509
+1.0328
+1.0233
+
+1.0068
+1.0303
+1.0168
+1.0033
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.0180
+1.0044
+1.0013
+1.0081
+
+1.0219
+1.0132
+1.0100
+1.0042
+
+1.0216
+1.0162
+1.0145
+1.0089
+
+1.0212
+1.0194
+1.0195
+1.0149
+
+Mean Absolute Forecast Error (MAFE)
+1.0394
+1.0330
+1.0063
+1.0101
+1.0073
+1.0366
+1.0242
+1.0072
+1.0049
+1.0062
+1.0327
+1.0253
+1.0010
+1.0072
+1.0014
+1.0300
+1.0214
+1.0028
+1.0032
+1.0013
+
+1.0088
+1.0056
+1.0019
+1.0099
+
+1.0192
+1.0166
+1.0148
+1.0052
+
+1.0132
+1.0115
+1.0122
+1.0023
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide the ratio of
+the degree of the respective forecast error metric of the estimator using specific estimation approach denoted in the column relative to
+results using the HRC p method presented in the last column.
+
+65
+
+Table A10: Further Comparison of the Relative Prediction Efficiency (with Volume Only)
+nE
+
+OLS10
+
+OLS11
+
+p
+
+p
+
+p
+
+p
+
+p
+
+p
+
+OLS12
+
+OLS13
+
+OLS14
+
+HRC12
+
+HRC13
+
+HRC14
+
+HRC15
+
+HRC p
+
+OLS15
+
+HRC10
+
+HRC11
+
+Panel A: Open Box Office
+10
+20
+30
+40
+
+1.0614
+1.0817
+1.1556
+1.1705
+
+1.0391
+1.0181
+1.0217
+1.0267
+
+1.0312
+1.0074
+1.0176
+1.0179
+
+1.0315
+1.0122
+1.0200
+1.0198
+
+Mean Squared Forecast Error (MSFE)
+1.0309
+1.0380
+1.0551
+1.0351
+1.0297
+1.0069
+1.0137
+1.0791
+1.0102
+0.9984
+1.0207
+1.0263
+1.1517
+1.0159
+1.0107
+1.0170
+1.0271
+1.1689
+1.0227
+1.0104
+
+1.0224
+1.0108
+1.0131
+1.0164
+
+1.0255
+1.0041
+1.0117
+1.0172
+
+1.0362
+1.0121
+1.0205
+1.0199
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.0058
+1.0228
+1.0343
+1.0280
+
+1.0113
+1.0150
+1.0122
+1.0169
+
+1.0109
+1.0160
+1.0147
+1.0194
+
+1.0113
+1.0131
+1.0149
+1.0203
+
+Mean Absolute Forecast Error (MAFE)
+1.0116
+1.0115
+1.0012
+1.0037
+1.0067
+1.0117
+1.0163
+1.0148
+1.0120
+1.0069
+1.0172
+1.0212
+1.0249
+1.0075
+1.0091
+1.0213
+1.0247
+1.0264
+1.0084
+1.0104
+
+1.0119
+1.0078
+1.0125
+1.0186
+
+1.0036
+1.0045
+1.0159
+1.0166
+
+1.0018
+1.0137
+1.0158
+1.0196
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+10
+20
+30
+40
+
+1.2868
+1.2641
+1.1739
+1.1208
+
+1.2680
+1.2501
+1.1650
+1.1178
+
+1.2518
+1.2383
+1.1541
+1.1126
+
+1.1204
+1.1429
+1.0774
+1.0543
+
+Mean Squared Forecast Error (MSFE)
+1.0814
+1.0996
+1.2614
+1.2570
+1.2493
+1.0971
+1.0951
+1.2537
+1.2472
+1.2332
+1.0604
+1.0389
+1.1700
+1.1549
+1.1439
+1.0504
+1.0125
+1.1103
+1.1082
+1.1092
+
+1.1113
+1.1340
+1.0704
+1.0474
+
+1.0772
+1.0883
+1.0522
+1.0408
+
+1.0969
+1.0879
+1.0304
+1.0093
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+1.1268
+1.1125
+1.0874
+1.0784
+
+1.1229
+1.1080
+1.0886
+1.0833
+
+1.1274
+1.1138
+1.0918
+1.0877
+
+1.0750
+1.0688
+1.0492
+1.0487
+
+Mean Absolute Forecast Error (MAFE)
+1.0752
+1.0715
+1.1236
+1.1128
+1.1177
+1.0631
+1.0547
+1.1096
+1.0970
+1.1043
+1.0479
+1.0439
+1.0803
+1.0828
+1.0820
+1.0474
+1.0425
+1.0768
+1.0803
+1.0786
+
+1.0668
+1.0610
+1.0490
+1.0463
+
+1.0728
+1.0632
+1.0455
+1.0434
+
+1.0724
+1.0461
+1.0364
+1.0367
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Note: Bold numbers denote the strategy with the best performance in that row of the table. The remaining entries provide the ratio of
+the degree of the respective forecast error metric of the estimator using specific estimation approach denoted in the column relative to
+results using the HRC p method presented in the last column.
+
+66
+
+E.7
+
+Comparing ARMS and ARMSH
+
+From the exercises in the main text, we notice that ARMS and ARMSH provide similar
+results in many cases. Although ARMSH is hetero-robust, ARMS and ARMSH end up
+with similar candidate model sets. In the following table A11, we show the 5 highest
+weight models estimated by HRC p using candidate model sets screened by ARMS and
+ARMSH respectively. For each model screening method, an “x” denotes the associated
+explanatory variable is included in the particular model. Each model screening method
+contains a candidate model set of 100 selected models. Estimated model weights are
+presented in the last row for each method.
+Table A11: Describing the 5 Highest Weight Models Using Model Sets Screened by ARMS
+and ARMSH
+M1
+Genre
+Action
+Adventure
+Animation
+Biography
+Comedy
+Crime
+Drama
+Family
+Fantasy
+Horror
+Mystery
+Romance
+Sci-Fi
+Thriller
+Rating
+PG
+PG13
+R
+Core
+Budget
+Weeks
+Screens
+Sentiment
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+Volume
+T-21/-27
+T-14/-20
+T-7/-13
+T-4/-6
+T-1/-3
+Weights
+
+M2
+
+ARMS
+M3
+
+x
+
+M4
+
+M5
+
+M1
+
+x
+
+x
+
+x
+
+x
+
+x
+x
+
+x
+x
+x
+
+M2
+
+ARMSH
+M3
+
+M4
+
+M5
+
+x
+
+x
+
+x
+x
+
+x
+x
+x
+
+x
+
+x
+
+x
+
+x
+x
+
+x
+x
+x
+
+x
+
+x
+x
+
+x
+
+x
+x
+x
+
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+x
+
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+x
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+
+x
+x
+x
+0.4278
+
+x
+x
+x
+0.3914
+
+x
+x
+x
+0.1296
+
+x
+x
+x
+0.0332
+
+x
+x
+x
+0.0155
+
+x
+x
+x
+0.4283
+
+x
+x
+x
+0.4220
+
+x
+x
+x
+0.1038
+
+x
+x
+x
+0.0291
+
+x
+x
+x
+0.0168
+
+Note: x denotes that explanatory variable is included in the particular model. The above exercise is carried out by
+using the top 100 models screened by ARMS and ARMSH respectively for open box office.
+
+The top 5 models for each method accumulates more than 95% of the total weights.
+Moreover, we notice that the top 5 models for each method are identical with the same
+67
+
+ranking. This explains why in our prediction experiment, ARMS and ARMSH yield quite
+similar results in terms of forecast accuracy. In Subsection E.4, we conduct a Monte Carlo
+study to shed further light on the relative performance of ARMS and ARMSH under
+different scenarios related to what is the source of heteroskedasticity.
+
+E.8
+
+Performance of Recursive Partitioning Methods Using Identical Variables to Model Screening/Averaging Strategies
+
+In the empirical exercises, we restrict that each potential model contains a constant term
+and 7 (11) relatively significant parameters for open box office (movie unit sales) based
+on the OLS results presented in table A1. To examine if our findings are driven by preselection, we compare the performance of recursive partitioning methods to econometric
+strategies using identical set of selected 7 (11) parameters. Results are presented in table
+A12.
+As usual, we report the median MSFE and MAE of different strategies listed in panel A
+of table A12 for each evaluation set of different sizes n E = 10, 20, 30, 40. Panel A presents
+results for forecasting open box office and panel B demonstrates results for forecasting
+movie unit sales. To ease interpretation, in each row of table A12 we normalize the MSFEs
+and MAFEs, respectively, by the MSFE and MAFE of the HRC p .
+For both panels, table A12 demonstrates that there are very large gains in prediction
+efficiency of the recursive partitioning algorithms relative to the benchmark HRC p , although such gains are not as large as those demonstrated in table 5, in which the recursive partitioning methods use all the potential variables available. Take the MSFE results
+under n E = 10 in panel A for example, Reg.Tree shows approximately 37% increase in
+prediction efficiency in table 5 and 20% increase in table A12. The results indicate that
+the pre-selected 7 (11) variables play crucial roles in predicting the open box office (movie
+unit sales). On the other hand, the other potential variables also jointly provide significant predicting power. In summary, the gains from machine learning strategies that use
+recursive partitioning over econometric methods is not due to differences in the set of
+predictors.
+
+E.9
+
+Test for Superior Predictive Ability (SPA) of the MAB Method
+
+In this subsection, we perform the SPA test of Hansen (2005) to examine if the MAB
+method we proposed demonstrates superior predictive ability over all the other methods
+listed in this paper. We consider both the squared forecast error (SFE) and the absolute
+forecast error (AFE) as the quantities for comparing predictive ability. We set the results
+of MAB as the benchmark.
+The null hypothesis of the SPA test states that the average performance of the benchmark is as good as the best average performance across the other competing methods. The
+68
+
+Table A12: Results of Relative Prediction Efficiency between Recursive Partitioning Methods Using Selective Variables and the Benchmark Method
+nE
+
+Reg. Tree
+
+Bagging
+
+Random Forest
+RF10
+RF15
+RF20
+
+Benchmark
+
+Panel A: Open Box Office
+Mean Squared Forecast Error (MSFE)
+10
+0.8020
+0.9501
+0.8155
+0.8542
+0.9559
+20
+1.0149
+0.9287
+0.8560 0.8540
+0.8940
+30
+1.1125
+0.8611
+0.8679 0.8525
+0.9940
+40
+1.3306
+1.1571
+1.2549
+1.1343
+1.2340
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+0.8487
+0.7865
+0.7973
+0.8641
+0.7635
+0.7571 0.7359
+0.7507
+0.8487
+0.8536
+0.8670
+0.8909
+0.8539
+0.8649
+0.8837
+0.8914
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Panel B: Movie Unit Sales
+Mean Squared Forecast Error (MSFE)
+10
+0.9236
+0.9580
+0.9009 0.9151
+0.9571
+20
+1.0261
+0.9600
+0.9439 0.9053
+0.9557
+30
+1.2982
+0.9810
+1.0447
+1.0652
+1.1236
+40
+1.1213
+1.0037
+0.9886 0.9761
+0.9834
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+Mean Absolute Forecast Error (MAFE)
+0.9794
+0.9201
+0.9525
+0.9443
+0.8303
+0.8448
+0.8388
+0.8563
+0.9103
+0.9431
+0.9220
+0.9250
+0.8367
+0.8332
+0.8456
+0.8398
+
+1.0000
+1.0000
+1.0000
+1.0000
+
+10
+20
+30
+40
+
+10
+20
+30
+40
+
+0.7794
+0.8079
+0.8780
+0.8501
+
+0.8390
+0.8409
+0.9485
+0.8905
+
+Note: Bold numbers denote the strategy with the best performance in that
+row of the table. The remaining entries provide the ratio of the degree of
+the respective forecast error metric of the estimator using specific estimation
+approach denoted in the column relative to results using the HRC p method
+presented in the last column.
+
+alternative is that there is at least one competing method has better average performance
+than the benchmark. We estimate the p-values under the two forecast error quantities
+for open box office and movie unit sales. Large p-values signify the superior predictive
+ability of the MAB method over others.
+Results for different n E values are presented in table A13 and all the p-values are larger
+than 5% implying the superior predictive ability of the MAB method over others. This is
+particularly true for movie unit sales, in which the p-values are as high as 1 in all cases.
+The p-values for open box office under SFE are relatively smaller than other cases which
+coincides with the MSFE results demonstrated in table 5.
+
+E.10
+
+Model Averaging Regression Tree
+
+This subsection considers adding a model averaging flavor to a single regression tree
+(MART). We duplicate the Monte Carlo simulations in section 4.2 and the MART method
+is represented by the lines with dots in figure A2. Although MART dominates RT for
+69
+
+Table A13: SPA Test Results of the MAB Method
+nE
+10
+20
+30
+40
+
+Open Box Office
+SFE
+AFE
+0.2651 1.0000
+0.0912 0.8180
+0.1770 1.0000
+0.0938 1.0000
+
+Movie Unit Sales
+SFE
+AFE
+1.0000
+1.0000
+1.0000
+1.0000
+1.0000
+1.0000
+1.0000
+1.0000
+
+both heteroskedasticity scenarios in figures A2(a) and A2(b), it is clear in figures A2(c)
+and A2(d) that the MART method is outperformed by both MAB and MARF by a large
+margin in both scenarios. In fact under random heteroskedasticiy MART performs similarly to OLS estimation of GUM. This reinforces our claim that gains to adding model
+averaging to recursively partitioned subgroups occurs when there is systemic heterogeneity perhaps due to parameter heterogeneity. The MART method only outperforms GUM
+under parameter heterogeneity.
+Figure A2: Risk Comparison under Different Scenarios
+
+1.3
+
+(a) Random Heteroskedasticity: RT vs. MART
+Reg.Tree
+MART
+
+1.25
+
+(b) Parameter Heterogeneity: RT vs. MART
+Reg.Tree
+MART
+
+1.1
+
+1.2
+
+Relative Risk
+
+Relative Risk
+
+1.15
+
+1.15
+1.1
+1.05
+
+1.05
+1
+0.95
+
+1
+0.95
+
+0.9
+200
+
+400
+
+600
+
+800
+
+1000
+
+200
+
+Number of Observations
+
+130
+
+(c) Random Heteroskedasticity: All
+
+130
+
+MART
+MAB
+MARF
+GUM
+
+120
+110
+
+600
+
+800
+
+1000
+
+(d) Parameter Heterogeneity: All
+MART
+MAB
+MARF
+GUM
+
+120
+110
+
+100
+
+Risk
+
+Risk
+
+400
+
+Number of Observations
+
+90
+
+100
+90
+
+80
+
+80
+
+70
+
+70
+
+60
+
+60
+200
+
+400
+
+600
+
+800
+
+1000
+
+200
+
+Number of Observations
+
+400
+
+600
+
+Number of Observations
+
+70
+
+800
+
+1000
+
+

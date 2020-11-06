@@ -1,0 +1,4505 @@
+NBER WORKING PAPER SERIES
+
+WHEN INEQUALITY MATTERS FOR MACRO AND MACRO MATTERS FOR
+INEQUALITY
+SeHyoun Ahn
+Greg Kaplan
+Benjamin Moll
+Thomas Winberry
+Christian Wolf
+Working Paper 23494
+http://www.nber.org/papers/w23494
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+June 2017
+
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+At least one co-author has disclosed a financial relationship of potential relevance for this
+research. Further information is available online at http://www.nber.org/papers/w23494.ack
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2017 by SeHyoun Ahn, Greg Kaplan, Benjamin Moll, Thomas Winberry, and Christian Wolf.
+All rights reserved. Short sections of text, not to exceed two paragraphs, may be quoted without
+explicit permission provided that full credit, including © notice, is given to the source.
+
+When Inequality Matters for Macro and Macro Matters for Inequality
+SeHyoun Ahn, Greg Kaplan, Benjamin Moll, Thomas Winberry, and Christian Wolf
+NBER Working Paper No. 23494
+June 2017
+JEL No. A0,C0,E0,F0,G0,J0
+ABSTRACT
+We develop an efficient and easy-to-use computational method for solving a wide class of
+general equilibrium heterogeneous agent models with aggregate shocks, together with an open
+source suite of codes that implement our algorithms in an easy-to-use toolbox. Our method
+extends standard linearization techniques and is designed to work in cases when inequality
+matters for the dynamics of macroeconomic aggregates. We present two applications that analyze
+a two-asset incomplete markets model parameterized to match the distribution of income, wealth,
+and marginal propensities to consume. First, we show that our model is consistent with two key
+features of aggregate consumption dynamics that are difficult to match with representative agent
+models: (i) the sensitivity of aggregate consumption to predictable changes in aggregate income
+and (ii) the relative smoothness of aggregate consumption. Second, we extend the model to
+feature capital-skill complementarity and show how factor-specific productivity shocks shape
+dynamics of income and consumption inequality.
+SeHyoun Ahn
+Department of Economics
+Princeton University
+Princeton, NJ, 08544
+sehyouna@princeton.edu
+Greg Kaplan
+Department of Economics
+University of Chicago
+1126 E 59th St
+Chicago, IL 60637
+and NBER
+gkaplan@uchicago.edu
+Benjamin Moll
+Department of Economics
+Princeton University
+106 Fisher Hall
+Princeton, NJ 08544
+and NBER
+moll@princeton.edu
+
+Thomas Winberry
+Booth School of Business
+University of Chicago
+5807 South Woodlawn Avenue
+Chicago, IL 60637
+and NBER
+thomas.winberry@chicagobooth.edu
+Christian Wolf
+Department of Economics
+Princeton University
+Princeton, NJ, 08544
+ckwolf@princeton.edu
+
+1
+
+Introduction
+
+Over the last thirty years, tremendous progress has been made in developing models that
+reproduce salient features of the rich heterogeneity in income, wealth, and consumption
+behavior across households that is routinely observed in micro data. These heterogeneous
+agent models often deliver strikingly different implications of monetary and fiscal policies
+than do representative agent models, and allow us to study the distributional implications
+of these policies across households.1 In principle, this class of models can therefore incorporate the rich interaction between inequality and the macroeconomy that characterizes our
+world: on the one hand, inequality shapes macroeconomic aggregates; on the other hand,
+macroeconomic shocks and policies also affect inequality.
+Despite providing a framework for thinking about these important issues, heterogeneous
+agent models are not yet part of policy makers’ toolbox for evaluating the macroeconomic
+and distributional consequences of their proposed policies. Instead, most quantitative analyses of the macroeconomy, particularly in central banks and other policy institutions, still
+employ representative agent models. Applied macroeconomists tend to make two excuses
+for this abstraction. First, they argue that the computational difficulties involved in solving
+and analyzing heterogeneous agent models render their use intractable, especially compared
+to the ease with which they can analyze representative agent models using software packages like Dynare. Second, there is a perception among macroeconomists that models which
+incorporate realistic heterogeneity are unnecessarily complicated because they generate only
+limited additional explanatory power for aggregate phenomena. Part of this perception stems
+from the seminal work of Krusell and Smith (1998), who found that the business cycle properties of aggregates in a baseline heterogeneous agent model are virtually indistinguishable
+from those in the representative agent counterpart.2,3
+Our paper’s main message is that both of these excuses are less valid than commonly
+1
+
+For examples studying fiscal policy, see McKay and Reis (2013) and Kaplan and Violante
+(2014); for monetary policy, see McKay, Nakamura and Steinsson (2015), Auclert (2014), and
+Kaplan, Moll and Violante (2016).
+2
+More precisely, in Krusell and Smith (1998)’s baseline model, which is a heterogenous agent version of a
+standard Real Business Cycle (RBC) model with inelastic labor supply, the effects of technology shocks on
+aggregate output, consumption and investment are indistinguishable from those in the RBC model.
+3
+Lucas (2003) succinctly captures many macroeconomists’ view when he summarizes Krusell and Smith’s
+findings as follows: “For determining the behavior of aggregates, they discovered, realistically modeled
+household heterogeneity just does not matter very much. For individual behavior and welfare, of course,
+heterogeneity is everything.” Interestingly, there is a discrepancy between this perception and the results in
+Krusell and Smith (1998): they show that an extension of their baseline model with preference heterogeneity,
+thereby implying a more realistic wealth distribution, “features aggregate time series that depart significantly
+from permanent income behavior.”
+
+1
+
+thought. To this end, we make two contributions. First, we develop an efficient and easy-touse computational method for solving a wide class of general equilibrium heterogeneous agent
+macro models with aggregate shocks, thereby invalidating the first excuse. Importantly, our
+method also applies in environments that violate what Krusell and Smith (1998) have termed
+“approximate aggregation”, i.e. that macroeconomic aggregates can be well described using
+only the mean of the wealth distribution.
+Second, we use the method to analyze the time series behavior of a rich two-asset heterogeneous agent model parameterized to match the distribution of income, wealth, and
+marginal propensities to consume (MPCs) in the micro data. We show that the model is
+consistent with two features of the time-series of aggregate consumption that have proven to
+be a challenge for representative agent models: consumption responds to predictable changes
+in income but at the same time is substantially less volatile than realized income. We then
+demonstrate how a quantitatively plausible heterogeneous agent economy such as ours can
+be useful in understanding the distributional consequences of aggregate shocks, thus paving
+the way for a complete analysis of the transmission of shocks to inequality. These results
+invalidate the second excuse: not only does macro matter for inequality, but inequality also
+matters for macro. We therefore view an important part of the future of macroeconomics
+as the study of distributions – the representative-agent shortcut may both miss a large part
+of the story (the distributional implications) and get the small remaining part wrong (the
+implications for aggregates).
+In Section 2, we introduce our computational methodology, which extends standard linearization techniques, routinely used to solve representative agent models, to the heterogeneous agent context.4 For pedagogical reasons, we describe our methods in the context of
+the Krusell and Smith (1998) model, but the methods are applicable much more broadly.
+We first solve for the stationary equilibrium of the model without aggregate shocks (but with
+idiosyncratic shocks) using a global non-linear approximation. We use the finite difference
+method of Achdou et al. (2015) but, in principle, other methods can be used as well. This approximation gives a discretized representation of the model’s stationary equilibrium, which
+includes a non-degenerate distribution of agents over their individual state variables. We
+then compute a first-order Taylor expansion of the discretized model with aggregate shocks
+around the stationary equilibrium. This results in a large, but linear, system of stochastic differential equations, which we solve using standard solution techniques. Although our
+4
+
+As we discuss in more detail below, the use of linearization to solve heterogeneous agent economies
+is not new. Our method builds on the ideas of Dotsey, King and Wolman (1999), Campbell (1998), and
+Reiter (2009), and is related to Preston and Roca (2007). In contrast to these contributions, we cast our
+linearization method in continuous time. While discrete time poses no conceptual difficulty, working in
+continuous time has a number of numerical advantages that we heavily exploit.
+
+2
+
+solution method relies on linearization with respect to the economy’s aggregate state variables, it preserves important non-linearities at the micro level. In particular, the response of
+macroeconomic aggregates to aggregate shocks may depend on the distribution of households
+across idiosyncratic states because of heterogeneity in the response to the shock across the
+distribution.
+Our solution method is both faster and more accurate than existing methods. Of the
+five solution methods for the Krusell and Smith (1998) model included in the Journal of
+Economic Dynamics and Control comparison project (Den Haan (2010)), the fastest takes
+around 7 minutes to solve. With the same calibration our model takes around a quarter of a
+second to solve. The most accurate method in the comparison project has a maximum aggregate policy rule error of 0.16% (Den Haan (2010)’s preferred accuracy metric). With a standard deviation of productivity shocks that is comparable to the Den Haan, Judd and Julliard
+(2010) calibration, the maximum aggregate policy rule error using our method is 0.05%. Since
+our methodology uses a linear approximation with respect to aggregate shocks, the accuracy
+worsens as the standard deviation of shocks increases.5
+However, the most important advantage of our method is not its speed or accuracy for
+solving the Krusell and Smith (1998) model. Rather, it is the potential for solving much
+larger models in which approximate aggregation does not hold and existing methods are
+infeasible. An example is the two-asset model of Kaplan, Moll and Violante (2016), where
+the presence of three individual state variables renders the resulting linear system so large
+that it is numerically impossible to solve. In order to be able to handle larger models such
+as this, in Section 3 we develop a model-free reduction method to reduce the dimensionality
+of the system of linear stochastic differential equations that characterizes the equilibrium.
+Our method generalizes Krusell and Smith (1998)’s insight that only a small subset of the
+information contained in the cross-sectional distribution of agents across idiosyncratic states
+is required to accurately forecast the variables that agents need to know in order to solve
+their decision problems. Krusell and Smith (1998)’s procedure posits a set of moments that
+capture this information based on economic intuition, and verifies its accuracy ex-post using
+a forecast-error metric; our method instead leverages advances in engineering to allow the
+computer to identify the necessary information in a completely model-free way.6
+To make these methods as accessible as possible, and to encourage the use of heteroge5
+
+See Table 16 of Den Haan (2010). See Section 2 for a description of this error metric and how we compare
+our continuous-state, continuous-time productivity process with the two-state, discrete-time productivity
+process in Den Haan (2010)
+6
+More precisely, we apply tools from the so-called model reduction literature, in particular
+Amsallem and Farhat (2011) and Antoulas (2005). We build on Reiter (2010) who first applied these ideas
+to reduce the dimensionality of linearized heterogeneous agent models in economics.
+
+3
+
+neous agent models among researchers and policy-makers, we are publishing an open source
+suite of codes that implement our algorithms in an easy-to-use toolbox.7 Users of the codes
+provide just two inputs: (i) a function that evaluates the discretized equilibrium conditions;
+and (ii) the solution to the stationary equilibrium without aggregate shocks. Our toolbox
+then solves for the equilibrium of the corresponding economy with aggregate shocks – linearizes the model, reduces the dimensionality, solves the system of stochastic differential
+equations and produces impulse responses.8
+In Sections 5 and 6 we use our toolbox to solve a two-asset heterogeneous agent economy
+inspired by Kaplan and Violante (2014) and Kaplan, Moll and Violante (2016), in which
+households can save in liquid and illiquid assets. In equilibrium, illiquid assets earn a higher
+return than liquid assets because they are subject to a transaction cost. This economy naturally generates “wealthy hand-to-mouth” households – households who endogenously choose
+to hold all their wealth as illiquid assets, and to set their consumption equal to their disposable income. Such households have high MPCs, in line with empirical evidence presented in
+Johnson, Parker and Souleles (2006), Parker et al. (2013) and Fagereng, Holm and Natvik
+(2016). Because of the two-asset structure and the presence of the wealthy hand-to-mouth,
+the parameterized model can match key features of the joint distribution of household portfolios and MPCs - properties that one-asset models have difficulty in replicating.9 Matching
+these features of the data leads to a failure of approximate aggregation, which together with
+the model’s size, render it an ideal setting to illustrate the power of our methods. To the
+best of our knowledge, this model cannot be solved using any existing methods.
+In our first application (Section 5) we show that inequality can matter for macro aggregates. We demonstrate that the response of aggregate consumption to an aggregate productivity shock is larger and more transitory than in either the corresponding representative
+7
+The codes are initially available as a Matlab toolbox at https://github.com/gregkaplan/phact, but
+we hope to make them available in other languages in future releases. Also see the Heterogeneous Agent Resource and toolKit (HARK) by Carroll et al. (2016, available at https://github.com/econ-ark/HARK) for
+another project that shares our aim of encouraging the use of heterogeneous agent models among researchers
+and policy-makers by making computations easier and faster.
+8
+We describe our methodology in the context of incomplete markets models with heterogeneous households, but the toolbox is applicable for a much broader class of models. Essentially any high dimensional
+model in which equilibrium objects are a smooth function of aggregate states can be handled with the
+linearization methods.
+9
+One-asset heterogeneous agent models models, in the spirit of Aiyagari (1994) and Krusell and Smith
+(1998), endogenize the fraction of hand-to-mouth households with a simple borrowing constraint. Standard
+calibrations of these models which match the aggregate capital-income ratio feature far too few high-MPC
+households relative to the data. In contrast when these models are calibrated to only liquid wealth, they are
+better able to match the distribution of MPCs in the data. Such economies, however, grossly understate the
+level of aggregate capital, and so are ill-suited to general equilibrium settings. They also miss almost the
+entire wealth distribution, and so are of limited use in studying the effects of macro shocks on inequality.
+
+4
+
+agent or one-asset heterogeneous agent economies, whereas a shock to productivity growth
+is substantially smaller and more persistent in the two-asset economy than in either the corresponding representative agent or one-asset heterogeneous agent economies. Matching the
+wealth distribution, in particular the consumption-share of hand-to-mouth households, drives
+these findings – since hand-to-mouth households are limited in their ability to immediately
+increase consumption in response to higher future income growth, their impact consumption
+response is weaker, and their lagged consumption response is stronger, than the response of
+non hand-to-mouth households. An implication of these individual-level consumption dynamics is that the two-asset model outperforms the representative agent models in terms
+of its ability to match the smoothness and sensitivity of aggregate consumption.10 Jointly
+matching these two features of aggregate consumption dynamics has posed a challenge for
+many benchmark models in the literature (Campbell and Mankiw (1989),Christiano (1989),
+Ludvigson and Michaelides (2001)).
+In our second application (Section 6) we show that macro shocks can additionally matter
+for inequality, resulting in rich interactions between inequality and the macroeconomy. To
+clearly highlight how quantitatively realistic heterogeneous agent economies such as ours
+can be useful in understanding the distributional consequences of aggregate shocks, in Section 6 we relax the typical assumption in incomplete market models that the cross-sectional
+distribution of labor income is exogenous. We adopt a nested CES production function
+with capital-skill complementarity as in Krusell et al. (2000), in which high skilled workers
+are more complementary with capital in production than are low skilled workers. First,
+we show how a negative shock to the productivity of unskilled labor generates a recession that disproportionately hurts low-skilled workers, thus also leading to an increase in
+income and consumption inequality. Second, we show how a positive shock to the productivity of capital generates a boom that disproportionately benefits high-skilled workers,
+thus leading to an increase in income and consumption inequality. The response of aggregate consumption to both of these aggregate shocks differs dramatically from that in the
+representative agent counterpart, thereby providing a striking counterexample to the main
+result of Krusell and Smith (1998). These findings illustrate how different aggregate shocks
+shape the dynamics of inequality and may generate rich interactions between inequality and
+macroeconomic aggregates.
+10
+
+“Sensitivity” is a term used to describe how aggregate consumption responds more to predictable changes
+in aggregate income than implied by benchmark representative agent economies. “Smoothness” is a term
+used to describe how aggregate consumption growth is less volatile, relative to aggregate income growth,
+than implied by benchmark representative agent economies.
+
+5
+
+2
+
+Linearizing Heterogeneous Agent Models
+
+We present our computational method in two steps. First, in this section we describe our
+approach to linearizing heterogeneous agent models. Second, in Section 3 we describe our
+model-free reduction method for reducing the size of the linearized system. We separate the
+two steps because the reduction step is only necessary for large models.
+We describe our method in the context of the Krusell and Smith (1998) model. This
+model is a natural expository tool because it is well-known and substantially simpler than
+the two-asset model in Section 5. As we show in Section 5, our method is applicable to a
+broad class of models.
+Continuous Time We present our method in continuous time. While discrete time
+poses no conceptual difficulty (in fact, Campbell (1998), Dotsey, King and Wolman (1999),
+Veracierto (2002), and Reiter (2009) originally proposed this general approach in discrete
+time), working in continuous time has three key numerical advantages that we heavily exploit.
+First, it is easier to capture occasionally binding constraints and inaction in continuous
+time than in discrete time. For example, the borrowing constraint in the Krusell and Smith
+(1998) model below is absorbed into a simple boundary condition on the value function and
+therefore the first-order condition for consumption holds with equality everywhere in the
+interior of the state space. Occasionally binding constraints and inaction are often included
+in heterogeneous agent models in order to match features of micro data.
+Second, first-order conditions characterizing optimal policy functions typically have a
+simpler structure than in discrete time and can often be solved by hand.
+Third, and most importantly in practice, continuous time naturally generates sparsity
+in the matrices characterizing the model’s equilibrium conditions. Intuitively, continuously
+moving state variables like wealth only drift an infinitesimal amount in an infinitesimal
+unit of time, and therefore a typical approximation that discretizes the state space has the
+feature that households reach only states that directly neighbor the current state. Our twoasset model in Section 5 is so large that sparsity is necessary to store and manipulate these
+matrices.11
+11
+
+As Reiter (2010) notes in his discussion of a related method “For reasons of computational efficiency,
+the transition matrix [...] should be sparse. With more than 10,000 state variables, a dense [transition
+matrix] might not even fit into computer memory. Economically this means that, from any given individual
+state today (a given level of capital, for example), there is only a small set of states tomorrow that the
+
+6
+
+2.1
+
+Model Description
+
+Environment There is a continuum of households with fixed mass indexed by j ∈ [0, 1]
+who have preferences represented by the expected utility function
+E0
+
+Z
+
+∞
+−ρt
+
+e
+
+0
+
+1−θ
+cjt
+dt,
+1−θ
+
+where ρ is the rate of time preference and θ is the coefficient of relative risk aversion. At
+each instant t, a household’s idiosyncratic labor productivity is zjt ∈ {zL , zH } with zL < zH .
+Households switch between the two values for labor productivity according to a Poisson
+process with arrival rates λL and λH .12 The aggregate supply of efficiency units of labor is
+R1
+exogenous and constant and denoted by N̄ = 0 zjt dj. A household with labor productivity
+
+zjt earns labor income wt zjt . Markets are incomplete; households can only trade in productive
+capital ajt subject to the borrowing constraint ajt ≥ 0.
+
+There is a representative firm which has access to the Cobb-Douglas production function
+Yt = eZt Ktα Nt1−α ,
+where Zt is (the logarithm of) aggregate productivity, Kt is aggregate capital and Nt is
+aggregate labor. The logarithm of aggregate productivity follows the Ornstein-Uhlenbeck
+process
+dZt = −ηZt dt + σdWt ,
+
+(1)
+
+where dWt is the innovation to a standard Brownian motion, η is the rate of mean reversion,
+and σ captures the size of innovations.13
+Equilibrium In equilibrium, household decisions depend on individual state variables,
+specific to a particular household, and aggregate state variables, which are common to all
+households. The individual state variables are capital holdings a and idiosyncratic labor
+agent can reach with positive probability. The level of sparsity is usually a function of the time period.
+A model at monthly frequency will probably be sparser, and therefore easier to handle, then a model at
+annual frequency.” We take this logic a step further by working with a continuous-time model. As Reiter’s
+discussion makes clear, discrete-time models can also generate sparsity in particular cases. However, this
+will happen either in models with very short time periods (as suggested by Reiter) which are known to be
+difficult to solve because the discount factor of households is close to one; or the resulting matrices will be
+sparse but with a considerably higher bandwidth or density than in the matrices generated by a continuous
+time model. A low bandwidth is important for efficiently solving sparse linear systems.
+12
+The assumption that idiosyncratic shocks follow a Poisson process is for simplicity of exposition; the
+method can also handle diffusion or jump-diffusion shock processes.
+13
+This process is the analog of an AR(1) process in discrete time.
+
+7
+
+productivity z. The aggregate state variables are aggregate productivity Zt and the crosssectional distribution of households over their individual state variables, gt (a, z).
+For notational convenience, we denote the dependence of a given equilibrium object
+on a particular realization of the aggregate state (gt (a, z) , Zt ) with a subscript t. That
+is, we use time-dependent notation with respect to those aggregate states. In contrast,
+we use recursive notation with respect to the idiosyncratic states (a, z). This notation
+anticipates our solution method which linearizes with respect to the aggregate states but
+not the idiosyncratic states.14 An equilibrium of the model is characterized by the following
+equations:
+ρvt (a, z) = max u (c) + ∂a vt (a, z) (wt z + rt a − c)
+c
+
++ λz (vt (a, z ′ ) − vt (a, z)) +
+
+1
+Et [dvt (a, z)] ,
+dt
+
+(2)
+a≥0
+
+dgt (a, z)
+= −∂a [st (a, z) gt (a, z)] − λz gt (a, z) + λz ′ gt (a, z ′ ) ,
+dt
+dZt = −ηZt dt + σdWt ,
+
+(3)
+(4)
+
+wt = (1 − α) eZt Ktα N̄ −α ,
+
+(5)
+
+rt = αeZt Ktα−1 N̄ 1−α − δ,
+Z
+Kt = agt (a, z)dadz.
+
+(6)
+(7)
+
+and where st (a, z) = wt z + rt a − c is the optimal saving policy function corresponding to the
+household optimization problem (2).
+For detailed derivations of these equations, see Achdou et al. (2015). The household’s
+Hamilton-Jacobi-Bellman equation (2) is the continuous-time analog of the discrete time
+Bellman equation. The flow value of a household’s lifetime utility is given by the sum of
+four terms: the flow utility of consumption, the marginal value of savings, the expected
+change due to idiosyncratic productivity shocks, and the expected change due to aggregate
+productivity shocks. Due to our use of time-dependent notation with respect to aggregate
+states, Et denotes the conditional expectation with respect to aggregate states only.15 The
+Kolmogorov Forward Equation (3) describes the evolution of the distribution over time. The
+flow change in the mass of households at a given point in the state space is determined by
+their savings behavior and idiosyncratic productivity shocks. Equation (4) describes the
+14
+
+Appendix A.1 writes the equilibrium conditions using fully recursive condition and shows how to obtain
+the system here by evaluating these conditions “along the characteristic” (gt (a, z) , Zt ).
+15
+The borrowing constraint only affects (2) through the boundary condition u′ (wt zi ) ≥ ∂a vt (0, z) for
+i = L, H. We impose this condition in our numerical computations, but for the ease of exposition suppress
+the notation here.
+
+8
+
+evolution of aggregate productivity. Finally, equations (5) to (7) define prices given the
+aggregate state.
+We define a steady state as an equilibrium with constant aggregate productivity Zt = 0
+and a time-invariant distribution g(a, z). The steady state system is given by
+ρv (a, z) = max u (c) + ∂a v (a, z) (wz + ra − c) + λz (v (a, z ′ ) − v (a, z)) ,
+c
+
+0 = −∂a [s (a, z) g (a, z)] − λz g (a, z) + λz ′ g (a, z ′ ) ,
+
+2.2
+
+a≥0
+
+(8)
+(9)
+
+w = (1 − α) K α N̄ −α ,
+
+(10)
+
+r = αK α−1 N̄ 1−α − δ,
+Z
+K = ag(a, z)dadz.
+
+(11)
+(12)
+
+Linearization Procedure
+
+Our linearization procedure consists of three steps. First, we solve for the steady state of
+the model without aggregate shocks but with idiosyncratic shocks. Second, we take a firstorder Taylor expansion of the equilibrium conditions around the steady state, yielding a
+linear system of stochastic differential equations. Third, we solve the linear system using
+standard techniques. Conceptually, each of these steps is a straightforward extension of
+standard linearization techniques to the heterogeneous agent context. However, the size of
+heterogeneous agent models leads to a number of computational challenges which we address.
+Step 1: Approximate Steady State Because households face idiosyncratic uncertainty,
+the steady state value function varies over individual state variables v(a, z), and there is a
+non-degenerate stationary distribution of households g(a, z). To numerically approximate
+these functions we must represent them in a finite-dimensional way. We use a non-linear
+approximation in order to retain the rich non-linearities and heterogeneity at the individual
+level. In principle, any approximation method can be used in this step; we use the finite
+difference methods outlined in Achdou et al. (2015) because they are fast, accurate, and
+robust.
+We approximate the value function and distribution over a discretized grid of asset holdings a = (a1 = 0, a2 , ..., aI )T . Denote the value function and distribution along this discrete
+grid using the vectors v = (v (a1 , zL ) , ..., v (aI , zH ))T and g = (g (a1 , zL ) , ..., g (aI , zH ))T ;
+both v and g are of dimension N × 1 where N = 2I is the total number of grid points in the
+individual state space. We solve the steady state versions of (2) and (3) at each point on
+9
+
+this grid, approximating the partial derivatives using finite differences. Achdou et al. (2015)
+show that if the finite difference approximation is chosen correctly, the discretized steady
+state is the solution to the following system of matrix equations:
+ρv = u (v) + A (v; p) v
+0 = A (v; p)T g
+
+(13)
+
+p = F (g) .
+The first equation is the approximated steady state HJB equation (8) for each point on the
+discretized grid, expressed in our vector notation. The vector u (v) is the maximized utility
+function over the grid and the matrix multiplication A (v; p) v captures the remaining terms
+in (8). The second equation is the discretized version of the steady state Kolmogorov Forward
+equation (9). The transition matrix A (v; p) is simply the transpose of the matrix from the
+discretized HJB equation because it encodes how households move around the individual
+state space. Finally, the third equation defines the prices p = (r, w)T as a function of
+aggregate capital through the distribution g.16
+Since v and g each have N entries, the total system has 2N + 2 equations in 2N + 2
+unknowns. In simple models like this one, highly accurate solutions can be obtained with as
+little as N = 200 grid points (i.e., I = 100 asset grid points together with the two income
+states); however, in more complicated models, such as the two-asset model in Section 5, N
+can easily grow into the tens of thousands. Exploiting the sparsity of the transition matrix
+A (v; p) is necessary to even represent the steady state of such large models.
+Step 2: Linearize Equilibrium Conditions The second step of our method is to compute a first-order Taylor expansion of the model’s discretized equilibrium conditions around
+steady state. With aggregate shocks, the discretized equilibrium is characterized by
+ρvt = u (vt ) + A (vt ;pt ) vt +
+dgt
+= A (vt ;pt )T gt
+dt
+dZt = −ηZt dt + σdWt
+
+1
+Et dvt
+dt
+(14)
+
+pt = F (gt ; Zt ) .
+16
+
+The fact that prices are an explicit function of the distribution is a special feature of the
+Krusell and Smith (1998) model. In general, market clearing conditions take the form F(v, g, p) = 0. Our
+solution method also handles this more general case.
+
+10
+
+The system (14) is a non-linear system of 2N + 3 stochastic differential equations in 2N + 3
+variables (the 2N +2 variables from the steady state, plus aggregate productivity Zt ). Shocks
+to TFP Zt induce fluctuations in marginal products and therefore prices pt = F (gt ; Zt ).
+Fluctuations in prices in turn induce fluctuations in households’ decisions and therefore in
+vt and the transition matrix A (vt ; pt ).17 Fluctuations in the transition matrix then induce
+fluctuations in the distribution of households gt .
+The key insight is that this large-dimensional system of stochastic differential equations
+has exactly the same structure as more standard representative agent models which are
+normally solved by means of linearization methods. To make this point, Appendix A.2
+relates the system (14) to the real business cycle (RBC) model. The discretized value
+function points vt are jump variables, like aggregate consumption Ct in the RBC model.
+The discretized distribution gt points are endogenous state variables, like aggregate capital
+Kt in the RBC model. TFP Zt is an exogenous state variable. Finally, the wage and real
+interest rate are statically defined variables, just as in the Krusell and Smith (1998) model.
+As already anticipated, we exploit this analogy and solve the non-linear system (14)
+by linearizing it around the steady state. Since the dimension of the system is large it is
+impossible to compute derivatives by hand. We use a recently developed technique called
+automatic (or algorithmic) differentiation that is fast and accurate up to machine precision.
+It dominates finite differences in terms of accuracy and symbolic differentiation in terms of
+speed. Automatic differentiation exploits the fact that the computer represents any function
+as the composition of various elementary functions, such as addition, multiplication, or
+exponentiation, which have known derivatives. It builds the derivative of the original function
+by iteratively applying the chain rule. This allows automatic differentiation to exploit the
+sparsity of the transition matrix A (vt ;pt ) when taking derivatives, which is essential for
+numerical feasibility in large models.18
+17
+
+We have written the price vector pt as a function of the state vector to easily exposit our methodology
+in a way that directly extends to models with more general market clearing conditions (see footnote 16).
+However, this approach is not necessary in the Krusell and Smith (1998) model because we can simply
+substitute the expression for prices directly into the households’ budget constraint and hence the matrix
+A(vt ; pt ).
+18
+To the best of our knowledge, there is no existing open-source automatic differentiation package for
+Matlab which exploits sparsity. We therefore wrote our own package for the computational toolbox.
+
+11
+
+The first-order Taylor expansion of (14) can be written as:19
+
+
+db
+vt
+
+
+
+
+
+Bvv
+
+0
+
+0
+
+ 
+
+
+ db
+gt 
+ = Bgv Bgg 0
+
+Et 
+ 
+0
+−η
+dZt   0
+0 Bpg BpZ
+0
+
+ 
+bt
+v
+ 
+ bt 
+Bgp 
+
+ g
+Z  dt
+0 
+  t
+bt
+p
+−I
+Bvp
+
+(15)
+
+bt , g
+bt , Zt and p
+bt , are expressed as deviations from their steady
+The variables in the system, v
+state values, and the matrix is composed of the derivatives of the equilibrium conditions
+evaluated at steady state. Since the pricing equations are static, the fourth row of this
+matrix equation only has non-zero entries on the right hand side.20 It is convenient to
+bt = Bpg g
+bt + BpZ Zt into the remaining equations of the system,
+plug the pricing equations p
+yielding
+ 
+ 
+
+bt
+Bvv
+Bvp Bpg
+Bvp BpZ
+db
+vt
+v
+ 
+ 
+
+Et  db
+(16)
+bt  dt.
+gt  = Bgv Bgg + Bgp Bpg Bgp BpZ   g
+dZt
+
+|
+
+0
+
+0
+
+{z
+B
+
+−η
+
+}
+
+Zt
+
+Step 3: Solve Linear System The final step of our method is to solve the linear system
+of stochastic differential equations (16). Following standard practice, we perform a Schur
+decomposition of the matrix B to identify the stable and unstable roots of the system. If
+the Blanchard and Kahn (1980) condition holds, i.e., the number of stable roots equals the
+19
+
+To arrive at (15), we first rearrange (14) so that all time derivatives are on the left-hand side. We then
+take the expectation of the entire system and use the fact that the expectation of a Brownian increment is
+zero Et [dWt ] = 0 to write (14) compactly without the stochastic term as
+
+
+ 
+u (vt ; pt ) + A (vt ;pt ) vt − ρvt
+dvt
+ dgt  
+
+A (vt ;pt )T gt
+ dt.
+=
+Et 
+dZt  
+
+−ηZt
+0
+F (gt ; Zt ) − pt
+
+Finally, we linearize this system to arrive at (15). Note that this compact notation loses the information
+contained in the stochastic term dWt . However, since we linearize the system, this is without loss of generality
+– as we discuss later linearized systems feature certainty equivalence.
+20
+The special structure of the matrix B involving zeros is particular to the Krusell and Smith (1998) model
+bt and Zt is a
+and can be relaxed. In addition, the fact that we can express prices as a static function of g
+special feature of the model; more generally, the equilibrium prices are only defined implicitly by a set of
+market clearing conditions.
+
+12
+
+bt and Zt , then we can compute the solution:
+number of state variables g
+bt = Dvg g
+bt + DvZ Zt ,
+v
+
+db
+gt
+= (Bgg + Bgp Bpg + Bgv Dvg )b
+gt + (Bgp BpZ + Bgv DvZ )Zt ,
+dt
+dZt = −ηZt dt + σdWt ,
+
+(17)
+
+bt = Bpg g
+bt + BpZ Zt .
+p
+
+bt as functions of the state variables g
+bt and
+The first line of (17) sets the control variables v
+
+Zt , i.e. the matrices Dvg and DvZ characterize the optimal decision rules as a function
+of aggregate states. The second line plugs that solution into the system (16) to compute
+the evolution of the distribution. The third line is the stochastic process for the aggregate
+bt.
+productivity shock and the fourth line is the definition of prices p
+
+2.3
+
+What Does Linearization Capture and What Does It Lose?
+
+Our method uses a mix of nonlinear approximation with respect to individual state variables
+and linear approximation with respect to aggregate state variables. Concretely, from the
+first line of (17), the approximated solution for the value function is of the form
+vt (ai , zj ) = v(ai , zj ) +
+
+I X
+2
+X
+
+Dvg [i, j; k, l](gt (ak , zℓ ) − g(ak , zℓ )) + DvZ [i, j]Zt ,
+
+(18)
+
+k=1 ℓ=1
+
+where Dvg [i, j; k, l] and DvZ [i, j] denote the relevant elements of Dvg and DvZ , and v(a, z)
+and g(a, z) are the steady state value function and distribution. Given the value function
+vt (ai , zj ), optimal consumption at different points of the income and wealth distribution is
+then given by
+ct (ai , zj ) = (∂a vt (ai , zj ))−1/θ .
+
+(19)
+
+Certainty Equivalence Expressions (18) and (19) show that our solution features certainty equivalence with respect to aggregate shocks; the standard deviation σ of aggregate
+TFP Zt does not enter households’ decision rules.21 This is a generic feature of all linearization techniques.
+However, our solution does not feature certainty equivalence with respect to idiosyncratic
+shocks, because the distribution of idiosyncratic shocks enters the HJB equation (2) as well as
+21
+
+Note that σ does not enter the matrix B characterizing the linearized system (16) and therefore also
+does not enter the matrices characterizing the optimal decision rules Dvg and DvZ .
+
+13
+
+its linearized counterpart in (16) directly. A corollary of this is that our method does capture
+the effect of aggregate uncertainty to the extent that aggregate shocks affect the distribution
+of idiosyncratic shocks. For example, Bloom et al. (2014) and Bayer et al. (2015) study the
+effect of “uncertainty shocks” that result in an increase in the dispersion of idiosyncratic
+shocks and can be captured by our method.22
+Our solution method may instead be less suitable for various asset-pricing applications in
+which the direct effect of aggregate uncertainty on individual decision rules is key. In future
+work we hope to encompass such applications by extending our first-order perturbation
+method to higher orders, or by allowing the decision rules to depend non-linearly on relevant
+low-dimensional aggregate state variables (but not the high-dimensional distribution). Yet
+another strategy could be to assume that individuals are averse to ambiguity so that risk
+premia survive linearization (Ilut and Schneider, 2014).
+Distributional Dependence of Aggregates A common motivation for studying heterogeneous agent models is that the response of macroeconomic aggregates to aggregate shocks
+may depend on the distribution of idiosyncratic states. For example, different joint distributions of income and wealth g(a, z) can result in different impulse responses of aggregates to
+the same aggregate shock. Our solution method preserves such distributional dependence.
+To fix ideas, consider the impulse response of aggregate consumption Ct to a productivity
+shock Zt , starting from the steady-state distribution g(a, z). First consider the response of
+initial aggregate consumption C0 only. We compute the impact effect of the shock on the
+initial value function v0 (a, z) and initial consumption c0 (a, z) from (18) and (19). Integrate
+this over households to get aggregate consumption
+C0 =
+
+Z
+
+c0 (a, z)g(a, z)dadz ≈
+
+I X
+2
+X
+
+c0 (ai , zj )g(ai , zj )∆a∆z.
+
+i=1 j=1
+
+The impulse response of C0 depends on the initial distribution g0 (a, z) because the elasticities
+of individual consumption c0 (a, z) with respect to the aggregate shock Z0 are different for
+individuals with different levels of income and/or wealth. These individual elasticities are
+then aggregated according to the initial distribution. Therefore, the effect of the shock
+depends on the initial distribution g0 (a, z).
+To see this even more clearly, it is useful to briefly work with the continuous rather than
+22
+
+McKay (2017) studies how time-varying idiosyncratic uncertainty on aggregate consumption dynamics.
+Terry (2017) studies how well discrete-time relatives of our method capture time-variation in the dispersion
+of productivity shocks in a heterogeneous firm model.
+
+14
+
+discretized value and consumption policy functions. Analogous to (18), we can write the
+initial value function response as vb0 (a, z) = DvZ (a, z)Z0 where DvZ (a, z) are the elements
+of DvZ in (17) and where we have used the fact that the initial distribution does not move
+(i.e. b
+g0 (a, z) = 0) by virtue of g being a state variable. We can use this to show that
+the deviation of initial consumption from steady state satisfies b
+c0 (a, z) = DcZ (a, z)Z0 where
+DcZ (a, z) captures the responsiveness of consumption to the aggregate shock.23 The impulse
+response of initial aggregate consumption is then
+b0 =
+C
+
+Z
+
+DcZ (a, z)g(a, z)dadz × Z0 .
+
+(20)
+
+It depends on the steady-state distribution g(a, z) since the responsiveness of individual
+consumption to the aggregate shock DcZ (a, z) differs across (a, z).
+Size- and Sign-Dependence Another question of interest is whether our economy features size- or sign-dependence, that is, whether it responds non-linearly to aggregate shocks
+of different sizes or asymmetrically to positive and negative shocks.24 In contrast to state
+dependence, our linearization method eliminates any potential sign- and size-dependence.
+This can again be seen clearly from the impulse response of initial aggregate consumption
+in (20) which is linear in the aggregate shock Z0 . This immediately rules out size- and
+sign-dependence in the response of aggregate consumption to the aggregate shock.25
+In future work we hope to make progress on relaxing this feature of our solution method.
+Extending our first-order perturbation method to higher orders would again help in this
+regard. Another idea is to leverage the linear model solution together with parts of the
+full non-linear model to simulate the model in a way that preserves these nonlinearities. In
+particular one could use the fully nonlinear Kolmogorov Forward equation in (14) instead
+of the linearized version in (16) to solve for the path of the distribution for times t > 0:
+dgt /dt = A (vt ;pt )T gt . This procedure allows us to preserve size-dependence after the initial
+impact t > 0 because larger shocks potentially induce non-proportional movements in the
+individual state space, and therefore different distributional dynamics going forward.26
+23
+
+1
+
+In particular DcZ (a, z) = (∂a v(a, z))− θ −1 ∂a DvZ (a, z).
+To see this note that b
+c0 (a, z) =
+− 1θ −1
+− θ1 −1
+(∂a v(a, z))
+∂a vb0 (a, z) = (∂a v(a, z))
+∂a DvZ (a, z)Z0 := DcZ (a, z)Z0 .
+24
+Note that this is separate from the state dependence we just discussed which is concerned with how the
+distribution may affect the linear dynamics of the system.
+25
+gt (a, z) 6= 0.
+Note that expression (20) only holds at t = 0. At times t > 0, the distribution also moves b
+R
+R
+b
+The generalization of (20) to t > 0 is Ct ≈ b
+ct (a, z)g(a, z)dadz + c(a, z)b
+gt (a, z)dadz. Since both b
+ct (a, z)
+bt , again ruling out size- and sign-dependence.
+and gbt (a, z) will be linear in Zt , so will be C
+26
+An open question is under what conditions this procedure would be consistent with our use of linear
+approximations to solve the model. One possible scenario is as follows: even though the time path for the
+
+15
+
+Small versus Large Aggregate Shocks Another generic feature of linearization techniques is that the linearized solution is expected to be a good approximation to the true
+non-linear solution for small aggregate shocks and less so for large ones. Section 2.4 below
+documents that our approximate dynamics of the distribution is accurate for the typical
+calibration of TFP shocks in the Krusell and Smith (1998) model, but breaks down for very
+large shocks.27
+
+2.4
+
+Performance of Linearization in Krusell-Smith Model
+
+In order to compare the performance of our method to previous work, we solve the model
+under the parameterization of the JEDC comparison project Den Haan, Judd and Julliard
+(2010). A unit of time is one quarter. We set the rate of time preference ρ = 0.01 and the
+coefficient of relative risk aversion θ = 1. Capital depreciates at rate δ = 0.025 per quarter
+and the capital share is α = 0.36. We set the levels of idiosyncratic labor productivity zL
+and zH following Den Haan, Judd and Julliard (2010).
+One difference between our model and Den Haan, Judd and Julliard (2010) is that we assume aggregate productivity follows the continuous-time, continuous-state Ornstein-Uhlenbeck
+process (1) rather than the discrete-time, two-state Markov chain in Den Haan, Judd and Julliard
+(2010). To remain as consistent with Den Haan, Judd and Julliard (2010)’s calibration as
+possible, we choose the approximate quarterly persistence corr(log Zt+1 , log Zt ) = e−η ≈
+1 − η = 0.75 and the volatility of innovations σ = 0.007 to match the standard deviation
+and autocorrelation of Den Haan, Judd and Julliard (2010)’s two-state process.28
+In our approximation we set the size of the individual asset grid I = 100, ranging from
+a1 = 0 to aI = 100. Together with the two values for idiosyncratic productivity, the total
+number of grids is N = 200 and the total size of the dynamic system (16) is 400.29
+distribution might differ substantially when computed using the non-linear Kolmogorov Forward equation,
+the time path for prices may still be well approximated by the linearized solution. Hence, the error in the
+HJB equation from using the linearized prices may be small.
+27
+Related, our linearization method obviously rules out nonlinear amplification effects that result in a bimodal ergodic distribution of aggregate states as in He and Krishnamurthy (2013) and
+Brunnermeier and Sannikov (2014).
+28
+Another difference is that Den Haan, Judd and Julliard (2010) allows the process for idiosyncratic shocks
+to depend on the aggregate state. We set our idiosyncratic shock process to match the average transition
+probabilities in Den Haan, Judd and Julliard (2010). We have solved the model with time-varying transition
+probabilities and obtained quantitatively similar results. Details are available from the authors upon request.
+29
+In this calculation, we have dropped one grid point from the distribution using the restriction that the
+bt , N − 1 = 199 equations for g
+bt and
+distribution integrates to one. Hence there are N = 200 equations for v
+one equation for Zt .
+
+16
+
+Table 1: Run Time for Solving Krusell-Smith Model
+Full Model
+Steady State
+
+0.082 sec
+
+Derivatives
+
+0.021 sec
+
+Linear system
+
+0.14 sec
+
+Simulate IRF
+
+0.024 sec
+
+Total
+
+0.27 sec
+
+Notes: Time to solve Krusell-Smith model once on MacBook Pro 2016 laptop with 3.3 GHz processor and
+16 GB RAM, using Matlab R2016b and our code toolbox. “Steady state” reports time to compute steady
+state. “Derivatives” reports time to compute derivatives of discretized equilibrium conditions. “Linear
+system” reports time to solve system of linear differential equations. “Simulate IRF” reports time to
+simulate impulse responses reported in Figure 1. “Total” is the sum of all these tasks.
+
+Table 1 shows that our linearization method solves the Krusell and Smith (1998) model
+in approximately one quarter of one second. In contrast, the fastest algorithm documented
+in the comparison projection by Den Haan (2010) takes over seven minutes to solve the
+model – more than 1500 times slower than our method (see Table 2 in Den Haan (2010)).30
+In Section 3 we solve the model in approximately 0.1 seconds using our model-free reduction
+method.
+Accuracy of Linearization The key restriction that our method imposes is linearity
+bt . We evaluate the accuracy of this
+with respect to the aggregate state variables Zt and g
+approximation using the error metric suggested by Den Haan (2010). The Den Haan error
+metric compares the dynamics of the aggregate capital stock under two simulations of the
+model for T = 10, 000 periods. The first simulation computes the path of aggregate capital
+Kt from our linearized solution (17). The second simulation computes the path of aggregate
+capital Kt∗ from simulating the model using the nonlinear dynamics (3) as discussed in
+Section 2.3. We then compare the maximum log difference between the two series,
+ǫDH = 100 × max |log Kt − log Kt∗ | .
+t∈[0,T ]
+
+30
+
+As discussed by Den Haan (2010), there is one algorithm (Penal) that “is even faster, but this algorithm
+does not solve the actual [Krusell-Smith] model specified.”
+
+17
+
+Table 2: Maximum den Haan Error in %
+St. Dev Productivity Shocks (%) Maximum den Haan Error (%)
+0.01
+
+0.000
+
+0.1
+
+0.001
+
+0.7
+
+0.049
+
+1.0
+
+0.118
+
+5.0
+
+3.282
+
+Notes: Maximum percentage error in accuracy check suggested by Den Haan (2010). The error is the
+percentage difference between the time series of aggregate capital under our linearized solution and a
+nonlinear simulation of the model, as described in the main text. The bold face row denotes the calibrated
+value σ = 0.007.
+
+Den Haan originally proposed this metric to compute the accuracy of the forecasting rule
+in the Krusell and Smith (1998) algorithm; in our method, the linearized dynamics of the
+distribution gt are analogous to the forecasting rule.
+When the standard deviation of productivity shocks is 0.7%, our method gives a maximum percentage error ǫDH = 0.049%, implying that households in our model make small errors in forecasting the distribution. Our method is three times as accurate as the Krusell and Smith
+(1998) method, which is the most accurate algorithm in Den Haan (2010) and gives ǫDH =
+0.16%. Table 2 shows that, since our method is locally accurate, its accuracy decreases in the
+size of the shocks σ. However, with the size of aggregate shocks in the baseline calibration,
+it provides exceptional accuracy.
+
+3
+
+Model Reduction
+
+Solving the linear system (16) is extremely efficient because the Krusell and Smith (1998)
+model is relatively small. However, the required matrix decomposition becomes prohibitively
+expensive in larger models like the two-asset model that we will study in Section 5. We must
+therefore reduce the size of the system to solve these more general models. Furthermore,
+even in smaller models like Krusell and Smith (1998), model reduction makes likelihoodbased estimation feasible by reducing the size of the associated filtering problem.31
+31
+
+Mongey and Williams (2016) use a discrete-time relative of our method without model reduction to
+estimate a small heterogeneous firm model. Winberry (2016) provides an alternative parametric approach
+
+18
+
+In this section, we develop a model-free reduction method to reduce the size of the
+linear system while preserving accuracy. Our approach projects the high-dimensional disbt and value function v
+bt onto low-dimensional subspaces and solves the resulting
+tribution g
+
+low-dimensional system. The main challenge is reducing the distribution, which we discuss in Sections 3.1, 3.2, and 3.3. Section 3.4 describes how we reduce the value function.
+
+Section 3.5 puts the two together to solve the reduced model and describes the numerical
+implementation. Finally, Section 3.6 shows that our reduction method performs well in the
+Krusell and Smith (1998) model.
+In order to simplify notation, for the remainder of this section we use vt , gt and pt to
+denote the deviations from steady state in the value function, distribution, and prices. In
+bt , g
+bt and p
+bt . This change of notation applies
+Section 2, we had denoted these objects using v
+to Section 3 only, and we will remind the reader whenever this change could cause confusion.
+
+3.1
+
+Overview of Distribution Reduction
+
+The basic insight that we exploit is that only a small subset of the information in gt is
+necessary to accurately forecast the path of prices pt . In fact, in the discrete time version of
+this model, Krusell and Smith (1998) show that just the mean of the asset distribution gt is
+sufficient to forecast pt according to a forecast-error metric. However, the success of their
+reduction strategy relies on the economic properties of the model, so it is not obvious how
+to generalize it to other environments. We use a set of tools from the engineering literature
+known as model reduction to generalize Krusell and Smith (1998)’s insight in a model-free
+way, allowing the computer to compute the features of the distribution that are necessary
+to accurately forecast pt .32
+It is important to note that the vector pt does not need to literally consist of prices; it
+is simply the vector of objects we wish to accurately describe. In practice, we often also
+include other variables of interest, such as aggregate consumption or output, to ensure that
+the reduced model accurately describes their dynamics as well.
+for reducing the distribution and also uses it to estimate a small heterogeneous firm model.
+32
+The following material is based on lecture notes by Amsallem and Farhat (2011), which in turn build
+on a book by Antoulas (2005). Lectures 3 and 7 by Amsallem and Farhat (2011) and Chapters 1 and 11
+in Antoulas (2005) are particularly relevant. All lecture notes for Amsallem and Farhat (2011) are available
+online at https://web.stanford.edu/group/frg/course_work/CME345/ and the book by Antoulas (2005)
+is available for free at http://epubs.siam.org/doi/book/10.1137/1.9780898718713. Also see Reiter
+(2010) who applies related ideas from the model reduction literature in order to reduce the dimensionality
+of a linearized discrete-time heterogeneous agent model.
+
+19
+
+3.1.1
+
+The Distribution Reduction Problem
+
+We say that the distribution exactly reduces if there exists a kS -dimensional time-invariant
+subspace S with kS << N such that, for all distributions gt which occur in equilibrium,
+gt = γ1t x1 + γ2t x2 + ... + γkS t xkS ,
+where XS = [x1 , ..., xkS ] ∈ RN ×kS is a basis for the subspace S and γ1t , ..., γkS t are scalars. If
+we knew the time-invariant basis XS , we could decrease the dimensionality of the problem
+by tracking only the kS −dimensional vector of coefficients γt .
+Typically exact reduction as described above does not hold, so we instead must estimate
+a trial basis X = [x1 , ..., xk ] ∈ RN ×k such that the distribution approximately reduces, i.e.,
+gt ≈ γ1t x1 + γ2t x2 + ... + γkt xk ,
+or, in matrix form, gt ≈ Xγt . Denote the resulting approximation of the distribution by
+et = Xγt and the approximate prices by p
+e t = Bpg g
+et + BpZ Zt .
+g
+
+Our model maps directly into the prototypical problem considered by the model reduction
+literature if the decision rules are exogenous, i.e. the matrices Dvg and DvZ in (17) are
+exogenously given.33 This case assumes away a crucial part of the economics we are interested
+
+in studying but nevertheless has pedagogical use in connecting to the existing literature. In
+this case, using the second and fourth equations of (17) and recalling our convention in this
+section to drop hats from variables, our dynamical system becomes
+dgt
+= Cgg gt + CgZ Zt
+dt
+pt = Bpg gt + BpZ Zt ,
+
+(21)
+
+where Cgg = Bgg + Bgp Bpg + Bgv Dvg and CgZ = Bgp BpZ + Bgv DvZ . This system maps
+a low-dimensional vector of “inputs” (aggregate productivity Zt ) into a low-dimensional
+vector of “outputs” (prices pt ), intermediated through the high-dimensional distribution
+gt .34 The model reduction literature provides an off-the-shelf set of tools to replace the high33
+
+Exogenous decision rules usually relate the value function to prices, i.e. vt = Dvp pt . But prices
+pt = Bpg gt + BpZ Zt in turn depend on the distribution gt and productivity Zt . Hence so do the decision
+rules: vt = Dvg gt + DvZ Zt , with Dvg = Dvp Bpg and DvZ = Dvp DpZ .
+34
+The system (21) is called a linear time invariant (LTI) system. Zt is an input into the system and pt
+is an output. If both inputs and outputs are scalars, the system is called a single-input-single-output (SISO)
+system. If both inputs and outputs are vectors, it is called a multiple-input-multiple-output (MIMO) system.
+Instead of assuming that decision rules are exogenous, we could have assumed that there is no feedback
+
+20
+
+dimensional “intermediating variable” gt with a low-dimensional approximation γt while
+preserving the mapping from inputs to outputs.
+Of course, our economic model is more complicated than this special case because the
+distribution reduction feeds back into agents’ decisions through the endogenous value function vt . It is helpful to restate the system with endogenous vt in a form closer to that in the
+model reduction literature:
+"
+# "
+#" #
+"
+#
+Et [dvt ]
+Bvv
+Bvp Bpg
+vt
+Bvp BpZ
+=
+dt +
+Zt dt
+dgt
+Bgv Bgg + Bgp Bpg gt
+Bgp BpZ
+
+(22)
+
+pt = Bpg gt + BpZ Zt ,
+given the exogenous stochastic process for productivity (4). This system still maps the
+low-dimensional input Zt into the low-dimensional output pt . However, the intermediating
+variables are now both the distribution gt and the forward-looking decisions vt .
+3.1.2
+
+Deriving The Reduced System Given Basis X
+
+Model reduction involves two related tasks: first, given a trial basis X, we must compute the
+dynamics of the reduced system in terms of the distribution coefficients γt ; and second, we
+must choose the basis X itself. In this subsection, we complete the first step of characterizing
+the reduced system given a basis X, which is substantially easier than the second step of
+choosing the basis. Sections 3.2 and 3.3 discuss how we choose the basis.
+Mathematically, we project the distribution gt onto the subspace spanned by the basis
+X ∈ RN ×k . Write the requirement that gt ≈ Xγt as
+gt = Xγt + εt ,
+
+(23)
+
+where εt ∈ RN is a residual. The formulation (23) is a standard linear regression in which the
+distribution gt is the dependent variable, the basis vectors X are the independent variables,
+and the coefficients γt are to be estimated.
+Just as in ordinary least squares, we can estimate the projection coefficients γt by imposing the orthogonality condition XT εt = 0, giving the familiar formula
+γt = (XT X)−1 XT gt .
+
+(24)
+
+from individuals’ decisions to the distribution Bgv = 0. In that case the system (16) again becomes a
+backward-looking system of the LTI form (21), now with Cgg = Bgg + Bgp Bpg and CgZ = Bgp BpZ .
+
+21
+
+A sensible basis will be orthonormal, so that (XT X)−1 = I, further simplifying (24) to
+γt = XT gt .35 We can compute the evolution of this coefficient vector by differentiating (24)
+with respect to time and using (23) to get
+dγt
+dgt
+= XT
+= XT Bgv vt + XT (Bgg + Bgp Bpg ) (Xγt + εt ) + XT Bgp Bpg Zt
+dt
+dt
+≈ XT Bgv vt + XT (Bgg + Bgp Bpg ) Xγt + XT Bgp Bpg Zt .
+The hope is that the residuals εt are small and so the last approximation is good. Assuming
+this is the case, we have the reduced version of (22)
+"
+# "
+#" #
+"
+#
+Et [dvt ]
+Bvv
+Bvp Bpg X
+vt
+Bvp BpZ
+=
+dt +
+Zt dt,
+dγt
+XT Bgv XT (Bgg + Bgp Bpg ) X γt
+XT Bgp BpZ
+
+(25)
+
+et = Bpg Xγt + BpZ Zt .
+p
+
+Summing up, assuming we have the basis X, this projection procedure takes us from the
+system of differential equations involving the N-dimensional vector gt in (22) to a system
+involving only the k-dimensional vector γt in (25).36
+
+3.2
+
+Choosing the Basis X with Exogenous Decision Rules
+
+We now turn to choosing a good basis X. In this section we explain how to choose a basis in
+a model with exogenous decision rules, allowing us to use preexisting tools from the model
+reduction literature. In Section 3.3 we extend the strategy to the case with endogenous
+decision rules.
+Mechanically increasing the size of the basis X will improve the approximation of the
+distribution gt ; in the limit where X spans RN , we will not reduce the distribution at all. The
+goal of the model reduction literature is to provide a good approximation of the mapping
+from inputs Zt to outputs pt with as small a basis X as possible. We operationalize the
+notion of a “good approximation” by matching the impulse response function of pt to a
+35
+
+The assumption that X is orthonormal is not necessary to derive our results but makes the exposition
+transparent. Appendix A.3 derives our results using non-normalized projection matrices.
+36
+The model reduction literature also presents alternatives to our “least squares” approach to computing
+the coefficients γt . In particular, one can also estimate γt using what amounts to an instrumental variables
+strategy: one can define a second subspace spanned by the columns of some matrix Z and impose the
+orthogonality condition ZT εt = 0. This yields an alternative estimate γt = (ZT X)−1 ZT gt . Mathematically,
+this is called an oblique projection (as opposed to an orthogonal projection) of gt onto the k-dimensional
+subspace spanned by the columns X along the kernel of ZT . See Amsallem and Farhat (2011, Lecture 3)
+and Antoulas (2005) for more detail on oblique projections.
+
+22
+
+shock to Zt up to a specified order k.37
+3.2.1
+
+Choosing the Basis in a Simplified Deterministic Model
+
+To transparently motivate our choice of basis X, we begin with a simplified version of the
+system (21). In particular, we make two simplifying assumptions. First, we assume that there
+are no aggregate shocks, so that Zt = 0 for all t. This allows us to focus on deterministic
+transition paths starting from an exogenously given initial distribution g0 ; because certainty
+equivalence with respect to aggregate shocks holds in our linear setting, these transition paths
+are intimately related to impulses responses driven by shocks to Zt . Our second simplifying
+assumption is that pt = pt is a scalar. This emphasizes that the price vector we are trying to
+approximate is a low-dimensional object. Under these assumptions, we obtain the following
+simplified version of the system (21)
+dgt
+= Cgg gt
+dt
+pt = bpg gt ,
+
+(26)
+
+where bpg is a 1 × N vector. The reduced version of this system is
+dγt
+= XT Cgg Xγt
+dt
+pet = bpg Xγt ,
+
+(27)
+
+where pet denotes the reduced path of prices. Since the system (26) is linear, it has a simple
+solution. The solution of the first equation is gt = eCgg t g0 where eCgg t is a matrix exponential.
+Hence
+pt = bpg eCgg t g0 .
+
+(28)
+
+Similarly, we can derive an analogous solution for the reduced prices which satisfy (27)
+TC
+
+pet = bpg XeX
+
+gg Xt
+
+γ0
+
+(29)
+
+The goal is then to choose X such that pt in (28) is “close” to pet in (29). The key idea is
+
+to choose X such that the kth-order Taylor series approximation of pt in (28) around t = 0
+exactly matches that of pet in (29).
+37
+
+Our approach for choosing the basis X is a simplified version of what the model reduction literature
+calls “moment matching.” See Amsallem and Farhat (2011, Lecture 7) and Antoulas (2005, Chapter 11). It
+is also the continuous-time analogue of what Reiter (2010) terms “conditional expectation approach” (see
+his Section 3.2.2).
+
+23
+
+The Taylor-series approximation of the time path of prices (28) around t = 0 is38
+pt ≈ bpg
+
+
+
+1
+I + Cgg t + C2gg t2 + . . . +
+2
+
+1
+Ck−1 tk−1
+(k−1)! gg
+
+
+
+g0
+
+(30)
+
+where we have used that eCgg t ≈ I + Cgg t + 12 C2gg t2 + .... Similarly, the Taylor-series approximation of reduced prices is
+
+1
+pet ≈ bpg X I + (XT Cgg X)t + (XT Cgg X)2 t + . . . +
+2
+
+1
+(XT Cgg X)k−1tk−1
+(k−1)!
+
+
+
+γ0 .
+
+(31)
+
+We want to choose X so that the first k terms of the two Taylor series expansions are identical.
+With γ0 = XT g0 , this means that we require bpg = bpg XXT , bpg Cgg = bpg XXT Cgg XXT ,
+and so on. If γt has the same dimensionality as gt (k = N, i.e., we are not reducing the
+distribution at all), then X has to be orthogonal, i.e. XXT = I, and the conclusion trivially
+follows. But once we have proper reduction, this equality does not hold, and the problem
+of Taylor series coefficient matching becomes non-trivial. Fortunately, the model reduction
+literature gives us a systematic way for choosing X such that (30) matches (31). This
+systematic way builds upon what is known as the order-k observability matrix of the system
+(26):39
+
+
+
+
+bpg
+
+
+ bpg Cgg 
+
+
+
+
+O(bpg , Cgg ) :=  bpg C2gg  .
+
+
+..
+
+
+.
+
+
+k−1
+bpg Cgg
+
+(32)
+
+It turns out that if the basis X spans the subspace generated by the transpose of the observability matrix O(bpg , Cgg ), then the kth-order Taylor-series approximation of reduced prices
+(31) exactly matches that of unreduced prices (30), even though it only uses information
+on the reduced state vector γt . Showing this just requires a few lines of algebra, which we
+present in Appendix A.3.1.
+38
+
+In this simple deterministic model, (30) can also be derived in a simpler fashion: the Taylor-series
+(k−1) k−1
+1
+p0
+t
+. This is equivalent to (30)
+approximation around t = 0 is pt ≈ p0 + ṗ0 t + 12 p̈0 t2 + ... + (k−1)!
+2
+because the derivatives are given by ṗt = bpg ġt = bpg Cgg gt , p̈t = bpg Cgg gt and so on. This strategy no
+longer works in the full model with aggregate productivity shocks. In contrast, the derivation in terms of
+the matrix exponential eCgg t can be easily extended to the stochastic case.
+39
+Observability of a dynamical system is an important concept in control theory introduced by Rudolf
+Kalman, the inventor of the Kalman filter. It is a measure of how well a system’s states (here gt ) can be
+inferred from knowledge of its outputs (here pt ). For systems like ours observability can be directly inferred
+from the observability matrix O(bpg , Cgg ) with k = N . Note that some texts refer only to O(bpg , Cgg ) with
+k = N as “observability matrix” and to the matrix with k < N as “partial observability matrix.”
+
+24
+
+To gain some intuition why the observability matrix (32) makes an appearance, note that
+the Taylor-series approximation (30) can be written more compactly using matrix notation
+as
+h
+i
+1
+pt ≈ 1, t, 12 t2 , ..., (k−1)!
+tk−1 O(bpg , Cgg )g0
+
+Related, O(bpg , Cgg )gt is simply the vector of time derivatives of pt , i.e. ṗt , p̈t and so on (see
+
+footnote 38).
+3.2.2
+
+Choosing the Basis in The Stochastic Model
+
+The deterministic case makes clear that the observability matrix O(bpg , Cgg ) plays a key
+role in model reduction. The logic of this simple case carries through the stochastic model,
+but the full derivation is more involved and details can be found in Appendix A.3. Because
+the model is now stochastic, the correct notion of “matching the path of prices” is to match
+the impulse response function of prices.
+Proposition 1. Consider the stochastic model with exogenous decision rules (21). Let X
+be a basis which spans the subspace generated by the observability matrix O(bpg , Cgg )T with
+Cgg = Bgg +Bgpbpg +Bgv Dvg . Then the impulse response function of prices pet to an aggregate
+productivity shock Zt in the reduced model equals the impulse response function of prices pt
+in the unreduced model up to order k.
+Proof. See Appendix A.3.2
+The impulse response function in the stochastic model combines the impact effect of an
+aggregate shock Zt together with the transition back to steady state. We do not reduce
+the exogenous state variable Zt , so the reduced model captures the impact effect of a shock
+exactly. The role of the observability matrix is to approximate the transition back to steady
+state analogously to the deterministic case.
+Finally, note that in this section we have assumed pt is a scalar to emphasize that it is
+a low-dimensional object. In general pt is an ℓ × 1 vector. One can extend the argument
+above to show that the correct basis X spans the subspace generated by O(Bpg , Cgg )T for
+Cgg = Bgg +Bgp Bpg +Bgv Dvg where now Bpg is an ℓ×N matrix. Matching impulse response
+functions of pt up to order k, requires matching ℓk terms in the corresponding Taylor-series
+approximation and hence the observability matrix O(Bpg , Cgg ) is now of dimension kg × N,
+where kg = ℓk < N.
+
+25
+
+3.3
+
+Choosing the Basis X with Endogenous Decision Rules
+
+Section 3.2 shows that if decision rules Dvg are exogenously given, then choosing the basis X
+to span the subspace generated by O(Bpg , Cgg )T guarantees that the impulse response of the
+reduced price pet matches the unreduced model up to a pre-specified order k. However, when
+decision rules are endogenous, the choice of basis impacts agents’ decisions and therefore the
+evolution of the distribution. In this case, the results of Section 3.2 do not apply.
+However, the choice of basis in Section 3.2 was only dictated by the concern of efficiently
+approximating the distribution with as small a basis as possible; it is always possible to
+improve accuracy by adding additional orthogonal basis vectors. In fact, in the finite limit
+when k = N, any linearly independent basis spans all of RN so the distribution is not
+reduced at all and the reduced model is vacuously accurate. Therefore, setting the basis X
+to the subspace generated by O(Bpg , Bgg +Bgp Bpg )T , i.e. ignoring feedback from individuals’
+decisions to the distribution by effectively setting Dvg = 0, will not be efficient but may still
+be accurate. In practice, we have found in both the simple Krusell and Smith (1998) model
+and the two-asset model in Section 5 that this choice leads to accurate solutions for high
+enough order k of the observability matrix.
+In cases where choosing the basis to span the subspace O(Bpg , Bgg + Bgp Bpg )T is not
+accurate even for as high an order k as numerically feasible, we suggest an iterative procedure.
+First, we solve the reduced model (25) based on the inaccurate basis choice for the subspace
+O(Bpg , Bgg + Bgp Bpg )T . This yields decision rules Dvγ defining a mapping from the reduced
+distribution γt to the value function. We then use these to construct an approximation
+to the true decision rules Dvg (which map the full distribution to the value function), i.e.
+e vg = Dvγ XT .40 Next we choose a new basis of the subspace generated by O(Bpg , Bgg +
+D
+e vg )T and solve the model again based on the new reduction. If the
+Bgg + Bgp Bpg + Bgv D
+second reduction gives an accurate solution, we are done; if not, we continue the iteration.
+Although we have no theoretical guarantee that this iteration will converge, in practice we
+have found that it does.
+Choosing k and Internal Consistency with Endogenous Decision Rules A key
+practical step in reducing the distribution is choosing the order of the observability matrix
+k, which determines the size of the basis X. With exogenous decision rules, we showed that
+a basis of order k implies that the path of reduced prices pet matches the k-th order Taylor
+
+Recall from (24) that the projection of gt onto X defines the reduced distribution as γt = XT gt . Hence
+e vg gt where D
+e vg = Dvγ XT .
+et = Dvγ γt = Dvγ XT gt = D
+the optimal decision rule can be written as v
+40
+
+26
+
+expansion of the path of true prices pt , providing a natural metric for assessing accuracy.41
+However, this logic does not carry through with endogenous decision rules, leaving unclear
+what exactly a basis of order k captures.
+In the finite limit when k = N, any linearly independent basis spans all of RN so the
+distribution is not reduced at all and the reduced model is vacuously accurate. Hence,
+a natural procedure is to increase k until the dynamics of reduced prices converge. In
+practice, this convergence is often monotonic. However, we cannot prove convergence is
+always monotonic, still leaving open the question of what exactly the reduced model captures
+for a given order k.
+We suggest an internal consistency metric to assess the extent to which the reduced model
+satisfies the model’s equilibrium conditions. The spirit of our internal consistency check
+is similar to Krusell and Smith (1998)’s R2 forecast-error metric and Den Haan (2010)’s
+accuracy measure discussed in Section 2: if agents make decisions based on the price path
+implied by the reduced distribution, but we aggregate those decisions against the true full
+distribution, do the prices generated by the true distribution match the forecasts?
+Concretely, our internal consistency check consists of three steps. First, we compute
+et = Dvγ γt . Second, we use these
+households’ decisions based on the reduced distribution, v
+
+decisions to simulate the nonlinear dynamics of the full distribution gt∗ – not the reduced
+version γt – and its implied prices p∗t for a given path of aggregate shocks Zt
+p∗t = Bpg gt∗ + BpZ Zt
+dgt∗
+= A(e
+vt , p∗t )gt∗ ,
+dt
+
+et and price
+where A(e
+vt , p∗t ) is the nonlinear transition matrix implied by the decision rules v
+p∗t . The third step of our internal accuracy check is to assess the extent to which the dynamics
+
+of p∗t matches the dynamics implied by the reduced system pet . If the two paths are close,
+households in the reduced model could not significantly improve their forecasts by using
+additional information about the distribution. Once again, we compare the maximum log
+deviation of the two paths
+ǫ = max max |log peit − log p∗it | ,
+i
+
+t≥0
+
+where i denotes an entry in the price vector.
+41
+
+Recall that in general pt includes both prices and other observables of interest to the researcher.
+
+27
+
+Computing The Basis X Following the discussion above, we choose the basis X to span
+the subspace generated by O(Bpg , Bgg + Bgp Bpg )T . However, using O(Bpg , Bgg + Bgp Bpg )T
+directly is numerically unstable due to approximate multicollinearity; as in standard regression, high degree standard polynomials are nearly collinear due to the fact that, for large
+k, Bpg (Bgg + Bgp Bpg )k−2 ≈ Bpg (Bgg + Bgp Bpg )k−1 , leaving the necessary projection of the
+distribution onto X numerically intractable.
+We overcome this challenge by relying on a Krylov subspace method, an equivalent but
+more numerically stable class of methods.42 For any N × N matrix A and N × 1 vector b,
+the order-k Krylov subspace is
+Kk (A, b) = span
+
+
+
+b, Ab, A2b, ..., Ak−1 b .
+
+From this definition it can be seen that the subspace spanned by the columns of O(Bpg , Bgg +
+Bgp Bpg )T is simply the order-k Krylov subspace generated by (Bgg + Bgp Bpg )T and BT
+pg ,
+T
+T
+T
+T
+i.e. Kk (BT
+gg + Bgp Bpg , Bpg ). Therefore, the projection of gt on O(Bpg , Bgg + Bgp Bpg ) is
+equivalent to the projection of gt onto this Krylov subspace.
+
+There are many methods for projecting onto Krylov subspaces in the literature. One
+important feature of all these methods is that they take advantage of the sparsity of the
+underlying matrices.43 We have found that one particular method, deflated block Arnoldi
+iteration, is a robust procedure. Deflated block Arnoldi iteration has two advantages for
+our application. First, it is a stable procedure to orthogonalize the columns of the basis X
+and eliminate the approximate multicollinearity. Second, the deflation component handles
+multicollinearity that can arise even with non-deflated block Arnoldi iteration.
+
+3.4
+
+Value Function Reduction
+
+After reducing the dimensionality of the distribution gt , we are left with a system of dimension N + kg with kg << N (recall kg = ℓ × k where ℓ is the number of prices and k is
+the order of the approximation according to which the basis X is chosen). Although this is
+considerably smaller than the original system which was of size 2N, it is still large because
+it contains N equations for the value function – one for each point in the individual state
+42
+
+See Antoulas (2005, Chapter 11) and Amsallem and Farhat (2011, Lecture 7).
+Even though Bgg is sparse and Bgp and Bpg are only ℓ × N , the matrix Bgg + Bgp Bpg which actually
+enters the system (22) is N × N and not sparse (because Bgp Bpg is N × N not sparse). In the two-asset
+model in Section 5, N = 66, 000, and even storing this matrix is not feasible. Fortunately it is never actually
+necessary to compute this full matrix; instead, it is only necessary to compute Bpg (Bgg + Bgp Bpg ) which
+involves the action of Bgp Bpg on a thin ℓ × N matrix Bpg and can be computed as (Bpg Bgp )Bpg .
+43
+
+28
+
+space. In complex models, this leaves the linear system too large for matrix decomposition
+methods to be feasible.44
+We therefore also reduce the dimensionality of the distribution vt . Just like in our
+method for reducing the distribution gt , we project the (deviation from steady state of the)
+value function vt onto a lower-dimensional subspace. As before, an important question
+is how to choose the basis for this projection. We choose it by appealing to the theory
+for approximating smooth functions and approximate vt using splines. In most models,
+the value function is sufficiently smooth that a low-dimensional spline provides an accurate
+approximation. In particular, any spline approximation can be written as the projection
+vt ≈ Xv νt ,
+where Xv is a N × kv matrix defining the spline knot points and νt are the kv coefficients at those knot points.45 Given this linear projection the coefficients are given by
+−1 T
+T
+νt = (XT
+v Xv ) Xv vt = Xv vt , where we have used that we typically choose an orthonormal
+Xv so that XT
+v Xv = I.
+
+It is worth emphasizing the symmetry with our distribution reduction method, the projection (23). In order to do so we add a g-subscript to the basis in the distribution reduction
+for the remainder of the paper and write (23) as gt ≈ Xg γt . Hence from now on Xg denotes
+the basis in the reduction of the distribution gt and Xv denotes the basis in the reduction of
+the value function vt . It is also important to note that we are approximating the deviation
+of the value function from its steady state value, not the value function itself (the reader
+should recall our convention in the present section to drop hat subscripts from variables that
+are in deviation from steady state for notational simplicity).
+We have found that non-uniformly spaced quadratic splines work well for three reasons.
+First, the non-uniform spacing can be used to place more knots in regions of the state space
+with high curvature, allowing for an efficient dimensionality reduction. Second, the quadratic
+spline preserves monotonicity and concavity between knot points, which is important in computing first-order conditions. Third, and related, the local nature of splines implies that they
+avoid creating spurious oscillations at the edges of the state space (Runge’s phenomenon)
+which often occurs with global approximations like high-degree polynomials.
+44
+
+One way to overcome this challenge is to use sparse matrix methods to find just the k eigenvalues
+associated with the stable eigenvectors. This is much faster than computing the full matrix decomposition
+necessary to obtain the full set of eigenvectors. However, it is slower than the approach we pursue in this
+subsection.
+45
+Note that, in general, the number of coefficients is different from the number of knot points.
+
+29
+
+It is also important to note the difference between approximating the deviations of the
+value function from steady state using quadratic splines – which we do – versus solving for
+the steady state value using quadratic splines – which we do not do. The finite difference
+method we use to compute the steady state does not impose that the value function is
+everywhere differentiable, which is potentially important for capturing the effects of nonconvexities. However, after having computed the steady state value functions, it is typically
+the case that they have kinks at a finite number of points and are well-approximated by
+smooth functions between these points. It is then straightforward to fit quadratic splines
+between the points of non-differentiability.
+
+3.5
+
+Putting It All Together: A Numerical Toolbox
+
+Summarizing the previous sections, we have projected the distribution gt onto the subspace
+spanned by Xg and the value function vt onto the subspace spanned by Xv . Now we simply
+need to keep track of the kv × 1 coefficient vector νt for the value function and the kg × 1
+coefficient vector γt for the distribution. Because knowledge of these coefficients is sufficient
+to reconstruct the full value function and distribution, we will also sometimes refer to νt as
+the reduced value function and to γt as the reduced distribution. Our original system (16)
+is now reduced to
+
+
+dνt
+
+
+
+
+
+XT
+v Bvv Xv
+
+XT
+v Bvp Bpg Xg
+
+ 
+
+T
+Et  dγt  = XT
+g Bgv Xv Xg (Bgg + Bgp Bpg )Xg
+0
+0
+dZt
+
+ 
+νt
+ 
+T
+Xg Bgp BpZ   γt  dt.
+Zt
+−η
+
+XT
+v Bvp BpZ
+
+(33)
+
+We have provided a numerical toolbox implementing the key steps in our computational
+method at the github page associated with this project.46 Broadly, the user provides two
+files: one which solves for the steady state and another which evaluates the model’s equilibrium conditions. Our toolbox then implements the following algorithm (we here revert back
+to denoting deviations from steady state with hat superscripts):
+1. Compute the steady state values of v, g and p.
+2. Compute a first-order Taylor expansion of the equilibrium conditions (14) around
+steady state using automatic differentiation, yielding the system (16) in terms of devibt , g
+bt , p
+b t and Zt .
+ations from steady state v
+
+46
+
+Currently at: https://github.com/gregkaplan/phact.
+
+30
+
+3. If necessary, reduce the model, yielding the system (33) in terms of (νt , γt , Zt ).
+(a) Distribution reduction: compute the basis Xg = O(Bpg , Bgg + Bgp Bpg )T using
+bt on Xg to obtain the reduced distribution
+deflated Arnoldi iteration and project g
+γt .
+
+bt on Xv to
+(b) Value function reduction: compute the spline basis Xv and project v
+obtain the reduced value function νt .
+4. Solve the system (16) or, if reduced, (33).
+5. Simulate the system to compute impulse responses and time-series statistics.
+
+3.6
+
+Model Reduction in Krusell-Smith Model
+
+The Krusell and Smith (1998) is a useful environment for evaluating our model reduction
+methodology because it is possible to solve the full unreduced model as a benchmark. We
+are able to substantially reduce the size of the system: projecting the distribution on an
+observability matrix of order k = 1 and approximating the value function at 24 spline knot
+points provides an extremely accurate approximation of the model’s dynamics.47 Figure
+1 shows that the impulse responses of key aggregate variables in the reduced model are
+almost exactly identical to the full, unreduced model, despite approximating the N = 400
+dimensional dynamic system with a 30-dimensional system.48
+The fact that we can reduce the distribution with an observability matrix of order k = 1
+is consistent with Krusell and Smith (1998)’s finding of “approximate aggregation” using a
+computationally distinct procedure and accuracy measure. In fact, as Figure 2 shows, a
+k = 1 order approximation of the distribution returns precisely the mean. The top left panel
+of the figure plots the basis vector associated with k = 1, split into two 100-dimensional
+vectors corresponding to the two values for idiosyncratic productivity. It shows that indeed
+a T
+b
+the first basis vector xg,1 = [ aa ], implying that γt = xT
+g,1 gt = [ a ] gt = Kt , the (deviation
+from steady state of the) mean of the distribution. The remaining panels plot the higherorder elements of Xg , which quickly converge to constants that do not add information to
+47
+
+More precisely, we choose the observability matrix so as to forecast ℓ = 5 equilibrium objects (namely the
+wage and the interest rate, plus the three equilibrium aggregates we are most interested in: aggregate output,
+consumption, investment) to order k = 1 resulting in a reduced distribution γt of dimension kg = ℓ × k = 5,
+and we approximate the value function at 12 spline knot points in the wealth dimension resulting in a reduced
+value function νt of dimension kv = 2 × 12 = 24.
+48
+There are kv = 12×2 = 24 points for the value function, kg = k ×ℓ = 1×5 = 5 points for the distribution
+because we are tracking five elements of the pt vector, and 1 point for TFP Zt .
+
+31
+
+Figure 1: Impulse Responses to TFP Shock in Krusell-Smith Model
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0
+
+0
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+0.14
+
+2.5
+
+0.12
+
+2
+
+0.1
+
+1.5
+
+0.08
+
+1
+
+0.06
+
+0.5
+
+0.04
+
+0
+
+0.02
+
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+-0.5
+0
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to aggregate TFP. We simulate the model by discretizing the time dimension with step size
+dt = 0.1. “Full model” refers to model solved without model reduction and “reduced model” with
+reduction, using kg = 2 (forecasting ℓ = 5 objects, of which two are linearly independent, with a
+k = 1-order Taylor series approximation) and kv = 24.
+
+32
+
+Figure 2: Basis Vectors in Distribution Reduction
+Order = 1
+
+Order = 2
+
+Weight on assets
+
+0
+
+1
+
+0
+-50
+-1
+
+-100
+
+-2
+0
+
+50
+
+100
+
+0
+
+50
+
+100
+
+Order = 3
+Weight on assets
+
+1.5
+
+Low productivity
+High productivity
+
+1
+0.5
+0
+-0.5
+0
+
+50
+
+100
+
+Assets
+
+Notes: The columns of Xg = O(Bpg , Bgg + Bgp Bpg )T , here displayed for the capital stock, up to order
+k = 4. These correspond to the basis vectors in the approximated distribution gt ≈ γ1t xg,1 + ... + γ4t xg,4 .
+
+the approximation. Hence, our model-free reduction method confirms Krusell and Smith
+(1998)’s approximate aggregation result in this simple model.
+With or without dimensionality reduction, our method solves and simulates the model in
+less than 0.3 seconds. Table 3 reports the running time of using our Matlab code suite on a
+desktop PC. Although reduction is not necessary to solve this simple model, it nevertheless
+reduces running time by more than 50% and takes approximately 0.1 seconds.49 In the
+two-asset model in Section 5, model reduction is necessary to even solve the model.
+Our internal consistency check confirms the fact that the distribution reduction is accurate; the maximum log deviation is 0.065%, which is twice as small as the most accurate
+algorithm in the JEDC comparison Den Haan (2010). Recall that in the unreduced model
+that the maximum log deviation is 0.049%, capturing the error due to linearization. Hence,
+the additional error due to our model reduction is extremely small. Figure 3 plots the
+two series for a random 400-quarter period of simulation and shows that the two series are
+extremely close to each other.50
+49
+
+Recall that the fastest algorithm in the JEDC comparison Den Haan (2010) is more 7 minutes, or 3500
+times longer.
+50
+Den Haan (2010) refers to this type of figure as the “fundamental accuracy plot.”
+
+33
+
+Table 3: Run Time for Solving Krusell-Smith Model
+Full Model
+
+Reduced Model
+
+Steady State
+
+0.082 sec
+
+0.082 sec
+
+Derivatives
+
+0.021 sec
+
+0.021 sec
+
+Dim reduction
+
+×
+
+0.007 sec
+
+Linear system
+
+0.14 sec
+
+0.002 sec
+
+Simulate IRF
+
+0.024 sec
+
+0.003 sec
+
+Total
+
+0.267 sec
+
+0.116 sec
+
+Notes: Time to solve Krusell-Smith model once on MacBook Pro 2016 laptop with 3.3 GHz processor and
+16 GB RAM, using Matlab R2016b and our code toolbox. “Full model” refers to solving model without
+model reduction and “reduced model” with reduction, using kg = 1 and kv = 12. “Steady state” reports
+time to compute steady state. “Derivatives” reports time to compute derivatives of discretized equilibrium
+conditions. “Dim reduction” reports time to compute both the distribution and value function reduction.
+“Linear system” reports time to solve system of linear differential equations. “Simulate IRF” reports time
+to simulate impulse responses reported in Figure 1. “Total” is the sum of all these tasks.
+
+Figure 3: Internal Consistency Check
+36.3
+36.2
+
+Aggregate Capital
+
+36.1
+36
+35.9
+35.8
+35.7
+35.6
+35.5
+
+Nonlinearly Aggregated
+Reduced Model Forecast
+
+35.4
+35.3
+0
+
+50
+
+100
+
+150
+
+200
+
+250
+
+300
+
+350
+
+400
+
+Quarters
+
+Notes: Two series for aggregate capital that enter the internal consistency check ǫ. “Reduced model
+e t implied by the reduced linear model. “Nonlinear model forecast” computes
+forecast” computes the path K
+the path Kt∗ from updating the distribution according to the nonlinear KFE (3).
+
+34
+
+4
+
+Two-Asset Incomplete Markets Model
+
+While the Krusell and Smith (1998) model is a useful pedagogical tool for explaining our
+computational method, it does not reproduce key features of the distribution of householdlevel income, wealth, and consumption in the micro data. In this section, we apply our
+method to solve a two-asset incomplete markets model in the spirit of Kaplan and Violante
+(2014) and Kaplan, Moll and Violante (2016), which is explicitly parameterized to match
+key features of these distributions. Accurately reproducing these features leads to a failure
+of approximate aggregation which, together with the model’s size, render it an ideal setting
+to illustrate the power of our method. In Sections 5 and 6, we use the model to illustrate a
+rich interaction between inequality and macroeconomic dynamics.
+
+4.1
+
+Model
+
+The household side of the model is a simplified version of Kaplan, Moll and Violante (2016),
+so we refer to the interested reader to that paper for full details. The firm side follows the
+standard real business cycle model with aggregate productivity shocks.
+4.1.1
+
+Environment
+
+Households There is a unit mass of households indexed by j ∈ [0, 1]. At each instant
+of time, households hold liquid assets bjt , illiquid assets ajt , and have labor productivity
+zjt . Households die with an exogenous Poisson intensity ζ and upon death give birth to an
+offspring with zero wealth ajt = bjt = 0 and labor productivity drawn from its ergodic distribution. There are perfect annuity markets, implying that the wealth of deceased households
+is distributed to other households in proportion to their asset holdings. Each household has
+preferences over consumption cjt represented by the expected utility function
+E
+
+Z
+
+∞
+
+e−(ρ+ζ)t log cjt dt.
+
+0
+
+A household with labor productivity zjt earns labor income wt zjt and pays a linear
+income tax at rate τ . Each household also receives a constant lump-sum transfer from the
+government, T . Labor productivity follows a discrete state Poisson process, taking values
+from the set zjt ∈ {z1 , ..., zJ }. Households switch from state z to state z ′ with Poisson
+intensity λzz ′ .
+35
+
+The liquid asset bjt pays a rate of return rtb . Households can borrow in liquid assets up
+b
+to an exogenous limit b. The interest rate on borrowing is rt − = rtb + κ where κ > 0 is a
+wedge between borrowing and lending rates. Define rtb (bt ) to be the interest rate function
+which takes both of these cases into account.
+The illiquid asset ajt pays a rate of return rta . It is illiquid in the sense that households
+must pay a flow cost χ(djt , ajt ) to transfer assets at rate djt from the illiquid to liquid account.
+The transaction cost function is given by51
+χ(d, a) = χ0 |d| + χ1
+
+d
+a
+
+χ2
+
+a.
+
+The linear component χ0 > 0 generates inaction in households’ optimal deposit decisions.
+The convex component (χ1 > 0, χ2 > 1) ensures that deposit rates d/a are finite, so that
+households’ asset holdings never jump. Scaling the convex term by illiquid assets a ensures
+that marginal transaction costs χd (d, a) are homogenous of degree zero in the deposit rate
+d/a, which implies that the marginal cost depends on the fraction of illiquid assets transacted
+rather than the raw size of the transaction.
+The laws of motion for liquid and illiquid assets are
+dbjt
+= (1 − τ )wt zjt + T + rtb (bjt )bjt − χ(djt , ajt ) − cjt − djt
+dt
+dajt
+= rta ajt + djt .
+dt
+Firms There is a representative firm with the Cobb-Douglas production function
+1−α
+
+Yt = eZt Ktα L
+
+,
+
+where as before Zt is the logarithm of aggregate productivity, Kt is aggregate capital, and
+L is aggregate labor supply which is constant by assumption. The logarithm of aggregate
+productivity again follows the Ornstein-Uhlenbeck process
+dZt = −ηZt dt + σdWt ,
+where dWt is the innovation to a standard Brownian motion, η is the rate of mean reversion,
+and σ captures the size of innovations.
+51
+
+Because the transaction cost at a = 0 is infinite, in computations we replace the term a with max{a, a},
+where the threshold a > 0 is a small value (2% of quarterly GDP per household, which is around $500). This
+guarantees that costs remain finite even for households with a = 0.
+
+36
+
+Government There is a government which balances its budget each period. Since the
+labor tax rate τ and lump-sum transfer rate T are constant, we assume that government
+spending Gt adjusts each period to satisfy the government budget constraint
+Z
+
+1
+
+τ wt zjt dj = Gt +
+0
+
+Z
+
+1
+
+T dj.
+
+(34)
+
+0
+
+Government spending Gt is not valued by households.
+Asset Market Clearing The aggregate capital stock is the total amount of illiquid assets
+in the economy,
+Z
+1
+
+Kt =
+
+ajt dj.
+
+0
+
+The market for capital is competitive, so the return on the illiquid asset rta is simply the
+rental rate of capital.
+The supply of liquid assets is fixed exogenously at Bt = B ∗ , where B ∗ is the steady state
+demand for liquid assets given rb∗ = 0.005 (discussed below). For simplicity, we assume that
+interest payments on the liquid assets come from outside the economy.
+4.1.2
+
+Equilibrium
+
+The household-level state variables are illiquid asset holdings a, liquid asset holdings b, and
+labor productivity z. The aggregate state variables are aggregate productivity Zt and the
+cross-sectional distribution of households over their individual state gt (a, b, z). As in Section
+2, we denote an equilibrium object conditional on a particular realization of the aggregate
+state (gt (a, b, z), Zt ) with a subscript t.
+Households The household’s Hamilton-Jacobi-Bellman equation is given by
+(ρ + ζ)vt (a, b, z) = max log c + ∂b vt (a, b, z)(T + (1 − τ )wt ez + rtb (b)b − χ(d, a) − c − d)
+c,d
+
++ ∂a vt (a, b, z)(rta a + d) +
+
+X
+z′
+
+37
+
+λzz ′ (vt (a, b, z ′ ) − vt (a, b, z)) +
+
+1
+Et [dvt (a, b, z)].
+dt
+(35)
+
+The cross-sectional distribution gt (a, b, z) satisfies the Kolmogorov forward equation
+
+dgt (a, b, z)
+= − ∂a (sat (a, b, z)gt (a, b, z)) − ∂b sbt (a, b, z)gt (a, b, z)
+dt
+X
+X
+−
+λzz ′ gt (a, b, z) +
+λz ′ z gt (a, b, z),
+z′
+
+(36)
+
+z′
+
+where sat and sbt are the optimal drifts in illiquid and illiquid assets implied by (35).
+Firms The equilibrium conditions for the production side are the firm optimality conditions, together with the process for aggregate productivity:
+1−α
+
+rta = αeZt Ktα−1 L
+
+wt = (1 − α)eZt Ktα L
+
+−δ
+−α
+
+dZt = −ηZt dt + σdWt .
+Market Clearing Capital market clearing is given by
+Kt =
+
+Z
+
+agt (a, b, z)dadbdz.
+
+Liquid asset market clearing is given by
+B=
+
+Z
+
+bgt (a, b, z)dadbdz.
+
+Given these conditions, as well as the government budget constraint (34), the market for
+output clears by Walras’ law.
+
+4.2
+
+Calibration
+
+We calibrate the steady state of the model without aggregate shocks to match key features
+of the cross-sectional distributions of household income and balance sheets. Our calibration
+closely follows Kaplan, Moll and Violante (2016).
+Exogenously Set Parameters We choose the quarterly death rate ζ = 1/180 so that
+households live 45 years on average. We set the tax rate τ = 30% and set the lump sum
+transfer T to 10% of steady-state output. Given our labor productivity process, this policy
+38
+
+implies that in steady state around 35% of households receive a net transfer from the government, consistent with the Congressional Budget Office (2013). We interpret borrowing
+in the liquid asset as unsecured credit and therefore set the borrowing limit b at one times
+average quarterly labor income.
+We set the capital share in production α = 0.4 and the annual depreciation rate on
+capital δ = 0.075. With an equilibrium steady-state ratio of capital to annual output of 3.0
+(see below) this implies an annual return on illiquid assets r a of 5.8%.
+Labor Productivity Shocks Following Kaplan, Moll and Violante (2016), we assume
+that the discrete-state process for labor productivity is a discretized version of the following
+continuous-state process. The logarithm of idiosyncratic labor productivity is the sum of
+two independent components
+log zjt = z1,jt + z2,jt ,
+
+(37)
+
+where each process is follows the jump-drift process
+dzi,jt = −βi zi,jt dt + dJi,jt.
+
+(38)
+
+Jumps arrive for component i at Poisson arrival rate λi . Conditional on a jump, a new
+log-earnings state zj,it is drawn from a normal distribution with mean zero and variance σj2 .
+Between jumps, the process drifts toward zero at rate βi .52 The parameters σi govern the
+size of the shocks, the parameters βi govern the persistence of the shocks, and the parameters
+λi govern the frequency of arrival of shocks.
+Jump-drift processes of this form are closely related to discrete-time AR(1) processes,
+with the modification that shocks arrive at random, rather than deterministic, dates. Allowing for the random arrival of shocks is important for matching the leptokurtic nature
+of annual income growth rates, which we discuss below. It is also important for matching
+observed household portfolio choices of liquid and illiquid assets. If the majority of earnings
+shocks are transitory and frequent (high β high λ), households would accumulate a buffer
+stock of liquid assets to self-insure. On the other hand, if earnings shocks are persistent and
+infrequent (low β, low λ), households would prefer to save in high-return illiquid assets and
+pay the transaction costs to rebalance their portfolio when shocks occur.
+Recent work by Guvenen et al. (2015) shows that changes in annual labor income are
+extremely leptokurtic, meaning that most absolute annual income changes are small but a
+52
+
+See Kaplan, Moll and Violante (2016) for a formal description of these processes.
+
+39
+
+Table 4: Targeted Labor Income Moments
+Moment
+
+Data
+
+Model
+
+Model
+
+Estimated
+
+Discretized
+
+Variance: annual log earns
+
+0.70
+
+0.70
+
+0.76
+
+Variance: 1yr change
+
+0.23
+
+0.23
+
+0.21
+
+Variance: 5yr change
+
+0.46
+
+0.46
+
+0.46
+
+Kurtosis: 1yr change
+
+17.8
+
+16.5
+
+17.3
+
+Kurtosis: 5yr change
+
+11.6
+
+12.1
+
+10.9
+
+Frac 1yr change < 10%
+
+0.54
+
+0.56
+
+0.64
+
+Frac 1yr change < 20%
+
+0.71
+
+0.67
+
+0.70
+
+Frac 1yr change < 50%
+
+0.86
+
+0.85
+
+0.86
+
+Notes: Moments of the earning process targeted in the calibration. “Data” refers to SSAA data on male
+earnings from Guvenen et al. (2015). “Model Estimated” refers to the continuous process (37) and (38).
+“Model Discretized” refers to discrete Poisson approximation of the process used in model computation.
+
+small number are very large. We use the extent of this leptokurtosis, together with standard
+moments on the variance of log earnings and log earnings growth rates, to estimate the
+parameters of the earnings process (37) and (38). The moments we match, together with
+the fit of the estimated model, are shown in Table 4.
+The estimated parameters in Table 5 indicate that the two jump-drift processes can be
+broadly interpreted as a transitory and a persistent component. The transitory component
+(j = 1) arrives on average once every three years and has a half-life of around one quarter.
+The persistent component (j = 2) arrives on average once every 38 years and has a half-life
+of around 18 years. In the context of an infinite-horizon model the persistent component
+can be interpreted as a “career shock.” We discretize the continuous process (38) using 10
+points for the persistent component and 3 points for the transitory component. The fit of
+the discretized process for the targeted moments is shown in Table 4.
+Adjustment Costs and Discount Factor The five remaining parameters on the household side of the model – the discount rate ρ, the borrowing wedge κ, and the parameters of
+the adjustment cost function χ0 , χ1 , and χ2 – jointly determine the incentives of households
+to accumulate liquid and illiquid assets. We choose these parameters to match five moments
+40
+
+Table 5: Estimated Labor Income Process
+Parameter
+
+Component
+
+Component
+
+j=1
+
+j=2
+
+Arrival rate
+
+λj
+
+0.080
+
+0.007
+
+Mean reversion
+
+βj
+
+0.761
+
+0.009
+
+St. Deviation of innovations
+
+σj
+
+1.74
+
+1.53
+
+Notes: Parameters of the income process (37) and (38) estimated to match the moments in 4. The j = 1
+component arrives on average once every three years with half-life approximately one quarter. The j = 2
+component arrives once every 38 years with half-life approximately 18 years.
+
+Table 6: Targeted Wealth Distribution Moments
+Target
+
+Model
+
+Mean illiquid assets (multiple of annual GDP)
+
+3.000
+
+3.000
+
+Mean liquid assets (multiple of annual GDP)
+
+0.375
+
+0.375
+
+Frac. with b = 0 and a = 0
+
+0.100
+
+0.105
+
+Frac. with b = 0 and a > 0
+
+0.200
+
+0.172
+
+Frac. with b < 0
+
+0.150
+
+0.135
+
+Notes: Moments of asset distribution targeted in calibration. Data source: SCF 2004. Liquid assets are
+revolving consumer debt, deposits, corporate bonds, and government bonds. Illiquid assets are net housing,
+net durables, corporate equity, and private equity.
+
+of household balance sheets from the Survey of Consumer Finances 2004: the mean of the
+illiquid and liquid wealth distributions, the fraction of poor hand-to-mouth households (with
+b = 0 and a = 0), the fraction of wealthy hand-to-mouth households (with b = 0 and a > 0),
+and the fraction of households with negative assets. We match mean illiquid and liquid
+wealth so that the model is consistent with the aggregate wealth in the U.S. economy. We
+match the fraction of hand-to-mouth households because these households have higher than
+average marginal propensities to consume. See Kaplan, Moll and Violante (2016) for details
+on the classification of liquid and illiquid assets.
+Table 6 shows that our calibrated model matches these five moments well. The implied
+annual discount rate is 5.8% annually and the annual borrowing wedge is 8.1% annually.
+
+41
+
+Figure 4: Calibrated Adjustment Cost Function
+
+Notes: Solid line plots adjustment costs as a fraction of the amount being transacted d, χ(d, a)/d, where
+χ2
+a. Histogram displays the steady state distribution of deposit rates d/a.
+χ(d, a) = χ0 |d| + χ1 ad
+
+Figure 4 plots the calibrated adjustment cost function together with the steady state distribution of quarterly deposits. The transaction cost is less than 1% of the transaction for
+small transactions and rises to around 10% of the transaction for a quarterly transaction
+that is 2% of illiquid assets. The function has a kink at d = 0, which generates a mass of
+households who neither deposit nor withdraw.
+The calibrated distributions of liquid and illiquid wealth are displayed in Figure 5. Approximately 28% of households are hand-to-mouth (i.e. have zero liquid wealth) and another
+14% have negative liquid wealth. Roughly two-thirds of the hand-to-mouth households are
+“wealthy hand-to-mouth,” i.e. have positive illiquid assets, while the remaining one-third
+are “poor hand-to-mouth,” i.e. have zero illiquid assets. Both distributions are extremely
+skewed; 3% of households have more than $2, 000, 000 in illiquid assets and the top 10 percent
+hold 85% of total illiquid wealth in the economy.
+The presence of hand-to-mouth households generates a distribution of marginal propensities to consume in line with empirical evidence. The average quarterly MPC out of a $500
+cash windfall is 22.5%, in line with the empirical estimates of Johnson, Parker and Souleles
+(2006) and Parker et al. (2013). The average number is composed of high MPCs for hand-tomouth households (around 0.4) and small MPCs for non-hand-to-mouth households. This bimodality can be seen in Figure 6(a) and is consistent with recent work Fagereng, Holm and Natvik
+42
+
+Figure 5: Liquid and Illiquid Wealth Distribution in Steady State
+
+(a) Liquid assets b
+
+(b) Illiquid assets a
+
+Notes: Steady state distributions of liquid and illiquid wealth in the calibrated model.
+
+(2016).53 Figure 6(b) shows that only households with zero (or very negative) liquid wealth
+have substantial MPCs, even for households with positive illiquid assets.
+Aggregate Shocks As in Section 2, we set the rate of mean reversion of aggregate productivity shocks η to ensure that their quarterly autocorrelation e−η ≈ 1 − η = 0.75, and we
+set the volatility of innovations σ = 0.007.
+
+4.3
+
+Performance of Computational Method
+
+Our discretization of the individual state space (a, b, z) contains N = 60, 000 points, implying
+that the total unreduced dynamic system contains more than 120, 000 equations in 120, 000
+bt using the spline approximation discussed in
+variables.54 We reduce the value function v
+Section 3.4, bringing the size of the value function down from N = 66, 000 gridpoints to
+
+kv = 2, 145 knot points.
+
+53
+Fagereng, Holm and Natvik (2016) study consumption responses to lottery winnings using Norwegian
+administrative data. They find that MPCs are high for households with nearly zero liquid assets, even if the
+household has positive illiquid assets.
+54
+The two-asset model is so much larger than the simple Krusell and Smith (1998) model because the
+individual state space is three-dimensional. To ensure an accurate approximation of the steady state, we use
+30 grid points for labor productivity, 40 points for the illiquid asset, and 50 points for the liquid asset. The
+total number of grid points is therefore N = 30 × 40 × 50 = 60, 000.
+
+43
+
+Figure 6: Heterogeneity in MPCs Across Households
+
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0
+400
+300
+
+30
+20
+
+200
+
+10
+0
+
+100
+
+-10
+0
+
+(a) Distribution in Steady State
+
+-20
+
+(b) MPC Function
+
+Notes: Quarterly MPCs out of a $500 windfall inR
+steady state. The MPC over a periodτ is
+τ
+(a,b,z)
+M P Cτ (a, b, z) = ∂Cτ ∂b
+, where Cτ (a, b, z) = E 0 c(at , bt , zt )dt|a0 = a, b0 = b, z0 = z .
+
+bt using a k = 300
+Failure of Approximate Aggregation We reduce the distribution g
+order observability matrix to form the basis X. In the finite limit where k is equal to the
+size of the unreduced state space, the reduced model converges to the true unreduced model.
+Figure 7 shows that the impulse responses of the three prices in the model – liquid return,
+the illiquid return, and the wage – appear to have converged by k = 300.
+The fact that the distribution reduction step requires k > 1 suggests that “approximate
+aggregation” does not hold in the two-asset model.55 Figure 7 shows that using k = 2
+provides a poor approximation of the model’s dynamics, particularly for the liquid return rtb .
+This result suggests that approximating the distribution with a small number of moments
+using Krusell and Smith (1998)’s procedure would be infeasible in this model.56
+There are two main reasons why approximate aggregation does not hold in the two-asset
+model. First, recall that the reason for approximate aggregation in the Krusell and Smith
+(1998) model is that consumption functions are approximately linear in wealth, except for
+hand-to-mouth households near the borrowing constraint. However, in the one-asset model
+these households do not contribute very much to the aggregate capital stock (by virtue
+of holding very little capital) and hence their consumption dynamics are not important
+55
+
+Recall that k = 1 does provide an accurate approximation in the simple Krusell and Smith (1998) model.
+As discussed in Section 3.3, with endogenous decision rules our method does not necessarily provide
+the most efficient choice of basis X. It is possible that by following the iterative procedure outlined in that
+section, one could obtain an accurate reduced model with k < 300.
+56
+
+44
+
+Figure 7: Impulse Responses for Different Orders of Distribution Reduction
+2
+
+5.94
+
+0.7
+0.6
+
+5.92
+
+0.5
+1.95
+
+5.9
+0.4
+5.88
+0.3
+
+1.9
+
+5.86
+0.2
+5.84
+
+1.85
+
+0.1
+
+5.82
+5
+
+10
+
+15
+
+20
+
+25
+
+0
+5
+
+10
+
+15
+
+20
+
+25
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to aggregate TFP. “k = 2” corresponds to distribution reduction based on an order 2
+observability matrix. “k = 300” corresponds to distribution reduction based on an order 300 observability
+matrix. ‘k = 325” corresponds to distribution reduction based on an order 325 observability matrix. We
+simulate the model by discretizing the time dimension with step size dt = 0.1.
+
+for the dynamics of aggregate capital. In contrast, in the two-asset model, there are a
+substantial number of wealthy hand-to-mouth households who have both highly non-linear
+consumption functions (by virtue of holding very little liquid wealth) and constitute a nontrivial contribution to the dynamics of aggregate capital (by virtue of holding substantial
+quantities of illiquid wealth).
+Consistent with this intuition, the basis X of our distribution reduction places weight
+on regions of the state space which have a significant fraction of hand-to-mouth households.
+Figure 8 plots the first four column vectors of the observability matrix associated with
+forecasting the aggregate capital stock Kt .57 Each panel plots a given column of the matrix
+over liquid and illiquid assets, conditional on the median realization of labor productivity
+z. The first column captures exactly the mean of the illiquid asset distribution, which
+corresponds to aggregate capital. The next three columns focus on regions of the state space
+in which households have low liquid assets – and so are hand-to-mouth – as well as high
+illiquid assets – and so contribute substantially to aggregates capital.
+The second reason why approximate aggregation breaks down in the two-asset model is
+that households must track the liquid return rtb in addition to the aggregate capital stock
+57
+
+Recall that our basis X spans the subspace generated by the columns of the observability matrix.
+
+45
+
+Figure 8: Basis Vectors for Approximating Distribution in Two-Asset Model
+
+50
+
+2000
+
+0
+0
+-50
+-100
+40
+
+-2000
+40
+20
+0
+-20
+
+0
+
+500
+
+1000
+
+1500
+
+2000
+
+20
+0
+
+10 4
+
+10 9
+
+20
+
+1
+
+-20
+
+0
+
+-20
+
+0
+
+500
+
+1000
+
+1500
+
+2000
+
+0
+10
+-1
+0
+40
+
+-2
+40
+20
+0
+-20
+
+0
+
+500
+
+1000
+
+1500
+
+2000
+
+20
+0
+
+500
+
+1000
+
+1500
+
+2000
+
+Notes: columns of the observability matrix O(Bpg , Bgg + Bgp Bpg )T corresponding to aggregate capital Kt .
+The four panels plot the first four columns of the observability matrix over liquid and illiquid assets
+conditional on the median realization of labor productivity z.
+
+Kt .58 The dynamics of rtb feature stronger distributional dependence than the dynamics of
+Kt because the liquid asset is in fixed supply B ∗ ; an increase in savings in one region of the
+state space must be met with a decrease in savings elsewhere in the state space. Indeed,
+Figure 7 shows that the liquid return is the most poorly approximated variable in a k = 2
+order approximation.59
+Run Time Our numerical toolbox solves and simulates the two-asset model in 4 mins, 46
+secs. Table 7 decomposes the total runtime into various tasks and show that over two-thirds
+of the time is spent in the model reduction step. In order to illustrate how the method scales
+with k, Table 7 also reports the runtime for a smaller k = 150 order observability matrix.
+With this smaller approximation of the distribution, the total runtime falls to 2 mins, 28
+secs.
+58
+
+Note that the aggregate capital stock is sufficient to compute the wage wt and illiquid return rta .
+We have also computed a version of the model in which we drop the liquid asset market clearing condition,
+and instead assume that the liquid return rtb is fixed and that the bond supply adjusts perfectly elastically to
+the meet the demand. In this version of the model, a k = 100 order observability matrix appears sufficient
+to reduce the distribution.
+59
+
+46
+
+Table 7: Run Time for Solving Two-Asset Model
+k = 300
+
+k = 150
+
+Steady State
+
+56.64 sec
+
+56.64 sec
+
+Derivatives
+
+13.97 sec
+
+13.97 sec
+
+Dim reduction
+
+199.71 sec
+
+67.48 sec
+
+Linear system
+
+12.89 sec
+
+7.70 sec
+
+Simulate IRF
+
+3.03 sec
+
+2.31 sec
+
+Total
+
+286.24 sec
+
+148.10 sec
+
+Notes: Time to solve the two-asset model on a MacBook Pro 2016 laptop with 3.3 GHz processor and 16
+GB RAM, using Matlab R2016b and our code toolbox. k refers to order of the observability matrix used to
+compute basis X. “Steady state” reports time to compute steady state. “Derivatives” reports time to
+compute derivatives of discretized equilibrium conditions. “Dim reduction” reports time to compute both
+the distribution and value function reduction. “Linear system” reports time to solve system of linear
+differential equations. “Simulate IRF” reports time to simulate impulse responses reported. “Total” is the
+sum of all these tasks.
+
+4.4
+
+Impulse Response to TFP Shock Zt
+
+Figure 9 plots the impulse responses of aggregate output and consumption to a positive
+aggregate productivity shock Zt . Higher productivity directly increases output Yt through
+the production function. It also increases the return on capital rta , which encourages capital
+accumulation and further increases output over time. The marginal product of labor also
+rises, increasing the real wage wt . Both of these price increases lead to an increase in
+household income.
+The increase in household income has differential effects on the consumption of hand-tomouth and non-hand-to-mouth households. Non-hand-to-mouth households respond primarily to the change in their permanent income. The change in permanent income is relatively
+small (because the productivity shock Zt is transitory) but is persistent (because of the
+dynamics of the capital stock). In contrast, hand-to-mouth households respond primarily
+to the change in their current income. The change in current income is larger than the
+change in permanent income and is less persistent. Consistent with this logic, Figure 10
+shows that the consumption of the hand-to-mouth households responds twice as much as
+average consumption upon impact, but dies out more quickly. Due to the presence of these
+hand-to-mouth households, the impulse response of aggregate consumption to a productivity
+shock is very different in the two-asset model compare with a representative agent model.
+47
+
+Figure 9: Aggregate Impulse Responses to Aggregate Productivity Shock Zt
+0.7
+
+0.7
+
+0.6
+
+0.6
+
+0.5
+
+0.5
+
+0.4
+
+0.4
+
+0.3
+
+0.3
+
+0.2
+
+0.2
+
+0.1
+
+0.1
+
+0.25
+
+0.2
+
+0.15
+
+0.1
+
+0.05
+
+0
+
+0
+10
+
+20
+
+30
+
+40
+
+50
+
+0
+10
+
+20
+
+30
+
+40
+
+50
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to aggregate TFP. “Two-asset” refers to the two-asset model developed in Section 4.1.
+“Representative agent” refers to the representative agent version of the model, in which the households are
+replaced by a representative household who can only save in aggregate capital; see Appendix A.5 for
+details. We simulate the model by discretizing the time dimension with step size dt = 0.1 using an implicit
+updating scheme.
+
+Figure 10: Consumption Response by Hand-to-Mouth Status
+0.4
+
+0.35
+
+0.3
+
+0.25
+
+0.2
+
+0.15
+
+0.1
+
+0.05
+
+0
+5
+
+10
+
+15
+
+20
+
+25
+
+30
+
+35
+
+40
+
+45
+
+50
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to aggregate TFP. “Wealthy hand-to-mouth” refers to households with b = 0 and a > 0. “Poor
+hand-to-mouth” refer to households with b = 0 and a = 0. “Average consumption” is aggregate
+consumption. “Non hand to mouth” is computed as the residual. We simulate the model by discretizing
+the time dimension with step size dt = 0.1 using an implicit updating scheme.
+
+48
+
+5
+
+Aggregate Consumption Dynamics in Two-Asset Model
+
+In this section, we use the two-asset model developed in Section 4 to illustrate how inequality
+shapes the dynamics of macroeconomic aggregates. Specifically, we show that although the
+model is parameterized to match household-level data, it also matches key features of the
+joint dynamics of aggregate consumption and income.
+
+5.1
+
+Model With Growth Rate Shocks
+
+Following a long line of work in the consumption dynamics literature, such as Campbell and Mankiw
+(1989), we compare the predictions of our model to data on aggregate consumption and aggregate income growth. However, the Ornstein-Uhlenbeck process for aggregate productivity
+we have been working with so far implies that aggregate income growth is negatively autocorrelated, which is at odds with the data. Therefore, we modify the shock process so that
+aggregate productivity growth, rather than the level, follows an Ornstein-Uhlenbeck process.
+In addition, we assume that the liquid interest rate rtb is fixed at its steady state value
+rb∗ = 0.005 and that the liquid asset supply adjusts perfectly elastically at this price, as in a
+small open econonomy. This simplifying assumption ensures that the only time-varying interest rate is the return on capital, making the comparison with representative agent models
+more transparent. Both of these modifications apply to this section only.
+Production and Aggregate Shock Process The production function with growth rate
+shocks is
+1−α
+,
+Yt = Ktα Qt L
+where Qt is aggregate productivity. Aggregate productivity growth follows the process
+d log Qt = Zt dt
+dZt = −ηZt dt + σdWt ,
+where dWt is an innovation to a standard Brownian motion. Hence, aggregate productivity
+growth is subject to the Ornstein-Uhlenbeck process Zt .
+Given the other calibrated parameters from Section 4, we choose the parameters of the
+TFP growth process Zt so that equilibrium dynamics of aggregate income growth ∆ log Yt
+match two key features of the data: the standard deviation of income growth σ (∆ log Yt )
+
+49
+
+Table 8: Targeted Moments of Real GDP Growth
+Data Model
+σ (∆ log Yt )
+
+0.89
+
+0.89
+
+Corr(∆ log Yt , ∆ log Yt−2 )
+
+0.21
+
+0.22
+
+Notes: targeted moments of per capita real GDP per capita growth, 1953q1 - 2016q2.
+
+and the second-order autocorrelation of income growth Corr(∆ log Yt , ∆ log Yt−2 ).60 These
+moments in the data and the model’s fit are reported in Table 8.
+Model Computation Many equilibrium objects in the model are nonstationary due to the
+nonstationarity of aggregate productivity Qt . We cannot directly apply our computational
+methodology in this setting, which relies on approximating the model’s dynamics around a
+stationary equilibrium. Therefore, we detrend the model to express the equilibrium in terms
+of stationary objects; for details, see Appendix A.4.
+
+5.2
+
+Comparison to the Data
+
+We focus our analysis on two sets of facts about the joint dynamics of aggregate consumption
+and income. The first set of facts, known as sensitivity, describe how aggregate consumption
+growth co-moves with predictable changes in aggregate income growth. The second set of
+facts, known as smoothness, refer to the extent of the time-series variation in aggregate
+consumption growth.
+Sensitivity We present several measures of sensitivity in the top panel of Table 9. These
+measures all compute how predictable changes in income pass through to changes in consumption, but differ in two key respects. The first two measures of sensitivity are coefficients
+from ordinary least squares regressions, whereas the second two measures are coefficients
+from instrumental variables regressions. The second and fourth measures include real interest rates in the conditioning set, whereas the first and third measures do not. We present
+this range of measures to represent the range of approaches in the existing literature.
+60
+We match the second-order autocorrelation, rather than the first, due to potential time aggregation
+issues, as discussed in Campbell and Mankiw (1989).
+
+50
+
+We measure aggregate income growth as the quarterly change in log real GDP per capita
+during the period 1953q1 to 2016q2. We measure aggregate consumption growth as the
+quarterly change in log real nondurables plus durable services consumption per capita during
+the same period. Finally, we measure the real interest rate as the real return on 90-day
+Treasury bills, adjusted for realized inflation.
+In the data, all measures of sensitivity indicate that a substantial portion of aggregate
+income growth passes through to consumption growth. Consistent with the arguments in
+Campbell and Mankiw (1989) and Ludvigson and Michaelides (2001), among others, the
+representative agent model generates too little sensitivity once we condition on the real
+interest rate.61 In contrast, the two-asset heterogeneous agent model generates substantial
+sensitivity of consumption growth to predictable changes in income growth (if anything, it
+overstates sensitivity relative to the data).
+Sensitivity in the two-asset model is driven by the presence of hand-to-mouth consumers
+who do not smooth their consumption over time. In the representative agent model, consumption jumps upon impact of the growth shock Zt because permanent income immediately jumps to a new level. However, in the two-asset model, consumption of hand-to-mouth
+households jumps less upon impact – because the change in current income is smaller than
+the change in permanent income – but is more persistent. The persistence generates autocorrelation in consumption which allows the model to match the fact that consumption
+responds even to predictable changes in income.
+Table 9 also reports the predictions of a simple spender-saver model in the spirit of
+Campbell and Mankiw (1989). It extends the representative agent model to include an
+exogenous fraction λ of households who are permanently hand-to-mouth. We calibrate the
+fraction of spenders λ to match the Campbell-Mankiw IV measure of consumption sensitivity.
+This reverse engineered model is also consistent with the degree of sensitivity in the data
+by construction. In contrast, our two-asset model has only been parameterized to match
+micro-level behavior, not aggregate sensitivity.
+Smoothness We present two measures of smoothness in the bottom panel of Table 9.
+The first is the standard deviation of consumption growth relative to the standard deviation of income growth. In the data, consumption growth is about half as volatile as income
+growth. The second measure of smoothness is the second-order autocorrelation of consumption growth.
+61
+
+In the special case of the representative agent model in which the interest rate is constant and income
+growth is a random walk, these sensitivity measures are exactly zero. The representative agent version of
+our model does not satisfy this special case, generating nonzero measures of sensitivity.
+
+51
+
+Table 9: Joint Dynamics of Consumption and Income
+Sensitivity to Income
+Data
+
+∆ log Ct = β0 + β1 ∆ log Yt−2 + εt
+
+0.12
+
+Models
+Two-Asset
+
+Rep Agent
+
+Sp-Sa
+
+0.22
+
+0.12
+
+0.16
+
+0.18
+
+0.04
+
+0.11
+
+1.04
+
+0.54
+
+0.78
+
+0.98
+
+0.004
+
+0.50
+
+(0.03)
+∆ log Ct = β0 + β1 ∆ log Yt−2 + β2 rt−2 + εt
+
+0.12
+(0.03)
+
+IV(∆ log Ct on ∆ log Yt | ∆ log Yt−2 )
+
+0.55
+(0.15)
+
+Campbell-Mankiw IV
+
+0.49
+(0.15)
+
+(calibrated)
+
+Smoothness
+Data
+
+Models
+Two-Asset
+
+Rep Agent
+
+Sp-Sa
+
+σ(∆ log Ct )
+σ(∆ log Yt )
+
+0.52
+
+0.80
+
+0.80
+
+0.70
+
+Corr(∆ log Ct , ∆ log Ct−2 )
+
+0.33
+
+0.25
+
+0.16
+
+0.27
+
+Notes: measures of sensitivity of aggregate consumption to income and the smoothness of aggregate
+consumption. In the data, aggregate consumption Ct is measured as the sum of real nondurable plus
+durable services, per capita, and aggregate income Yt is real GDP per capita. Both series are quarterly
+1953q1 - 2016q2. “Rep agent” refers to the representative agent model described in Appendix A.5.
+“Two-asset” refers to the full two-asset model. “Sp-Sa” refers to the spender-saver model described in
+Appendix A.5. “∆ log Ct = β0 + β1 ∆ log Yt−2 + εt ” refers to β1 in the regression.
+“∆ log Ct = β0 + β1 ∆ log Yt−2 + β2 rt−2 + εt ” refers to the coefficient β1 in the regression.
+“IV(∆ log Ct on ∆ log Yt |∆ log Yt−2 )” refers to β1 in the instrumental variables regression
+∆ log Ct = β0 + β1 ∆ log Yt + εt , using ∆ log Yt−2 to instrument for ∆ log Yt . “Campbell-Mankiw IV” refers
+to the β1 in the instrumental variables regression ∆ log Ct = β0 + β1 ∆ log Yt + β2 rt + εt , using ∆ log Yt−2 ,
+∆ log Yt−3 , ∆ log Yt−4 , rt−2 , rt−3 , and rt−4 to instrument for the right hand side. We time-aggregate our
+continuous time model to the quarterly frequency by computing the simple average within a quarter.
+
+52
+
+The two-asset heterogeneous agent model, the representative agent model, and the spendersaver model all over-predict the volatility of consumption growth relative to income growth.
+Consistent with the degree of sensitivity discussed above, both the two-asset model and the
+spender-saver model generate significant autocorrelation of consumption growth.
+
+6
+
+Business Cycle Dynamics of Inequality
+
+The previous section explored how inequality shapes the joint dynamics of aggregate consumption and income. In this section, we briefly explore how aggregate shocks themselves
+shape the dynamics of inequality across households. However, with the Cobb-Douglas production function we have used so far, the distribution of labor income is given exogenously
+by the distribution of labor productivity shocks z. Therefore, we first extend the production
+side of the economy to include high- and low-skill workers which are not perfect substitutes
+with each other or with capital. We then explore the effects of shock to the productivity
+of unskilled labor, and a shock to the productivity of capital. By construction, this shock
+has differential effects across workers, generating substantial movements in income and consumption inequality. In addition, the resulting dynamics of aggregate variables are different
+from the representative agent counterpart of the model.
+
+6.1
+
+Model with Imperfect Substitutability Among Workers
+
+Following Krusell et al. (2000), we modify the production function to feature two types of
+workers and capital-skill complementarity.
+Production Structure The production function is
+1
+h
+σi
+ρ ρ σ
+σ
+K
+ρ
+U
+Yt = µ(Zt Ut ) + (1 − µ) λ(Zt Kt ) + (1 − λ)St
+,
+
+(39)
+
+where ZtU is an unskilled labor-specific productivity shock, ZtK is capital-specific productivity
+shock, Ut is the amount of unskilled labor, and St is the amount of skilled labor (all described
+in more detail below). The elasticity of substitution between unskilled labor and capital,
+1
+. The elasticity
+which is equal to the elasticity between unskilled and skilled labor, is 1−σ
+1
+of substitution between skilled labor and capital is 1−ρ . If, as in our calibration, σ > ρ,
+
+high-skill workers are complementary with capital.62
+62
+
+Krusell et al. (2000) assume that only equipment capital features capital-skill complementarity while
+structures capital has unitary elasticity of substitution. We omit structures capital for simplicity.
+
+53
+
+We posit a simple mapping from labor productivity z into skill. Recall that we modeled
+the logarithm of labor productivity as the sum of two components, log z = z1 + z2 . We
+estimated that z1 is a transitory component and z2 is a persistent component. With our
+estimated parameters, shocks to the persistent component arrive on average once every 38
+years. Hence, a natural interpretation of the persistent component in an infinite-horizon
+model is a “career shock.” We therefore map workers into skills based on the realization of
+the persistent component – we label the top 50% of workers as high-skill and the bottom
+50% as low-skill.
+We assume that both aggregate productivity shocks follows Ornstein-Uhlenbeck process
+d log ZtU = −ηU log ZtU dt + σU dWtU
+d log ZtK = −ηK log ZtK dt + σK dWtK .
+where ηU and ηK control the rate of mean reversion and σU and σK control the size of
+innovations.
+Calibration We set the elasticities of substitution in production to the estimated values
+in Krusell et al. (2000): σ = 0.401 and ρ = −.495. Since σ > ρ, the production function
+features capital-skill complementarity, i.e., capital-specific productivity shocks disproportionately favor skilled labor.
+Given the values for these elasticities, and all the other calibrated parameters from Section
+4.2, we choose the factor shares µ and λ to match two steady state targets. First, we target
+a steady state labor share of 60%, as in Section 4.2. Second, we target a steady state
+skill premium – the ratio of the average skilled worker’s earnings to the average unskilled
+workers’ earnings – of 1.97, which is the value of the college skill premium reported in
+Acemoglu and Autor (2011). This yields µ = 0.52 and λ = 0.86.
+We set the process for the unskilled-labor productivity shock to be equivalent to our
+factor-neutral productivity shock process in the case of Cobb-Douglas production. Therefore,
+as in Section 4.2, we set the rate of mean reversion to ηU = 0.25. We set the standard
+deviation of innovations σU so that they generate the same impact effect on output as the
+factor-neutral shocks in Section 4.2.
+
+54
+
+Figure 11: Impulse Responses to Unskilled Labor-Specific Productivity Shock
+0.5
+
+0
+-0.5
+
+0
+
+-1
+-0.5
+-1.5
+-1
+
+-2
+-2.5
+
+-1.5
+10
+
+20
+
+30
+
+40
+
+50
+
+0.2
+
+1
+
+0.15
+
+0.8
+
+0.1
+
+0.6
+
+0.05
+
+0.4
+
+0
+
+0.2
+
+-0.05
+
+10
+
+20
+
+30
+
+40
+
+50
+
+10
+
+20
+
+30
+
+40
+
+50
+
+0
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to unskilled labor-specific productivity. “Unskilled wage” is the wage rate per efficiency unit of
+labor for unskilled workers. “Skilled wage” is the wage rate per efficiency unit of labor for skilled workers.
+“Log income dispersion” is the cross-sectional standard deviation of log pre-tax labor income across
+households. “90-10 Ratio” is the ratio of the 90th percentile of pre-tax labor income to the 10th percentile.
+We simulate the model by discretizing the time dimension with step size dt = 0.1 using an implicit
+updating scheme.
+
+55
+
+Figure 12: Impulse Responses to Unskilled Labor-Specific Productivity Shock
+0.12
+
+0.05
+0
+
+0.1
+-0.05
+0.08
+
+-0.1
+-0.15
+
+0.06
+-0.2
+0.04
+
+-0.25
+-0.3
+
+0.02
+-0.35
+-0.4
+
+0
+10
+
+20
+
+30
+
+40
+
+50
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous negative unit standard deviation size shock (Dirac delta
+function) to unskilled labor-specific productivity. “Unskilled” is the average consumption of unskilled
+workers. “Skilled” is the average consumption of skilled workers. “Average” is aggregate consumption.
+“Log consumption dispersion” is the cross-sectional standard deviation of log consumption across
+households. We simulate the model by discretizing the time dimension with step size dt = 0.1 using an
+implicit updating scheme.
+
+6.2
+
+Inequality Dynamics Following Unskilled-Labor Specific Shock
+
+Figure 11 plots the impulse responses of key features of the distribution of income across
+households. The wage rate of unskilled workers falls fives times more than the wage rate
+of skilled workers, due to the fact that the shock directly affects the marginal product of
+unskilled workers and these workers are not perfect substitutes with skilled workers. Hence,
+the dispersion of pre-tax labor income across households increases by nearly 0.2% and the
+90-10 percentile ratio increases by nearly 1%.63
+Figure 12 plots the impulse responses of features of the distribution of consumption across
+workers. The average consumption of low-skill workers falls more than twice the amount of
+high-skill workers. This differential effect reflects the combination of two forces. First,
+the shock decreases unskilled workers’ wages more than skilled workers, so the permanent
+income of unskilled workers is lower. Second, unskilled workers are over 30% more likely to
+be hand-to-mouth, making them more sensitive to changes in income.
+
+56
+
+Figure 13: Impulse Responses to Unskilled Labor-Specific Productivity Shock
+0.1
+
+0.05
+
+0
+
+0
+
+-0.1
+
+-0.05
+
+-0.2
+
+-0.1
+
+-0.3
+
+-0.15
+
+-0.4
+
+-0.2
+
+-0.5
+
+-0.25
+10
+
+20
+
+30
+
+40
+
+50
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous negative unit standard deviation size shock (Dirac delta
+function) to unskilled labor-specific productivity. “Two-asset” refers to the two-asset model. “Rep agent”
+refers to the representative agent version of the model, described in Appendix A.5. We simulate the model
+by discretizing the time dimension with step size dt = 0.1 using an implicit updating scheme.
+
+6.3
+
+Aggregate Dynamics Following Unskilled-Labor Specific Shock
+
+Figure 13 plots the impulse responses of aggregate output and consumption following the
+unskilled-specific shock, and compares the responses to the representative agent version of
+the model. Although the output responses are very similar across the two models, the trough
+in consumption is more than twice as low in the two-asset model than in the representative
+agent model.
+The severity of the consumption response in the two-asset model reflects the combination
+of two forces. First, the two-asset model features a substantial fraction of hand-to-mouth
+households that respond more strongly to income changes than the representative household. The presence of hand-to-mouth households also changed the consumption response to
+factor neutral shocks, as discussed in Section 4. Second, the unskilled labor-specific shock
+is concentrated among low-skill workers who are more likely to be hand-to-mouth. This
+concentration is absent in the factor-neutral shock case, and in that case, the difference between the two-asset and representative agent models is 25% smaller. Hence, the fact that the
+unskilled labor-specific shock is concentrated among a particular region of the distribution
+shapes aggregate business cycle dynamics of the model.
+63
+
+Recall that with Cobb-Douglas the dispersion of pre-tax labor income is constant.
+
+57
+
+Figure 14: Impulse Responses to Capital-Specific Productivity Shock
+1.8
+
+1.2
+
+0.14
+
+1.6
+
+0.12
+1
+
+1.4
+
+0.1
+
+1.2
+
+0.8
+0.08
+
+1
+0.6
+
+0.06
+
+0.8
+0.04
+0.6
+
+0.4
+0.02
+
+0.4
+0.2
+
+0
+
+0.2
+0
+
+0
+10
+
+20
+
+30
+
+40
+
+50
+
+-0.02
+10
+
+20
+
+30
+
+40
+
+50
+
+10
+
+20
+
+30
+
+40
+
+50
+
+Notes: impulse responses to an instantaneous positive unit standard deviation size shock (Dirac delta
+function) to capital-specific productivity. “Unskilled wage” is the wage rate per efficiency unit of labor for
+unskilled workers. “Skilled wage” is the wage rate per efficiency unit of labor for skilled workers. “Log
+income dispersion” is the cross-sectional standard deviation of log pre-tax labor income across households.
+We simulate the model by discretizing the time dimension with step size dt = 0.1 using an implicit
+updating scheme.
+
+6.4
+
+Inequality Dynamics Following Capital-Specific Shock
+
+We close this section with a brief example to show that, due to capital-specific complementarity, a shock to capital-specific productivity ZtK can generate dynamics of income inequality.
+We set the rate of mean reversion ηK = 0.25 and calibrate the standard deviation of innovations σK so that it generates the same impact effect on output as the factor-neutral shocks
+in Section 4.2.
+Figure 14 shows that the capital shock increases labor income inequality. The left panel
+shows that high-skill wages increase by more than low-skill wages due to capital-skill complementarity; in response to the capital-specific shock, the representative firm substitutes
+toward skilled labor. Hence, the dispersion of labor income across households increases as
+well.
+
+7
+
+Conclusion
+
+Our paper’s main message is that two of the most common excuses that macroeconomists
+make for employing representative agent models are less valid than commonly thought.
+58
+
+First, we develop an efficient and easy-to-use computational method for solving a wide class
+of general equilibrium heterogeneous agent macro models with aggregate shocks, thereby
+invalidating the excuse that these models are subject to extreme computational difficulties.
+Second, our results in Sections 5 and 6 show that inequality may matter greatly for the
+dynamics of standard macroeconomic aggregates. These results invalidate the excuse that
+heterogeneous agent models are unnecessarily complicated because they generate only limited
+additional explanatory power for aggregate phenomena.
+Due to its speed, our method opens up the door to estimating macroeconomic models in which distributions play an important role with micro data. Existing attempts to
+bring macroeconomic models to the data, typically use either only aggregate time-series
+to discipline aggregate dynamics (in the case of representative agent models); or they use
+cross-sectional micro data at a given point in time to discipline a stationary equilibrium
+without aggregate shocks (in the case of heterogeneous agent models). Instead, future research should use micro data capturing distributional dynamics over time, i.e. panel data or
+repeated cross-sections. An important hurdle in this endeavour is that micro data, especially
+from surveys, are often inconsistent with national accounts data on macroeconomic aggregates (see e.g. Deaton, 2005). Attempts to produce time-series on distributional variables
+that capture 100 percent of national income like the Distributional National Accounts of
+Piketty, Saez and Zucman (2016) are welcome in this regard.
+
+59
+
+References
+Acemoglu, D., and D. Autor (2011): “Skills, Tasks, and Technologies: Implications for Employment and Earnings,” Handbook of Labor Economics 4, pp. 1043–1171.
+Achdou, Y., J. Han, J.-M. Lasry, P.-L. Lions, and B. Moll (2015): “Heterogeneous Agent
+Models in Continuous Time,” Discussion paper, Princeton University.
+Aiyagari, S. R. (1994): “Uninsured Idiosyncratic Risk and Aggregate Saving,” The Quarterly
+Journal of Economics, 109(3), 659–684.
+Amsallem, D., and C. Farhat (2011): “Lecture Notes for CME 345: Model Reduction,”
+https://web.stanford.edu/group/frg/course_work/CME345/.
+Antoulas, A. (2005): Approximation of Large-Scale Dynamical Systems. SIAM Advances in Design and Control.
+Auclert, A. (2014): “Monetary Policy and the Redistribution Channel,” Discussion paper, MIT.
+Bayer, C., R. Luetticke, L. Pham-Dao, and V. Tjaden (2015): “Precautionary Savings,
+Illiquid Assets, and the Aggregate Consequences of Shocks to Household Income Risk,” Discussion paper, University of Bonn.
+Blanchard, O. J., and C. M. Kahn (1980): “The Solution of Linear Difference Models under
+Rational Expectations,” Econometrica, 48(5), 1305–11.
+Bloom, N., M. Floetotto, N. Jaimovich, I. Saporta-Eksten, and S. Terry (2014): “Really Uncertain Business Cycles,” Discussion paper.
+Brunnermeier, M. K., and Y. Sannikov (2014): “A Macroeconomic Model with a Financial
+Sector,” American Economic Review, 104(2), 379–421.
+Campbell, J. (1998): “Entry, Exit, Embodied Technology, and Business Cycles,” Review of Economic Dynamics, 1(2), 371–408.
+Campbell, J. Y., and N. G. Mankiw (1989): “Consumption, Income and Interest Rates:
+Reinterpreting the Time Series Evidence,” in NBER Macroeconomics Annual 1989, Volume 4,
+NBER Chapters, pp. 185–216. National Bureau of Economic Research.
+Carroll, C., M. White, N. Palmer, D. Low, and A. Kaufman (2016): “Heterogenous
+Agents Resources & toolKit,” https://github.com/econ-ark/HARK.
+Christiano, L. (1989): “Comment on “Consumption, Income and Interest Rates: Reinterpreting
+the Time Series Evidence”,” in NBER Macroeconomics Annual 1989, Volume 4, NBER Chapters,
+pp. 216–233. National Bureau of Economic Research.
+Congressional Budget Office (2013): “The Distribution of Federal Spending and Taxes in
+2006,” Discussion paper, Congress of the United States.
+Deaton, A. (2005): “Measuring Poverty in a Growing World (or Measuring Growth in a Poor
+World),” The Review of Economics and Statistics, 87(1), 1–19.
+Den Haan, W., K. Judd, and M. Julliard (2010): “Computational Suite of Models with
+Heterogeneous Agents: Incomplete Markets and Aggregate Uncertainty,” Journal of Economic
+Dynamics and Control, 34(1), 1–3.
+Den Haan, W. J. (2010): “Comparison of solutions to the incomplete markets model with aggregate uncertainty,” Journal of Economic Dynamics and Control, 34(1), 4–27.
+Dotsey, M., R. King, and A. Wolman (1999): “State-Dependent Pricing and the General
+Equilibrium Dynamics of Money and Output,” Quarterly Journal of Economics, pp. 655–690.
+Fagereng, A., M. B. Holm, and G. J. Natvik (2016): “MPC Heterogeneity and Household
+Balance Sheets,” Discussion paper, Statistics Norway.
+Guvenen, F., F. Karahan, S. Ozkan, and J. Song (2015): “What Do Data on Millions of
+U.S. Workers Reveal about Life-Cycle Earnings Risk?,” NBER Working Papers 20913, National
+
+60
+
+Bureau of Economic Research.
+He, Z., and A. Krishnamurthy (2013): “Intermediary Asset Pricing,” American Economic
+Review, 103(2), 732–770.
+Ilut, C. L., and M. Schneider (2014): “Ambiguous Business Cycles,” American Economic
+Review, 104(8), 2368–2399.
+Johnson, D. S., J. A. Parker, and N. S. Souleles (2006): “Household Expenditure and the
+Income Tax Rebates of 2001,” American Economic Review, 96(5), 1589–1610.
+Kaplan, G., B. Moll, and G. L. Violante (2016): “Monetary Policy According to HANK,”
+Working Papers 1602, Council on Economic Policies.
+Kaplan, G., and G. L. Violante (2014): “A Model of the Consumption Response to Fiscal
+Stimulus Payments,” Econometrica, 82(4), 1199–1239.
+Krusell, P., L. Ohanian, V. Rios-Rull, and G. Violante (2000): “Capital-Skill Complementarity and Inequality: A Macroeconomic Analysis,” Econometrica, 68, 1029–1053.
+Krusell, P., and A. A. Smith (1998): “Income and Wealth Heterogeneity in the Macroeconomy,” Journal of Political Economy, 106(5), 867–896.
+Lucas, R. E. (2003): “Macroeconomic Priorities,” American Economic Review, 93(1), 1–14.
+Ludvigson, S. C., and A. Michaelides (2001): “Does Buffer-Stock Saving Explain the Smoothness and Excess Sensitivity of Consumption?,” American Economic Review, 91(3), 631–647.
+McKay, A. (2017): “Time-Varying Idiosyncratic Risk and Aggregate Consumption Dynamics,”
+Discussion paper, Boston University.
+McKay, A., E. Nakamura, and J. Steinsson (2015): “The Power of Forward Guidance Revisited,” NBER Working Papers 20882, National Bureau of Economic Research.
+McKay, A., and R. Reis (2013): “The Role of Automatic Stabilizers in the U.S. Business Cycle,”
+NBER Working Papers 19000, National Bureau of Economic Research.
+Mongey, S., and J. Williams (2016): “Firm Dispersion and Business Cycles: Estimating Aggregate Shocks Using Panel Data,” Working paper, NYU.
+Parker, J. A., N. S. Souleles, D. S. Johnson, and R. McClelland (2013): “Consumer
+Spending and the Economic Stimulus Payments of 2008,” American Economic Review, 103(6),
+2530–53.
+Piketty, T., E. Saez, and G. Zucman (2016): “Distributional National Accounts: Methods and
+Estimates for the United States,” NBER Working Papers 22945, National Bureau of Economic
+Research, Inc.
+Preston, B., and M. Roca (2007): “Incomplete Markets, Heterogeneity and Macroeconomic
+Dynamics,” NBER Working Papers 13260, National Bureau of Economic Research, Inc.
+Reiter, M. (2009): “Solving heterogeneous-agent models by projection and perturbation,” Journal
+of Economic Dynamics and Control, 33(3), 649–665.
+(2010): “Approximate and Almost-Exact Aggregation in Dynamic Stochastic
+Heterogeneous-Agent Models,” Economics Series 258, Institute for Advanced Studies.
+Terry, S. (2017): “Alternative Methods for Solving Heterogeneous Firm Models,” Discussion
+paper, Boston University.
+Veracierto, M. (2002): “Plant Level Irreversible Investment and Equilibrium Business Cycles,”
+American Economic Review, 92, 181–197.
+Winberry, T. (2016): “A Toolbox for Solving and Estimating Heterogeneous Agent Macro Models,” Working paper, University of Chicago.
+
+61
+
+A
+
+Appendix
+
+A.1
+
+Fully Recursive Formulation of Krusell-Smith (1998)
+
+When writing the equilibrium conditions (2) to (7), we used recursive notation with respect
+to the idiosyncratic states (a, z) but time-dependent notation with respect to the aggregate
+states (g, Z). For completeness, this Appendix shows how to write the corresponding equations using fully recursive notation, and how to obtain the hybrid-notation conditions in the
+main text from the equations using fully recursive notation.
+To this end, define the wage and interest rate as a function of the state variables (g, Z)
+w(g, Z) = (1 − α)eZ K(g)α ,
+
+(40)
+
+r(g, Z) = αeZ K(g)α−1 − δ,
+Z
+where K(g) = ag(a, z)dadz
+
+(41)
+(42)
+
+is the aggregate capital stock as a function of the distribution. Furthermore, define the
+“Kolmogorov Forward operator” KZ that operates on distributions g as
+(KZ g)(a, z) := −∂a [s(a, z, g, Z)g(a, z)] − λz g(a, z) + λz ′ g(a, z ′ )
+where s(a, z, g, Z) is the optimal saving policy function (determined below). This operator
+maps distribution functions g into time derivatives of that distribution. Using this tool, one
+can for example write the Kolmogorov Forward equation (3) compactly as
+dgt (a, z)
+= (KZ gt )(a, z).
+dt
+With this machinery in hand, the fully recursive, infinite-dimensional HJB equation is:
+ρV (a, z, g, Z) = max u(c) + ∂a V (a, z, g, Z)(w(g, Z)z + r(g, Z)a − c)
+c
+
++ λz (V (a, z ′ , g, Z) − V (a, z, g, Z))
+1
++ ∂Z V (a, z, g, Z)(−ηZ) + ∂ZZ V (a, z, g, Z)σ 2
+2
+Z
+δV (a, z, g, Z)
+(KZ g)(a, z)dadz
++
+δg(a, z)
+
+(43)
+
+The first and second lines in this infinite-dimensional HJB equation capture the evolution
+of the idiosyncratic states (a, z) (just like in (2)). The third and fourth lines capture the
+62
+
+evolution of the aggregate states (g, Z). The third line captures the evolution of aggregate
+TFP Z with standard “Ito’s Formula terms” involving the first and second derivatives of the
+value function with respect to Z. The fourth line captures the evolution of the distribution
+g. Since g is a function, it involves the functional derivative of V with respect to g at point
+(a, z), which we denote by δV /δg(a, z). The equilibrium in fully recursive notation is then
+characterized by (43) together with (40), (41) and (42).
+To understand the last term in (43), assume momentarily that the distribution is an
+N-dimensional vector g = (g1 , ..., gN ) rather than a function (i.e. an infinite-dimensional
+object). Then the HJB equation would be
+ρV (a, z, g, Z) = max u(c) + ∂a V (a, z, g, Z)(w(g, Z)z + r(g, Z)a − c)
+c
+
++ λz (V (a, z ′ , g, Z) − V (a, z, g, Z))
+1
++ ∂Z V (a, z, g, Z)(−ηZ) + ∂ZZ V (a, z, g, Z)σ 2
+2
+N
+X
+∂V (a, z, g, Z)
++
+ġi
+∂gi
+i=1
+Since a functional derivative δV /δg(a, z) is the natural generalization of the partial derivative
+∂V /∂gi to the infinite-dimensional case, if g is a function rather than a vector we get (43).
+The equilibrium conditions (2) to (7) in the main text can be obtained from this system
+by evaluating “along the characteristic” (gt , Zt ) that satisfies (3) and (4). In particular the
+value function vt (a, z) in (2) is obtained from evaluating (43) at (gt , Zt ), i.e.
+vt (a, z) = V (a, z, gt , Zt ).
+In particular by Ito’s Formula
+
+1
+2
+dvt (a, z) = ∂Z V (a, z, gt , Zt )(−ηZt ) + ∂ZZ V (a, z, gt , Zt )σ dt + σ∂Z V (a, z, gt , Zt )dWt
+2
+Z
+δV (a, z, gt , Zt )
++
+(KZ gt )(a, z)dadz dt
+δgt (a, z)
+
+
+and hence using that Et [dWt ] = 0
+1
+1
+Et [dvt (a, z)] = ∂Z V (a, z, gt , Zt )(−ηZt )+ ∂ZZ V (a, z, gt , Zt )σ 2 +
+dt
+2
+
+Z
+
+δV (a, z, gt , Zt )
+(KZ gt )(a, z)dadz
+δgt (a, z)
+
+Similarly, the prices and capital stock in (5) to (7) are obtained by evaluating (40) to (42)
+63
+
+at (gt , Zt ), i.e.
+wt = w(gt , Zt ),
+
+A.2
+
+rt = r(gt , Zt ),
+
+Kt = K(gt ).
+
+Connection to Linearization of Representative Agent Models
+
+This Appendix develops the relationship between our linearization of heterogeneous agent
+models and standard linearization of representative agent business cycle models. For illustration, consider a simple real business cycle model. As in our heterogeneous agent models
+in the main text, the equilibrium of this representative agent model is characterized by a
+forward-looking equation for controls, a backward-looking equation for the endogenous state,
+several static relations and an evolution equation for the exogenous state.
+Defining the representative household’s marginal utility Λt := Ct−γ , the equilibrium conditions can be written as
+1
+Et [dΛt ] = (ρ − rt )Λt
+dt
+dKt
+= w t + r t Kt − C t
+dt
+dZt = −ηZt dt + σdWt
+
+(44)
+
+rt = αeZt Ktα−1 − δ
+wt = (1 − α)eZt Ktα
+−1/γ
+
+and where Ct = Λt . The first equation is the Euler equation. Marginal utility Λt is the
+single control variable; we could have alternatively written the Euler equation in terms of
+consumption Ct , but working with marginal utility is more convenient. The second equation
+is the evolution of the aggregate capital stock, which is the single endogenous state variable. The third equation is the stochastic process for aggregate productivity, which is the
+exogenous state variable. The last two equations define equilibrium prices.
+The equilibrium conditions (14) of the simple Krusell and Smith (1998) model have the
+same structure as the representative agent model above. The discretized value function vt is
+the endogenous control vector, analogous to marginal utility Λt (or aggregate consumption
+Ct ) in the representative agent model. The distribution gt is the endogenous state variable,
+analogous to aggregate capital Kt . Finally, TFP Zt is the exogeneous state variable, just as
+in the representative agent model.
+The representative agent model’s equilibrium conditions can be linearized and the resulting linear system solved exactly as the heterogeneous agent model in the main text. Let
+64
+
+b t,
+hatted variables denote deviations from steady state. Then we have the control variable Λ
+b t , the exogenous state Zt , and the prices p
+bt = (b
+the endogenous state K
+rt , w
+bt ). We can thus
+write
+ 
+ 
+
+bt
+bt
+Λ
+BΛΛ
+0
+0
+BΛp
+dΛ
+ 
+ 
+
+b t  BKΛ BKK
+b 
+dK
+0 BKp 
+ Kt  dt
+ 
+Et 
+
+
+ dZ  =  0
+0
+−η
+0 
+ Zt 
+ t 
+bt
+p
+0
+BpK BpZ −I
+0
+Note that our linearized heterogeneous agent model (15) has the same form as this system.
+
+A.3
+
+Model Reduction and Proof of Proposition 1
+
+This Appendix proves the results cited in the main text regarding our distribution reduction
+method. We also show that, in discrete time, our approach corresponds to matching the first
+k periods of the impulse response function.
+A.3.1
+
+Deterministic Model
+
+As in the main text consider first the simplified model (26) which we briefly restate here:
+ġt = Cgg gt ,
+pt = bpg gt .
+Solving this for pt gives
+pt = bpg eCgg t g0
+
+
+1 2 2 1 3 3
+= bpg I + Cgg t + Cgg t + Cgg t + . . . g0
+2
+6
+We consider a reduced model obtained by means of projection. That is, we project the distribution gt on a lower-dimensional space, and then analyze the dynamics of the corresponding
+reduced system. Of course, all that ultimately matters for the dynamics of the reduced
+system is that projection space itself, and not the particular basis chosen for the purpose of
+projection. Thus, for ease of presentation, we in the main text consider a semi-orthogonal
+basis XT , i.e. a matrix X that satisfies XT X = I. Under this assumption, the reduced
+distribution is given by γt = (XT X)−1XT gt = XT gt . For the proofs in this Appendix,
+however, it will turn out to be more convenient to work with a non-normalized (non-semi-
+
+65
+
+orthogonal) basis. Specifically, we consider a pair of matrices V, WT such that WT V = I.
+This formulation nests our analysis from the main text with X = V and XT = WT .
+We then approximate the distribution gt through γt = (WT V)−1WT gt = WT gt . Conversely, up to projection error, we have that gt = Vγt.64 Differentiating with respect to time
+thus gives the reduced-system dynamics
+γ̇t = WT Cgg Vγt
+pet = bpg Vγt
+
+Note that, with V = X, WT = XT , this system simply collapses to the formulation in the
+main text. From here, we then get
+T
+
+pet = bpg Ve(W Cgg V)t WT g0
+
+
+1
+1
+T
+2 2
+T
+3 3
+T
+= bpg V I + (W Cgg V)t + (W Cgg V) t + (W Cgg V) t + . . . WT g0
+2
+6
+We choose the projection matrices V, WT to ensure that the dynamics of the reduced pet
+match as closely as possible those of the unreduced pt . Following insights from the model
+
+reduction literature, we take this to mean that Taylor series expansions of pt and pet around
+t = 0 share the first k expansion coefficients. As argued before, the dynamics of the system
+– and so these expansion coefficients – do not depend on the projection matrices V, WT
+
+themselves, but only on the subspaces associated with them.65 It is in this sense that we
+can first focus on general V, WT , and then simply conclude that all results will extend
+to semi-orthogonal matrices X that span the same subspace of RN . To match the first k
+expansion coefficients, it is useful to consider what is known as the order-k observability
+matrix O(bpg , Cgg ):
+
+
+bpg
+
+
+ bpg Cgg 
+
+
+ b (C )2 
+O(bpg , Cgg ) :=  pg gg 
+
+
+..
+
+
+.
+
+
+k−1
+bpg (Cgg )
+64
+
+Formally, Π := VWT is a projection, and we have that Πgt = Vγt .
+For a detailed discussion of this, see Amsallem and Farhat (2011, Lecture 7). The intuition is that, for
+the dynamics of a reduced system, only the space on which we project the large-dimensional state variable
+matters. A sketch of the formal argument goes as follows. V and X are bases of the same space, so there exists
+an invertible matrix Z such that VZ = X, so Z−1 = XT V and Z = (XT V)−1 . Similarly, there exists an
+e such that ZW
+e T = XT , so Z
+e −1 = WT X and Z
+e = (WT X)−1 . But WT X = WT VZ = Z,
+invertible matrix Z
+−1
+T
+−1
+T
+T
+T
+e
+e
+so Z = Z . Then VW = XZ W = XZW = XX and the projections are identical.
+65
+
+66
+
+We propose to consider the pair V, WT with WT = O(bpg , Cgg ) and V chosen such that
+WT V = I. To see that this works, let us consider each term separately in the Taylor series
+expansions derived above. In all of the following, ei denotes the ith standard unit vector
+and WiT denotes the ith submatrix of WT (corresponding to bpg (Cgg )i−1 ). First of all we
+have
+bpg VWT = W1T VWT
+= e1 WT = W1T = bpg
+where we have used the fact that, by construction, WT V = I. Next we have
+bpg VWT Cgg VWT = W1T VWT Cgg VWT
+= W2T VWT = e2 WT = W2T = bpg Cgg
+where again we have used that WT V = I, together with the definition of WT . All higherorder terms then follow analogously. Putting things together in the notation of the main text,
+we see that picking XT to be a semi-orthogonal basis of the space spanned by O(bpg , Cgg )
+is sufficient to ensure that the Taylor series expansion coefficients are matched.
+A.3.2
+
+Stochastic Model: Proof of Proposition 1
+
+Solving out prices and the decision rules for the controls vt , we get the system
+ġt = (Bgg + Bgp bpg + Bgv Dvg )gt + (Bgv DvZ )Zt
+|
+| {z }
+{z
+}
+Cgg
+
+CgZ
+
+pt = bpg gt + bpZ Zt
+
+The dynamics of this stochastic system are characterized by the impulse response function
+h(t) = bpg eCgg t CgZ + δ(t)bpZ
+where δ(t) is the Dirac delta function. This impulse response function induces the following
+dynamic behavior:
+Z t
+Cgg t
+h(t − s)Zs ds
+pt = bpg e
+g0 +
+| {z }
+0
+|
+{z
+}
+det. part
+stoch. part
+
+67
+
+As before, we consider the projection γt = WT gt and (up to projection error) gt = Vγt .
+This gives
+γ̇t = WT Cgg Vγt + WT CgZ Zt
+pet = bpg Vγt + bpZ Zt
+
+This model induces the impulse response function
+
+and so the dynamics
+
+T
+e
+h(t) = bpg Ve(W Cgg V)t WT CgZ + δ(t)bpZ
+
+(WT Cgg V)t
+
+pet = bpg Ve
+
+T
+
+W g0 +
+
+Z
+
+t
+0
+
+e
+h(t − s)Zs ds
+
+We now proceed exactly as before and consider the order-k observability matrix O(bpg , Cgg ):
+
+
+bpg
+
+
+
+
+
+ bpg Cgg 
+
+
+
+
+O(bpg , Cgg ) :=  bpg (Cgg )2 
+
+
+..
+
+
+.
+
+
+k−1
+bpg (Cgg )
+We again set WT and V such that WT = O(bpg , Cgg ) and WT V = I. Showing that
+all terms in the deterministic part are matched is exactly analogous to the argument given
+above. For the stochastic part, we also do not need to change much. The impact impulse
+response bpZ is matched irrespective of the choice of projection matrix. Next we have
+bpg VWT CgZ = W1T VWT CgZ
+= e1 WT CgZ = W1T CgZ = bpg CgZ
+As before we exploit the definition of WT as well as the fact that WT V = I. And finally
+bpg VWT Cgg VWT CgZ = W1T VWT Cgg VWT CgZ
+= W2T VWT CgZ = e2 WT CgZ = W2T CgZ = bpg Cgg CgZ
+again exactly analogous to the derivation for the deterministic part above. We are thus
+matching both the deterministic and the stochastic part of the dynamics up to order k in
+68
+
+a Taylor series expansion around time t = 0. Finally returning to the notation of the main
+body of the text, we see that letting XT be a semi-orthogonal basis of the space spanned by
+O(bpg , Cgg ) is again sufficient for the impulse response matching.
+A.3.3
+
+Discrete Time
+
+As we have seen, in continuous time, our model reduction procedure ensures that the coefficients of a Taylor series expansion around t = 0 are matched. In discrete time, this
+procedure guarantees that we match the first k periods of the impulse response functions.
+The stochastic discrete-time model is
+gt = Cgg gt−1 + CgZ Zt
+pt = bpg gt−1 + bpZ Zt
+The impulse responses of this system are bpZ on impact and bpg Ch−1
+gg CgZ for horizons h =
+1, 2, . . .. As before, we consider the reduced system
+γt = WT Cgg Vγt−1 + WT CgZ Zt
+pt = bpg Vγt−1 + bpZ Zt
+Equality of the induced impulse responses for impact h = 0 is immediate. For all higher
+horizons, we proceed exactly as before and show that
+bpg VWT Cgz = bpg Cgz
+as well as
+bpg VWT Cgg VWT Cgz = bpg Cgg Cgz
+
+A.4
+
+Detrending the Nonstationary Model
+
+Many equilibrium objects in the version of the model described in Section 5 are nonstationary. In this Appendix, we develop a normalized version of the equilibrium involving only
+stationary objects. In addition to the production side of the model described in the main
+text, we make three modifications to the two-asset model in the presence of nonstationary
+shocks. First, the borrowing constraint for liquid assets is b > bQt , where Qt is the level
+of aggregate productivity. Second, the transaction cost for accessing the illiquid account is
+now χ(d, a)Qt . Third, the lump-sum transfer from the government is now T Qt .
+69
+
+The equilibrium of this model can be equivalently represented by a set of normalized
+objects vt (â, b̂, z), gt (â, b̂, z), K̂t , rta , ŵt , rtb , and Zt such that
+1. Transformed HJB : vt (â, b̂, z) solves
+ĉ1−θ
+ˆ â)
++ ∂b vt (â, b̂, z)(T + (1 − τ )ŵt ez + rtb (b̂)b̂ − χ(d,
+ˆ
+1
+−
+θ
+ĉ,d
+X
+1
+ˆ + ∂a vt (â, b̂, z)(r a â + d)
+ˆ +
+− ĉ − d)
+λzz ′ (vt (â, b̂, z ′ ) − vt (â, b̂, z)) + Et [dv̂t (â, b̂, z)].
+t
+dt
+′
+
+(ρ + ζ−(1 − θ)Zt )vt (â, b̂, z) = max
+
+z
+
+The fact that TFP growth is permanent changes the effective discount factor in the
+households’ HJB equation.
+2. Transformed KFE : gt (â, b̂, z) evolves according to
+dgt (â, b̂, z)
+= − ∂â sat (â, b̂, z)gt (â, b̂, z) − ∂b̂ sbt (â, b̂, z)gt (â, b̂, z)
+dt
+X
+X
+−
+λzz ′ gt (â, b̂, z) +
+λz ′ z gt (â, b̂, z), where
+z′
+
+z′
+
+ˆ â) − ĉ − dˆ − âZt and
+sbt (â, b̂, z) =T + (1 − τ )ŵt ez + rtb (b̂)b̂ − χ(d,
+sa (â, b̂, z) =r a â + dˆ − b̂Zt .
+t
+
+t
+
+Permanent TFP shocks change the effective depreciation rate of assets.
+3. Transformed firm conditions: rta , ŵt , and Zt satisfy
+rta =αK̂tα−1 (L)1−α − δ
+−α
+
+ŵt =(1 − α)K̂tα L
+
+dZt = − νZt dt + σdWt .
+4. Transformed asset market clearing conditions
+∗
+
+Z
+
+B = B̂t = b̂gt (â, b̂, z)db̂dâdz
+Z
+K̂t = agt (â, b̂, z)db̂dâdz
+To derive this normalized equilibrium we detrend the model’s original equilibrium objects
+by aggregate productivity Qt . Almost all variables in the model naturally scale with the level
+of productivity Qt ; for any such variable xt , let x̂t = Qxtt denote its detrended version. The
+70
+
+one exception to this scheme is the households’ value function vt (a, b, z), which scales with
+Q1−θ
+.
+t
+HJB Equation Define the detrended value function v̂t (a, b, z) =
+
+vt (a,b,z)
+.
+Q1−θ
+t
+
+Divide both sides
+
+of the HJB (35) by Q1−θ
+and use x̂t notation where applicable to get
+t
+
+
+ĉ1−θ
++ ∂b v̂t (a, b, z) T Qt + (1 − τ )wt ez + rtb (b)b − χ(d, a)Qt − c − d
+c,d 1 − θ
+X
++ ∂a v̂t (a, b, z)(rta a + d) +
+λzz ′ (v̂t (a, b, z ′ ) − v̂t (a, b, z))
+
+(ρ + ζ)v̂t (a, b, z) = max
+
+z′
+
++
+
+1
+
+Q1−θ
+t
+
+Next, to replace the
+
+×
+
+1
+Et [dvt (a, b, z)].
+dt
+
+1
+E [dvt (a, b, z)]
+dt t
+
+d
+v̂t (a, b, z) =
+dt
+
+(45)
+
+term, note that by the chain rule
+
+d
+v (a, b, z)
+dt t
+Q1−θ
+t
+
++ (θ − 1)
+
+d log Qt
+v̂t (a, b, z),
+dt
+
+which implies that
+1
+Q1−θ
+t
+
+×
+
+1
+1
+d log Qt
+Et [dvt (a, b, z)] = Et [dv̂t (a, b, z)] + (1 − θ)
+v̂t (a, b, z).
+dt
+dt
+dt
+
+Plug this back into (45) and rearrange to get
+(ρ + ζ + (θ − 1)
+
+d log Qt
+ĉ1−θ
+)v̂t (a, b, z) = max
++ ∂b v̂t (a, b, z)(T Qt + (1 − τ )wt ez + rtb (b)b − χ(d, a)Qt
+c,d 1 − θ
+dt
+X
+− c − d) + ∂a v̂t (a, b, z)(rta a + d) +
+λzz ′ (v̂t (a, b, z ′ ) − v̂t (a, b, z))
+z′
+
++
+
+1
+Et [dv̂t (a, b, z)].
+dt
+
+(46)
+
+The formulation in (46) is still not stationary because there are permanent changes in
+the state variables a and b, the wage wt , and transaction cost on the right hand side. To
+address this we perform a change of variables and characterize the value function in terms
+
+71
+
+of â and b̂, rather than a and b themselves. Note that
+a b
+, , z) =
+Qt Qt
+a b
+∂a v̂t (a, b, z) =∂a v̂t ( , , z) =
+Qt Qt
+∂b v̂t (a, b, z) =∂b v̂t (
+
+1
+∂ v̂t (â, b̂, z) and
+Qt b̂
+1
+∂â v̂t (â, b̂, z).
+Qt
+
+This implies
+∂b v̂t (a, b, z)(T Qt + (1 − τ )wt ez + rtb (b)b − χ(d, a)Qt − c − d)
+ˆ â) − ĉ − d)
+ˆ
+= ∂b v̂t (â, b̂, z)(T Qt (1 − τ )ŵt ez + r b (b̂)b̂ − χ(d,
+t
+
+and
+ˆ
+∂a v̂t (a, b, z)(rta a + d) = ∂a v̂t (â, b̂, z)(rta â + d).
+Putting all these results together, we get the final detrended HJB equation
+d log Qt
+ĉ1−θ
+ˆ â)
+(ρ + ζ−(1 − θ)
+)v̂t (â, b̂, z) = max
++ ∂b v̂t (â, b̂, z)(T + (1 − τ )ŵt ez + rtb (b̂)b̂ − χ(d,
+ˆ
+dt
+ĉ,d 1 − θ
+X
+1
+ˆ + ∂a v̂t (â, b̂, z)(r a â + d)
+ˆ +
+− ĉ − d)
+λzz ′ (v̂t (â, b̂, z ′ ) − v̂t (â, b̂, z)) + Et [dv̂t (â, b̂, z)].
+t
+dt
+′
+z
+
+(47)
+
+KFE The cross-sectional distribution of households over â, b̂, z is stationary. We will directly construct the KFE for the distribution over this space. Analogously to (36), this is
+given by
+˙
+gt (â, b̂, z) = − ∂â â˙ t (a, b, z)gt (â, b̂, z) − ∂b̂ b̂t (â, b, z)gt (â, b̂, z)
+X
+X
+λz ′ z gt (â, b̂, z).
+λzz ′ gt (â, b̂, z) +
+−
+z′
+
+z′
+
+By the product rule,
+ȧt
+d log Qt
+â˙ t =
+−
+ât
+Qt
+dt
+and that from the construction of the modified HJB (47) above
+72
+
+ȧ
+Qt
+
+ˆ
+= rta â + d.
+
+Using this result, and the analogous one for â˙ t , we get the final detrended KFE
+gt (â, b̂, z) = − ∂â sat (â, b̂, z)gt (â, b̂, z) − ∂b̂ sbt (â, b̂, z)gt (â, b̂, z)
+X
+X
+λz ′ z gt (â, b̂, z), where
+λzz ′ gt (â, b̂, z) +
+−
+z′
+
+z′
+
+ˆ â) − ĉ − dˆ − d log Qt â and
+sbt (â, b̂, z) =T̂t + (1 − τ )ŵt ez + rtb (b̂)b̂ − χ(d,
+sa (â, b̂, z) =r a â + dˆ − d log Qt b̂.
+t
+
+t
+
+Other Equilibrium Conditions Detrending the remaining equilibrium conditions is simple:
+rta =αK̂tα−1 (L)1−α − δ
+ŵt =(1 − α)K̂tα L
+
+−α
+
+d log Qt =Zt dt
+dZt = − νZt dt + σdWt .
+
+A.5
+
+Representative Agent and Spender-Saver Models
+
+Representative Agent The representative agent model is identical to the RBC model
+described in Appendix A.2.
+Spender-Saver The spender-saver model extends the household side of the representative
+agent model above to two types of households. First, there is a fraction λ of hand-to-mouth
+households who simply consume their income each period. Second, the remaining fraction
+1 − λ of households make an optimal consumption-savings decision like in the representative
+agent model.
+
+73
+
+

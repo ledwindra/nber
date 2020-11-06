@@ -1,0 +1,1357 @@
+NBER WORKING PAPER SERIES
+
+NONLINEAR PROGRAMMING METHOD FOR DYNAMIC PROGRAMMING
+Yongyang Cai
+Kenneth L. Judd
+Thomas S. Lontzek
+Valentina Michelangeli
+Che-Lin Su
+Working Paper 19034
+http://www.nber.org/papers/w19034
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+May 2013
+
+Cai and Judd gratefully acknowledge NSF support (SES-0951576). Michelangeli acknowledges the
+funding of the Bank of Italy research fellowship. The views expressed herein are those of the authors
+and do not necessarily reflect the views of the National Bureau of Economic Research or the Bank
+of Italy.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2013 by Yongyang Cai, Kenneth L. Judd, Thomas S. Lontzek, Valentina Michelangeli, and Che-Lin
+Su. All rights reserved. Short sections of text, not to exceed two paragraphs, may be quoted without
+explicit permission provided that full credit, including © notice, is given to the source.
+
+Nonlinear Programming Method for Dynamic Programming
+Yongyang Cai, Kenneth L. Judd, Thomas S. Lontzek, Valentina Michelangeli, and Che-Lin
+Su
+NBER Working Paper No. 19034
+May 2013
+JEL No. C61,C63
+ABSTRACT
+A nonlinear programming formulation is introduced to solve infinite horizon dynamic programming
+problems. This extends the linear approach to dynamic programming by using ideas from approximation
+theory to avoid inefficient discretization. Our numerical results show that this nonlinear programming
+method is efficient and accurate.
+
+Yongyang Cai
+Hoover Institution
+Stanford University
+Stanford, CA 94305
+yycai@stanford.edu
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+Thomas S. Lontzek
+University of Zurich
+Moussonstrasse 15, 8044 Zurich
+Thomas.Lontzek@Business.uzh.ch
+
+Valentina Michelangeli
+Banca d'Italia
+Via Nazionale 91, 00184 Roma
+valentina.michelangeli@gmail.com
+Che-Lin Su
+University of Chicago
+che-lin.su@ChicagoBooth.edu
+
+1
+
+Introduction
+
+Dynamic programming (DP) is the essential tool in solving problems of dynamic and stochastic controls in economic analysis. The nonlinearities of
+dynamic economic problems make them numerically challenging. To avoid
+the nonlinearity, linear programming (LP) approaches have been studied in
+the literature; see De Farias and Van Roy (2003), and Trick and Zin (1997).
+However, the LP approach has limited value for problems with continuous actions and/or states since an LP approach would have to discretize the states
+and controls. The most common discretization technique is the Cartesian
+grid, which leads to a curse-of-dimensionality in both the state and action
+spaces: if each of action or state variable is discretized by m equally spaced
+nodes, then the number of points is up to md , where d is the number of
+both action and state variables. Moreover, in many economic problems, especially those involving policy evaluations or welfare analysis, it is necessary
+to obtain accurate approximations of the decision rules, a task that is much
+more difficult than approximating the value function. Therefore, if we want
+to have 5-digit accuracy for a problem defined on one state variable and two
+controls, all of which are mapped to a unit cube, the LP approach would
+require 100,000 points in each dimension for a total of 1015 points, a problem
+size that is currently infeasible.
+This paper presents a nonlinear programming (NLP) method, called
+DPNLP, to solve the infinite horizon DP problems with or without stochasticity. The method uses shape-preserving approximation methods to approximate the optimal value function by adding some extra degree of freedom.
+DPNLP solves the deterministic or stochastic DP problem with one or two
+continuous state variables and several continuous control variables without
+the curse-of-dimensionality of the action space. Moreover, in our numerical examples, DPNLP uses only 19 nodes of the continuous state and their
+corresponding 19 two-dimensional actions and takes only seconds or about
+one minute to achieve the 5-digit or higher accuracy for both deterministic and stochastic DP problems with one continuous state (and one discrete
+state for the stochastic DP) and two continuous control variables. Since
+DPNLP has no curse-of-dimensionality of the action space, it can also solve
+DP problems with many continuous control variables easily and quickly. In
+our two-country optimal growth examples, the problems have two continuous state variables and six continuous control variables. This makes the
+LP approach infeasible even within only 2-digit accuracy, but DPNLP solves
+them in minutes with up to 5-digit accuracy.
+In this paper, the DPNLP method is described as an adequate tool to
+solve a DP problem with one or multiple continuous state variables (and
+discrete state variables) and multiple continuous control variables. Many
+economic problems involve models with one or several variables that is “by
+definition” continuous (such as wealth or capital). Discretizing such a state
+2
+
+would require many grid points, with the computational costs associated
+to it. However, other state variables, even though continuous, often follow
+processes that make them suitable for discretization, without significant loss
+in terms of accuracy of the solution.
+Our DPNLP method can also be a crucial component of empirical estimation methods. Michelangeli (2009) used DPNLP inside an MPEC approach
+(see Su and Judd, 2012) to estimating a model of the demand for reverse
+mortgages.
+The paper is constructed as follows. Section 2 describes the kind of dynamic problem commonly used in economics and the subject of this paper.
+Section 3 briefly reviews approximation methods such as Chebyshev polynomial approximation. Section 4 defines the DPNLP method for solving
+infinite horizon DP problems. Section 5, 6 and 7 apply DPNLP to optimal accumulation problems similar to many economics problems. Section 8
+concludes.
+
+2
+
+Dynamic Programming
+
+An infinite horizon stochastic optimal decision-making problem has the following general form:
+(∞
+)
+X
+V (x0 , θ0 ) = max E
+(1)
+β t u(xt , at ) ,
+at ∈D(xt ,θt )
+
+t=0
+
+xt+1 = g(xt , θt , at ),
+
+s.t.
+
+θt+1 = h(θt , t ),
+where xt is the discrete time continuous state vector process with initial state
+x0 , θt is the discrete state vector process with initial state θ0 , t is a serially
+uncorrelated random vector process, g is a continuous function representing
+the change in the state xt as a function of the state and action, at , and h
+represents the transition process for θt respectively, D(xt , θt ) is a feasible
+set of at dependent on (xt , θt ), β is the discount factor with 0 < β < 1, u
+is a concave utility function, and E{·} is the expectation operator. While
+this description does not apply to many applications of dynamic programming, it does apply to most models in dynamic economics. Examples include
+economic growth, portfolio decisions, and investment decisions by firms.
+The DP model for the general infinite horizon problem is the following
+Bellman equation (Bellman, 1957):
+
+V (x, θ) = max u(x, a) + βE V (x+ , θ+ ) | x, θ, a ,
+(2)
+a∈D(x,θ)
+
+s.t.
+
+x+ = g(x, θ, a),
+θ+ = h(θ, ),
+3
+
+where (x+ , θ+ ) is the next-stage state conditional on the current-stage state
+(x, θ) and the action a,  is a random variable, and V (x, θ) is the value
+function.
+In the simpler case where there is no uncertainty, there is no stochastic
+state θt , the problem (1) becomes
+V (x0 ) = max
+
+∞
+X
+
+at ∈D(xt )
+
+s.t.
+
+β t u(xt , at ),
+
+t=0
+
+xt+1 = g(xt , at ),
+
+and its Bellman equation is:
+u(x, a) + βV (x+ ),
+
+V (x) = max
+
+(3)
+
+a∈D(x)
+
+x+ = g(x, a).
+
+s.t.
+
+3
+
+Approximation
+
+In the DP problem (3), we want to solve for the optimal value function. Even
+though the method allows to compute both the value functions and the policy
+functions, the implementation of the steps require to solve for the optimal
+value functions. But when state and control variables are continuous such
+that value functions are also continuous, we have to use some approximation
+for the value functions, since computers cannot model the entire space of
+continuous functions.
+An approximation scheme consists of two parts: basis functions and approximation nodes. Approximation nodes can be chosen as uniformly spaced
+nodes, Chebyshev nodes, or some other specified nodes. From the viewpoint of basis functions, approximation methods can be classified as either
+spectral methods or finite element methods. A spectral method uses globally nonzero
+P basis functions {φj (x)} and coefficients b = {bj } such that
+V̂ (x; b) = nj=0 bj φj (x) is a degree-n approximation. Examples of spectral
+methods include ordinary polynomial approximation, Chebyshev polynomial
+approximation, and shape-preserving Chebyshev polynomial approximation
+(Cai and Judd, 2012b). In contrast, a finite element method uses locally basis
+functions {φj (x)} that are nonzero over sub-domains of the approximation
+domain. Examples of finite element methods include piecewise linear interpolation, Schumaker interpolation, shape-preserving rational function spline
+Hermite interpolation (Cai and Judd, 2012a), cubic splines, and B-splines.
+See Cai (2010), Cai and Judd (2010), and Judd (1998) for more details.
+
+4
+
+3.1
+
+Chebyshev Polynomial Approximation
+
+Chebyshev polynomials on [−1, 1] are defined as Tj (z) = cos(j cos−1 (z)).
+Economics problems typically live on an interval [xmin , xmax ]; if we let
+Z (x) =
+
+2x − xmin − xmax
+,
+xmax − xmin
+
+then Tj (Z (x)) are Chebyshev polynomials adapted to [xmin , xmax ] for j =
+0, 1, 2, . . .. These
+are orthogonal under the weighted inner prod´ xpolynomials
+max
+uct: hf, gi = xmin f (x)g(x)w(x)dx with the weighting function w(x) =
+−1/2
+1 − Z(x)2
+. A degree n Chebyshev polynomial approximation for V (x)
+on [xmin , xmax ] is
+n
+X
+V̂ (x; b) =
+bj Tj (Z (x)),
+(4)
+j=0
+
+where b = {bj } are the Chebyshev coefficients. It is often more stable to use
+the expanded Chebyshev polynomial interpolation (Cai, 2010), as the above
+standard Chebyshev polynomial interpolation gives poor approximation in
+the neighborhood of end points.
+In this section we describe the Chebyshev polynomial approximation because it is the approximation scheme used in our examples. While also other
+approximation schemes may be adequate and with good performances, the
+Chebyshev polynomial approximation presents advantages in terms of coding
+simplicity and reliability, and easy extension to multidimensional approximation.
+
+3.2
+
+Multidimensional Complete Chebyshev Approximation
+
+In a d-dimensional approximation problem, let the domain of the approximation function be
+
+
+x = (x1 , . . . , xd ) : xmin
+≤ xi ≤ xmax
+, i = 1, . . . d ,
+i
+i
+
+for some real numbers xmin
+and xmax
+with xmax
+> xmin
+for i = 1, . . . , d.
+i
+i
+i
+i
+min
+min
+min
+max
+max
+max
+Let x
+= (x1 , . . . , xd ) and x
+= (x1 , . . . , xd ). Then we denote
+[xmin , xmax ] as the domain. Let α = (α1 , . . . , αd ) be a vector of nonnegative integers. Let Tα (z) denote the product Tα1 (z1 ) · · · Tαd (zd ) for z =
+(z1 , . . . , zd ) ∈ [−1, 1]d . Let
+
+
+2xd − xmin
+− xmax
+2x1 − xmin
+− xmax
+1
+1
+d
+d
+Z(x) =
+,...,
+xmax
+− xmin
+xmax
+− xmin
+1
+1
+d
+d
+for any x = (x1 , . . . , xd ) ∈ [xmin , xmax ].
+
+5
+
+Using these notations, the degree-n complete Chebyshev approximation
+for V (x) is
+X
+bα Tα (Z(x)) ,
+(5)
+V̂n (x; b) =
+0≤|α|≤n
+
+Pd
+
+where |α| = i=1 αi for the nonnegative integer vector α = (α1 , . . . , αd ). So
+
+P
+for the degree-n
+the number of terms with 0 ≤ |α| = di=1 αi ≤ n is n+d
+d
+complete Chebyshev approximation in Rd .
+
+4
+
+Nonlinear Programming Method to Solve Bellman Equations
+
+There are many approaches to solve Bellman equations, such as value function iteration and policy iteration methods, or LP approaches. This section
+describes the general nonlinear programming method (DPNLP) to solve the
+Bellman equations (3) or (2).
+
+4.1
+
+Basic DPNLP
+
+To solve the problem (3), we discretize the nonlinear approximation of the
+value function instead of the state and action spaces. The following nonlinear
+programming problem expresses one possible formulation of this method:
+max
+
+ai ∈D(xi ),x+
+i ,vi ,b
+
+s.t.
+
+m
+X
+
+vi ,
+
+i=1
+
+vi ≤ u(xi , ai ) + β V̂ (x+
+i ; b),
+x+
+i
+
+= g(xi, , ai ),
+
+vi = V̂ (xi ; b),
+
+i = 1, . . . , m,
+
+i = 1, . . . , m,
+i = 1, . . . , m,
+
+where m is the number of the approximation nodes. In this method, the
+choice variables are the actions a, the next-stage states x+ , the value functions v, and the coefficients b.
+Unfortunately the solutions of the above model often has no shape properties, i.e., the value function is not increasing or concave. One approach
+to improve it is to add shape-preservation in the model. See Cai and Judd
+(2010, 2012a, 2012b) for the discussion of importance of shape-preservation
+
+6
+
+in DP. Now we have the basic DPNLP model:
+max
+
+ai ∈D(xi ),x+
+i ,vi ,b
+
+s.t.
+
+m
+X
+
+vi ,
+
+(6)
+
+i=1
+
+vi ≤ u(xi , ai ) + β V̂ (x+
+i ; b),
+x+
+i
+
+= g(xi, , ai ),
+
+vi = V̂ (xi ; b),
+0
+
+i = 1, . . . , m,
+
+i = 1, . . . , m,
+i = 1, . . . , m,
+
+V̂ (yi0 ; b) ≥ 0,
+
+i0 = 1, . . . , m0 ,
+
+V̂ 00 (yi0 ; b) ≤ 0,
+
+i0 = 1, . . . , m0 ,
+
+where {yi0 : i0 = 1, . . . , m0 } are the set of shape nodes for shape preservation
+constraints. Usually the number of shape nodes, m0 , is more than the number
+of approximation nodes, m.
+To solve the stochastic Bellman equation (2) where θ ∈ Θ = {ϑj : j =
+1, ..., J}, the basic DPNLP model becomes
+J X
+m
+X
+
+min
+
+ai,j ∈D(xi ,ϑj ),x+
+i ,vi ,b
+
+s.t.
+
+vi,j ,
+
+j=1 i=1
+
+vi,j ≤ u(xi , ai,j ) + β
+
+J
+X
+
+Pj,j 0 V̂ (x+
+i,j , ϑj 0 ; b),
+
+j 0 =1
+
+x+
+i,j
+
+= g(xi , ϑj , ai,j ),
+
+vi,j = V̂ (xi , ϑj ; b),
+V̂ 0 (yi0 , ϑj ; b) ≥ 0,
+
+i0 = 1, . . . , m0 ,
+
+V̂ 00 (yi0 , ϑj ; b) ≤ 0,
+
+i0 = 1, . . . , m0 ,
+
+i = 1, . . . , m, j = 1, ..., J,
+where Pj,j 0 is the conditional
+probability of θ+ = θj 0 given θ = θj , i.e.,
+
+Pj,j 0 = Pr θ+ = θj 0 | θ = θj , for any j, j 0 = 1, . . . , J.
+
+4.2
+
+Iterative DPNLP
+
+One problem of the basic DPNLP model (6) is that an optimization solver often gives a solution where the equality in (7) does not hold while V̂ 0 (yi0 ; b) ≥
+0 or V̂ 00 (yi0 ; b) ≤ 0 are binding at some shape nodes instead. However, the
+true solution of the basic DPNLP model (6) should let the inequality constraints
+vi ≤ u(xi , ai ) + β V̂ (x+
+(7)
+i ; b),
+be binding for all i = 1, . . . , m, and V̂ (yi0 ; b) should be strictly increasing and
+concave at all the shape nodes. We introduce an iterative DPNLP method
+to solve these problems.
+7
+
+In this paper, we use the Chebyshev polynomial approximation in V̂ . For
+a smooth function, we know that the Chebyshev polynomial approximation
+usually have a smaller coefficients in magnitude for higher-degree terms. This
+tells us that a small-degree Chebyshev polynomial approximation in V̂ is a
+good initial guess for a higher-degree Chebyshev polynomial approximation.
+Another issue is that a quadratic Chebyshev polynomial approximation in V̂
+will be a good shape-preserving approximation with increasing and concave
+properties. Therefore, we have the following iterative DPNLP method to
+solve the infinite horizon deterministic optimal decision-making problems.
+Algorithm 1 Iterative DPNLP Method for Infinite Horizon Deterministic
+Optimal Decision-Making Problems
+Initialization. Choose m expanded Chebyshev nodes {xi : 1 ≤ i ≤ m} on
+the range [xmin , xmax ] as the approximation nodes (with an odd number m), choose m0 expanded Chebyshev nodes {yi : 1 ≤ i ≤ m0 } on the
+range [xmin , xmax ] as the shape nodes, and choose the Chebyshev polynomial approximation for V̂ (x; b) with degree n. Then solve the Basic
+DPNLP model (6) with degree-2 Chebyshev polynomial approximation.
+For a degree n = 3, . . . , m − 1, iterate through steps 1 and 2.
+Step 1. Use the solutions of the Basic DPNLP model (6) with degree n − 1
+Chebyshev polynomial approximation as the initial start point of the
+Basic DPNLP model (6) with degree n.
+Step 2. Use a reliable optimizer to solve the Basic DPNLP model (6) with
+degree n.
+It is easy to extend the algorithm to solve the infinite horizon stochastic
+and/or multidimensional optimal decision-making problems.
+
+5
+
+Applications to Deterministic Optimal Growth
+Problems
+
+An infinite-horizon economic problem is the discrete-time optimal growth
+model with one good and one capital stock, which is a deterministic model1 .
+The aim is to find the optimal consumption function and the optimal labor
+supply function such that the total utility over the infinite-horizon time is
+maximal, i.e.,
+V (k0 ) = max
+c,l
+
+s.t.
+1
+
+∞
+X
+
+β t u(ct , lt ),
+
+t=0
+
+kt+1 = F (kt , lt ) − ct ,
+
+Please see Judd (1998) for a detailed description of this.
+
+8
+
+(8)
+
+where kt is the capital stock at time t with k0 given in [0.3, 2], ct is the
+consumption, lt is the labor supply, β is the discount factor, F (k, l) is the
+aggregate production function, and u(ct , lt ) is the utility function.
+In the examples, the aggregate production function is F (k, l) = k +
+Ak ψ l1−ψ with ψ = 0.25 and A = (1 − β)/(ψβ). The utility function is
+(c/A)1−γ − 1
+l1+η − 1
+− (1 − ψ)
+.
+1−γ
+1+η
+
+u(c, l) =
+
+(9)
+
+The functional forms for utility and production imply that the steady state
+of the infinite horizon deterministic optimal growth problems is kss = 1, and
+the optimal consumption and the optimal labor supply at kss are respectively
+css = A and lss = 1. The code for DPNLP is written in GAMS (McCarl,
+2011), and the optimization solver is CONOPT (in the GAMS environment).
+
+5.1
+
+True Solution
+
+In order to estimate the accuracy of solution given by DPNLP, we compute
+the “true” optimal solution on a large set of test points for initial capital
+k0 ∈ [0.3, 2], and then compare those results with the computed optimal
+solution from DPNLP. To get the “true” optimal solution, we discretize the
+range of capital, [0.3, 2], with one million equally-spaced capital nodes, and
+also discretize the range of labor supply, [0.4, 2.5], with another one million
+equally-spaced labor supply nodes. for a discrete capital node k among the
+one million capital nodes and a discrete labor supply node l among the one
+million labor supply nodes, we choose consumption c = F (k, l) − k + such
+that k + is also one node among the one million capital nodes. Then using the
+one million capital nodes as discrete states, we apply the alternating sweep
+Gauss-Seidel algorithm (Judd, 1998) to compute the optimal value function
+until it converges under the stopping criterion 10−7 .
+
+5.2
+
+DPNLP Solution
+
+We use the iterative DPNLP method (Algorithm 1) to solve the deterministic
+optimal growth problem. The basic DPNLP model is
+max
+
+c,l,k+ ,v,b
+
+s.t.
+
+m
+X
+
+vi ,
+
+(10)
+
+i=1
+
+vi ≤ u(ci , li ) + β V̂ (ki+ ; b),
+ki+
+
+≤ F (ki, , li ) − ci ,
+
+vi = V̂ (ki ; b),
+
+i = 1, . . . , m,
+
+i = 1, . . . , m,
+
+i = 1, . . . , m,
+
+0
+
+V̂ (yi0 ; b) ≥ 0,
+
+i0 = 1, . . . , m0 ,
+
+V̂ 00 (yi0 ; b) ≤ 0,
+
+i0 = 1, . . . , m0 .
+
+9
+
+For our examples in this section, we always choose m = 19 expanded
+Chebyshev nodes, ki , in [0.3, 2], as the approximation nodes, and the approximation method, V̂ , is the expanded Chebyshev polynomial up to the
+maximal degree 18, and we choose m0 = 100 expanded Chebyshev nodes, yi0 ,
+in [0.3, 2], as the shape nodes. In fact, in some cases among our examples,
+we could use less numbers to save computational time but with almost the
+same accuracy.
+
+5.3
+
+Error Analysis of DPNLP Solution
+
+We next use some basic examples of the deterministic optimal growth problem to test DPNLP. We tries β = 0.9, 0.95, 0.99, γ = 0.5, 2, 8, and η =
+0.2, 1, 5, all these examples give us good solutions.
+Table 1 lists relative errors of optimal solutions computed by DPNLP for
+these cases in comparison with the “true” solution given by the high-precision
+discretization method. The errors for optimal consumptions are computed
+by
+|c∗DPNLP (k) − c∗ (k)|
+max
+,
+|c∗ (k)|
+k∈[0.3,2]
+where c∗DPNLP (k) is the optimal consumption computed by DPNLP, and
+c∗ (k) is the “true” optimal consumption, for k ∈ [0.3, 2]. The errors for
+∗
+, have the similar computation formula. The
+optimal labor supply, lDPNLP
+last column of Table 1 lists the running time of the iterative DPNLP method
+for various cases in the GAMS environment, on a single core of a Mac laptop
+with a 2.5 GHz processor.
+Table 1 shows that DPNLP solves the examples with accuracy up to 5
+digits or higher for optimal control policy functions in all cases. Moreover,
+the DPNLP method is fast and takes only several seconds for each case For
+example, row one in Table 1 assumes β = 0.9, γ = 0.5, and η = 0.2. For
+this case, the error in consumption is 1.5 × 10−6 , the error in labor supply
+is 1.8 × 10−6 , and the running time is only 6.8 seconds.
+
+6
+
+Applications to Stochastic Optimal Growth Problems
+
+When the capital stock is dependent on a random economic shock θt , the optimal growth problem (8) becomes a stochastic dynamic optimization problem. Assume that the random economic shock θt is a stochastic process
+following θt+1 = h(θt , εt ), where t is a serially uncorrelated random process.
+Let f (k, l, θ) denote net production function, and F (k, l, θ) = k + f (k, l, θ).
+Then the infinite-horizon discrete-time stochastic optimization problem be-
+
+10
+
+Table 1: Relative Errors of DPNLP for Deterministic Optimal Growth Problems
+∗
+β
+γ
+η
+Error of c∗DPNLP Error of lDPNLP
+Time (seconds)
+0.9 0.5 0.2
+1.5(−6)
+1.8(−6)
+6.8
+1
+3.1(−6)
+1.5(−6)
+3.8
+5
+3.0(−6)
+1.1(−6)
+4.4
+2 0.2
+1.1(−6)
+3.6(−6)
+4.3
+1
+1.4(−6)
+2.3(−6)
+7.0
+5
+2.2(−6)
+1.2(−6)
+4.5
+8 0.2
+9.7(−6)
+3.7(−6)
+5.7
+1
+1.0(−6)
+2.6(−6)
+3.9
+5
+1.5(−6)
+3.5(−6)
+3.8
+0.95 0.5 0.2
+3.1(−6)
+3.7(−6)
+3.8
+1
+4.7(−6)
+1.9(−6)
+3.7
+5
+4.8(−6)
+1.2(−6)
+3.4
+2 0.2
+1.6(−6)
+5.8(−6)
+4.2
+1
+2.2(−6)
+3.4(−6)
+4.3
+5
+3.5(−6)
+1.9(−6)
+3.7
+8 0.2
+1.2(−6)
+6.7(−6)
+4.6
+1
+1.2(−6)
+5.2(−6)
+4.3
+5
+2.8(−6)
+4.8(−6)
+4.3
+0.99 0.5 0.2
+1.2(−5)
+1.3(−5)
+4.8
+1
+3.0(−5)
+1.1(−5)
+4.8
+5
+4.2(−5)
+4.3(−6)
+3.9
+2 0.2
+6.1(−6)
+2.4(−5)
+5.7
+1
+1.0(−5)
+1.6(−5)
+5.3
+5
+1.8(−5)
+7.7(−6)
+5.6
+8 0.2
+2.0(−6)
+3.2(−5)
+7.4
+1
+3.9(−6)
+2.2(−5)
+6.3
+5
+1.1(−5)
+1.6(−5)
+6.9
+Note: a(k) means a × 10k .
+
+11
+
+comes
+V (k0 , θ0 ) = max E
+
+(∞
+X
+
+k,c,l
+
+s.t.
+
+)
+β t u(ct , lt ) ,
+
+(11)
+
+t=0
+
+kt+1 = F (kt , lt , θt ) − ct ,
+θt+1 = h(θt , εt ),
+
+where k0 ∈ [0.3, 2] and θ0 are given. The parameter θ has many economic
+interpretations. In the life-cycle interpretation, θ is a state variable that
+may affect either asset income, labor income, or both. In the monopolist
+interpretation, θ may reflect shocks to costs, demand, or both.
+We use the same utility function (9), but the production function is
+changed to
+F (k, l, θ) = k + θAk ψ l1−ψ
+where θ is the stochastic state, ψ = 0.25 and A = (1 − β)/(ψβ). In the
+examples, θt is assumed to be a Markov chain with 3 possible values:
+ϑ1 = 0.95, ϑ2 = 1.0, ϑ3 = 1.05,
+and the probability transition matrix from θt to θt+1 is
+
+
+0.75 0.25
+0
+P =  0.25 0.5 0.25  .
+0
+0.25 0.75
+The code for DPNLP is written in GAMS (McCarl, 2011), and the optimization solver is CONOPT (in the GAMS environment).
+
+6.1
+
+True Solution
+
+For the deterministic optimal growth problem (8), we use the discretized
+method and the alternating sweep Gauss-Seidel algorithm to get the “true”
+solution. But the DP method with high-precision discretization will be
+too time-consuming for solving the stochastic optimal growth problem (11).
+However, Cai and Judd (2012a) introduces a value function iteration method
+using a shape-preserving rational spline interpolation and shows that it is
+very accurate for solving multi-period portfolio optimization problems. For
+the deterministic optimal growth problem, since the value function is smooth,
+increasing and concave over the continuous state, capital k, we can also apply this shape-preserving DP algorithm to solve the deterministic optimal
+growth problem and realize that it is also very accurate (by comparing its
+solution with those given by the alternating sweep Gauss-Seidel algorithm).
+For the stochastic optimal growth problem, the value function for each
+discrete state is also smooth, increasing and concave over the continuous
+12
+
+state, capital k. Therefore, we can again choose the shape-preserving value
+function iteration method to solve the stochastic optimal growth problem
+and iterates until it converges under the stopping criterion 10−7 . We use
+1000 equally-spaced interpolation nodes on the range of the continuous state,
+[0.3, 2], for each discrete state θ.
+
+6.2
+
+DPNLP Solution
+
+We use the iterative DPNLP method (stochastic version of Algorithm 1) to
+solve the stochastic optimal growth problem. The basic DPNLP model is
+max
+
+c,l,k+ ,v,b
+
+s.t.
+
+J X
+m
+X
+
+vi,j ,
+
+(12)
+
+j=1 i=1
+
+vi,j ≤ u(ci,j , li,j ) + β
+
+J
+X
+
++
+Pj,j 0 V̂ (ki,j
+, θj 0 ; b),
+
+j 0 =1
++
+ki,j
+≤ F (ki, , li,j , θj ) − ci,j ,
+
+vi,j = V̂ (ki , θj ; b),
+V̂ 0 (yi0 , θj ; b) ≥ 0,
+V̂ 00 (yi0 , θj ; b) ≤ 0,
+i = 1, . . . , m, j = 1, ..., J, i0 = 1, ..., m0 .
+where J = 3, m = 19, m0 = 100, ki are expanded Chebyshev nodes in [0.3, 2],
+V̂ is the expanded Chebyshev polynomial up to the maximal degree 18, and
+yi0 are expanded Chebyshev nodes in [0.3, 2] as the shape nodes.
+
+6.3
+
+Error Analysis of DPNLP Solution
+
+We examine the errors for the stochastic model in the similar manner we did
+for the deterministic optimal growth problems: We apply the high-precision
+value function iteration to get the “true” optimal solution for every test
+point of initial capital k0 and every possible initial discrete state θ0 , and
+then use them to check the accuracy of the computed optimal solution from
+the DPNLP model (12).
+Table 2 lists relative errors of optimal solutions computed by DPNLP
+for the stochastic optimal growth problem with the following cases: β =
+0.9, 0.95, 0.99, γ = 0.5, 2, 8, and η = 0.2, 1, 5. The errors for optimal consumptions at time 0 are computed by
+|c∗DPNLP (k, θ) − c∗ (k, θ)|
+,
+|c∗ (k, θ)|
+k∈[0.3,2],θ∈{0.95,1.0,1.05}
+max
+
+where c∗DPNLP is the optimal consumption computed by DPNLP on the
+model (12), and c∗ is the “true” optimal consumption computed by the highprecision value function iteration method. The similar formula applies to
+13
+
+Table 2: Relative Errors of DPNLP for Stochastic Optimal Growth Problems
+∗
+β
+γ
+η
+Error of c∗DPNLP Error of lDPNLP
+Time (seconds)
+0.9 0.5 0.2
+1.9(−7)
+5.2(−7)
+11
+1
+2.5(−7)
+4.5(−7)
+9
+5
+2.5(−7)
+4.7(−7)
+9
+2 0.2
+1.4(−7)
+5.0(−7)
+16
+1
+2.0(−7)
+5.9(−7)
+12
+5
+3.0(−7)
+4.4(−7)
+12
+8 0.2
+1.1(−7)
+8.4(−7)
+22
+1
+1.6(−7)
+8.8(−7)
+18
+5
+8.5(−7)
+1.2(−6)
+15
+0.95 0.5 0.2
+3.7(−7)
+4.8(−7)
+15
+1
+3.9(−7)
+4.2(−7)
+11
+5
+4.4(−7)
+4.4(−7)
+10
+2 0.2
+2.9(−7)
+6.6(−7)
+22
+1
+3.2(−7)
+5.9(−7)
+17
+5
+4.4(−7)
+4.4(−7)
+13
+8 0.2
+2.3(−7)
+9.6(−7)
+25
+1
+3.0(−7)
+8.7(−7)
+21
+5
+9.7(−7)
+1.3(−6)
+23
+0.99 0.5 0.2
+4.1(−7)
+6.1(−7)
+30
+1
+4.5(−7)
+4.6(−7)
+22
+5
+4.1(−7)
+4.6(−7)
+17
+2 0.2
+3.0(−7)
+1.1(−6)
+50
+1
+3.4(−7)
+7.4(−7)
+40
+5
+5.9(−7)
+5.4(−7)
+40
+8 0.2
+1.5(−7)
+1.5(−6)
+55
+1
+1.8(−7)
+1.3(−6)
+58
+5
+2.2(−6)
+3.1(−6)
+56
+k
+Note: a(k) means a × 10 .
+
+14
+
+compute errors for optimal labor supply. The last column of Table 2 lists
+the running time of the iterative DPNLP method for various cases in the
+GAMS environment, on a single core of a Mac laptop with a 2.5 GHz processor.
+From Table 2, we can also see the similar pattern shown in Table 1. That
+is, DPNLP solves the examples with accuracy up to 6 or higher digits for
+optimal control policy functions in all cases. Moreover, for these stochastic
+examples, DPNLP is also fast, and takes less than one minute to solve any
+one case. For example, row one in Table 2 assumes β = 0.9, γ = 0.5, and
+η = 0.2. For this case, the error in consumption is 1.9 × 10−7 , the error in
+labor supply is 5.2 × 10−7 , and the running time is only 11 seconds.
+
+7
+
+Applications to Two-Dimensional Optimal Growth
+Problem
+
+The key DPNLP idea is clearly applicable to multidimensional problems. Of
+course, multidimensional problems are more demanding. Our next example illustrates DPNLP applied to a two-dimensional extension of our earlier
+models. The results indicate that DPNLP is a reasonable method for lowdimensional problems.
+We assume that there are two countries, and let kt = (kt,1 , kt,2 ) denote
+the capital stocks of two countries which is a two-dimensional continuous
+state vector at time t. Let lt = (lt,1 , lt,2 ) denote elastic labor supply levels of
+the countries which is a two-dimensional continuous control vector variable
+at time t. Assume that the net production of country i at time t is
+ψ 1−ψ
+fi (kt,i , lt,i ) = Akt,i
+lt,i ,
+
+with A = (1 − β)/(ψβ), for i = 1, 2. Let ct = (ct,1 , ct,2 ) denote consumption
+of the countries which is another two-dimensional continuous control vector
+variable at time t. The utility function is
+"
+#
+2
+X
+li1+η − 1
+(ci /A)1−γ − 1
+u(c, l) =
+− (1 − ψ)
+.
+1−γ
+1+η
+i=1
+
+We want to find an optimal consumption and labor supply decisions such
+that expected total utility over the infinite-horizon time is maximized. That
+
+15
+
+is,
+V (k0 ) =
+
+max
+
+kt ,It ,ct ,lt
+
+s.t.
+
+∞
+X
+
+β t u(ct , lt )
+
+(13)
+
+t=0
+
+kt+1,i = (1 − δ)kt,i + It,i ,
+
+2
+It,i
+ζ
+Γt,i = kt,i
+−δ ,
+2
+kt,i
+2
+X
+
+(ct,i + It,i − δkt,i ) =
+
+i=1
+
+2
+X
+
+(fi (kt,i , lt,i ) − Γt,i ) ,
+
+i=1
+
+where δ is the depreciation rate of capital, It,i is the investment of country
+i, Γt,i is the investment adjustment cost of country i, and ζ governs the
+intensity of the friction. Detailed discussion of multi-country growth models
+with infinite horizon can be seen in Den Haan et al (2011) and Juillard and
+Villemot (2011). For the multi-country growth models with finite horizon,
+they can be solved efficiently using dynamic programming with Hermite
+approximation, see Cai and Judd (2012c). In our examples, we let ψ = 0.36,
+δ = 0.025, and ζ = 0.5.
+The functional forms for utility and production imply that the steady
+state of the infinite horizon deterministic optimal growth problems is kss,1 =
+kss,2 = 1, and the optimal consumption, labor supply and investment at
+the steady state are respectively css,1 = css,2 = A, lss,1 = lss,2 = 1, and
+Iss,1 = Iss,2 = δ. The code for DPNLP is written in GAMS (McCarl, 2011),
+and the optimization solver is CONOPT (in the GAMS environment).
+
+7.1
+
+True Solution
+
+Discretization method will be too time-consuming to solve the two-country
+optimal growth problem with two continuous state variables (kt,1 , kt,2 ) and
+six continuous control variables (ct,1 , ct,2 , lt,1 , lt,2 , It,1 , It,2 ). In order to get the
+“true” solution, we use the value function iteration with high-degree complete
+Chebyshev polynomials and iterates until it converges under the stopping
+criterion 10−7 (i.e., the difference between two consecutive value functions
+is less than 10−7 ). We use 512 tensor Chebyshev nodes on the state space
+[0.5, 1.5]2 , and the degree of the complete Chebyshev polynomials is 30.
+
+7.2
+
+DPNLP Solution
+
+We use the iterative DPNLP method (multidimensional version of Algorithm
+1) to solve the two-dimensional optimal growth problem. The basic DPNLP
+
+16
+
+model is the multidimensional extension of the model (10). That is,
+max
+
+m
+X
+
+c,l,I,k+ ,v,b
+
+s.t.
+
+vi ,
+
+(14)
+
+i=1
+
+vi ≤ u(ci , li ) + β V̂ (ki+ ; b),
++
+ki,j
+
+Γi,j
+2
+X
+
+i = 1, . . . , m,
+
+≤ (1 − δ)ki,j + Ii,j , i = 1, . . . , m, j = 1, 2,
+
+2
+Ii,j
+ζ
+− δ , i = 1, . . . , m, j = 1, 2,
+= ki,j
+2
+ki,j
+
+(ci,j + Ii,j − δki,j ) =
+
+j=1
+
+vi = V̂ (ki ; b),
+0
+
+2
+X
+
+(fj (ki,j , li,j ) − Γi,j ) ,
+
+i = 1, . . . , m,
+
+j=1
+
+i = 1, . . . , m,
+
+V̂ (yi0 ; b) ≥ 0,
+
+i0 = 1, . . . , m0 ,
+
+V̂ 00 (yi0 ; b) ≤ 0,
+
+i0 = 1, . . . , m0 ,
+
++
++
+where ki = (ki,1 , ki,2 ), ci = (ci,1 , ci,2 ), li = (li,1 , li,2 ), ki+ = (ki,1
+, ki,2
+), yi0 =
+(yi0 ,1 , yi0 ,2 ), and V̂ 0 is the 2-dimensional gradient of V̂ , and V̂ 00 is the 2dimensional second order derivatives of V̂ .
+For our examples in this section, we choose m = 112 tensor Chebyshev
+nodes in the state space [0.5, 1.5]2 , as the approximation nodes. The approximation method, V̂ , is the complete Chebyshev polynomial up to the
+maximal degree 10. And we choose m0 = 100 tensor Chebyshev nodes, yi0 ,
+in the state space [0.5, 1.5]2 , as the shape nodes.
+
+7.3
+
+Error Analysis of DPNLP Solution
+
+We examine the errors for the multidimensional model in the similar manner
+we did for the unidimensional optimal growth problems: We apply the highprecision value function iteration to get the “true” optimal solution for every
+test point of initial capitals, and then use them to check the accuracy of the
+computed optimal solution from the DPNLP model (12).
+Table 3 lists relative errors of optimal solutions computed by DPNLP
+for the two-dimensional optimal growth problem with the following cases:
+β = 0.95, γ = 0.5, 2, 8, and η = 0.2, 1, 5. The last column of Table 3 lists the
+running time of the iterative DPNLP method for various cases in the GAMS
+environment, on a single core of a Mac laptop with a 2.5 GHz processor.
+Table 3 shows that DPNLP solves the examples with accuracy up to 4
+digits or higher for optimal control policy functions in all the cases besides
+one case having 3 digits. Moreover, the DPNLP method is not slow and
+takes only several minutes for each case. For example, row one in Table 3
+assumes γ = 0.5, and η = 0.2. For this case, the error in consumption is
+6.4 × 10−5 , the error in labor supply is 1.5 × 10−4 , and the running time is
+3.9 minutes.
+17
+
+Table 3: Relative Errors of DPNLP for Two-Country Optimal Growth Problems
+∗
+γ
+η
+Error of c∗DPNLP Error of lDPNLP
+Time (minutes)
+0.5 0.2
+6.4(−5)
+1.5(−4)
+3.9
+1
+9.0(−6)
+3.0(−5)
+2.5
+5
+8.0(−6)
+8.0(−7)
+1.4
+2 0.2
+6.2(−5)
+2.3(−4)
+3.6
+1
+4.5(−5)
+6.5(−5)
+3.1
+5
+8.5(−5)
+3.2(−5)
+2.2
+8 0.2
+8.4(−5)
+1.2(−3)
+5.0
+1
+2.1(−5)
+1.1(−4)
+6.6
+5
+1.3(−4)
+2.0(−4)
+5.6
+Note: a(k) means a × 10k .
+
+8
+
+Conclusion
+
+This paper presents a nonlinear programming formulation of dynamic programming problems common in economic decision making. We have applied
+it to a variety of optimal accumulation problems, showing that our DPNLP
+method performs very well, with high accuracy, reliability and efficiency for
+those problems. The variety of example problems indicate that our DPNLP
+method could be applied to many problems.
+
+18
+
+References
+[1] Bellman, R. (1957). Dynamic Programming. Princeton University Press.
+[2] Cai, Y. (2010). Dynamic Programming and Its Application in
+Economics and Finance. PhD thesis, Stanford University.
+[3] Cai, Y., and K.L. Judd (2010). Stable and efficient computational methods for dynamic programming. Journal of the European Economic Association, Vol. 8, No. 2-3, 626–634.
+[4] Cai, Y., and K.L. Judd (2012a). Dynamic programming with
+shape-preserving rational spline Hermite interpolation. Economics Letters, Vol. 117, No. 1, 161–164.
+[5] Cai, Y., and K.L. Judd (2012b). Shape-preserving dynamic
+programming. Mathematical Methods of Operations Research,
+DOI: 10.1007/s00186-012-0406-5.
+[6] Cai, Y., and K.L. Judd (2012c). Dynamic programming with
+Hermite approximation. NBER working paper No. w18540.
+[7] De Farias, D.P., and B. Van Roy (2003). The linear programming approach to approximate dynamic programming. Operations Research, 51(6), 850–865.
+[8] Den Haan, W.J., K.L. Judd and M. Juillard (2011). Computational suite of models with heterogeneous agents II: Multicountry real business cycle models. Journal of Economic Dynamics & Control, 35, 175–177.
+[9] Judd, K.L. (1998). Numerical Methods in Economics. The MIT
+Press.
+[10] Juillard, M., and S. Villemot (2011). Multi-country real business cycle models: Accuracy tests and test bench. Journal of
+Economic Dynamics & Control, 35, 178–185.
+[11] McCarl, B., et al. (2011). McCarl GAMS User Guide. GAMS
+Development Corporation.
+[12] Michelangeli, V. (2009). Economics of the Life-Cycle: Reverse
+Mortgage, Mortgage and Marriage. PhD thesis, Boston University.
+[13] Rust, J. (2008). Dynamic Programming. In: Durlauf, S.N.,
+Blume L.E. (Eds.), New Palgrave Dictionary of Economics. Palgrave Macmillan, second edition.
+19
+
+[14] Stokey, N.L., R.E. Lucas, and E.C. Prescott (1989). Recursive
+Methods in Economic Dynamics. Harvard University Press.
+[15] Su, C.H, and K.L. Judd (2012). Constrained Optimization Approaches to Estimation of Structural Models. Econometrica,
+Vol. 80 (5), 2213–2230.
+[16] Trick, M.A., and S.E. Zin (1997). Spline approximations to
+value functions — linear programming approach. Macroeconomic Dynamics, 1, 255–277.
+
+20
+
+

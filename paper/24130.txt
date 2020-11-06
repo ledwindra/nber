@@ -1,0 +1,6693 @@
+NBER WORKING PAPER SERIES
+
+INFERRING THE IDEOLOGICAL AFFILIATIONS OF POLITICAL COMMITTEES
+VIA FINANCIAL CONTRIBUTIONS NETWORKS
+Yiran Chen
+Hanming Fang
+Working Paper 24130
+http://www.nber.org/papers/w24130
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+December 2017
+
+We would like to thank Ben Connault, Frank DiTraglia, Yue Hou, Karam Kang, Michael Leung,
+Tengyuan Liang, Sarah Moshary, Andrew Shephard, Rakesh Vohra, Yiqing Xu and participants
+in the North American Econometric Society Summer Meeting (2017, St. Louis) for helpful
+discussions and suggestions. All remaining errors are our own. The views expressed herein are
+those of the authors and do not necessarily reflect the views of the National Bureau of Economic
+Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2017 by Yiran Chen and Hanming Fang. All rights reserved. Short sections of text, not to
+exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+
+Inferring the Ideological Affiliations of Political Committees via Financial Contributions Networks
+Yiran Chen and Hanming Fang
+NBER Working Paper No. 24130
+December 2017
+JEL No. D72,D85,P16
+ABSTRACT
+About two thirds of the political committees registered with the Federal Election Commission do
+not self identify their party affiliations. In this paper we propose and implement a novel Bayesian
+approach to infer about the ideological affiliations of political committees based on the network of
+the financial contributions among them. In Monte Carlo simulations, we demonstrate that our
+estimation algorithm achieves very high accuracy in recovering their latent ideological affiliations
+when the pairwise difference in ideology groups' connection patterns satisfy a condition known as
+the Chernoff-Hellinger divergence criterion. We illustrate our approach using the campaign finance
+record in 2003-2004 election cycle. Using the posterior mode to categorize the ideological
+affiliations of the political committees, our estimates match the self reported ideology for 94.36%
+of those committees who self-reported to be Democratic and 89.49% of those committees who self
+reported to be Republican.
+
+Yiran Chen
+Department of Economics
+University of Pennsylvania
+3718 Locust Walk
+Philadelphia, PA 19104
+yiranc@sas.upenn.edu
+Hanming Fang
+Department of Economics
+University of Pennsylvania
+3718 Locust Walk
+Philadelphia, PA 19104
+and NBER
+hanming.fang@econ.upenn.edu
+
+1
+
+Introduction
+Campaign finance is an integral part of the U.S. politics, and political committees are major
+
+participants in campaign finance related activities. We use the term Political Committees (henceforth, PCs) to refer to federal political action committees (PACs), party committees, campaign
+committees for presidential, house and senate candidates, as well as issue-based groups or organizations, including lobbyists or fundraisers. They collect contributions from individual donors, make
+contributions to other committees and candidates, and spend money for or against candidates.
+U.S. campaign finance laws mandate that political committees disclose all financial transactions
+including the contributions they receive and their expenditures, thus rendering numerous data
+for analyzing their campaign related activities. However, the PCs are not mandated to file their
+party (or ideological) affiliations. Indeed, as we will detail in Section 3, nearly 60% of PCs’ party
+affiliations are unreported. This missing data problem may generate obstacles in the study of
+important issues related to campaign finance. For example, for researchers who want to study the
+patterns of individual contributions using the individual contributions data provided by the Federal
+Election Commission (FEC), it is important to know the ideological affiliations of the PCs to which
+individual donors contribute. Nevertheless, in the Contributions by Individuals (Year 2003-2004)
+data released by the Federal Election Commission (FEC), about 24%, both in terms of the instance
+and the amount, of individual contributions go to PCs with unknown party affiliations.
+In this paper, we contribute to the methodologies that aim to address the missing ideological
+affiliations of the PCs. We propose a method of inferring PCs’ ideological affiliations from the
+financial transactions network among the PCs. The Contributions to Committees from Committees
+data, also administered by the FEC, contains the universe of all records of financial contributions
+among all registered PCs. We use this data set of the contribution activities to construct a financial
+transactions network of the PCs, where each PC is a vertex of the network, and the money flows
+between the PCs form the (weighted) edges. The basic idea of our method of inferring ideological
+affiliations of the PCs is simple. If the PCs tend to contribute more frequently to other PCs with
+similar ideology, then the PCs that actually filed their party affiliations, together with the structure
+of the observed financial transactions network, should provide information about the ideologies of
+the PCs with unknown ideological affiliations. Specifically, we build an economic model of link
+formation and transfer amount, and use the ideas of “community detection” first developed in the
+stochastic block model literature where contribution decisions (both the link formation and the
+weights) depend on both the observed characteristics and the potentially latent (for the PCs that
+do not file their party affiliations) ideologies of the potential contributing and receiving PCs.
+Our model incorporates several new features that are absent in the existing stochastic block
+1
+
+model literature. First, we introduce weights and rich heterogeneity in the edge formation process:
+the decision to make a contribution and its contribution amount is not only governed by the latent
+political ideologies of the PCs, but also depends on the vertex-level contextual information such as
+financial and institutional characteristics. Second, we model the reported party affiliations of those
+PCs that do self report their party affiliations as noisy measurements of their true latent ideologies.
+Thus, our methodology allows us to estimate the latent ideologies of all PCs, including those that
+self reported party affiliations.
+We use three publicly available data sets in our analysis. Two are from the campaign finance
+record in 2003-2004 election cycle, namely the Contributions to Committees from Committees, and
+the Committee Master File, both maintained by the FEC. We use the first data set to construct
+the financial transactions network of the PCs, and we use the second data set to obtain the party
+affiliations of some PCs (if they self report), as well as the designations and types of all PCs. The
+third data set is additional industrial breakdown information of the PCs which we collected from
+OpenSecret.org.1 Our data sets cover the universe of all PCs engaging in transactions with other
+PCs in 2003-2004. This feature of our network data has both advantages and disadvantages. An
+advantage is that it avoids potential bias arising from analyzing a partially sampled network, but
+a major disadvantage is the computational burden associated with the large network.2 There are
+5,858 vertices (i.e., PCs) in the financial transactions network, 3,727 of which did not report their
+party affiliations. Thus the number of potential ideological configurations is enormous, specifically,
+23727 even if we just allow for the binary ideology of Democrat or Republican. For similar reasons, in
+a Bayesian approach that delivers a probability distribution over different ideologies for each vertex
+(see Section 4 for details), exact estimation of the posterior mode is infeasible. We instead propose a
+Gibbs sampler algorithm to approximate the solution. In Monte Carlo Simulations, we demonstrate
+that our estimation algorithm achieves very high accuracy in recovering the latent party affiliations
+provided that the pairwise difference in ideology groups’ connection patterns satisfy what is known
+as the Chernoff-Hellinger divergence criterion. We illustrate our approach using the campaign
+finance record in the 2003-2004 election cycle. Using the posterior mode to categorize the party
+affiliations of the PCs, our estimated ideological affiliations match the self reported ideology for
+94.36% of those committees who self reported to be Democratic and 89.49% of those committees
+who self reported to be Republican.
+1
+
+https://www.opensecrets.org/pacs/list.php
+
+2
+
+Chandrasekhar and Lewis (2011) shows that bias arises when one works with partially sampled network.
+
+2
+
+Related Literature.
+
+This paper is closely related to two strands of existing literature. In terms
+
+of the research question, our paper is related to the political economy literature on the measurement
+of political ideologies. In terms of methodology, it is related to the statistics literature on community
+detection.
+We first discuss the literature on the measurement of political ideology. In a seminal paper,
+Poole and Rosenthal (1985) proposed a measure of the ideology points (NOMINATE score) of
+federal legislators using the roll call data. In their paper, legislators’ ideology points can differ
+by election cycle, and bridge legislators and bridge bills are used to ensure that the measures are
+comparable across time.3 Note that Poole and Rosenthal’s NOMINATE score is only available
+for members of Congress, which is a very small sample (around 500 legislators in each election
+cycle); and it is tied to voting behavior. Subsequently, ideology measurement for other political
+actors are proposed based on the NOMINATE score. For example, McCarty, Poole and Rosenthal
+(2006) combined NOMINATE score and the amount of contribution from PACs to the legislators to
+estimate PACs’ ideology. Their proposed measure is money-weighted average of the NOMINATE
+scores of the legislators to whom the PAC has contributed. These measures could be biased because
+they do not account for PACs’ contribution to losing candidates and other political actors. McKay
+(2008) and McKay (2010) combined NOMINATE score and the preferred votes on key roll calls
+published by interest groups to estimate interest groups’ ideologies. Her proposed measure is the
+average of the NOMINATE scores of “perfectly scoring” legislators whose votes are exactly the
+same as the preferred votes of the particular interest group. These measures are only available
+for interest groups which publish their preferred votes. Additionally, they could be biased: if an
+interest group publishes many key votes, the number of “perfectly scoring” legislators could be
+too small and leads to inaccuracy; if an interest group publishes only a few key votes, the number
+of “perfectly scoring” legislators could be too large and artificially draws the measure toward the
+center.
+There are other proposed methods which do not rely on the NOMINATE score. Some studies
+use the campaign finance data to jointly estimate candidates and PACs’ ideologies. For example,
+McCarty and Poole (1998) proposed a measure based on PAC’s contribution decision between
+incumbent-challenger pairs, excluding unchallenged and open seat elections which account for a
+significant fraction in the federal elections. Their measures are not available for candidates in
+these elections; and are potentially biased for PACs which contributed in these elections. More
+recently, Bonica (2013) proposed a method using the contributions from PACs to candidates. This
+3
+
+“Bridge legislators” are legislators who serve multiple terms; and “bridge bills” are bills that are considered at
+different legislative cycles but with similar contents.
+
+3
+
+approach, from the perspective of network study, restricted the sample to a directed bipartite graph,
+excluding connections among PACs or candidates, as well as connections from candidates to PACs.
+In our paper, in contrast, we use an unrestricted network incorporating all financial connections.
+Moreover, he uses maximum likelihood estimation method which requires multiple observations, so
+he pooled observations over a period of 30 years (1980-2010) and further restricted the sample to
+PACs that have given to 30 or more unique candidates, and candidates who have received from 30
+or more unique PACs. Pooling data over time is potentially problematic. It requires the assumption
+that the actor’s ideology is fixed in a span of 30 years. Differently, in our paper, we make inference
+about a PC’s ideology out of a single observation of financial transactions network: for any PC,
+separate ideology measures can be calculated for each election cycles. As a result, our measures
+are well suited for the study of the time trend of political activities. Moreover, his sample selection
+excludes candidates and PACs with small numbers of financial transactions. However, in our paper,
+we cover a more extensive scope of political actors: a PC is included as long as it has at least one
+financial transaction with another PC.
+Other studies use data from the social media platforms. For example, Barberá (2015) used the
+Twitter “following” links to estimate the ideology of the political elites (accounts of candidates,
+parties, media, and journalists) and the mass (other individual accounts) in multiple countries on
+the same scale. Similar to Bonica (2013), he restricted the sample to a directed bipartite graph
+focusing on the mass following the elites. He used a Bayesian method and a two-stage estimation
+strategy that exploits the bipartite structure. In the first stage, he used a sub-network induced by
+a random subsample of the mass accounts and all the elite accounts, and jointly estimated their
+ideologies. In the second stage, holding the first stage ideology measures of the elite accounts fixed,
+he estimated the ideology for all the mass accounts using the full network. This two stage procedure
+reduces the computational intensity; but using a partially sampled network may lead to bias in the
+first stage, which may be further propagated in the second stage. Our approach is different in
+that we simultaneously estimate the ideologies of all PCs using the full network. Finally, one key
+difference between Bonica (2013) and Barberá (2015) and our paper is that both of these papers
+use spatial models. Spatial models assume a priori homophily: political actors with closer ideology
+points have higher propensity to connect. This has an especially strong implication on the centrists’
+behavior. It rules out the possibility for the centrists to have low propensity to connect with other
+centrists, and high propensity to connect with the center-left and the center-right. In contrast,
+our model can accommodate non-homophilic patterns. In fact, according to our estimates, the
+Independent PCs do have higher propensity to form financial connections with Democratic and
+Republican PCs than other Independent PCs.
+
+4
+
+We now discuss the literature of community detection. The main task in this literature is to
+classify vertices in a network into different groups based on observed connections. When repeated
+observations of the network are available, canonical statistical tools can be directly applied. For
+example, Trebbi and Weese (2015) used generalized method of moments to estimate, for each
+district (vertex), the fraction of insurgents in different groups. The number of parameters is of
+order n, the number of vertices. Though large, it is fixed when the number of network observations
+T grows. Therefore, standard asymptotic results and inference tools are valid.
+When only one observation of the network is available, which is the case for our application, the
+nature of the problem is changed. In this case, the only hope for asymptotic result is to have network
+size n → ∞; however, when the network size grows, the number of parameters (of order n) also
+grows, which renders canonical statistical tools invalid. Some popular approaches circumvent this
+issue by using model-free heuristics: minimum-cut method in Stoer and Wagner (1997) minimizes
+the number of edges between communities; modularity maximization method in Newman (2006)
+maximizes the difference between the fraction of the edges within groups and its expected value if
+edges were formed at random; convergence of iterated correlations (CONCOR) method in Breiger,
+Boorman and Arabie (1975) bisects the adjacency matrix by iteratively calculating correlation
+coefficients among rows (or columns); and spectral method in Newman (2013) extracts information
+of graph partition from the top few eigenvectors of the adjacency matrix. Though widely used in
+practice, these approaches have the following limitations. First of all, the first three methods all
+assume a priori assortative communities, i.e., denser within-community connection than betweencommunity connection. They are not appropriate for problems where some group may have higher
+external connectivity. For example, in our application, the Independent PCs may engage in more
+transactions with Democratic and Republican PCs than with other Independent PCs. We need a
+model which does not assume away this possibility. Second, in the absence of a statistical model,
+none of these methods allows for statistical inference: we cannot state how confident we are in the
+obtained classification. Third, these methods cannot incorporate vertex level or vertex pair level
+heterogeneity beyond the latent community.
+Therefore, we took a model-based approach instead - we build on the stochastic block model
+(SBM) initiated by Snijders and Nowicki (1997) and Nowicki and Snijders (2001). In the SBM, a
+network is randomly formed conditional on the underlying community structure, and the community
+structure itself is also stochastically generated. This model is widely accepted as a canonical model
+for community detection and its estimators have desirable properties. Recent studies characterized
+the information-theoretic threshold for exact recovery, i.e. conditions on the data generating process
+such that one observation of the network embodies enough information to exactly recover the
+
+5
+
+community structure. Mossel, Neeman and Sly (2014), Abbe, Bandeira and Hall (2014), and Abbe
+and Sandon (2015) studied this problem in unweighted networks. Jog and Loh (2015) and Yun and
+Proutiere (2016) extended previous results to weighted networks. In particular, they show that if
+the Chernoff-Hellinger divergence of community pair’s connection patterns is above a particular
+threshold, the probability of correctly recovering the entire community structure converges to 1
+as n → ∞. Kanade, Mossel and Schramm (2016) and Cai, Liang and Rakhlin (2017) studied
+this problem when a fraction of the vertices’s community affiliations are revealed. Finally, Abbe
+(2017) provided a detailed review of the recent development in the research of exact recovery in
+stochastic block models. As explained earlier, exact solution to the Bayesian posterior mode is
+infeasible for large network, and various algorithms are proposed to approximate the solution.
+For example, the spectral algorithm can be viewed as an approximation to posterior mode.4 The
+Gibbs sampler algorithm we use in this paper is an approximation to first obtain the posterior
+distribution and then the posterior mode. From the perspective of empirical implementation, a
+weakness of the generic SBM is the lack of heterogeneity beyond community affiliations, so we
+introduce pair-wise heterogeneity in a similar way as Peng and Carvalho (2015a) and Peng and
+Carvalho (2015b). These papers proposed a degree correction strategy to capture vertex-level
+heterogeneity: they use additional latent variable or observed degree to capture the popularity of
+a vertex, and a “popular” vertex has higher propensities to connect to all other vertices. In this
+paper, we allow heterogeneity at vertex pair level, by incorporating interactions of the observable
+vertex level characteristics, such as location, industry, and budget. Apart from richer specification,
+the use of observable characteristics has additional benefits: it entails less computational intensity
+than the use of latent variable, and it avoids the endogeneity problem from the use of observed
+degrees.
+The remainder of the paper is structured as follows. In Section 2, we introduce the basic
+framework for the financial network among political committees, and describe the statistical model
+of random network formation that we will empirically implement; in Section 3, we describe the
+data sets used in our analysis, as well as several “naive” methods that we attempted; in Section
+4, we provide the details of the Bayesian estimation procedure and arguments for identification;
+in Section 5, we present the Monte Carlo results; in Section 6, we describe the specifications used
+in our empirical implementation, and present the main empirical results; finally, in Section 7, we
+conclude and discuss directions for future research.
+4
+
+The original discrete parameter space is relaxed to a sphere, and the spectral method is a solution to the relaxed
+problem, and is derived through derivatives. A detailed description can be found in Newman (2013).
+
+6
+
+2
+
+Financial Network of Political Committees
+We represent the money-flow network among political committees as a static, weighted and
+
+undirected graph.5 A graph G consists of vertices V and edges E. In our model, each vertex
+i ∈ V = {1, ..., n} represents a PC. In our application, n will represent the total number of PCs
+registered with the FEC, and is 5,858 for the 2003-2004 election cycle. Each edge (i, j) ∈ E is an
+unordered pair in V × V. In our application, (i, j) ∈ E if there exists money flow, either unilateral
+or bilateral, between committees i and j. A weighted graph also includes, for each edge (i, j) ∈ E,
+a corresponding weight wij , which in our application will correspond to the sum of money flows
+between the two PCs. Equivalently, a weighted graph G can be represented by a weighted adjacency
+matrix y where
+
+ w
+ij
+yij =
+ 0
+
+if (i, j) ∈ E
+
+(1)
+
+otherwise.
+
+In addition to the network structure described above, each committee i ∈ {1, ..., n} is characterized
+by the following attributes: a unidimensional latent ideology xi , and a multi-dimensional observable
+characteristics zi , which captures the financial and institutional characteristics of the PC. The
+details of the variables contained in the vector zi will be described in Section 6 when we present
+our empirical specification.
+Ideologies of Vertices.
+
+We assume that there are m discrete categories of ideologies where
+
+m ≥ 2. In our application, m will be equal to 3, corresponding to Democratic, Republican and
+Independent respectively. We denote the true ideology of vertex i ∈ V by xi ∈ {1, ..., m}. We
+assume that, for all vertices, their xi ’s are latent and unobserved to us. However, For a subset of
+vertices V o ⊂ V, there exists a noisy measure, denoted by x̂i ∈ {1, ..., m}, of the latent ideology xi ;
+but for vertices in V\V o , we do not have this noisy measure. In our application, the size of V o is
+typically about 1/3 of the size of V.6
+To summarize, the framework for the financial network of PCs can be represented by:
+hy, x, x̂, zi = h{yij }1≤i,j≤n , {xi }1≤i≤n , {x̂i }i∈V o , {zi }1≤i≤n i .
+
+(2)
+
+Note, however, since we do not observe x, the data consists of
+DATA : hy, x̂, zi = h{yij }1≤i,j≤n , {x̂i }i∈V o , {zi }1≤i≤n i .
+5
+
+(3)
+
+While both the model and the estimation strategy can be straightforwardly extended to a directed graph, an
+undirected graph is adopted for computational tractability.
+6
+
+In Appendix H, we also implement a version of the model in which we assume that x̂i = xi for all i ∈ V o .
+
+7
+
+The goal of our empirical exercise is to make inference about the latent ideology x based on data
+hy, x̂, zi .
+
+2.1
+
+A Statistical Model
+
+As we explained in the introduction, the vector of latent ideologies x = (x1 , ..., xn ) can be highdimensional. To circumvent the high-dimensionality problem, we adopt a Bayesian approach by
+assuming that each vertex can, a priori, be of ideology k ∈ {1, ..., m} with probability θk where
+θ = (θ1 , ..., θm ) ∈ ∆m−1 ; and then we use its observed links with other vertices and the weights
+of the links to render a posterior probability distribution pi ∈ ∆m−1 over these categories. We
+will use the mode of the posterior distribution pi as our best guess for i0 s political or ideological
+affiliation.7
+Formally, our model of the financial network formation among PCs is based on the stochastic
+block models of random network formation. In the model, the number of vertices n, the number of
+blocks m, and vertices’ observable characteristics z are assumed to be exogenous and fixed. The
+adjacency matrix Y, the ideology vector X, and the noisy measure X̂ are assumed to be random.8
+Prior.
+
+For any PC i ∈ V, its latent ideology Xi has the following marginal prior distribution:
+P(Xi = k) = θk for k = 1, ..., m
+
+(4)
+
+where θ = (θ1 , ..., θm ) ∈ ∆m−1 .
+Measurement Error. For a PC i ∈ V o ⊂ V, we observed i0 s reported political affiliation X̂i ,
+which we interpret as a noisy measure of its true ideology Xi . Specifically,
+
+ 1−
+P(X̂i = k|Xi = xi ) =
+ 
+m−1
+
+for k = xi
+
+(5)
+
+for k ∈ {1, ..., m}\{xi },
+
+where  ∈ [0, 1) captures the rate of measurement error.9
+7
+
+Of course, the whole posterior distribution pi itself is of interest beyond its mode: pi will allow us to provide a
+more continuous measure of i0 s ideology spectrum. For example, two vertices may end up with the same ideological
+categorization based on their posterior mode, while one vertex could be more central than the other.
+8
+
+Throughout the paper, generic random variables are denoted by capital letters Y, X, and X̂, whereas their
+realizations and specific configurations are denoted by small letters y, x, and x̂.
+9
+
+ can be pre-specified as 0 if there is good reason to believe that there is no error in report (perhaps by the nature
+of the data set). Otherwise, a positive  is more flexible because it allows for measurement error, which makes it
+possible for the report x̂i to differ from the true ideology xi . We will implement a version of the model restricting
+ to be zero in Appendix H, where we instead hold out a subset of the vertices with self-reported ideologies in our
+estimation, and use the holdout sample to validate our estimation results.
+
+8
+
+Edge Formation.
+
+Conditional on the true ideologies, Xi , Xj , and observable characteristics
+
+zi , zj , entries Yij ’s in the weighted adjacency matrix are assumed to be independently generated
+across (i, j) pairs:
+Assumption 1 (Conditional Independence). For any pairs of PCs, (i, j) and (i0 , j 0 ) , with either i 6= i0 or j 6= j 0 ,
+Yij ⊥ Yi0 j 0
+
+
+Xi , Xj , zi , zj , Xi0 , Xj 0 , zi0 , zj 0 .
+
+An economic interpretation of this assumption is as follows. A PC designs its general principle
+in contributions according to its political ideology as well as its financial and institutional characteristic. Following the principle, its staffs make decisions on whether to contribute to a specific
+committee, and the idiosyncratic factors in each of these decisions are unobserved by the researcher
+and are assumed to be independent. This conditional independence assumption is a potentially
+strong assumption, because it abstracts away from various possible strategic considerations that
+a political committee may have in its contribution decisions; of course, the restrictiveness of this
+assumption in practice depends on how complete the vector of characteristics z is. It is important to note that Assumption 1 is stated conditional on the latent ideologies of the relevant PCs.
+Thus, it allows for what we believe to be the first-order role of ideologies in political contributions.
+Other characteristics of the PC, for example, its previous connections, are also allowed to affect its
+contribution decisions, to the extent that such information is contained in its characteristics z. In
+addition, it is well acknowledged that it is difficult to establish asymptotic results in a network model in the presence of widespread correlation (see, e.g., Leung (2016)); as a result, valid statistical
+inference using data from a single network (or a small number of networks) necessitates restrictions
+on the degree of correlation. Finally, conditional independence is a maintained assumption in the
+literature of stochastic block model (Snijders and Nowicki (1997) and Nowicki and Snijders (2001)),
+and the literature of classification in general (see, e.g., Koller and Friedman (2009)).10
+Specifically, we assume that the edge formation process is as follows. For any pair of vertices
+(i, j) ∈ V 2 with i 6= j, conditional on (Xi , Xj ) = (k, l) ∈ {1, ..., m}2 , and zi , zj ,
+Yij
+
+> 0 if β 0,kl + β 1,kl (zi +zj ) + β 2,kl zi zj + eij > 0;
+
+Yij
+
+= 0, otherwise,
+
+(6)
+
+
+where β kl,0 , β 1,kl , β 2,kl are the parameters governing the edge formation probability, and zi zj
+is a shorthand (with some abuse of notation) for interaction terms of zi and zj . Because we deal
+10
+For example, the naive Bayes model is widely used as a spam filter to classify emails into normal vs. spam emails,
+and it assumes that conditional on text class, the presence of words are independent.
+
+9
+
+with an undirected graph, we further assume that the process (6) satisfies parameter symmetry
+over (k, l) , i.e.,
+β 0,kl = β 0,lk ,
+β 1,kl = β 1,lk ,
+
+(7)
+
+β 2,kl = β 2,lk ,
+and that eij ∼ i.i.d. N (0, 1).
+To simplify notation in the likelihood function in Section 4, we will denote the conditional
+probability of two vertices i and j forming an edge as η ij and express it in a compact form as:11
+η ij (Xi , Xj ) = P(Yij > 0|Xi , Xj , zi , zj )
+
+= Φ γ(Xi , Xj , zi , zj )0 β ,
+
+(8)
+
+where
+O
+[1, zi +zj , zi zj ]0 ,
+γ(Xi , Xj , zi , zj ) = D(Xi , Xj )
+h
+i
+D(Xi , Xj ) = 1(Xi =k,Xj =l)∨(Xi =l,Xj =k)
+,
+1≤k≤l≤m
+
+0
+β = β 0,kl , β 1,kl , β 2,kl 1≤k≤l≤m .
+Weights of the Edge. Once two vertices form an edge, we assume that the weight of their edge,
+which in our application will correspond to the total amount of financial transactions between
+the two vertices, is drawn from a Q-valued discrete distribution with probabilities that depend on
+ideological proximity. Specifically, conditional on Yij > 0, if Xi = k, Xj = l, the Yij takes values
+(w1 , ..., wQ ) with probabilities
+hkl ≡ (hkl,1 , ..., hkl,Q ) ∈ ∆Q−1 .
+
+(9)
+
+In our estimation we will pre-fix Q and the values (w1 , ..., wQ ). Again because we deal with an
+undirected graph, we impose the natural symmetry assumption that
+hkl = hlk .
+11
+
+(10)
+
+Note that we omit the covariates zi and zj in the arguments of expression (8) for η ij for notational convenience.
+
+10
+
+2.2
+
+Discussions
+
+First, we would like to note that the edge formation process as specified by (6) can be interpreted
+as resulting from a model of matching. Two committees decide whether to establish a financial
+connection based on their joint surplus from forming a match. The surplus has a deterministic
+component β 0,kl + β 1,kl (zi +zj ) + β 2,kl zi zj as well as a stochastic component eij . Parameters differ
+by ideology pair (k, l). β kl,0 captures the direct effect of ideology proximity, and β 1,kl and β 2,kl
+capture the effect of committee specific characteristics interacting with ideology proximity. In other
+words, ideology influences the edge formation probability through both the constant term and the
+coefficients.12
+Second, financial and institutional characteristics zi and zj are included in the specification
+(6) not only because they may be important factors in the PCs’ contribution decisions, but also,
+technically, it is our strategy for degree correction. Without these covariates, the model is essentially
+the same as Snijders and Nowicki (1997), where edge formation probability is governed only by
+ideology proximity. In their model, variations in degree are attributed only to random shock and
+ideology proximity. Moreover, the implied degree distribution is a mixture of m(m + 1)/2 binomial
+distributions. However, when the number of ideology categories is small, the model-implied degree
+distribution may not be able to capture the empirical degree distribution. Therefore, we include
+vertex specific characteristics to introduce richer heterogeneity in the edge formation probability.
+This is a variant of the degree correction strategy introduced in Peng and Carvalho (2015a) and
+Peng and Carvalho (2015b). In addition to proximity of the latent ideology, Peng and Carvalho
+(2015a) assume that the edge formation probability also depends on additional latent variables
+ξ i , ξ j ∈ R, capturing vertex specific popularity. Peng and Carvalho (2015b) replace the latent
+popularity variables with the quantile ranks of the vertices’ observed degrees qi , qj ∈ {1, 2, ..., Q}.
+Our paper differs from Peng and Carvalho (2015b) in that the characteristics we use do not involve
+any features of the network, rendering a much cleaner model with which to perform statistical
+inference because the potential problem of endogeneity is avoided. Compared to Peng and Carvalho
+(2015a), our paper has a faster convergence rate and lower computational intensity because it does
+not require inferring about additional latent variable ξ i .
+Finally, note that conditional on the latent ideologies of the vertices, our model of network
+formation is equivalent to a pair-wise matching model. However, since the vertices’ latent ideologies
+are not known, our edge formation process as specified in (6) allows for correlation conditional on
+12
+
+In an empirical application, additional constraints can be added: for example, restricting some coefficients in
+β 1,kl and β 2,kl to be 0, or to be the same for different ideology pairs. We provide the details of the additional
+restrictions in Section 6.
+
+11
+
+observables
+
+n o
+X̂i
+
+i∈V o
+
+and z. Moreover, the correlation is spread all over the connected component
+
+of the network via the latent ideologies. As a result, our network is not decomposable based on
+observables.
+
+3
+
+Data and Descriptive Statistics
+Three data sets are used in our study, two of which are administrative data sets from the Federal
+
+Election Commission (FEC) in 2003-2004 election cycle: the “ Committee Master File”, and the
+“Contributions to Committees from Committees” data; and the third data set is collected from
+OpenSecrets.org.13
+The “Committee Master File” contains basic information about all the PCs registered with
+the FEC. The PCs in this data set include federal political action committees (PACs), party
+committees, campaign committees for presidential, house and senate candidates, as well as groups
+or organizations such as lobbyists or fund raisers. This data set also contains information on the
+PC’s geographical location, institutional characteristics, and the self-reported party affiliation, if
+available.
+The “Contributions to Committees from Committees” data contains the universe of the contribution records between PCs. We observe the universe of records because the campaign finance
+laws mandate the disclosure of all transactions and expenditure related to federal election activities. In this data set, for each contribution, it lists the contributor, recipient, and the amount of
+contribution. We will use this data set to construct the complete network of financial transactions
+among the PCs.
+Finally, the OpenSecrets.org data set contains the industry categorization for the PCs. The
+data sources corresponding to each of the variables we use are summarized in Table 1.
+Variable
+
+Data Source
+
+y
+x̂
+z
+
+Contributions to Committees from Committees
+Committee Master File
+Committee Master File (location and institutional characteristics),
+Contributions to Committees from Committees (imputed financial budget),
+OpenSecrets.org (industry categorization).
+
+Table 1: Data Source
+13
+
+The website is maintained by the Center for Responsive Politics.
+
+12
+
+3.1
+
+Vertex Characteristics
+
+In the 2003-2004 election cycle, 5,858 PCs participated in contribution activities with other PCs
+and formed a financial network, among a total of 7,559 active PCs (defined as PCs with either
+positive total receipts or positive total disbursement).14 We do not include in our study the PCs
+that do not participate in financial contributions with other PCs, though they could alternatively
+be viewed as isolated vertices in the network. This is not particularly worrisome because the PCs
+excluded from our study are financially insignificant. Among all PCs with positive receipts, the
+PCs in the financial network accounted for 96.83% of total amount of receipts; and among all PCs
+with positive disbursement, these PCs accounted for 96.87% of total amount of receipts.
+Since the campaign finance laws do not mandate that political committees report their party
+affiliations, the Committee Master File has incomplete information on the PCs’ political affiliation.
+In Table 2, we summarize the distribution of reported party affiliations of the PCs in the Committee
+Master File. Respectively 17.4% and 17.12% of the PCs reported to be Democratic and Republican,
+while 1.01% of the PCs reported to be Independent, and 0.85% of the PCs reported other affiliations
+such as Labor Party or Conservative Party. Importantly, 63.62% of the PCs did not report their
+party affiliations. In terms of financial significance, contributions sent by the PCs without self
+reported political affiliations accounted for 15.25% of the total amount of contributions among the
+PCs, and contributions received by them accounted for 37.38% of the total contributions.
+Reported Affiliation
+
+Frequency
+
+% of PC
+
+% of Contribution From
+
+% of Contribution To
+
+Democratic
+Republican
+Independent
+Other
+Missing
+
+1,019
+1,003
+59
+50
+3,727
+
+17.40
+17.12
+1.01
+0.85
+63.62
+
+45.25
+38.64
+0.53
+0.33
+15.25
+
+34.74
+25.78
+1.63
+0.46
+37.38
+
+Total
+
+5,858
+
+100
+
+100
+
+100
+
+Table 2: Tabulation of Reported Party Affiliation
+In Table 3 we describe the non-ideological characteristics included in our analysis. Information
+on state and industry enables us to capture the effect of geographical and industrial proximity on
+political contribution. Figure 1 shows that the District of Columbia has the highest number of
+political committees (896), followed by California (575), Virginia (436), Texas (301), New York
+14
+Information on total receipts and disbursement is obtained from data sets “Candidate Summary (All Candidates)”
+and “PAC & Party Summary” released by the FEC. This information is missing for 89 PCs in the observed financial
+network. We define them as active, and use their budget in the financial network as a proxy for their total receipts
+and total disbursement.
+
+13
+
+Characteristics
+
+Type
+
+Range
+
+State
+Industry
+Committee Type
+Committee Designation
+National
+Budget (in $1,000)
+
+Categorical
+Categorical
+Categorical
+Categorical
+Dummy
+Continuous
+
+55 distinct categories
+46 distinct categories
+6 distinct categories
+3 distinct categories
+{0,1}
+[0, 104064.2]
+
+Table 3: Non-ideological Characteristics
+Note: States include unincorporated territories.
+
+(284), Pennsylvania (273) and Illinois (226). In Table 4, we provide a coarse industrial breakdowns
+of the political committees. Besides “Other” , which aggregates many small industrial categories,
+Finance/Insurance/Real Estate is the most represented industry (9.12%), followed by Miscellaneous
+Business (6.96%), Health (5.43%) and Labor (5.19%). In our empirical analysis, we drop the
+ideological and party affiliated sectors, and use a finer breakdown for sectors such as Misc Business
+and Other. We provide a detailed description of the construction of the industry variable in
+Appendix A.
+
+86
+
+20
+
+93
+
+14
+24
+
+44
+
+79
+
+186
+
+19
+1524
+
+18
+
+16
+
+284
+
+61
+
+41
+
+273
+176
+36
+
+91
+
+44
+
+32
+
+226
+
+83
+
+116
+
+74
+72 22
+
+130
+142
+24
+17 896
+
+56
+
+436
+
+575
+81
+69
+
+24
+
+116
+
+50
+
+62
+
+57
+33
+84
+
+130
+
+72
+
+301
+
+183
+
+Figure 1: Geographical Distribution of Political Committees
+Committee type, committee designation, and national dummy are institutional characteristics
+that are potentially related to contribution patterns. There are six distinct categories of committee
+type in the Committee Master File: House campaign, Senate campaign, Presidential campaign,
+14
+
+15
+5,858
+
+Total
+
+100
+
+4.87
+3.18
+2.12
+0.92
+4.68
+9.12
+5.43
+5.19
+3.18
+2.68
+6.96
+41.04
+2.80
+6.13
+0.41
+1.31
+1,019
+
+0
+0
+0
+0
+1
+0
+0
+1
+0
+0
+0
+782
+81
+153
+0
+1
+100
+
+0
+0
+0
+0
+0.10
+0
+0
+0.10
+0
+0
+0
+76.74
+7.95
+15.01
+0
+0.01
+
+Report Dem
+Number
+%
+
+1,003
+
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+812
+65
+124
+0
+2
+100
+
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+80.96
+6.48
+12.36
+0
+0.20
+
+Report Rep
+Number
+%
+
+Table 4: Industrial Sectors of Political Committees
+
+285
+186
+124
+54
+274
+534
+318
+304
+186
+157
+408
+2,404
+164
+359
+24
+77
+
+All PCs
+Number
+%
+
+Agribusiness
+Communic/Electronics
+Construction
+Defense
+Energy/Natural Resource
+Finance/Insurance/ Real Estate
+Health
+Labor
+Lawyers & Lobbyists
+Transportation
+Misc Business
+Ideological/Single-Issue
+Joint Candidate Committee
+Party Committee
+Other
+Unknown
+
+Sector
+
+59
+
+4
+3
+1
+1
+3
+6
+4
+9
+0
+2
+6
+19
+0
+0
+1
+0
+
+100
+
+6.78
+5.08
+1.69
+1.69
+5.08
+10.17
+6.78
+15.25
+0
+3.40
+10.17
+32.20
+0
+0
+1.69
+0
+
+Report Ind
+Number
+%
+
+3,777
+
+281
+183
+123
+53
+270
+528
+314
+294
+186
+155
+402
+791
+18
+82
+23
+74
+
+100
+
+7.44
+4.85
+3.26
+1.40
+7.15
+13.98
+8.31
+7.78
+4.92
+4.10
+10.64
+20.94
+0.48
+2.17
+0.61
+1.96
+
+Missing/Report Other
+Number
+%
+
+qualified PAC, qualified Party and others.15 Table 5 shows that 27.72% of the committees are campaign committees of either House, Senate or Presidential elections, 45.43% are qualified PACs, and
+4.52% are qualified Party committees, and the rest (“Other”) are mainly non-qualified committees.
+In Table 6, we provide information about the committee designations. There are three distinct
+categories of committee designation in the Committee Master File: authorized by a candidate,
+joint fund-raiser, and others.16 Table 6 shows that 1.89% of the committees are authorized by a
+candidate, 2.83% are joint fund-raisers, and the majority of the rest are either principal campaigns
+or committees not authorized by a candidate. We do not list principal campaigns separately because it would be redundant given the more detailed categorization in committee type. Finally,
+the national dummy listed in Table 3 takes value 1 if and only if the committee is one of the
+following six committees: the Democratic National Committee (DNC), the Democratic Senatorial
+Campaign Committee (DSCC), the Democratic Congressional Campaign Committee (DCCC), the
+Republican National Committee (RNC), National Republican Senatorial Committee (NRSC), and
+National Republican Congressional Committee (NRCC).
+We compute a PC’s budget from its contribution record. It is constructed as the sum of its
+contributions to all other PCs within this election cycle. Typically, this amount is lower than a
+committee’s total receipts or total disbursements. We use this measure because it is most powerful
+in explaining a PC’s probability of making political contribution, and thus its total number of
+connections. In fact, the correlation between a PC’s total receipts or disbursements and its number
+of contributions to other PCs is low. The distribution of budget is given in Table 7 and Figure 2.
+It has a wide range and a fat tail: 25.7% of the PCs have budget less than or equal to $1,000, while
+8% of the PCs have budget more than $500,000.
+
+3.2
+
+Descriptive Statistics of the Financial Transactions Network
+
+The Contributions from Committees to Committees data set records 411,106 transactions among
+5,858 political committees in the 2003-2004 election cycle. Figure 3 is a graphical representation
+of the network using graphing software Gephi.17 Each vertex represents a PC, and the color
+of the vertex represents reported affiliation: blue for Democratic, red for Republican, green for
+15
+Qualified PACs need to have been in existence for six months and received contributions from 50 people and
+made contributions to five federal candidates. Qualified party committees need to have been in existence for at least
+six months and received contributions from 50 people or are affiliated with another party committee that meets these
+requirements.
+16
+A committee is designated as “authorized by a candidate” if it is authorized by a candidate in writing to receive
+contributions or make expenditures on behalf of the candidate, but is not her principal campaign committee. A
+committee is designated as “a joint fundraiser ” if it is created by two or more candidates, PACs or party committees
+to share the costs of fundraising, and split the proceeds.
+17
+
+See https://gephi.org.
+
+16
+
+17
+5,858
+
+Total
+100
+
+21.77
+5.27
+0.68
+45.43
+4.52
+22.33
+1,019
+
+613
+140
+20
+20
+127
+99
+100
+
+60.16
+13.74
+1.96
+1.96
+12.46
+9.72
+
+Report Dem
+Number
+%
+
+1,003
+
+644
+158
+9
+13
+114
+65
+100
+
+64.21
+15.75
+0.90
+1.30
+11.37
+6.48
+
+Report Rep
+Number
+%
+
+59
+
+8
+2
+6
+43
+0
+0
+
+100
+
+13.56
+3.39
+10.17
+72.88
+0
+0
+
+Report Ind
+Number
+%
+
+Note: The 22.33% other committees mainly consist of non-qualified PACs and non-qualified Party committees.
+
+Table 5: Types of the Political Committees
+
+1,275
+309
+40
+2,661
+265
+1,308
+
+All PCs
+Number
+%
+
+House
+Senate
+Presidential
+Qualified PAC
+Qualified Party
+Other
+
+Committee Type
+
+3,777
+
+10
+9
+5
+2,585
+24
+1,144
+
+100
+
+0.26
+0.24
+0.13
+68.44
+0.64
+30.29
+
+Missing/Report Other
+Number
+%
+
+18
+
+1.89
+2.83
+95.27
+100
+
+111
+166
+5,581
+5,858
+
+Authorized by a Candidate
+Joint Fundraiser
+Other
+
+Total
+
+1,019
+
+42
+81
+896
+100
+
+4.12
+7.95
+87.93
+
+Reported Dem
+Freq %
+
+1,003
+
+65
+66
+872
+100
+
+6.48
+6.58
+86.94
+
+Reported Rep
+Freq %
+
+59
+
+4
+0
+55
+
+100
+
+6.78
+0
+93.22
+
+Reported Ind
+Freq %
+
+3,777
+
+0
+19
+3,758
+
+100
+
+0
+0.50
+99.50
+
+Missing/Reported Other
+Freq %
+
+Note: The 95.27% other committees mainly consist of principal campaigns and committees that are not authorized by a candidate.
+
+Table 6: Committee Designation
+
+All PCs
+Freq %
+
+Committee Type
+
+Quantile
+
+All PCs
+
+Report Dem
+
+Report Rep
+
+Report Ind
+
+Missing/Report Other
+
+Min
+25%
+50%
+75%
+Max
+
+0.00
+1.00
+10.00
+75.90
+104,064.19
+
+0.00
+2.98
+32.75
+353.30
+104,064.19
+
+0.00
+4.00
+48.07
+456.15
+55,873.70
+
+0.00
+5.00
+20.00
+88.87
+2,386.53
+
+0.00
+0.70
+6.08
+30.00
+9,180.75
+
+Obs.
+
+5,858
+
+1,019
+
+1,003
+
+59
+
+3,777
+
+Table 7: Quantiles of Budget in $1,000
+
+Frequency
+
+3000
+
+2000
+
+1000
+
+0
+0
+
+20 40 60 80 100 120 140 160 180 200 220 240 260 280 300 320 340 360 380 400 420 440 460 480 500
+
+Budget in $1,000
+
+Figure 2: Distribution of Budget
+Note: Observations with budget higher than $500,000 are plotted at $500,000.
+
+Independent, and yellow for missing/other. For the purpose of this graph, we collapse multiple
+contributions with the same direction between any pair of PCs into one edge: each edge represents
+a directed financial connection; and we use the contributor’s color to represent the color of the
+edge. Thus there are a total of 164,529 edges in Figure 3. This network has 20 disconnected
+components.18 Nevertheless, the component in the center is disproportionately large with 5,806
+vertices. The subsequent description focuses on this giant component.
+Network Level Statistics.
+
+In the rest of the analysis we will consider the network as undirected,
+
+thus we further collapse transactions with different directions between any pair of PCs. We derive
+18
+
+A component is a maximum connected sub-network.
+
+19
+
+Figure 3: Political Contribution Network
+Note: Vertex color represents reported affiliation: blue for Democratic, red for Republican, green for Independent,
+and yellow for missing. Edge color is the same as contributor’s color.
+
+20
+
+a financial network with 5,806 vertices and 145,406 edges. Table 8 presents some of the key
+statistics for the financial transaction network among the PCs. First, the network is sparse, yet
+well-connected. On the one hand, the average degree is 50.09, i.e. on average, a PC is connected
+to only 0.86% of other PCs.19 This indicates sparsity because the number of edges is only a small
+fraction of all the vertex pairs. On the other hand, it has a diameter of 10, and an average distance
+of 2.99.20 Both statistics indicate that the network is well-connected, which poses a challenge for our
+study. Given the connectedness, there is no straightforward approach to structurally decompose this
+giant component into separate sub-networks, despite the visual patterns of clustering. Moreover,
+there is no other natural way of decomposition. A common practice in the network applications is
+to partition the full network into geographically disjoint sub-networks and assume no interaction
+across sub-networks. However, this practice is not suitable in our application because political
+contributions are not concentrated at local levels.
+Number of vertices
+Number of edges
+Average degree
+Diameter
+Average distance
+
+5,806
+145,406
+50.09
+10
+2.99
+
+Table 8: Network Statistics
+
+Distributions of Degrees and Edge Weights.
+
+To explore beyond the network-level summary
+
+statistics, we further investigate the distribution of degrees. Figure 4 shows that the degree distribution has a large spread and a fat tail: the highest degree is as large as 978. An important
+feature is that the shape of this distribution is inconsistent with a mixture of a small number of
+binomial distributions–an implication in the standard stochastic block model. To capture the observed degree distribution, we introduce rich heterogeneity in our model. Specifically, we include
+budget whose distribution has similar patterns to account for the variations in degree.
+Additionally, we study the sub-networks induced by reported Democratic, Republican and Independent PCs, and analyze connection patterns conditional on reported affiliations. In Figure 5, we
+have three graphs for self-reported Democratic, Republican, and Independent PCs respectively. In
+each graph, we present the distribution of the PCs’ numbers of connections with the three groups
+19
+
+Degree is a vertex-level statistics. It is the number of direct connections
+a vertex has. Following the notation
+P
+introduced in the previous section, vertex i’s degree is given by di = j6=i 1(yij > 0).
+20
+
+The diameter of a network is calculated as the maximum length of the (finite) shortest paths among vertex pairs.
+The average distance of a network is calculated as the average length of the (finite) shortest paths among vertex
+pairs.
+
+21
+
+Frequency
+
+2000
+
+1000
+
+0
+1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90
+
+100 110 120 130 140 150 160 170 180 190 200
+
+Degree
+
+Figure 4: Histogram of degree
+Note: Observations with degree higher than 200 are plotted at 200.
+
+of self identified PCs. Self-reported Democratic and Republican PCs show evidence of homophily.
+On the one hand, many PCs are financially connected with PCs affiliated to same party, and a
+sizable of them have more than 20 such connections; on the other hand, only a small number of
+PCs are financially connected with PCs affiliated to the other party, and most of them have less
+than 10 such connections. Self-reported Independent PCs show similar connection pattern with
+the self-reported Democratic vs. Republican PCs. Many are financially connected with both parties, and a sizable of them have more than 20 such connections. A small fraction are financially
+connected with other self-reported Independent PCs, and most of them have less than 10 such
+connections - partially due to the small number of self-reported Independent PCs. Note that we
+cannot claim, based on the connection patterns between PCs with self reported affiliations, that
+this is an evidence of heterophily. It is possible that they are connected with a large number of
+Independent PCs without self-reported affiliations. Furthermore, even if Independent PCs exhibit
+heterophily, this behavior does not invalidate either our model or estimation. Identification only
+requires that PCs with different political ideologies have different contribution patterns. This is at
+least true for the PCs with self-reported affiliation, which is reassuring.
+Finally, in order to infer about the unknown ideologies from the PCs with self reported ideologies,
+an implicit assumption in our model is that the PCs without self reported affiliations do not act
+systematically differently from the PCs with self reported affiliations. Therefore, we reproduce the
+degree distribution in Figure 6 with the composition of each bar marked by color. The degree
+distribution of PCs without self reported affiliations is similar to that of the PCs with self reported
+affiliations. This evidence is consistent with the assumption, though insufficient. In Section 6, we
+22
+
+Self−Reported Democratic Committees
+Connections with
+Reported Democratic
+Reported Independent
+
+900
+
+Frequency
+
+Reported Republican
+
+600
+
+300
+
+0
+1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Self−Reported Republican Committees
+1000
+
+Connections with
+Reported Democratic
+Reported Independent
+Reported Republican
+
+Frequency
+
+750
+
+500
+
+250
+
+0
+1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Self−Reported Independent Committees
+Connections with
+40
+
+Reported Democratic
+Reported Independent
+Reported Republican
+
+Frequency
+
+30
+
+20
+
+10
+
+0
+1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Figure 5: Distributions of Number of Connections with Different Committees
+Note: These figures only include observations with positive number of connections. Observations with more than 200
+connections are plotted at 200.
+
+23
+
+will present more evidence on this after we have presented our estimation results.
+Reported Affiliation
+Democratic
+Republican
+Independent
+Missing
+
+Frequency
+
+2000
+
+1000
+
+0
+1
+
+10
+
+20
+
+30
+
+40
+
+50
+
+60
+
+70
+
+80
+
+90
+
+100 110 120 130 140 150 160 170 180 190 200
+
+Degree
+
+Figure 6: Decomposition of Degree Distribution
+Note: The same as Figure 4, but the composition of each bar, i.e., the composition of PCs with a certain rage of
+degrees, is presented with different colors.
+
+The financial network also provides information on transfer amount (the sum of the contribution
+amount) between pairs of connected PCs. Its distribution is given in Table 9 and Figure 7. Most of
+them are small because of the regulations on contribution limits (detailed description in Appendix
+B). In addition, we present the distribution of transfer amount conditional on reported ideology in
+Table 9 and Figure 8. On average, the transfer amount is high between PCs with the same reported
+affiliation, and low for the other cases. A caveat in interpreting these statistics is that we exclude
+all the contributions involving PCs without self reported affiliations, so they do not necessarily give
+the full picture of the contribution pattern.
+
+3.3
+
+Issues with Naive Alternative Methods
+
+In this subsection, we briefly discuss the issues with some naive alternative methods that we
+have attempted, and explain why they are invalid. We first define
+
+
+−1 if committee i is reported to be Democratic
+
+
+
+x̂i =
+0 if committee i is reported to be Independent
+
+
+
+
+1 if committee i is reported to be Republican.
+
+24
+
+25
+
+5,582
+Dem,Ind
+51.00
+1,500.00
+4,000.00
+7,500.00
+75,000.00
+5,209.31
+
+145,406
+
+Dem,Rep
+
+10.00
+1,000.00
+1,000.00
+2,000.00
+150,000.000
+9,059.11
+121
+
+Obs.
+
+Quantile
+
+Min
+25%
+50%
+75%
+Max
+Mean
+
+Obs.
+
+48,132
+
+1.00
+1,000.00
+2,000.00
+5,000.00
+2,966,933.00
+3,833.99
+
+Dem,Other/Missing
+
+5,151
+
+10.00
+1,000.00
+1,000.00
+4,028.00
+22,542,215.00
+58,189.32
+
+Rep,Rep
+
+1,359
+
+50.00
+1,000.00
+2,000.00
+5,000.00
+60,000.00
+3,677.08
+
+Rep,Ind
+
+6
+
+5,000.00
+10,000.00
+10,000.00
+29,143.00
+223,000.00
+48,920.67
+
+Ind, Ind
+
+68,281
+
+2.00
+1,000.00
+2,000.00
+4,000.00
+1,638,000.00
+3,468.98
+
+Rep,Other/Missing
+
+13,979
+
+11.00
+2,000.00
+5,000.00
+10,000.00
+12,367,982.00
+9,544.85
+
+Other/Missing,Other/Missing
+
+Table 9: Quantiles of Transfer Amount (in $1.00)
+
+6.00
+1,000.00
+1,000.00
+2,000.00
+47,190,000.00
+76,034.83
+
+1.00
+1,000.00
+2,000.00
+5,000.00
+47,190,000.00
+8,990.74
+
+Min
+25%
+50%
+75%
+Max
+Mean
+
+2,238
+
+Dem,Dem
+
+All
+
+Quantile
+
+557
+
+5.00
+2,000.00
+5,000.00
+10,000.00
+1,000,000.00
+18,441.87
+
+Ind,Other/Missing
+
+0.6
+
+Density
+
+0.4
+
+0.2
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+Figure 7: Empirical Distribution of Transfer Amount
+Note: Bin size is 500. Observations with transfer amount higher than $50,000 are plotted at $50,000.
+Reported Rep, Reported Rep
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+Density
+
+0.6
+
+0.0
+
+0.2
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+Reported Dem, Reported Ind
+
+0.4
+
+0.4
+
+Density
+
+0.4
+
+Density
+
+0.6
+
+0.0
+
+0.2
+
+0.0
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+10000
+
+Transfer Amount
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+Reported Rep, Missing/Reported Other
+
+0.4
+
+0.4
+
+Density
+
+0.4
+
+Density
+
+0.6
+
+0.2
+
+0.0
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+20000
+
+30000
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+Transfer Amount
+
+40000
+
+50000
+
+0
+
+10000
+
+20000
+
+30000
+
+Transfer Amount
+
+Missing/Reported Other, Missing/Reported Other
+
+Density
+
+0.4
+
+0.2
+
+0.0
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0.2
+
+0.6
+
+0
+
+40000
+
+Reported Ind, Missing/Reported Other
+
+0.6
+
+0
+
+10000
+
+Transfer Amount
+
+0.6
+
+0.0
+
+50000
+
+0.2
+
+Transfer Amount
+
+0.2
+
+40000
+
+0.0
+0
+
+Reported Dem, Missing/Reported Other
+
+30000
+
+Reported Rep, Reported Ind
+
+0.6
+
+0.2
+
+20000
+
+Transfer Amount
+
+0.6
+
+0
+
+10000
+
+Transfer Amount
+
+Reported Dem, Reported Rep
+
+Density
+
+0.2
+
+0.0
+0
+
+Transfer Amount
+
+Density
+
+Reported Ind, Reported Ind
+
+0.6
+
+Density
+
+Density
+
+Reported Dem, Reported Dem
+0.6
+
+50000
+
+Transfer Amount
+
+Figure 8: Empirical Distribution of Transfer Amount Conditional on Reported Ideology
+Note: Bin size is 500. Observations with transfer amount higher than $50,000 are plotted at $50,000.
+
+26
+
+40000
+
+50000
+
+The naive method tries to find x∗ solving the following fixed point problem as a solution to the
+ideology recovery problem:
+
+
+
+x̂
+x∗
+
+
+
+ 
+
+ = sign y 
+
+
+
+x̂
+x∗
+
+ .
+
+(11)
+
+In other words, a PC is Democratic (Republican) if it is connected with more Democratic (Republican) PCs than Republican (Democratic) ones, or Independent if it is connected with an equal
+number of Democratic and Republican PCs. However, neither existence nor uniqueness of the
+solution is guaranteed. We attempted to solve this problem by iteration method, but failed. The
+following example in Figure 9 illustrates the reason. According to the categorization rule described
+above, the two “unknown” vertices should be assigned Democratic. However, this assignment generates inconsistency in the “Republican” vertex’s behavior: as a Republican PC, it is connected with
+two Democratic PCs. There does not exist a categorization which can reconcile such inconsistency,
+so the naive method proposed in (11) does not guarantee a well-defined solution.
+
+DEM
+
+DEM
+UNK
+
+REP
+
+UNK
+DEM
+
+DEM
+
+Figure 9: Non-Existence of Solution with Naive Method
+Since the solution concept above requires too strong a coherency in categorization, a less restric-
+
+27
+
+tive method was also attempted:
+xi =
+
+X
+
+yij x̂j .
+
+(12)
+
+j∈V o
+
+In this case, a PC’s ideology is defined by its connected PCs with self reported affiliation. There are
+two major problems with this method. First, when a PC is only connected to PCs with unreported
+affiliations, its ideology is not defined. If we try to address this problem by iteratively applying the
+equation above, we go back to the previous method. Second, categorization has very low precision
+for PCs connected with few PCs with self reported affiliations and mostly with PCs with unknown
+affiliations. The poor performance of naive methods necessitate the use of a more sophisticated
+method.
+
+4
+
+Estimation
+Given the model description, the likelihood of y, x̂ conditional on x, z is given by
+P (y, x̂|x, z; , β, h)
+= P (x̂|x; ) P (y|x, z; β, h)
+
+ne Y
+
+nt
+= (1 − )
+m−1
+
+1(yij >0) 
+1(yij =0)
+
+1 − η ij (xi , xj )
+, (13)
+η ij (xi , xj )hxi xj (yij )
+
+1≤i<j≤n
+
+P
+where nt = i∈V o 1(xi = x̂i ) is the number of vertices in V o whose x̂i ’s coincide with xi ’s, ne =
+P
+o
+i∈V o 1(xi 6= x̂i ) is the number of vertices in V whose x̂i ’s differ from xi ’s, and hxi xj (yij ) = hxi xj ,q
+if yij = wq where hxi xj ,q is defined in (9).
+We use the Maximum A Posteriori (MAP) estimator to recover the latent ideology. It is a
+Bayesian estimator that equals the mode of the posterior probability. Specifically, it solves
+max
+
+x∈{1,...,m}n
+
+P (y, x̂|x, z; , β, h) P (x; θ) .
+
+(14)
+
+Note that the Maximum Likelihood Estimator (MLE) solves
+max
+
+x∈{1,...,m}n
+
+P (y, x̂|x, z; , β, h) ,
+
+(15)
+
+1
+1
+, ..., m
+).
+and that MAP is equivalent to MLE under uniform prior θ = ( m
+
+We now argue for the validity of the MAP estimator, and propose a Bayesian algorithm to obtain
+an approximate solution. Theoretically, statistical inference is non-standard in our model. First of
+all, we have only one observation of the network, i.e. one realization of y, x̂. Second, the number
+
+28
+
+of parameters (the number of latent political ideologies) grows with the network size. Therefore,
+canonical asymptotic theory is not applicable. For example, law of large numbers cannot be directly
+applied. As a result, in the recent literature, new concepts and tools are introduced to study this
+problem. The following subsection summarizes the key concepts and results mostly related to our
+study.
+
+4.1
+
+Threshold for Exact Recovery
+
+In this subsection we describe the theoretical results in Yun and Proutiere (2016) that justify
+our estimation using one observation of the network. The standard stochastic block model was first
+introduced in Snijders and Nowicki (1997) and Nowicki and Snijders (2001), and its exact recovery
+problems were studied in Mossel, Neeman and Sly (2014), Abbe, Bandeira and Hall (2014), and
+Abbe and Sandon (2015). The labeled stochastic block model introduced weights on edges, and its
+exact recovery problems were studied in Jog and Loh (2015) and Yun and Proutiere (2016). First,
+we provide a formal definition of the labeled stochastic block model.
+Definition 1 (Labeled Stochastic Block Model LSBM (n, θ, log(n)
+n W )). The LSBM generates an n-vertex random graph with community affiliation X and weighted adjacency matrix Y according to the following process. Each vertex is assigned a community affiliation
+Xi ∈ {1, 2, ..., m} independently under probability θ = (θ1 , ..., θm ) ∈ ∆m−1 . Conditional
+on community affiliations, the edges are drawn independently. The edges Yij ’s take discrete
+values {0, w1 , w2 , ...wQ } where 0 represents no edge and wq represents an edge with the specified (non-zero) weight. The distribution of edges is governed by an m-by-m-by-Q matrix
+W . Specifically, vector W (k, l; ·) characterizes edge distribution between a pair of vertices in
+communities k and l:
+log(n)
+W (k, l; q) for q = 1, .., Q;
+n
+Q
+log(n) X
+W (k, l; q).
+= 0|Xi = k, Xj = l) = 1 −
+n
+
+P(Yi,j = wq |Xi = k, Xj = l) =
+P(Yi,j
+
+(16)
+
+q=1
+
+Note that W is not indexed by the network size n, i.e. it does not change with n. This implies
+that the distribution described above will change with n. More precisely, the probability of having
+an edge scales as Θ( log(n)
+n ) and the degree scales as Θ(log(n)). This logarithmic growth rate of
+degree with respect to the network size is called the logarithmic degree regime. The literature on
+exact recovery studies this regime because it is dense enough that the graph is connected with
+high probability; yet it is still sparse enough that the conditional independence condition yields
+29
+
+asymptotic independence of the failures of the component-MAP for different vertices.
+Next, we provide the definition of exact recovery. Exact recovery is an asymptotic requirement
+in the context of the SBM - a counterpart of consistency in the classical statistical problems.21
+Definition 2 (Exact Recovery). Exact recovery is solved if there exists an algorithm such that
+P(X est = X) → 1 as n → ∞ where X est is the estimated community affiliation.22
+In other words, exact recovery requires that for a large enough network, the probability of correctly
+recovering the entire community structure (i.e. no misclassification) is almost 1. The most promising estimator to solve exact recovery is the MAP estimator because it minimizes P(X est 6= X) - if
+MAP fails in solving exact recovery, no other algorithm can succeed (see, e.g., Abbe (2017) ).
+In order to describe the condition for exact recovery, we first define the Chernoff-Hellinger (CH)
+divergence (Abbe and Sandon (2015)).
+Definition 3 (Chernoff-Hellinger divergence D(θ, W )).
+D(θ, W ) = min DL+ (θ, W (k), W (l))
+k,l:k6=l
+
+(17)
+
+where DL+ (θ, W (k), W (l)) is given by
+
+DL+ (θ, W (k), W (l)) = max
+
+λ∈[0,1]
+
+Q X
+m
+X
+
+θj [(1−λ)W (k, j; q)+λW (l, j; q)−W (k, j; q)1−λ W (l, j; q)λ ]
+
+q=1 j=1
+
+(18)
+Intuitively, DL+ (θ, W (k), W (l)) measures the difference in connection patterns between a pair of
+communities, k and l; and thus the CH-divergence D(θ, W ) is the minimum of such difference
+between any pair of distinct communities. In the following, we explain more precisely the meaning
+of difference in connection pattern. Note that mathematically θj [(1 − λ)W (k, j; q) + λW (l, j; q) −
+W (k, j; q)1−λ W (l, j; q)λ ] measures the difference between θj W (k, j; q) and θj W (l, j; q). Moreover,
+θj W (k, j; q) log(n) gives, for a vertex in community k, the expected number of wq -weighted edges
+with community j; and θj W (l, j; q) log(n) gives, for a vertex in community l, a similar number.
+Therefore, θj [(1 − λ)W (k, j; q) + λW (l, j; q) − W (k, j; q)1−λ W (l, j; q)λ ] measures the difference between communities k and l in terms of the number of wq -weighted edges with community j. Finally,
+summing over different communities j and different edge weights wq delivers the expression in (18).
+DL+ (θ, W (k), W (l)) is non-negative. Larger value of DL+ (θ, W (k), W (l)) represents larger differ21
+
+Exact recovery is sometimes referred to as strong consistency, reflecting the resemblance to consistency.
+
+22
+
+The equivalence is up to group permutation of X est with respect to community names.
+
+30
+
+ence in connection patterns between communities k and l, and DL+ (θ, W (k), W (l)) is zero if and
+only if the two communities have identical connection patterns, i.e., W (k, j; q) = W (l, j; q), ∀j, q.
+We further illustrate the definition of CH divergence in a special case of a homogeneous model
+(Jog and Loh (2015)), where its expression is significantly simplified. In a homogeneous model,
+vertices are assigned to different communities with equal probabilities; and the distribution of an
+edge only depends on whether the pair of vertices belong to the same communities:
+θj =
+
+W (k, l; ·) =
+
+1
+, ∀j;
+m
+
+
+Wwithin (·) if k = l
+
+(19)
+
+(20)
+
+W
+between (·) if k 6= l.
+Under homogeneity, the CH divergence reduces to the Hellinger divergence (corresponding to λ =
+1
+2 ),
+
+measuring the difference in within-community and between-community connection patterns:
+
+D(θ, W )
+=DL+ (θ, W (k), W (l)) ∀k 6= l
+= max
+λ∈[0,1]
+
+Q X
+m
+X
+
+θj [(1 − λ)W (k, j; q) + λW (l, j; q) − W (k, j; q)1−λ W (l, j; q)λ ]
+
+q=1 j=1
+
+Q
+1 X X
+[(1 − λ)W (k, j; q) + λW (l, j; q) − W (k, j; q)1−λ W (l, j; q)λ ]
+λ∈[0,1] m
+
+= max
+
+q=1 j∈{k,l}
+Q
+
+1 X
+Wwithin (q) + Wbetween (q) − Wwithin (q)1−λ Wbetween (q)λ − Wbetween (q)1−λ Wwithin (q)λ
+λ∈[0,1] m
+
+= max
+
+q=1
+
+=
+
+1
+m
+
+Q
+X
+
+p
+p
+( Wwithin (q) − Wbetween (q))2 .
+
+q=1
+
+(21)
+The first equation follows symmetry, the second equation directly applies the definition in (18),
+the third equation uses (19) and W (k, j; ·) = W (l, j; ·) = Wbetween (·) ∀j 6= k, l, the fourth equation
+applies (20), and the last equation results from λ =
+
+1
+2
+
+being the maximizer.
+
+Now we can state the main theoretical results. Combining Theorem 3 and Claim 4 in Yun and
+Proutiere (2016), we have:
+Theorem 1 (Threshold for Exact Recovery). Exact recovery is solvable for LSBM (n, θ, log(n)
+n W ))
+if D(θ, W ) > 1.
+31
+
+The theorem shows that: if the difference in connection patterns of any pair of communities is large
+enough, we can correctly recover the entire community structure from one observed network with
+high probability. This theorem provides theoretical foundation for the use of the MAP estimator
+(because it is the “optimal” algorithm in terms of exact recovery), and it is very similar to the
+consistency results in classical statistics.
+Some comment on the case where D(θ, W ) < 1 is useful. In this case, the MAP estimator
+fails exact recovery (i.e. has misclassification) with strictly positive probability. This result should
+not be interpreted as discouraging: although the probability of having misclassification does not
+vanish with the growth of the sample size, the misclassification rate defined as the proportion of
+vertices misclassified could still be low. In our Monte Carlo simulations, we observe that even when
+the CH divergence is below 1, we still have reasonably good classification. Therefore, even if our
+application falls in the second case, the MAP estimator is still a sensible choice.
+To apply this theorem to our model, note that W corresponds to a composition of the edge
+formation probability Φ(γ 0 β), the conditional weight distribution h, and the scaling factor
+
+log(n)
+n .
+
+In the Monte Carlo exercises, and the real data application, we will calculate the CH divergence
+according to Definition 3 and (22)
+W (k, l; q) =
+
+n
+Φ( γ(k, l)0β )hkl (q)
+log(n)
+
+(22)
+
+where γ(k, l)0β is the median of (γ(k, l, zi , zj )0β) over (i, j) pairs such that xi = k, xj = l or
+xi = l, xj = k. This accommodates our introduction of covariates in the edge formation process.
+
+4.2
+
+Estimation Algorithm
+
+Apart from the theoretical challenge, the large size of the campaign finance network poses
+additional computational challenges. The parameter space of x is mn . With 3 categories and 5,806
+vertices, the parameter space is far larger than the number of atoms in the universe.23 Therefore,
+exact solution to MAP in (14) is infeasible, and instead we need an efficient approximation method.
+In light of these considerations, we propose a Bayesian algorithm to approximate the posterior
+distribution of the latent ideology as well as other parameters.
+In this Bayesian approach, the latent ideology vector X, and the parameters , θ, β are treated
+as random variables with certain prior probability distributions. Adjacency matrix y and reported
+affiliation x̂ are treated as one realization of the random variables Y and X̂. Observable characteristics z are treated as fixed and exogenous.
+23
+
+According to Jackson (2010), the estimated number of atoms in the universe is on the order of 2270 .
+
+32
+
+The prior distribution of the latent X is given by (4) in the network formation model. The prior
+distribution of θ, the parameter governing the unconditional probability distribution of ideology, is
+assumed to be a Dirichlet distribution:
+θ ∼ Dir(αθ ),
+
+(23)
+
+where αθ ∈ Rm
++ is a vector of pre-specified concentration parameters. The prior distribution of ,
+the parameter governing measurement error, is assumed to be a Beta distribution:
+ ∼ Beta(α1 , α2 ),
+
+(24)
+
+where (α1 , α2 ) ∈ R2+ is a vector of pre-specified concentration parameters. The prior distributions
+of h = {hkl }1≤k≤l≤m , the conditional distribution of edge weight (transfer amount), is assumed to
+be a Dirichlet distribution:
+hkl ∼ Dir(αhkl ),
+
+(25)
+
+where αhkl ∈ RQ
++ is a vector of pre-specified concentration parameters. The prior distribution of
+β, the parameter governing edge formation probability, is assumed to be a multivariate normal
+distribution:
+β ∼ N (0, τ 2 I),
+
+(26)
+
+where τ ∈ R+ is pre-specified standard deviation.
+Given the prior probability distributions of X, θ, β, , and h, the goal of Bayesian estimation is to
+update the belief on their joint distribution using data y, x̂ and z, i.e., to compute the posterior distribution P(θ, β, , h, X|y, x̂, z). Once the posterior distribution is computed, it is straightforward
+to assess different objects of interest, especially the marginal distributions P(Xi |y, x̂, z). There is
+neither an analytically nor a numerically convenient form to directly characterize of the joint posterior distribution. Fortunately, calculations of conditional distributions P(Xi |x−i , y, x̂, z, θ, β, , h, ),
+P(θ|y, x̂, z, β, , h, x), P(β|y, x̂, z, θ, , h, x), P(|y, x̂, z, θ, β, h, x), and P(h|y, x̂, z, θ, β, , x) are relatively easy. Therefore, a Gibbs sampler algorithm is used to construct the joint posterior distribution. Gibbs sampler is a Markov Chain Monte Carlo (MCMC) algorithm, which repeatedly samples
+a set of random variables conditional on the values of all other random variables. It is particularly
+useful when sampling from conditional distributions is convenient.
+
+33
+
+Computing the Posterior Distribution P(θ, β, , h, X|y, x̂, z).
+
+By Bayes’ rule, the posterior
+
+distribution of Xi is given by:
+P(y, x1 , ..xi−1 , xi = k, xi+1 , ...xn , x̂|z, θ, β, , h)
+P(Xi = k|x−i , y, x̂, z; θ, β, , h, ) = Pm
+,
+l=1 P(y, x1 , ..xi−1 , xi = l, xi+1 , ...xn , x̂|z, θ, β, , h)
+
+which can be reduced to:
+
+P(Xi = k|x−i , y, x̂, z, θ, β, , h, ) ∝
+
+
+Y
+
+θ
+(1
+−
+)
+[η ij (k, xj )hkxj (yij )]1(yij >0) [1 − η ij (k, xj )]1(yij =0) if k = x̂i
+
+k
+
+
+j6=i
+
+ Y
+
+
+[η ij (k, xj )hkxj (yij )]1(yij >0) [1 − η ij (k, xj )]1(yij =0) if k 6= x̂i
+
+θk m − 1
+
+∀i ∈ V o ,
+
+j6=i
+
+(27)
+
+are measurement accuracy of the report, and
+where θk is the ideology prior, (1 − ) and m−1
+Q
+1(y
+>0)
+1(y
+=0)
+ij
+[1 − η ij (k, xj )] ij
+is information embedded in network connecj6=i [η ij (k, xj )hkxj (yij )]
+
+tions. The posterior is an interaction of the three. When  > 0, i.e. allowing for measurement error,
+if the network data highly favors an ideology different from x̂i , it is possible for the posterior to
+override the prior, i.e. a posterior mode at k 6= x̂i . This can be viewed as a data-oriented correction
+of measurement error. Similarly,
+P(Xi = k|x−i , y, x̂, z, θ, β, , h, ) ∝ θk
+
+Y
+[η ij (k, xj )hkxj (yij )]1(yij >0) [1−η ij (k, xj )]1(yij =0)
+
+∀i ∈ V\V o ,
+
+j6=i
+
+(28)
+where θk is the ideology prior, and
+
+Q
+
+1(yij >0) [1
+j6=i [η ij (k, xj )hkxj (yij )]
+
+− η ij (k, xj )]1(yij =0) is infor-
+
+mation embedded in network connections. The posterior is an interaction of the two. Summoning
+conjugacy, the posterior distribution of θ is given by:
+θ|y, x̂, z, β, , h, x ∼ Dir(αθ + [nk ]1≤k≤m ),
+where nk =
+
+P
+
+1≤i≤n 1(xi
+
+(29)
+
+= k) is the number of vertices with xi equal to k. The posterior distribu-
+
+tion of  is given by:
+|y, x̂, z, θ, β, h, x ∼ Beta(α1 + ne , α2 + nt ),
+
+(30)
+
+P
+
+1(x̂i 6= xi ) is the number of vertices whose self report is different from its
+P
+ideology, and nt = i∈V o 1(x̂i = xi ) is the number of vertices whose self report is the same as its
+
+where ne =
+
+i∈V o
+
+ideology. The posterior distribution of h is given by:
+hkl |y, x̂, z, θ, β, , x ∼ Dir(αhkl + [nkl,q ]1≤q≤Q ),
+
+34
+
+(31)
+
+where nkl,q =
+
+P
+
+1≤i<j≤n max{1(xi
+
+= k, xj = l), 1(xi = l, xj = k)}1(yij = q) is the number of edges
+
+with transfer amount wq between PCs of ideologies k and l. Constructing the posterior distribution
+of β is more delicate. β is essentially the coefficient vector in a Probit regression model, whose
+posterior distribution does not have an analytically convenient form. Therefore, instead of directly
+sampling from a closed form distribution, a data augmentation strategy introduced in Albert and
+Chib (1993) is used. First, sample auxiliary variable u = {uij }1≤i<j≤n from the following truncated
+normal distributions:
+
+uij ∼
+
+
+N (γ(xi , xj , zi , zj )0 β, 1)|uij > 0 if yij > 0
+N (γ(x , x , z , z )0 β, 1)|u < 0 if y = 0.
+i j i j
+ij
+ij
+
+(32)
+
+Conditional on the auxiliary variable u, the posterior distribution of β is given by:
+
+β|y, x̂, z, θ, , h, x, u ∼ N (τ −2 I + Γ0 Γ)−1 Γ0 u, (τ −2 I + Γ0 Γ)−1 ,
+
+(33)
+
+
+
+where Γ = γ(xi , xj , zi , zj )0 1≤i<j≤n .
+The Gibbs sampler algorithm is summarized below:
+1. Initialize x0 , θ 0 , β 0 , 0 , h0 .
+2. Iteratively sample from conditional posterior distribution. Specifically, in iteration t, we
+sample one set of parameters (xt , θ t , t , ht , β t ) with the following procedure:
+(a) Sample {xi }t1≤i≤n sequentially from distribution
+t−1
+P(Xi |y, x̂, z, θ t−1 , β t−1 , t−1 , ht−1 , xt1 , ..xti−1 , xt−1
+i+1 , ...xn ) using (27) and (28).
+
+(b) Sample vector θ t from distribution P(θ|y, x̂, z, β t−1 , t−1 , ht−1 , xt ) using (29).
+(c) Sample t from distribution P(|y, x̂, z, β t−1 , ht−1 , xt , θ t ) using (30).
+(d) Sample vectors ht from distribution P(h|y, x̂, z, β t−1 , xt , θ t , t ) using (31)
+(e) Sample auxiliary vector ut from distribution P(u|y, z, β t−1 , xt ) using (32).
+(f) Sample vector β t from distribution P(β|y, x̂, z, xt , θ t , t , ht , ut ) using (33).
+3. Burn in the first T1 iterations. Use samples from iterations T1 + 1 to T1 + T2 to construct
+posterior distribution.
+The first step initializes the Markov chain. The initial values should not affect the steady state and
+can be determined either at random or by other algorithms. We use the former in our application.
+The second step simulates the Markov chain by repeatedly sampling one parameter conditional
+35
+
+on the values of all other parameters. The sampling order of the parameters is arbitrary, and a
+different order can be used, e.g. one can sample θ before x. In order to speed up convergence,
+we use the newly sampled parameter immediately in the following sampling procedures and do not
+wait until the next iteration, e.g., xt sampled from (a) is used in the sampling of θ t in (b). The
+final step discards the initial portion of the Markov chain, namely the first T1 iterations, where
+steady state is not reached. Pooling the remainder samples gives an approximate joint posterior
+distribution P(θ, β, , h, X|y, x̂, z).
+
+5
+
+Monte Carlo Evidence
+In this section, we present Monte Carlo evidence to evaluate the performance of the community
+
+recovery algorithm proposed in Section 4. We conduct four sets of Monte Carlo simulations that
+differ in the specifications of the edge formation process and the network size, both of which affect
+the Chernoff-Hellinger divergence measure as defined in (18) because they enter the expression of
+W (k, l; q) (see Eq. (22)).
+The first three sets of Monte Carlo simulations share a framework that is similar to the homogeneous labeled stochastic block model as in Jog and Loh (2015), even though the edge distributions
+are not exactly homogeneous due to the introduction of the covariates in the edge formation probability. Our Monte Carlo results show a strong confirmation of Theorem 1 that CH divergence of 1 is
+a sharp threshold for exact recovery. In the first specification, the network edge formation patterns
+and the network size imply a CH divergence of 1.0074, and we find that the misclassification rate
+is on average 1.10%. The second specification differs from the first one only in the weight distribution, resulting in a smaller CH divergence of 0.4719 and we find a larger average misclassification
+rate of 5.68%. The third specification differs from the second one only in the network size, which
+results in a larger CH divergence of 1.7537 and we find a smaller average misclassification rate of
+0. In the fourth set of Monte Carlo simulations, the network size is similar to the real data (about
+6,000 vertices), and the edge distributions are heterogeneous in a flexible way, resulting in a CH
+divergence of 6.0110. This is intended to assess the performance of the algorithm in a data set that
+resembles the real data. The results show that the algorithm performs surprisingly well with an
+average misclassification rate of 0.0002%, although it is slower due to the scale of the network. We
+summarize our main simulation results in the text, but many of the less essential details are left in
+Appendices C-F.
+Common Specifications Across All Four Sets of Monte Carlo Simulations.
+
+The spec-
+
+ifications that are common across all four sets of Monte Carlo studies are listed as follows. The
+36
+
+aspects of the specifications that are unique to each set of Monte Carlo studies, as well as their
+specific results, are presented separately in subsequent subsections.
+• The number of ideologies: m = 3.
+• Marginal distribution of ideology: θ = (1/3, 1/3, 1/3).
+• Probability of measurement error:  = 0.05.
+• Fraction of vertices with reported affiliation: 40%.
+• Edge formation probability is specified by yij > 0 iff
+γ(xi , xj , zi , zj )0 β + eij > 0,
+where γ(xi , xj , zi , zj ) = (γ x , γ z ) is a list of 19 variables and β = (β x , β z ) ∈ R19 . To make
+the simulated data as close as possible to the real data we use for the empirical analysis, we
+include in the vector zi the PC’s budget, state, industry, dummy for House campaign, dummy
+for Senate campaign, dummy for Presidential campaign, dummy for qualified PAC, dummy
+for qualified Party, dummy for national committee, dummy for authorized by a candidate,
+and dummy for joint fund-raiser, and we construct γ z ∈ R13 based on (zi , zj ); specifically,
+
+
+
+
+1statei =statej , 1industryi =industryj ,
+
+
+
+
+
+1
+,
+1
+,
+1
+,
+
+
+(housei =1)∨(housej =1) (senatei =1)∨(senatej =1) (presidenti =1)∨(presidentj =1)
+
+
+
+.
+γz = 
+1(qualified PACi =1)∨(qualified PACj =1) , 1(qualified Partyi =1)∨(qualified Partyj =1) ,
+
+
+
+ 1(national =1)∨(national =1) , 1(authorized =1)∨(authorized =1) , 1(fundraiser =1)∨(fundraiser =1) , 
+i
+j
+i
+j
+i
+j
+
+
+
+
+[ln bi + ln bj ] , (ln bi )2 + (ln bj )2 , ln bi ln bj
+(34)
+We set
+
+
+βz = 
+
+0.3, 0.3, 0.1, 0.1, 0.1, 0.2, 0.2,
+0.15, 0.15, 0.15, 0.01, −0.01, 0.001
+
+
+
+
+in all four sets of Monte Carlo simulations.
+γ x ∈ R6 includes a constant term and interaction terms of xi and xj ; specifically,
+
+γx = 
+
+1, 1xi =xj =Dem , 1xi =xj =Rep , 1xi =xj =Ind ,
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem) , 1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+
+37
+
+
+.
+
+(35)
+
+• Transfer amount is discretized into four bins. Therefore, conditional on yij > 0, yij ∈
+{1, 2, 3, 4}.
+
+5.1
+
+Monte Carlo I: 500 Networks with n = 100, CH Divergence Exceeding 1
+
+In the first set of Monte Carlo simulations, 500 networks are simulated and estimated. They
+have network size n = 100, the coefficients in the network formation probability are given by β x =
+(−1.5, 0.5, 0.5, 0.5, 0, 0), and the edge’s weight distributions are given by hDem,Dem = hRep,Rep =
+hInd,Ind = (0.05, 0.1, 0.4, 0.45), and hDem,Rep = hDem,Ind = hRep,Ind = (0.4, 0.3, 0.2, 0.1). Note that
+the specification of β x = (−1.5, 0.5, 0.5, 0.5, 0, 0) implies that the link formation depends on whether
+the two vertices are of the same ideology or are of differen ideologies, and fits into the homogeneity
+special case we described in Eq. (20). The implied CH divergence according to (21) and (22) is
+1.0074 > 1.
+For these simulations, the total execution time is 235,405 seconds (about 65 hours). The speed of
+convergence in terms of the number of iterations varies, which is shown in Figure C1 where we plot
+the histogram of the number of iterations (including burn-in and posterior) across the 500 networks
+we simulated. The distribution of misclassification rates is summarized in Figure C2 and Table C1.24
+They are small in general, and in 37.4% of the simulations, there is no misclassification.25 Moreover,
+98.8% of the simulations have misclassification rates lower than the measurement error rate 0.05,
+which implies that in most cases our algorithm successfully corrects some of the misreports. Table
+C2 provides a detailed tabulation of the estimated vs. true ideologies.
+The results above focus only on the posterior mode, and the following analysis further investigates the patterns of the posterior distributions. For the correctly classified vertices, our categorical
+classification based on posterior mode is rather precise. Figure C3 shows that the differences in
+posterior probability between the highest posterior probability (i.e., the posterior of the true ideology) and the second highest posterior probability are highly concentrated around 1. This indicates
+that for most of these vertices, the posterior distribution is strongly informative of the true ideology. For the misclassified vertices, however, the scales of misclassification vary. Figure C4 shows
+that the differences in the posterior probability between the highest posterior probability and the
+posterior probability of the true ideology are approximately uniformly distributed between 0 where
+the classification is only a bit off and 1 where the classification is far off. This suggests that the mis24
+
+Estimated ideology is defined as the posterior mode.
+
+25
+
+37.4% exact recovery is lower than the theoretical prediction, for several reasons. First, probability of exact
+recovery approaches 1 only when network size approaches infinity. In this case, the network size is only 100, which
+may be too small. Second, our model is not exactly the same as the model in Jog and Loh (2015) because we
+include covariates in the edge formation probability, which is more complicated. Third, we do not use an exact MAP
+estimator, which may also introduce approximation error.
+
+38
+
+classification is likely to be caused by unusual realizations of the networks process rather than the
+failure of our estimation algorithm. The randomness in the network formation renders the ideology
+information unclear or even misleading for some vertices, though this occurs rarely. Additional
+analysis of the posterior mean of other parameters are presented in Tables C3-C6. These tables
+show that the algorithm recovers the true parameters effectively, except for the weight distribution
+parameters hkl . We will show that these parameters will be estimated more precisely as the network
+size gets larger in Monte Carlo simulations III (where n = 500) and IV (where n = 6000).
+
+5.2
+
+Monte Carlo II: 500 Networks with n = 100, CH Divergence Less Than 1
+
+The specifications for the second set of Monte Carlo simulations are the same as those for
+the first set except for the weight distributions hDem,Dem , hRep,Rep and hInd,Ind . Specifically, the
+edge’s weight distributions are given by hDem,Dem = hRep,Rep = hInd,Ind = (0.2, 0.15, 0.35, 0.3),
+and hDem,Rep = hDem,Ind = hRep,Ind = (0.4, 0.3, 0.2, 0.1). Again, 500 networks with size n = 100
+are simulated and estimated. The implied CH divergence according to (21) and (22) decreases to
+0.4719, which is now less than 1.
+The total execution time for these simulations is 418,322 seconds (about 5 days). The speed of
+convergence in terms of the number of iterations is relatively slow; Figure D1 depicts the histogram
+of the number of iterations (including burn-in and posterior). Figure D2 and Table D1 summarize
+the distribution of misclassification rates across the 500 simulations. Comparing with Monte Carlo
+I, the misclassification rates are higher; for the worst case, the misclassification rate is as high as
+24%. Only 2.8% of the simulations have 0 misclassification. This is consistent with the theoretical
+prediction of Theorem 1 that a CH divergence lower than 1 is associated with low probability
+of exact recovery. Table D2 provides a detailed tabulation of the estimated vs. true ideologies
+in this set of Monte Carlo simulations. Figure D3 plots, for the correctly classified vertices, the
+histogram of the difference in posterior probability between the highest posterior probability (i.e.,
+the posterior for the true ideology) and the second highest posterior probability. It is shown to be
+mostly concentrated at 1, though relative to Figure C3 for Monte Carlo I, the difference is somewhat
+more likely to be less than 1 and is more spread out. This indicates that, when CH is less than
+1, our categorizations are not as informative even though we obtained the correct classification.
+Similarly, Figure D4 plots, for the misclassified vertices, the histogram of the difference in posterior
+probability between the highest posterior probability and the posterior probability of the true
+ideology. The difference is rather evenly distributed, which is similar to Figure C4 in Monte Carlo
+I. Additional analysis of the posterior mean of other parameters are presented in Tables D3-D6.
+These tables show that the algorithm recovers the true parameters effectively, except for the weight
+
+39
+
+distribution parameters hkl .
+
+5.3
+
+Monte Carlo III: 500 Networks with n = 500, CH Divergence Exceeding 1
+
+The specifications for the third set of Monte Carlo simulations are the same as those of Monte
+Carlo II except for the network size. Now we simulate 500 networks, each with a network size of
+n = 500. As a result of the increase in the network size, the implied CH divergence according to
+(21) and (22) is now 1.7537, which is larger than 1.
+The total execution time for these simulations is 31,974 seconds (about 9 hours). The speed of
+convergence is fast in terms of the number of iterations (ranging from 600 to 900); Figure E1 depicts
+the histogram of the number of iterations (including burn-in and posterior). The misclassification
+rates in all 500 simulations are 0. Therefore, this set of simulations over-perform the previous
+two in terms of both convergence speed and accuracy rate. Figure E2 plots the histogram of the
+difference in posterior probability between the highest posterior probability (i.e., the posterior for
+the true ideology) and the second highest posterior probability for the correctly classified vertices
+(which are all vertices because of 0 misclassification rate). The difference is almost completely
+concentrated at 1, indicating that our categorization based on posterior mode is very informative;
+in fact, for 99.9976% of the correctly classified vertices, the posterior probability on the true ideology
+is 1. Additional analysis of the posterior mean of other parameters are presented in Tables E1-E4.
+These tables show that the algorithm recovers the true parameters effectively, including the weight
+distribution parameters hkl (see Table E3).
+
+5.4
+
+Monte Carlo IV: 100 Networks with n = 6, 000, CH Divergence Exceeding 1
+
+In the fourth set of Monte Carlo simulations, we make several important changes. First, we
+increase the network size to n = 6000, which is comparable to the size of the political contribution
+network in our data. Also importantly, we deviate from the symmetry in the within-community and
+between-community link formation probabilities. Both changes are intended to assess the performance of our estimation algorithm in an environment that resembles the actual data. We again simulate and estimate 100 networks. Specifically, the coefficient in the network formation probability is
+given by β x = (−3, 1, 1, 0.7, 0.3, 0.3), and the edge’s weight distributions are given by hDem,Dem =
+hRep,Rep = (0.1, 0.2, 0.2, 0.5), hInd,Ind = (0.25, 0.25, 0.25, 0.25), hDem,Rep = (0.5, 0.2, 0.2, 0.1), and
+hDem,Ind = hRep,Ind = (0.3, 0.3, 0.3, 0.1). Using expressions (18) and (22) to evaluate pairwise
+divergence between ideology communities, we have DL+ (θ, W (Dem), W (Rep)) = 13.1003, and
+DL+ (θ, W (Dem), W (Ind)) = DL+ (θ, W (Rep), W (Ind)) = 6.011, and thus the CH divergence
+6.011 > 1.
+40
+
+The total execution time for the fourth set of simulations is 930,673 seconds (about 11 days ). The
+speed of convergence is fast in terms of the number of iterations (ranging from 600 to 900); Figure
+F1 depicts the histogram of the number of iterations. Therefore, the long execution time is a result
+of heavy computation in each iteration, not the number of iteration. Misclassification rates are 0 for
+99 simulations, 0.0167% (i.e., 1 vertex is misclassified) for 1 simulation. For the correctly classified
+vertices, the numerical posterior distributions of ideology are degenerate in the true ideology. For
+the only vertex that is incorrectly classified in this set of simulations, the difference between the
+highest posterior probability and the posterior probability of the true ideology is 0.13. These results
+suggest that the simulated data exhibit strong information on the community structure, and that
+our algorithm is efficient in identifying this structure. Additional analysis of the posterior mean
+of other parameters are presented in Tables F1-F4. These tables show that the algorithm recovers
+the true parameters effectively, including the weight distribution parameters hkl .
+To summarize, our algorithm has excellent performance when the data is generated with CH
+divergence greater than 1. It has reasonably good performance even when the data is generated
+with CH divergence lower than 1. The results also suggest that a large network is not necessarily
+undesirable. On the one hand, it brings in more computational burden and increases the runtime;
+on the other hand, it also embodies more information and speeds up the convergence.
+
+6
+
+Empirical Implementation and Results
+
+6.1
+
+Empirical Implementation.
+
+We empirically infer the ideologies of 5,806 PCs from the giant component in the campaign
+finance network depicted in Figure 3. There are 3 categories of ideologies: Democratic, Republican,
+and Independent. For the small number of PCs whose self-reported affiliations do not belong to
+these categories, we treat them as if we do not observe their report. The set V o contains PCs
+with self-reported affiliations x̂i ’s. We assume the following functional form for the edge formation
+
+41
+
+probability:
+γ(xi , xj , zi , zj )0 β = β 1 + β 2 1xi =xj =Dem + β 3 1xi =xj =Rep + β 4 1xi =xj =Ind
++β 5 1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem) + β 6 1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
++β 7 1statei =statej + β 8 1industryi =industryj + β 9 1(housei =1)∨(housej =1)
++β 10 1(senatei =1)∨(senatej =1) + β 11 1(presidenti =1)∨(presidentj =1)
++β 12 1(qualified PACi =1)∨(qualified PACj =1) + β 13 1(qualified Partyi =1)∨(qualified Partyj =1)
++β 14 1(nationali =1)∨(nationalj =1) + β 15 1(authorizedi =1)∨(authorizedj =1)
+
+
++β 16 1(fundraiseri =1)∨(fundraiserj =1) + β 17 [ln bi + ln bj ] + β 18 (ln bi )2 + (ln bj )2
++β 19 ln bi ln bj ,
+
+(36)
+
+where the first term is a constant characterizing the baseline connection probability between Democratic and Republican PCs; the second to the sixth terms characterize the connection probabilities
+for other ideology pairs; the seventh and the eighth terms capture the effect of the two PCs belonging to the same state or industry; the ninth to the sixteenth terms capture the effects of PCs’
+institutional characteristics: whether one of them is a House campaign, a Senate campaign, a
+Presidential campaign, a qualified PAC, a qualified Party, a national committee, authorized by a
+candidate, or a joint fundraiser; and the seventeenth to the nineteenth terms capture the effect of
+both PCs’ budgets on link formations probability, which is a restrictive form of that in (8) and
+assumes that the effect of financial and institutional characteristics are the same across ideological
+pairs. The main reason for this parsimonious specification is to reduce the computational intensity. The estimation results do not seem to show signs of severe mis-specification. The transfer
+amount Yij is discretized into multiples of $500, and can take values of {0, 1, 2, ..., 100} where 100
+includes all the transfer higher than $50,000. The initial values in the Gibbs sampler are randomly
+generated, and different sets of initial values are used.
+
+6.2
+
+Estimation Results: Posterior Mean and Standard Deviations.
+
+Table 10 presents the posterior mean and standard deviation of β, the coefficients in edge formation probability. The second to the sixth coefficients are all positive, indicating that Democratic
+and Republican PCs (the baseline case) have the lowest connection probability. Additionally, the
+Democratic PCs have stronger within party connection than the Republican PCs. Moreover, Independent PCs have a higher probability of connecting with Democratic or Republican PCs than
+other Independent PCs. It is also interesting to note that, everything else equal, pairs of Republican
+
+42
+
+PCs are less likely to form a link than Republican/Independent or Democratic/Independent pairs
+of PCs.
+Tables 11 and 12 present the posterior mean and standard deviation of θ, the unconditional
+probability of ideology; and , the measurement error. Tables 11 shows that in the population of all
+PCs, 40.01% are Democratic, 42.74% are Republican, and 17.24% are Independent. The posterior
+standard deviations of these estimates are small. Table 12 shows that the self-reported ideologies
+of the PCs are likely to be erroneous with probability 7.37%.
+Due to the large number of parameters in the weight distribution function, we present the
+estimates of h in Figure 10, which shows the posterior means of all the values of (hkl,1 , ..., hkl,100 )
+for all k, l ∈ {Dem, Rep, Ind} pairs graphically.
+β
+
+Posterior Mean
+
+Posterior Standard Deviation
+
+-7.4729
+1.3301
+0.8210
+0.6405
+1.2909
+1.5797
+0.6399
+0.2185
+0.5306
+0.3783
+0.0212
+0.7006
+-0.5334
+0.9421
+-0.4473
+-0.7623
+-0.0442
+0.0162
+-0.0010
+
+0.0166
+0.0099
+0.0130
+0.0134
+0.0121
+0.0119
+0.0043
+0.0117
+0.0034
+0.0035
+0.0113
+0.0049
+0.0066
+0.0133
+0.0090
+0.0059
+0.0023
+0.00004
+0.0002
+
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Table 10: Posterior Distribution of β
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Posterior Mean
+
+Posterior Standard Deviation
+
+0.4001
+0.4274
+0.1724
+
+0.0045
+0.0046
+0.0036
+
+Table 11: Posterior Distribution of θ
+43
+
+
+
+Posterior Mean
+
+Posterior Standard Deviation
+
+0.0737
+
+0.0042
+
+Table 12: Posterior Distribution of 
+
+hRep,Rep
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+Density
+
+0.6
+
+0.0
+
+0.2
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0.2
+
+0.0
+
+0.0
+0
+
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+30000
+
+Transfer Amount
+
+hDem,Rep
+
+hDem,Ind
+
+hRep,Ind
+0.6
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+Density
+
+0.6
+
+0.2
+
+0.0
+
+0.0
+10000
+
+20000
+
+Transfer Amount
+
+0.6
+
+0
+
+10000
+
+Transfer Amount
+
+Density
+
+Density
+
+hInd,Ind
+0.6
+
+Density
+
+Density
+
+hDem,Dem
+0.6
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+40000
+
+50000
+
+40000
+
+50000
+
+0.2
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+0
+
+10000
+
+20000
+
+30000
+
+Transfer Amount
+
+Figure 10: Posterior Mean of h
+Note: Bin size is 500. Probability of transfer amount higher than $50,000 is plotted at $50,000.
+
+Chernoff-Hellinger Divergence of the Estimated Model.
+
+Using the posterior mode of x,
+
+and the posterior means of θ, β, h, we calculate the implied Chernoff-Hellinger divergence:
+DL+ (θ, W (Dem), W (Rep)) = 14.7760,
+DL+ (θ, W (Dem), W (Ind)) = 26.6116,
+DL+ (θ, W (Rep), W (Ind)) = 22.4425,
+and thus the CH divergence is 14.7760 > 1. Therefore, the data generating process, corresponding
+to our estimated parameters, satisfies the condition for exact recovery as stated in Theorem 1.
+
+44
+
+6.3
+
+Comparing Estimated and Self-Reported Ideologies for PCs that Self Report Ideologies
+
+Using the posterior mode as a point estimate of the ideology, Table 13 presents the cross tabulation of all PCs according to self-reported and estimated ideology. Overall, 90.70% of our estimates
+match the self reports: 94.36% for self-reported Democratic PCs, and 89.49% for self-reported
+Republican PCs.
+
+Self-Reported Dem
+Self-Reported Rep
+Self-Reported Ind
+No Reported Affiliation
+
+Estimated Dem
+
+Estimated Rep
+
+Estimated Ind
+
+954 (94.36%)
+46 (4.60%)
+16 (29.09%)
+748 (20.00%)
+
+43 (4.25%)
+894 (89.49%)
+14 (25.45%)
+1,202 (32.13%)
+
+14 (1.38%)
+59 (5.91%)
+25 (45.45%)
+1,791 (47.87%)
+
+Table 13: Tabulation of Estimated vs. Self-Reported Ideology
+Note: The percentages are calculated for each row.
+
+6.4
+
+Re-examining the Network Statistics Using Estimated Ideologies
+
+In Section 3, we presented the network statistics based on self-reported ideologies for those
+PCs that self reported their ideologies. Here we re-examine these statistics based on estimated
+ideologies of all PCs. Conditional on the estimated ideologies, the empirical distribution of transfer
+amount is shown in Figure 11, and the mean of each distribution is shown in Table 14. On average,
+the transfer amount is the highest for Democratic PC pairs and Republican PC pairs, and this is
+partially due to the heavy tail of the within-party contributions. The transfer amount is smaller
+between Democratic and Republican PCs, and smallest when it involves Independent PCs. This
+is consistent with the estimates on connection probability. Independent PCs have overall high
+connection probability, but the associated transfer amount is small. Democratic and Republican
+PCs have relatively lower within-party connection probability, but the associated transfer amount
+is larger.
+Dem, Dem
+
+Rep, Rep
+
+Ind, Ind
+
+Dem, Rep
+
+Dem, Ind
+
+Rep, Ind
+
+26,311.03
+
+22,165.53
+
+8,144.17
+
+18,507.13
+
+3,206.26
+
+3,769.65
+
+Table 14: Mean of Transfer Amount Conditional on Estimated Ideology
+Next, we compare the contribution patterns of the PCs according to their self-reported vs. estimated ideologies. For each PC i, let numDemi , numRepi , and numIndi denote its numbers of
+45
+
+Estimated Dem, Estimated Dem
+
+Estimated Rep, Estimated Rep
+
+Estimated Ind, Estimated Ind
+
+0.4
+
+0.4
+
+0.4
+
+Density
+
+Density
+
+0.6
+
+0.6
+
+Density
+
+0.6
+
+0.2
+
+0.2
+
+0.2
+
+0.0
+
+0.0
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+10000
+
+Transfer Amount
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+Estimated Dem, Estimated Rep
+
+Estimated Dem, Estimated Ind
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+20000
+
+30000
+
+Transfer Amount
+
+40000
+
+50000
+
+50000
+
+0.2
+
+0.0
+10000
+
+40000
+
+Density
+
+Density
+
+Density
+
+0.6
+
+0.0
+
+30000
+
+Estimated Rep, Estimated Ind
+
+0.6
+
+0.2
+
+20000
+
+Transfer Amount
+
+0.6
+
+0
+
+10000
+
+Transfer Amount
+
+0.0
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+Transfer Amount
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+Figure 11: Empirical Distribution of Transfer Amount Conditional on Estimated Ideology
+Note: Bin size is 500. Observations with transfer amount higher than $50,000 are plotted at $50,000.
+
+connections with (estimated) Democratic, Republican, and Independent PCs respectively. In Figures 12-14, we plot the distributions of numDem (dark bar), numRep (white bar), and numInd
+(gray bar) for different groups of PCs, focusing on the difference between self-reported and estimated ideologies. The left panel in Figure 12 presents the distributions for PCs that self reported
+to be Democratic, and the right panel for PCs that did not self report but are estimated to be
+Democratic PCs. Figures 13 and 14 are similar, but for Republican and Independent PCs respectively. Qualitatively, the degree distributions have similar patterns for self-reported and estimated
+PCs with the same ideology. As a robustness check, we redo the analysis above, with each connection weighted by transfer amount. Specifically, for each PC, we calculate its total amount of
+transfer to and from (estimated) Democratic, Republican, and Independent PCs respectively, and
+then plot the distributions of these numbers for different groups of PCs. The histograms are shown
+in Figures 15, 16, and 17, respectively for Democratic, Republican and Independent PCs. Again,
+the distributions are similar for self-reported and estimated PCs with the same ideology. These
+results demonstrate that PCs without self-report, classified according to our estimation results,
+behave similarly to PCs with the corresponding self reports of affiliations.
+
+46
+
+Self−Reported Democratic Committees
+
+Estimated Democratic Committees
+1000
+
+1250
+
+Connections with
+
+Connections with
+
+Democratic
+
+Democratic
+
+Independent
+
+Independent
+
+Republican
+
+Republican
+
+1000
+750
+
+Frequency
+
+Frequency
+
+750
+500
+
+500
+
+250
+250
+
+0
+
+0
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Number of Connections
+
+Figure 12: Self-reported vs. Estimated Democratic PCs: Distributions of Number of Connections
+Note: These figures only include observations with positive number of connections. Observations with more than 200
+connections are plotted at 200.
+
+Self−Reported Republican Committees
+
+Estimated Republican Committees
+Connections with
+
+Connections with
+
+Democratic
+
+Democratic
+
+Independent
+
+Independent
+
+Republican
+
+Republican
+1500
+
+Frequency
+
+Frequency
+
+900
+
+600
+
+1000
+
+500
+
+300
+
+0
+
+0
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Number of Connections
+
+Figure 13: Self-reported vs. Estimated Republican PCs: Distributions of Number of Connections
+Note: These figures only include observations with positive number of connections. Observations with more than 200
+connections are plotted at 200.
+
+47
+
+Self−Reported Independent Committees
+
+Estimated Independent Committees
+Connections with
+
+Connections with
+
+Democratic
+
+60
+
+Democratic
+
+2000
+
+Independent
+
+Independent
+
+Republican
+
+Republican
+
+1500
+
+Frequency
+
+Frequency
+
+40
+
+1000
+
+20
+500
+
+0
+
+0
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+1 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200
+
+Number of Connections
+
+Number of Connections
+
+Figure 14: Self-reported vs. Estimated Independent PCs: Distributions of Number of Connections
+Note: These figures only include observations with positive number of connections. Observations with more than 200
+connections are plotted at 200.
+
+Self−Reported Democratic Committees
+
+Estimated Democratic Committees
+Transfer amount with
+
+Transfer amount with
+1000
+
+Independent
+
+Independent
+
+Republican
+
+Republican
+
+600
+
+Frequency
+
+750
+
+Frequency
+
+Democratic
+
+800
+
+Democratic
+
+500
+
+400
+
+250
+
+200
+
+0
+
+0
+0e+00
+
+1e+05
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+Transfer Amount
+
+0e+00
+
+1e+05
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+Transfer Amount
+
+Figure 15: Self-reported vs. Estimated Democratic PCs: Distributions of Transfer Amount
+Note: Bin size is 25,000. Observations with more than $500,000 transfer to and from one class of committees are
+plotted at $500,000.
+
+48
+
+Self−Reported Republican Committees
+
+Estimated Republican Committees
+Transfer amount with
+
+Transfer amount with
+1500
+
+Democratic
+
+Democratic
+
+Independent
+
+Independent
+
+Republican
+
+Republican
+
+750
+
+Frequency
+
+Frequency
+
+1000
+
+500
+
+500
+250
+
+0
+
+0
+0e+00
+
+1e+05
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+0e+00
+
+1e+05
+
+Transfer Amount
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+Transfer Amount
+
+Figure 16: Self-reported vs. Estimated Republican PCs: Distributions of Transfer Amount
+Note: Bin size is 25,000. Observations with more than $500,000 transfer to and from one class of committees are
+plotted at $500,000.
+
+Self−Reported Independent Committees
+
+Estimated Independent Committees
+Transfer amount with
+
+60
+
+Transfer amount with
+
+Democratic
+
+Democratic
+
+Independent
+
+Independent
+
+2000
+
+Republican
+
+Republican
+
+1500
+
+Frequency
+
+Frequency
+
+40
+
+1000
+
+20
+
+500
+
+0
+
+0
+0e+00
+
+1e+05
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+Transfer Amount
+
+0e+00
+
+1e+05
+
+2e+05
+
+3e+05
+
+4e+05
+
+5e+05
+
+Transfer Amount
+
+Figure 17: Self-reported vs. Estimated Independent PCs: Distributions of Transfer Amount
+Note: Bin size is 25,000. Observations with more than $500,000 transfer to and from one class of committees are
+plotted at $500,000.
+
+49
+
+6.5
+
+Estimation Results: Analyzing the Posterior Distribution of PCs’ Political
+Ideologies
+
+Now we analyze the posterior distribution of political ideology. Figure 18 plots, for PCs whose
+estimates are the same as the self reports (i.e., the reported ideology has the highest posterior
+probability), the distribution of the differences between the highest and the second highest posterior
+probability. These differences concentrate around 1, meaning the posterior probabilities concentrate
+on the self-reported affiliation. This confirms that we do not obtain these classifications by luck. We
+Report = Estimate = Rep
+
+Report = Estimate = Ind
+1.00
+
+0.75
+
+0.75
+
+0.75
+
+0.50
+
+0.25
+
+Density
+
+1.00
+
+Density
+
+Density
+
+Report = Estimate = Dem
+1.00
+
+0.50
+
+0.25
+
+0.00
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+0.50
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+Difference in Posterior Probability
+
+1.00
+
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+Figure 18: Distribution of Difference in the Posterior Probability of Ideology
+Note: Horizontal axis is the difference between the highest posterior probability (i.e., the posterior probability of the
+self-reported ideology) and the second highest posterior probability. Bin size is 0.025.
+
+do a similar analysis in Figure 19, for PCs whose estimates differ from the self reports, by plotting
+the distributions of the differences between the highest posterior probability and the posterior
+probability of the reported ideology. These distributions have larger spread, but still a mass around
+1. This indicates that these are not “near misses”: our estimate strongly favors an ideology different
+from the PC’s self-reported ideology.
+Diagnostics of the Discrepancy.
+
+We further investigate the reason for the discrepancy between
+
+our estimates and the self reports by comparing PCs with different estimated ideology but the same
+self reported affiliation.
+First of all, their financial conditions are different. Table 15 shows that self-reported Democratic
+PCs that are estimated as Republican are mostly PCs with high budget, and self-reported Democratic PCs that are estimated as Independent are mostly PCs with low budget. Similarly, among
+self-reported Republican PCs, the ones estimated to be Democratic or Independent are mostly PCs
+with lower budget.
+Second, their contribution patterns are different. For each PC i, we define DemSharei as its
+
+50
+
+Reported Dem, Estimated Ind
+
+0.75
+
+0.75
+
+0.75
+
+0.50
+
+Density
+
+1.00
+
+0.25
+
+0.50
+
+0.25
+
+0.00
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.00
+0.00
+
+Difference in Posterior Probability
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+0.00
+
+Difference in Posterior Probability
+
+Reported Rep, Estimated Ind
+
+1.00
+
+0.75
+
+0.75
+
+0.75
+
+Density
+
+1.00
+
+0.25
+
+0.50
+
+0.25
+
+0.00
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+0.75
+
+1.00
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.50
+
+Reported Ind, Estimated Rep
+
+1.00
+
+0.50
+
+0.25
+
+Difference in Posterior Probability
+
+Reported Ind, Estimated Dem
+
+Density
+
+Density
+
+Reported Rep, Estimated Dem
+
+1.00
+
+Density
+
+Density
+
+Reported Dem, Estimated Rep
+1.00
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+0.00
+
+Difference in Posterior Probability
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+Figure 19: Distribution of Difference in the Posterior Probability of Ideology
+Note: Horizontal axis is the difference between the highest posterior probability and the posterior probability of the
+self-reported ideology. Bin size is 0.025.
+
+Self-Reported Dem
+Self-Reported Rep
+Self-Reported Ind
+
+Estimated Dem
+
+Estimated Rep
+
+Estimated Ind
+
+32.26
+10.00
+31.00
+
+206.52
+77.96
+3.00
+
+3.50
+6.77
+46.00
+
+Table 15: Median Budget (in $1,000)
+
+51
+
+share of connections with (estimated) Democratic PCs DemSharei =
+
+numDemi
+numDemi +numRepi +numIndi ,
+
+and similarly for RepSharei and IndSharei . In Table 16, we compare the means of DemShare,
+RepShare, and IndShare for different groups of PCs. As a robustness check, we also calculate the
+shares in terms of transfer amount and present the results in the same table. The table supports
+our categorization of some PCs as Republican (Democratic) whose self-reports are Democratic
+(Republican) because they have significantly higher shares of connections with the Republican
+(Democratic) PCs, a pattern exhibited by all estimated Republican (Democratic) PCs.
+
+Reported Dem, Estimated Rep
+All PCs Estimated as Dem
+Reported Rep, Estimated Dem
+All PCs Estimated as Rep
+
+Number of Connection
+Dem Share Rep Share Ind Share
+
+Transfer Amount
+Dem Share Rep Share Ind Share
+
+8.71%
+72.58%
+49.99%
+6.69%
+
+28.36%
+78.24%
+54.56%
+6.01%
+
+19.65%
+4.40%
+13.44%
+52.98%
+
+71.64%
+23.02%
+36.58%
+40.33%
+
+20.51%
+4.15%
+21.20%
+55.77%
+
+51.13%
+17.62%
+24.24%
+38.22%
+
+Table 16: Mean of DemShare, RepShare, and IndShare
+Next, we will discuss the discrepancy in more detail case by case. The discrepancies will fall
+into one of six cases, as shown in the panel label of Figure 20. Figure 20 depicts the distribution
+of the number of connections with PCs with different ideologies according to our estimates.
+In the first case, some self-reported Democratic PCs are estimated to be Republican. In the data,
+these PCs have a small number of connections with PCs that self reported affiliations, most of which
+are Democratic. However, they are mostly connected with PCs without self reported affiliations,
+most of which are Independent by our estimates. As our estimate β suggests, Republican PCs have
+the highest connection probability with Independent PCs. Therefore, although they self reported
+to be Democratic and are connected with few self-reported Republican or Independent PCs, their
+overall contribution patterns are close to that of the Republican PCs. In the degree distribution
+presented in Figure 20 for this case, it can be seen that the tail distribution is very close to that of
+the self-reported Republican PCs in Figure 13.
+In the second case, some self-reported Democratic PCs are estimated as Independent. Only one
+of these PCs has one connection with another Independent PC, and the rest have no connection with
+Independent PCs. According to estimate β, classifying them as Independent, rather than Democratic, better rationalize this pattern because Independent-Independent connection probability is
+lower than Democratic-Independent connection probability.
+In the third case, some self-reported Republican PCs are estimated as Democratic. These PCs
+have similar number of connections to all three classes of PCs, with slightly more Democratic
+connections. Their number of connections to the Republican and the Independent PCs are not
+
+52
+
+jointly high enough to be estimated as Republican.
+In the fourth case, some self-reported Republican PCs are estimated as Independent. These PCs
+have more connections with Republican than Democratic PCs, but not large enough connections
+with Independent PCs to be estimated as Republican. In other words, they do not exhibit the heavy
+tail on connection with Independent PCs which is observed for other self-reported Republican PCs.
+In the fifth case, some self-reported Independent PCs are estimated as Democratic. These PCs’
+numbers of connections with Democratic PCs significantly outweigh that with the Republican and
+Independent PCs. There are not large enough connections with Republican PCs to be estimated
+as Independent.
+In the sixth case, some self-reported Independent PCs are estimated as Republican. These PCs
+do not have large enough connections with Democratic PCs to be estimated as Independent.
+Discussion.
+
+Here we present and analyze the discrepancy between our estimate and the self-
+
+report, in an attempt to better understand the implications of our model and algorithm. We are
+not making a claim that these PCs strategically misreported their party affiliations. We show that
+under our model, their contribution patterns to other PCs are different from the majority of the
+PCs self reporting the same affiliation as they did. Simplifications in our model are also potential
+reasons for the discrepancy. For example, our model does not capture all aspects of the incentives in
+political contribution between PCs. Additionally, we only study the contributions among PCs, and
+do leave out other campaign activities such as collection of individual contribution and independent
+expenditures. In Appendix G we list the PCs that self reported to be Democratic (Republican),
+but are estimated to be Republican (Democratic).
+
+7
+
+Conclusion
+About two thirds of the political committees registered with the Federal Election Commission do
+
+not self identify their party affiliations. In this paper we propose and implement a novel Bayesian
+approach to infer about the ideological affiliations of political committees based on the network
+of the financial contributions among them. In Monte Carlo simulations, we demonstrate that our
+estimation algorithm achieves very high accuracy in recovering their latent ideological affiliations
+when the pairwise difference in ideology groups’ connection patterns satisfy a condition known
+as the Chernoff-Hellinger divergence criterion. We illustrate our approach using the campaign
+finance record in 2003-2004 election cycle. Using the posterior mode to categorize the ideological
+affiliations of the political committees, our estimates match the self reported ideology for 94.36%
+of those committees who self reported to be Democratic and 89.49% of those committees who self
+53
+
+Figure 20: Distributions of Number of Connections with Different Committees
+Note: Observations with more than 200 connections are plotted at 200.
+
+54
+
+reported to be Republican.
+Since PCs are required to report to the FEC the financial contributions among each other, our
+proposed methods to infer the ideological affiliations of political committees via financial contributions network can be implemented readily. To the extent that the estimated ideologies for the PCs
+are close to their true latent ideologies, our estimated PC ideology can fill the missing “ideologies”
+problem for researchers who are interested in studying individuals’ political contribution patterns
+using FEC’s “Contributions by Individuals” data. Moreover, since our estimation methods can be
+implemented using data from only one election cycle, we can estimate the ideological affiliations of
+the same PCs using data from different election cycles. This would allow us to study the possible
+evolutions of ideological affiliations of PCs over time. We can also exploit the permanent presence
+of the national committees such as Democratic National Committee (DNC) and Republican National Committee (RNC) and use their network links as a vehicle to study the possible changes of
+party platforms that are not necessarily reflected in official documents. These are exciting areas
+for future research.
+
+References
+Abbe, Emmanuel. 2017. “Community Detection And Stochastic Block Models: Recent Developments.” arXiv preprint arXiv:1703.10146.
+Abbe, Emmanuel, Afonso S Bandeira, and Georgina Hall. 2014. “Exact Recovery In The
+Stochastic Block Model.” arXiv preprint arXiv:1405.3267.
+Abbe, Emmanuel, and Colin Sandon. 2015. “Community Detection In General Stochastic
+Block Models: Fundamental Limits And Efficient Algorithms For Recovery.” 670–688, IEEE.
+Albert, James H, and Siddhartha Chib. 1993. “Bayesian Analysis Of Binary And Polychotomous Response Data.” Journal of the American statistical Association, 88(422): 669–679.
+Barberá, Pablo. 2015. “Birds of the same feather tweet together: Bayesian ideal point estimation
+using Twitter data.” Political Analysis, 23(1): 76–91.
+Bonica, Adam. 2013. “Ideology And Interests In The Political Marketplace.” American Journal
+of Political Science, 57(2): 294–311.
+Breiger, Ronald L, Scott A Boorman, and Phipps Arabie. 1975. “An Algorithm For Clustering Relational Data With Applications To Social Network Analysis And Comparison With
+Multidimensional Scaling.” Journal of mathematical psychology, 12(3): 328–383.
+55
+
+Cai, T Tony, Tengyuan Liang, and Alexander Rakhlin. 2017. “Weighted Message Passing
+and Minimum Energy Flow for Heterogeneous Stochastic Block Models with Side Information.”
+arXiv preprint arXiv:1709.03907.
+Chandrasekhar, Arun, and Randall Lewis. 2011. “Econometrics Of Sampled Networks.”
+Unpublished manuscript, MIT.
+Jackson, Matthew O. 2010. “An Overview Of Social Networks And Economic Applications.”
+The handbook of social economics, 1: 511–85.
+Jog, Varun, and Po-Ling Loh. 2015. “Information-Theoretic Bounds For Exact Recovery In Weighted Stochastic Block Models Using The Renyi Divergence.” arXiv preprint
+arXiv:1509.06418.
+Kanade, Varun, Elchanan Mossel, and Tselil Schramm. 2016. “Global And Local Information In Clustering Labeled Block Models.” IEEE Transactions on Information Theory,
+62(10): 5906–5917.
+Koller, Daphne, and Nir Friedman. 2009. Probabilistic Graphical Models: Principles And
+Techniques. MIT press.
+Leung, Michael. 2016. “A Weak Law for Moments of Pairwise-Stable Networks.” Available at
+SSRN: https://ssrn.com/abstract=2663685.
+McCarty, Nolan, Keith T Poole, and Howard Rosenthal. 2006. Polarized America: The
+Dance Of Ideology And Unequal Riches. MIT Press.
+McCarty, Nolan M, and Keith T Poole. 1998. “An Empirical Spatial Model Of Congressional
+Campaigns.” Political Analysis, 7: 1–30.
+McKay, Amy. 2008. “A Simple Way Of Estimating Interest Group Ideology.” Public Choice,
+136(1): 69–86.
+McKay, Amy. 2010. “The Effects Of Interest Groups’ Ideology On Their Pac And Lobbying
+Expenditures.” Business and Politics, 12(2): 1–21.
+Mossel, Elchanan, Joe Neeman, and Allan Sly. 2014. “Consistency Thresholds For Binary
+Symmetric Block Models.” arXiv preprint arXiv:1407.1591.
+Newman, Mark EJ. 2006. “Modularity And Community Structure In Networks.” Proceedings of
+the national academy of sciences, 103(23): 8577–8582.
+56
+
+Newman, Mark EJ. 2013. “Spectral Methods For Community Detection And Graph Partitioning.” Physical Review E, 88(4): 042822.
+Nowicki, Krzysztof, and Tom A B Snijders. 2001. “Estimation And Prediction For Stochastic
+Blockstructures.” Journal of the American Statistical Association, 96(455): 1077–1087.
+Peng, Lijun, and Luis Carvalho. 2015a. “Bayesian Degree-Corrected Stochastic Block Models
+for Community Detection.” arXiv preprint arXiv:1309.4796.
+Peng, Lijun, and Luis E Carvalho. 2015b. “Group-Corrected Stochastic Blockmodels for Community Detection on Large-scale Networks.”
+Poole, Keith T, and Howard Rosenthal. 1985. “A Spatial Model For Legislative Roll Call
+Analysis.” American Journal of Political Science, 357–384.
+Snijders, Tom AB, and Krzysztof Nowicki. 1997. “Estimation And Prediction For Stochastic
+Blockmodels For Graphs With Latent Block Structure.” Journal of Classification, 14(1): 75–100.
+Stoer, Mechthild, and Frank Wagner. 1997. “A Simple Min-Cut Algorithm.” Journal of the
+ACM (JACM), 44(4): 585–591.
+Trebbi, Francesco, and Eric Weese. 2015. “Insurgency and Small Wars: Estimation of Unobserved Coalition Structures.” NBER Working Paper, , (w21202).
+Yun, Se-Young, and Alexandre Proutiere. 2016. “Optimal Cluster Recovery In The Labeled
+Stochastic Block Model.” in Advances in Neural Information Processing Systems, 29: 965–973.
+
+57
+
+Appendix A
+
+Construction of Variable industry ∗
+
+We construct PCs’ characteristic “industry ∗ ” using the industrial breakdown information from
+OpenSecrets.org. Their breakdown has three nested levels - from coarse to fine - “sector”, “industry”, and “category”.
+
+26
+
+We define variable industry ∗ to be the sector for PCs in sectors that
+
+are relatively homogeneous such as agricultural business. We define industry ∗ to be a finer level,
+industry or category, for PCs in sectors that are relatively heterogeneous such as miscellaneous
+business. The reason is that we use interaction term “same industry ∗ ” in our analysis; and we
+want, within each industry ∗ , similar level of heterogeneity. A detailed description of the construction of the variable industry ∗ is given below, and the corresponding codebook is given in Table
+A1.
+1. industry ∗ =sector if:
+A PC belongs to one of the following sectors: Agribusiness, Communications/Electronics,
+Construction, Defense, Energy & Natural Resources, Finance, Insurance & Real Estate,
+Health, Labor, Lawyers & Lobbyists, Transportation.
+2. industry ∗ =industry if:
+(a) A PC belongs to the Miscellaneous Business sector.
+(b) A PC belongs to the Other sector, but not in the Other industry.
+(c) A PC belongs to the Ideological/Single-Issue sector, but not in one of the following industries: Misc Issues, Republican/Conservative, Democratic/Liberal, Leadership PACs,
+Candidate Committee.
+3. industry ∗ =category if:
+(a) A PC belongs to the Other industry in the Other sector, but not in the Other category.
+(b) A PC belongs to the Misc Issues industry in the Ideological/Single-Issue sector.
+4. industry ∗ =NA if:27
+(a) A PC belongs to one of the following sectors: Unknown, Joint Candidate Committee,
+Party Committee, Candidate, Non-contribution.
+(b) A PC belongs to one of the following industries in the Ideological/Single-Issue sector:
+Republican/Conservative, Democratic/Liberal, Leadership PACs, Candidate Committee.
+(c) A PC’s sector, industry and category are all Other.
+26
+
+The codebook is available at https://www.opensecrets.org/downloads/crp/CRP_Categories.txt.
+
+27
+
+We define the interaction term “same industry ∗ ” to be 0 if one or both PCs’ industry ∗ s are NAs.
+
+A1
+
+Code
+A
+B
+C
+D
+E
+F
+H
+H6000
+J1300
+J3000
+J4000
+J7200
+J7600
+J8000
+J9000
+K
+M
+N00
+N01
+N02
+N03
+N04
+N05
+N06
+N07
+N08
+N12
+N13
+N14
+N15
+N16
+NA
+P
+Q04
+Q05
+Q08
+Q09
+Q11
+Q12
+Q13
+Q14
+Q15
+W02
+W03
+W04
+X5000
+
+Description
+Agribusiness
+Communic/Electronics
+Construction
+Defense
+Energy/Nat Resource
+Finance/Insur/RealEst
+Health
+Welfare & Social Work
+Third-party committees
+Consumer groups
+Fiscal & tax policy
+Elderly issues/Social Security
+Animal Rights
+Labor, anti-union
+Other single-issue or ideological groups
+Lawyers & Lobbyists
+Transportation
+Business Associations
+Food & Beverage
+Beer, Wine & Liquor
+Retail Sales
+Misc Services
+Business Services
+Recreation/Live Entertainment
+Casinos/Gambling
+Lodging/Tourism
+Misc Business
+Chemical & Related Manufacturing
+Steel Production
+Misc Manufacturing & Distributing
+Textiles
+Not Available
+Labor
+Foreign & Defense Policy
+Pro-Israel
+Women’s Issues
+Human Rights
+Environment
+Gun Control
+Gun Rights
+Abortion Policy/Anti-Abortion
+Abortion Policy/Pro-Abortion Rights
+Non-Profit Institutions
+Civil Servants/Public Officials
+Education
+Military
+
+Table A1: Codebook for Variable industry ∗
+A2
+
+Appendix B
+
+Contribution Limit
+
+Contribution limits for the 2003-2004 Election Cycle are given in Table B1.28 They differ by the
+identity of the contributor and that of the recipient. As a contributor, individual, national party
+committee, non-national party committee, multicandidate PAC, and non-multicandidate PAC have
+different contribution limits. As a recipient, candidate or candidate committee, national party
+committee, non-national party committee, and other PC have different contribution limits. As
+shown in the table, there is no limit for contribution between party committees, national or local.
+For the rest of the contributions between PCs, the limits range from $2,000 to $25,000, most of
+which are set at $5,000.
+
+28
+
+Source: http://www.fec.gov/pages/brochures/ContributionLimits2003-2004.htm.
+
+A3
+
+A4
+
+$5,000
+
+National
+Party Committee
+
+6
+
+5
+
+4
+
+3
+
+2
+
+$25,000
+
+$15,000
+
+No limit
+
+No limit
+
+$25,000
+
+National
+party committee
+per calendar year
+
+$10,000
+(combined limit)
+
+$5,000
+(combined limit)
+
+No limit
+
+$5,000
+
+$5,000
+
+$5,000
+(combined limit)
+
+$5,000
+
+$5,000
+
+$10000
+(combined limit6)
+
+No limit
+
+Any other PC1
+per calendar year
+
+State, district and local
+party committee
+per calendar year
+
+No limit
+
+No limit
+
+No limit
+
+$35,000 to Senate candidate
+per campaign3
+
+$95,000 overall biennial limit:
+$37,500 to all candidates,
+$57,500 to all PACs and parties.2
+
+Special Limits
+
+Table B1: Contribution Limits for the 2003-3004 Election Cycle
+
+A contribution earmarked for a candidate through a political committee counts against the original contributor’s limit for
+that candidate. In certain circumstances, the contribution may also count against the contributors limit to the PAC. 11 CFR
+110.6. See also 11 CFR 110.1(h).
+No more than $37,500 of this amount may be contributed to state and local party committees and PACs.
+This limit is shared by the national committee and the Senate campaign committee.
+A multicandidate committee is a political committee with more than 50 contributors which has been registered for at least 6
+months and, with the exception of state party committees, has made contributions to 5 or more candidates for federal office.
+11 CFR 100.5(e)(3).
+A federal candidate’s authorized committee(s) may contribute no more than $1,000 per election to another federal candidate’s
+authorized committee(s). 11 CFR 102.12(c)(2).
+Combined limits are shared by federal accounts of all other state and local committees of the same party in the same state.
+
+$2,0005
+
+PAC
+(not multicandidate)
+
+1
+
+$5,000
+
+PAC
+(multicandidate4)
+
+$5,000
+(combined limit)
+
+$2,000
+
+Individual
+
+State, District & Local
+Party Committee
+
+Candidate or
+candidate committee
+per election
+
+Contributor
+
+Recipient
+
+Appendix C
+
+Figures and Tables: Monte Carlo I
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+Number of Iterations
+
+Figure C1: Histogram of Number of Iterations
+Note: Bin size is 1000.
+
+Average
+
+Standard Deviation
+
+Minimum
+
+Maximum
+
+0.011020
+
+0.011637
+
+0.000000
+
+0.080000
+
+Table C1: Summary Statistics on Misclassification Rates
+
+A5
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.0
+
+0.1
+
+0.2
+
+0.3
+
+Misspecification Rate
+
+Figure C2: Histogram of Misclassification Rate
+Note: Bin size is 0.01.
+
+True Dem
+True Rep
+True Ind
+
+Estimated Dem
+
+Estimated Rep
+
+Estimated Ind
+
+32.7520%
+0.1700%
+0.1840%
+
+0.1820%
+32.7440%
+0.2120%
+
+0.1540%
+0.2000%
+33.4020%
+
+Table C2: Tabulation of Estimated vs. True Ideology
+
+A6
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Probability
+
+Figure C3: Histogram of Difference in Posterior Probability for Correctly Classified Vertices
+Note: Each observation is a vertex. Horizontal axis is the difference between the highest posterior probability(i.e.,
+the posterior probability of the true ideology) and the second highest posterior probability. Bin size is 0.025.
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Probability
+
+Figure C4: Histogram of Difference in Posterior Probability for Misclassified Vertices
+Note: Each observation is a vertex. Horizontal axis is the difference between the highest posterior probability and
+the posterior probability of the true ideology. Bin size is 0.025.
+
+A7
+
+β
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Bias
+
+Standard Deviation
+
+-0.020032
+0.014907
+0.008465
+0.017410
+0.001838
+-0.001370
+0.001803
+0.002705
+-0.001016
+-0.004365
+-0.001202
+0.000268
+0.001389
+0.001199
+0.001038
+-0.001212
+0.004666
+-0.000569
+-0.000553
+
+0.306216
+0.075353
+0.075682
+0.078703
+0.064869
+0.064845
+0.043134
+0.044662
+0.046084
+0.046909
+0.046442
+0.044655
+0.042022
+0.050153
+0.046411
+0.051018
+0.103812
+0.013868
+0.025041
+
+Table C3: Parameters Governing Edge Formation Probabilities β
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Bias
+
+Standard Deviation
+
+-0.000223
+-0.000224
+0.000447
+
+0.004705
+0.004567
+0.004620
+
+Table C4: Parameters Governing the Fraction of Ideologies θ
+Notes: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A8
+
+hDem,Dem
+
+hInd,Ind
+
+hDem, Ind
+
+Bias
+
+Standard Deviation
+
+0.136574
+0.101386
+-0.102415
+-0.135545
+
+0.014174
+0.011487
+0.014947
+0.017527
+
+Bias
+
+Standard Deviation
+
+0.134438
+0.100568
+-0.101278
+-0.133727
+
+0.014390
+0.011735
+0.014835
+0.017879
+
+hRep,Rep
+
+hDem,Rep
+
+Bias
+
+Standard Deviation
+
+-0.096669
+-0.032747
+0.032331
+0.097085
+
+0.013237
+0.011223
+0.009789
+0.009931
+
+hRep, Ind
+
+Bias
+
+Standard Deviation
+
+0.136643
+0.102114
+-0.102477
+-0.136280
+
+0.014089
+0.012182
+0.014942
+0.017799
+
+Bias
+
+Standard Deviation
+
+-0.097963
+-0.033662
+0.032859
+0.098766
+
+0.013732
+0.011047
+0.009625
+0.010588
+
+Bias
+
+Standard Deviation
+
+-0.097534
+-0.032846
+0.032789
+0.097592
+
+0.013724
+0.011521
+0.009901
+0.010524
+
+Table C5: Parameters Governing the Weight Distribution h
+Notes: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+
+
+Bias
+
+Standard Deviation
+
+-0.002427
+
+0.000660
+
+Table C6: Parameter Governing Measurement Error 
+Notes: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A9
+
+Appendix D
+
+Figures and Tables: Monte Carlo II
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0
+
+10000
+
+20000
+
+30000
+
+40000
+
+Number of Iterations
+
+Figure D1: Histogram of Number of Iterations
+Note: Bin size is 1000.
+
+Average
+
+Standard Deviation
+
+Minimum
+
+Maximum
+
+0.056800
+
+0.033604
+
+0.000000
+
+0.240000
+
+Table D1: Summary Statistics on Misclassification Rates
+
+A10
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.0
+
+0.1
+
+0.2
+
+0.3
+
+Misspecification Rate
+
+Figure D2: Histogram of Misclassification Rate
+Note: Bin size is 0.01.
+
+True Dem
+True Rep
+True Ind
+
+Estimated Dem
+
+Estimated Rep
+
+Estimated Ind
+
+31.5080%
+1.0740%
+0.8940%
+
+0.9440%
+31.3140%
+1.0100%
+
+0.8760%
+0.8820%
+31.4980%
+
+Table D2: Tabulation of Estimated vs. True Ideology
+
+A11
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Probability
+
+Figure D3: Histogram of Difference in Posterior Probability for Correctly Classified Vertices
+Note: Each observation is a vertex. Horizontal axis is the difference between the highest posterior probability(i.e.,
+the posterior probability of the true ideology) and the second highest posterior probability. Bin size is 0.025.
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Probability
+
+Figure D4: Histogram of Difference in Posterior Probability for Misclassified Vertices
+Note: Each observation is a vertex. Horizontal axis is the difference between the highest posterior probability and
+the posterior probability of the true ideology. Bin size is 0.025.
+
+A12
+
+β
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Bias
+
+Standard Deviation
+
+-0.053234
+0.004676
+0.005889
+0.008628
+-0.005467
+0.000659
+0.004227
+0.002177
+0.001558
+0.000138
+0.001651
+0.002929
+0.002520
+0.001504
+0.005082
+0.007028
+0.013339
+-0.001264
+-0.002407
+
+0.278777
+0.088396
+0.085760
+0.090062
+0.069264
+0.071066
+0.043947
+0.043028
+0.046981
+0.051027
+0.046874
+0.048328
+0.043062
+0.048683
+0.047008
+0.049847
+0.095571
+0.013323
+0.023131
+
+Table D3: Parameters Governing Edge Formation Probabilities β
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Bias
+
+Standard Deviation
+
+0.000043
+-0.000114
+0.000071
+
+0.004747
+0.004533
+0.004761
+
+Table D4: Parameters Governing the Fraction of Ideologies θ
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A13
+
+hDem,Dem
+
+hInd,Ind
+
+hDem,Ind
+
+Bias
+
+Standard Deviation
+
+0.039407
+0.070890
+-0.070779
+-0.039519
+
+0.010862
+0.011031
+0.012694
+0.011386
+
+Bias
+
+Standard Deviation
+
+0.039131
+0.071208
+-0.070468
+-0.039871
+
+0.011047
+0.011610
+0.013130
+0.012104
+
+Bias
+
+Standard Deviation
+
+-0.100720
+-0.035439
+0.035755
+0.100404
+
+0.013911
+0.011370
+0.009990
+0.010030
+
+hRep,Rep
+
+hDem,Rep
+
+hRep,Ind
+
+Bias
+
+Standard Deviation
+
+0.038909
+0.072241
+-0.071994
+-0.039157
+
+0.010678
+0.011493
+0.012912
+0.012040
+
+Bias
+
+Standard Deviation
+
+-0.100952
+-0.036391
+0.036400
+0.100943
+
+0.014387
+0.011860
+0.011109
+0.010614
+
+Bias
+
+Standard Deviation
+
+-0.101129
+-0.036941
+0.036431
+0.101638
+
+0.014001
+0.011595
+0.010460
+0.010507
+
+Table D5: Parameters Governing the Weight Distribution h
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+
+
+Bias
+
+Standard Deviation
+
+-0.002484
+
+0.000581
+
+Table D6: Parameter Governing Measurement Error 
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A14
+
+Appendix E
+
+Figures and Tables: Monte Carlo III
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0
+
+10000
+
+20000
+
+30000
+
+Number of Iterations
+
+Figure E1: Histogram of Number of Iterations
+Note: Bin size is 1000.
+
+A15
+
+40000
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Probability
+
+Figure E2: Histogram of Difference in Posterior Probability for Correctly Classified Vertices
+Note: Each observation is a vertex. Horizontal axis is the difference between the highest posterior probability(i.e.,
+the posterior probability of the true ideology) and the second highest posterior probability. Bin size is 0.025.
+
+β
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Bias
+
+Standard Deviation
+
+-0.000600
+0.000375
+0.001279
+0.000725
+0.001145
+0.000070
+-0.000222
+-0.000045
+-0.000023
+-0.000173
+-0.000214
+-0.000737
+-0.000620
+0.000057
+-0.000122
+0.000534
+0.000375
+-0.000113
+0.000054
+
+0.045500
+0.013841
+0.014102
+0.014023
+0.012192
+0.011883
+0.008429
+0.008724
+0.009036
+0.009085
+0.009082
+0.008557
+0.008545
+0.009115
+0.009020
+0.009923
+0.015589
+0.002002
+0.004421
+
+Table E1: Parameters Governing Edge Formation Probabilities β
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A16
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Bias
+
+Standard Deviation
+
+0.000469
+-0.000514
+0.000046
+
+0.007948
+0.007469
+0.007534
+
+Table E2: Parameters Governing the Fraction of Ideologies θ
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+hDem,Dem
+
+hInd,Ind
+
+hDem,Ind
+
+Bias
+
+Standard Deviation
+
+0.003591
+0.007005
+-0.006713
+-0.003883
+
+0.005047
+0.004737
+0.006200
+0.006027
+
+Bias
+
+Standard Deviation
+
+0.003769
+0.007100
+-0.007326
+-0.003543
+
+0.005023
+0.004713
+0.005899
+0.005966
+
+Bias
+
+Standard Deviation
+
+-0.009563
+-0.003075
+0.003214
+0.009424
+
+0.005808
+0.005394
+0.004920
+0.003579
+
+hRep,Rep
+
+Bias
+
+Standard Deviation
+
+0.003633
+0.007228
+-0.007282
+-0.003580
+
+0.005297
+0.004696
+0.006413
+0.005937
+
+hDem, Rep
+
+Bias
+
+Standard Deviation
+
+-0.009173
+-0.003547
+0.002779
+0.009941
+
+0.006111
+0.005576
+0.004879
+0.003743
+
+Bias
+
+Standard Deviation
+
+-0.009567
+-0.003141
+0.003000
+0.009708
+
+0.005856
+0.005524
+0.004760
+0.003814
+
+hRep, Ind
+
+Table E3: Parameters Governing the Weight Distribution h
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+
+
+Bias
+
+Standard Deviation
+
+-0.002183
+
+0.001299
+
+Table E4: Parameter Governing Measurement Error 
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A17
+
+Appendix F
+
+Figures and Tables: Monte Carlo IV
+
+1.00
+
+Density
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0
+
+10000
+
+20000
+
+30000
+
+Number of Iterations
+
+Figure F1: Histogram of Number of Iterations
+Note: Bin size is 1000.
+
+A18
+
+40000
+
+β
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Bias
+
+Standard Deviation
+
+-0.000099
+0.000333
+0.000288
+0.000045
+0.000012
+0.000441
+0.000135
+-0.000033
+-0.000167
+-0.000063
+-0.000026
+0.000091
+0.000060
+0.000015
+-0.000166
+0.000039
+-0.000084
+0.000005
+0.000030
+
+0.003286
+0.002225
+0.002065
+0.002128
+0.002087
+0.002084
+0.001168
+0.001090
+0.001289
+0.001331
+0.001187
+0.001104
+0.001147
+0.001267
+0.001376
+0.001281
+0.000527
+0.000216
+0.000583
+
+Table F1: Parameters Governing Edge Formation Probabilities β
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Bias
+
+Standard Deviation
+
+-0.000759
+0.000469
+0.000289
+
+0.006007
+0.004874
+0.005318
+
+Table F2: Parameters Governing the Fraction of Ideologies θ
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A19
+
+hDem,Dem
+
+hInd,Ind
+
+hDem,Ind
+
+Bias
+
+Standard Deviation
+
+0.000352
+0.000110
+0.000025
+-0.000488
+
+0.000592
+0.000951
+0.000896
+0.001082
+
+Bias
+
+Standard Deviation
+
+-0.000002
+0.000030
+0.000158
+-0.000186
+
+0.001127
+0.001127
+0.001154
+0.001181
+
+Bias
+
+Standard Deviation
+
+-0.000148
+-0.000079
+-0.000163
+0.000389
+
+0.001221
+0.001344
+0.001343
+0.000966
+
+hRep,Rep
+
+hDem,Rep
+
+hRep,Ind
+
+Bias
+
+Standard Deviation
+
+0.000309
+-0.000051
+0.000283
+-0.000542
+
+0.000557
+0.000850
+0.000831
+0.001025
+
+Bias
+
+Standard Deviation
+
+-0.001770
+0.000260
+0.000455
+0.001056
+
+0.001944
+0.001699
+0.001516
+0.001108
+
+Bias
+
+Standard Deviation
+
+-0.000176
+-0.000162
+-0.000244
+0.000581
+
+0.001315
+0.001176
+0.001361
+0.000852
+
+Table F3: Parameters Governing the Weight Distribution h
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+
+
+Bias
+
+Standard Deviation
+
+-0.001132
+
+0.002546
+
+Table F4: Parameter Governing Measurement Error 
+Note: Bias is defined as the difference between the average of posterior means across simulations and the true
+parameter value. Standard Deviation is defined as the standard deviation of posterior means across simulations.
+
+A20
+
+Appendix G
+
+List of PCs with Estimated Ideology Different from
+Self Report
+
+FEC ID
+
+Committee Name
+
+C00113662
+C00165753
+C00247734
+C00401364
+C00178418
+C00387829
+C00396101
+C00316596
+C00316141
+C00220145
+C00223230
+C00366401
+C00315176
+C00347310
+C00386292
+C00143438
+C00305110
+C00364364
+C00280917
+C00396044
+C00391110
+C00389957
+C00224972
+C00215830
+C00391862
+C00325126
+C00317214
+C00202754
+C00368209
+C00306712
+C00385013
+C00204370
+C00387449
+C00308676
+C00201533
+C00402008
+C00255463
+C00385633
+C00349217
+C00344051
+C00306860
+C00383497
+C00328211
+
+NEW MEXICANS FOR BILL RICHARDSON
+LEADERSHIP ’02 (FKA FRIENDS OF ALBERT GORE JR INC)
+COMMITTEE TO ELECT WILLIAM J JEFFERSON TO THE UNITED STATES CONGRESS
+FRIENDS OF JOHN SWEENEY
+BOUCHER FOR CONGRESS COMMITTEE
+DEMOCRAT GRAYSON FOR THE HOUSE
+JON PORTER FOR CONGRESS COMMITTEE
+CHRIS JOHN FOR CONGRESS
+RE-ELECT HAROLD FORD
+GENE TAYLOR FOR CONGRESS COMMITTEE
+FRIENDS OF JOHN TANNER
+MARK PRYOR FOR US SENATE
+FEINSTEIN FOR SENATE
+FRIENDS OF CHRIS DODD 2004
+NORTH DAKOTA 2004
+FRIENDS OF BYRON DORGAN
+A LOT OF PEOPLE WHO SUPPORT JEFF BINGAMAN
+DANIEL K INOUYE IN 2004
+DANIEL K INOUYE IN 98
+JOHN KENNEDY FOR US SENATE INC
+VICTORY 2004
+COBLE FOR US SENATE
+FRIENDS OF SENATOR ROCKEFELLER
+JOHN BREAUX COMMITTEE
+LOUISIANA SENATE 2003
+FRIENDS OF MARY LANDRIEU INC
+MARY LANDRIEU FOR SENATE COMMITTEE INC
+FRIENDS OF KENT CONRAD
+NELSON 2006
+NELSON 2000
+NEVADA SENATE 2004
+FRIENDS FOR HARRY REID
+MONTANA NEVADA VICTORY FUND
+WYDEN FOR SENATE
+TIM JOHNSON FOR SOUTH DAKOTA INC
+MONTANA ARKANSAS VICTORY FUND
+FRIENDS OF BLANCHE LINCOLN
+ARKANSAS SENATE 2004
+CARPER FOR SENATE
+BILL NELSON FOR U S SENATE
+EVAN BAYH COMMITTEE
+BAUCUS VICTORY FUND
+FRIENDS OF MAX BAUCUS 2002
+
+Table G1: PCs that Self Reported to be Democratic, but are Estimated to be Republican
+
+A21
+
+FEC ID
+
+Committee Name
+
+C00400598
+C00387001
+C00406322
+C00188078
+C00350496
+C00371443
+C00400531
+C00376749
+C00272211
+C00272153
+C00378158
+C00396523
+C00401703
+C00385542
+C00388884
+C00400556
+C00400507
+C00190637
+C00386060
+C00399675
+C00392860
+C00398776
+C00403642
+C00386078
+C00388991
+C00399295
+C00395061
+C00398834
+C00331108
+C00320168
+C00395731
+C00333294
+C00219204
+C00335190
+C00300699
+C00096412
+C00091298
+C00334334
+C00397075
+C00394346
+C00405688
+C00374652
+C00389692
+C00349795
+C00366237
+C00325571
+
+ILLINOIS US SENATE VICTORY COMMITTEE
+OHIO VICTORY COMMITTEE
+REPUBLICAN PARTY OF KENDALL COUNTY
+SEVENTH CONGRESSIONAL DISTRICT REPUBLICAN PARTY OF WISCONSIN
+BRADY FOR CONGRESS
+DANNY DAVIS FOR CONGRESS
+KY 04 CONGRESSIONAL VICTORY COMMITTEE
+RODNEY ALEXANDER FOR CONGRESS INC.
+PETE KING FOR CONGRESS COMMITTEE
+COMMITTEE TO ELECT MCHUGH
+ZARELLI FOR CONGRESS
+ROSELYN FOR CONGRESS
+FRIENDS OF ALJANICH
+PHELPS FOR CONGRESS
+HOOSIERS FOR HARDY
+LA 03 CONGRESSIONAL VICTORY COMMITTEE
+LA 07 CONGRESSIONAL VICTORY COMMITTEE
+TIERNEY FOR CONGRESS COMMITTEE
+DEROSSETT FOR CONGRESS
+FRIENDS OF STEVE MORROW
+BRAUNER FOR CONGRESS
+HUFFMAN FOR CONGRESS
+PAUL RODRIGUEZ FOR CONGRESS
+BELL FOR CONGRESS COMMITTEE
+RICCARDI FOR CONGRESS
+MATT MUEDA FOR CONGRESS
+JANE ESHAGPOOR FOR CONGESS
+ASAY FOR CONGRESS COMMITTEE
+REP DON YOUNG CONSTITUTIONAL DEFENSE FUND
+ASA HUTCHINSON FOR CONGRESS COMMITTEE
+TERESA DOGGETT TAYLOR FOR CONGRESS
+DOUG OSE FOR CONGRESS ’98
+PORTER GOSS RE-ELECTION TEAM
+CONNELLY FOR CONGRESS
+NODLER FOR CONGRESS COMMITTEE
+COMMITTEE TO REELECT CONGRESSMAN CHRIS SMITH
+THE COMMITTEE TO RE-ELECT CONGRESSWOMAN MARGE ROUKEMA
+DON SHERWOOD FOR CONGRESS
+SANTA CRUZ ACTION COMMITTEE
+BUSH ADMINISTRATION RETIREMENT FUND PAC (BARF PAC)
+DUMP BUSH MISSOULA
+DIANE ALLEN FOR US SENATE
+DR KATHURIA FOR US SENATE
+GORMLEY FOR SENATE PRIMARY ELECTION FUND
+CHAFEE FOR SENATE
+SENATOR JOHN WARNER COMMITTEE
+
+Table G2: PCs that Self Reported to be Republican, but are Estimated to be Democratic
+
+A22
+
+Appendix H
+
+Alternative Model: No Measurement Error, but with
+Hold Out Sample
+
+In this alternative model, we randomly select 200 PCs in V o to be the holdout sample. Additionally, we assume no measurement error, i.e.,  = 0 and xi = x̂i when x̂i is available. We estimate
+this model pretending x̂i is not available for the holdout sample. In order to assess our estimates,
+we compare the estimated posterior distribution and the self report for the holdout sample.
+Posterior distributions of β, θ, h are summarized in Table H1, H2, and Figure H1.
+β
+constant
+1xi =xj =Dem
+1xi =xj =Rep
+1xi =xj =Ind
+1(xi =Dem,xj =Ind)∨(xi =Ind,xj =Dem)
+1(xi =Rep,xj =Ind)∨(xi =Ind,xj =Rep)
+Same state
+Same industry
+One of them is a House campaign
+One of them is a Senate campaign
+One of them is a Presidential campaign
+One of them is a qualified PAC
+One of them is a qualified Party
+One of them is a national committee
+One of them is authorized by a candidate
+One of them is a joint fundraiser
+(ln bi + ln bj )
+((ln bi )2 + (ln bj )2 )
+ln bi ln bj
+
+Posterior Mean
+
+Posterior Standard Deviation
+
+-72.9487
+47.9304
+47.8478
+47.8889
+48.3420
+48.4466
+0.7792
+0.5151
+0.5315
+0.2261
+-0.2852
+0.3990
+-0.7151
+0.7163
+-0.4360
+-0.8477
+1.4648
+0.0056
+-0.1017
+
+1.1780
+0.4056
+0.4027
+0.3907
+0.4055
+0.4062
+0.0114
+0.0272
+0.0082
+0.0044
+0.0169
+0.0051
+0.0133
+0.0116
+0.0071
+0.0102
+0.0579
+0.0003
+0.0038
+
+Table H1: Posterior Distribution of β
+
+θ
+P(Dem)
+P(Rep)
+P(Ind)
+
+Posterior Mean
+
+Posterior Standard Deviation
+
+0.3839
+0.3913
+0.2248
+
+0.0045
+0.0045
+0.0038
+
+Table H2: Posterior Distribution of θ
+In the following part, we focus on the holdout sample. Table H3 cross tabulates PCs in the
+holdout sample according to self-reported and estimated ideology. Our estimated ideology matches
+the self report for 87.76% of those who reported to be Democratic and 79.17% of those who reported
+A23
+
+hRep,Rep
+0.6
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+Density
+
+0.6
+
+0.0
+
+0.2
+
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+0.2
+
+0.0
+
+0.0
+0
+
+0
+
+10000
+
+Transfer Amount
+
+20000
+
+30000
+
+40000
+
+50000
+
+0
+
+hDem,Ind
+
+0.4
+
+0.4
+
+Density
+
+0.4
+
+Density
+
+0.6
+
+0.2
+
+0.0
+
+0.0
+10000
+
+20000
+
+30000
+
+40000
+
+50000
+
+30000
+
+40000
+
+50000
+
+40000
+
+50000
+
+hRep,Ind
+
+0.6
+
+0.2
+
+20000
+
+Transfer Amount
+
+0.6
+
+0
+
+10000
+
+Transfer Amount
+
+hDem,Rep
+
+Density
+
+hInd,Ind
+
+0.6
+
+Density
+
+Density
+
+hDem,Dem
+
+0.2
+
+0.0
+0
+
+10000
+
+Transfer Amount
+
+20000
+
+30000
+
+40000
+
+50000
+
+Transfer Amount
+
+0
+
+10000
+
+20000
+
+30000
+
+Transfer Amount
+
+Figure H1: Posterior Mean of h
+Note: Probability of transfer amount higher than $50,000 is plotted at $50,000.
+
+to be Republican.
+In this part, we analyze the posterior distribution of political ideology. Figure H2 plots, for
+PCs whose estimates are the same as the self-reports (i.e., the reported ideology has the highest
+posterior probability), the distribution of the differences between the highest and the second highest
+posterior probability. These differences concentrate around 1, meaning the posterior probabilities
+concentrate on the self-reported affiliation. This confirms that we do not obtain these classifications
+by luck.
+We do a similar analysis in Figure H3, for PCs whose estimates differ from the self-reports,
+by plotting the distributions of the differences between the highest posterior probability and the
+posterior probability of the self-reported ideology. The distributions for PCs which self reported
+to be Democratic (Republican) but are estimated as Republican (Democratic) are concentrated
+around 0, indicating that these are “near misses”.
+Finally, Table H4 and H5 list the PCs that self reported to be Democratic (Republican), but
+are estimated to be Republican (Democratic).
+
+A24
+
+Self-Reported Dem
+Self-Reported Rep
+Self-Reported Ind
+
+Estimated Dem
+
+Estimated Rep
+
+Estimated Ind
+
+86 (87.76%)
+10 (10.42%)
+1 (16.67%)
+
+9 (9.18%)
+76 (79.17%)
+3 (50.00%)
+
+3 (3.06%)
+10 (10.42%)
+2 (33.33%)
+
+Table H3: Tabulation of Estimated vs. Self-Reported Ideology
+Note: The percentages are calculated for each row.
+
+Report = Estimate = Rep
+
+Report = Estimate = Ind
+1.00
+
+0.75
+
+0.75
+
+0.75
+
+0.50
+
+0.25
+
+Density
+
+1.00
+
+Density
+
+Density
+
+Report = Estimate = Dem
+1.00
+
+0.50
+
+0.25
+
+0.00
+
+0.25
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+0.50
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+Figure H2: Distribution of Difference in the Posterior Probability of Ideology
+Note: Horizontal axis is the difference between the highest posterior probability (i.e., the posterior probability of the
+self-reported ideology) and the second highest posterior probability. Bin size is 0.025.
+
+FEC ID
+
+Committee Name
+
+C00327403
+C00367060
+C00381350
+C00388454
+C00390245
+C00394858
+C00399097
+C00399154
+C00402149
+
+FRIENDS OF JONATHAN MILLER
+JOHN MILKOVICH FOR CONGRESS
+MARK BUDETICH
+JOHNSON FOR US SENATE
+REYES FOR CONGRESS
+VICTORY 04
+JOHN SALAZAR AND KEN SALAZAR JOINT COMMITTEE
+BURKS FOR US SENATE CAMPAIGN COMMITTEE
+FRIENDS TO ELECT JEFF MILLER
+
+Table H4: PCs that Self Reported to be Democratic, but are Estimated to be Republican
+FEC ID
+
+Committee Name
+
+C00188078
+C00349795
+C00367839
+C00371443
+C00375485
+C00386078
+C00387571
+C00389130
+C00390203
+C00404772
+
+SEVENTH CONGRESSIONAL DISTRICT REPUBLICAN PARTY OF WISCONSIN
+GORMLEY FOR SENATE PRIMARY ELECTION FUND
+SALAZAR FOR CONGRESS
+DANNY DAVIS FOR CONGRESS
+RUSTY GLOVER FOR CONGRESS
+BELL FOR CONGRESS COMMITTEE
+STARK FOR CONGRESS
+FRIENDS OF JOE NEGRON
+RISLEY FOR CONGRESS
+RANDY EASTWOOD FOR CONGRESS
+
+Table H5: PCs that Self Reported to be Republican, but are Estimated to be Democratic
+
+A25
+
+Reported Dem, Estimated Ind
+
+0.75
+
+0.75
+
+0.75
+
+0.50
+
+Density
+
+1.00
+
+0.25
+
+0.50
+
+0.25
+
+0.00
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.00
+0.00
+
+Difference in Posterior Probability
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+0.00
+
+Difference in Posterior Probability
+
+Reported Rep, Estimated Ind
+
+Reported Ind, Estimated Dem
+
+0.75
+
+0.75
+
+0.75
+
+Density
+
+1.00
+
+0.25
+
+0.50
+
+0.25
+
+0.00
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+0.75
+
+1.00
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+0.50
+
+Reported Ind, Estimated Rep
+
+1.00
+
+0.50
+
+0.25
+
+Difference in Posterior Probability
+
+1.00
+
+Density
+
+Density
+
+Reported Rep, Estimated Dem
+
+1.00
+
+Density
+
+Density
+
+Reported Dem, Estimated Rep
+1.00
+
+0.00
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+Difference in Posterior Probability
+
+1.00
+
+0.00
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+Difference in Posterior Probability
+
+Figure H3: Distribution of Difference in the Posterior Probability of Ideology
+Note: Horizontal axis is the difference between the highest posterior probability and the posterior probability of the
+self-reported ideology. Bin size is 0.025.
+
+A26
+
+

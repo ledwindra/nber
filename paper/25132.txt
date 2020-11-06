@@ -1,0 +1,3352 @@
+NBER WORKING PAPER SERIES
+
+MATRIX COMPLETION METHODS FOR CAUSAL PANEL DATA MODELS
+Susan Athey
+Mohsen Bayati
+Nikolay Doudchenko
+Guido Imbens
+Khashayar Khosravi
+Working Paper 25132
+http://www.nber.org/papers/w25132
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+October 2018
+
+We are grateful for comments by Alberto Abadie and participants at the NBER Summer Institute
+and at seminars at Stockholm University and the California Econometrics Conference. This
+research was generously supported by ONR grant N00014-17-1-2131 and NSF grant
+CMMI:1554140. The views expressed herein are those of the authors and do not necessarily
+reflect the views of the National Bureau of Economic Research.
+At least one co-author has disclosed a financial relationship of potential relevance for this
+research. Further information is available online at http://www.nber.org/papers/w25132.ack
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2018 by Susan Athey, Mohsen Bayati, Nikolay Doudchenko, Guido Imbens, and Khashayar
+Khosravi. All rights reserved. Short sections of text, not to exceed two paragraphs, may be quoted
+without explicit permission provided that full credit, including © notice, is given to the source.
+
+Matrix Completion Methods for Causal Panel Data Models
+Susan Athey, Mohsen Bayati, Nikolay Doudchenko, Guido Imbens, and Khashayar Khosravi
+NBER Working Paper No. 25132
+October 2018
+JEL No. C01,C21,C23
+ABSTRACT
+In this paper we study methods for estimating causal effects in settings with panel data, where a
+subset of units are exposed to a treatment during a subset of periods, and the goal is estimating
+counterfactual (untreated) outcomes for the treated unit/period combinations. We develop a class
+of matrix completion estimators that uses the observed elements of the matrix of control
+outcomes corresponding to untreated unit/periods to predict the “missing” elements of the matrix,
+corresponding to treated units/periods. The approach estimates a matrix that well-approximates
+the original (incomplete) matrix, but has lower complexity according to the nuclear norm for
+matrices. From a technical perspective, we generalize results from the matrix completion
+literature by allowing the patterns of missing data to have a time series dependency structure. We
+also present novel insights concerning the connections between the matrix completion literature,
+the literature on interactive fixed effects models and the literatures on program evaluation under
+unconfoundedness and synthetic control methods.
+Susan Athey
+Graduate School of Business
+Stanford University
+655 Knight Way
+Stanford, CA 94305
+and NBER
+athey@stanford.edu
+
+Guido Imbens
+Graduate School of Business
+Stanford University
+655 Knight Way
+Stanford, CA 94305
+and NBER
+Imbens@stanford.edu
+
+Mohsen Bayati
+Graduate School of Business
+Stanford University
+Stanford, CA 94305
+bayati@stanford.edu
+
+Khashayar Khosravi
+Department of Electrical Engineering
+Stanford University
+Stanford, CA 94305
+khosravi@stanford.edu
+
+Nikolay Doudchenko
+Graduate School of Business
+Stanford University
+Stanford, CA 94305
+nikolayd@stanford.edu
+
+1
+
+Introduction
+
+In this paper we develop new methods for estimating average causal effects in settings with
+panel or longitudinal data, where a subset of units is exposed to a binary treatment during
+a subset of periods, and we observe the realized outcome for each unit in each time period.
+To estimate the (average) effect of the treatment on the treated units in this setting, we
+focus on imputing the missing potential outcomes. The statistics and econometrics literatures have taken two general approaches to this problem. The literature on unconfoundedness (Rosenbaum and Rubin (1983); Imbens and Rubin (2015)) imputes missing potential
+outcomes using observed outcomes for units with similar values for observed outcomes in
+previous periods. The synthetic control literature (Abadie and Gardeazabal (2003); Abadie
+et al. (2010, 2015); Doudchenko and Imbens (2016)) imputes missing control outcomes for
+treated units by finding weighted averages of control units that match the treated units in
+terms of lagged outcomes. Although at first sight similar, the two approaches are conceptually quite different in terms of the patterns in the data they exploit to impute the missing
+potential outcomes. The unconfoundedness approach estimates patterns over time that are
+assumed to be stable across units, and the synthetic control approach estimates patterns
+across units that are assumed to be stable over time. Both sets of methods also primarily
+focus on settings with different structures on the missing data or assignment mechanism.
+In the case of the unconfoundedness literature typically the assumption is that the treated
+units are all treated in the same periods, typically only the last period, and there are a substantial number of control units. The synthetic control literature has primarily focused on
+the case where one or a small number of treated units are observed prior to the treatment
+over a substantial number of periods.
+In this study we also draw on the econometric literature on factor models and interactive
+fixed effects, and the computer science and statistics literatures on matrix completion, to
+
+2
+
+take an approach to imputing the missing potential outcomes that is different from the
+unconfoundedness and synthetic control approaches. In the literature on factor models
+and interactive effects (Bai and Ng (2002); Bai (2003)) researchers model the observed
+outcome, in a balanced panel setting, as the sum of a linear function of covariates and
+an unobserved component that is a low rank matrix plus noise. Estimates are typically
+based on minimizing the sum of squared errors given the rank of the matrix of unobserved
+components, sometimes with the rank estimated. Xu (2017) applies this to causal settings
+where a subset of units is treated from common period onward, so that the complete data
+methods for estimating the factors and factor loadings can be used. The matrix completion
+literature (Candès and Recht (2009); Candès and Plan (2010); Mazumder et al. (2010))
+focuses on imputing missing elements in a matrix assuming the complete matrix is the sum
+of a low rank matrix plus noise and the missingness is completely at random. The rank of
+the matrix is implicitly determined by the regularization through the addition of a penalty
+term to the objective function. Especially with complex missing data patterns using the
+nuclear norm as the regularizer is attractive for computational reasons.
+In the current paper we make two contributions. First, we generalize the methods from
+the matrix completion literature to settings where the missing data patterns are not completely at random. In particular we allow for the possibility of staggered adoption (Athey
+and Imbens (2018)), where units are treated from some initial adoption date onwards,
+but the adoption dates vary between units. Compared to the factor model literature the
+proposed estimator focuses on nuclear norm regularization to avoid the computational difficulties that would arise for complex missing data patterns with the fixed-rank methods in
+Bai and Ng (2002) and Xu (2017), similar to the way LASSO (`1 regularization, Tibshirani
+(1996)) is computationally attractive relative to subset selection (`0 regularization) in linear
+regression models. The second contribution is to show that the synthetic control and unconfoundedness approaches, as well as our proposed method, can all be viewed as matrix
+3
+
+completion methods based on matrix factorization, all with the same objective function
+based on the Fröbenius norm for the difference between the latent matrix and the observed
+matrix. Given this common objective function the unconfoundedness and synthetic control
+approaches impose different sets of restrictions on the factors in the matrix factorization,
+whereas the proposed method does not impose any restrictions but uses regularization to
+define the estimator.
+
+2
+
+Set Up
+
+Consider an N × T matrix Y of outcomes with typical element Yit . We only observe Yit
+for some units and some time periods. We define M to be the set of pairs of indices (i, t),
+i ∈ {1, . . . , N }, t ∈ {1, . . . , T }, corresponding to the missing entries and O to be the set
+corresponding to the observed entries: Yit is missing if (i, t) ∈ M and observed if (i, t) ∈ O.
+We wish to impute the missing Yit . Our motivation for this problem arises from a causal
+potential outcome setting (e.g., Rubin (1974); Imbens and Rubin (2015)), where for each
+of N units and T time periods there exists a pair of potential outcomes, Yit (0) and Yit (1),
+with unit i exposed in period t to treatment Wit ∈ {0, 1}, and the realized outcome equal
+to Yit = Yit (Wit ). In that case the primary object of interest may be the average causal
+P
+effect of the treatment, τ = i,t [Yit (1) − Yit (0)]/(N T ), or some other average treatment
+effect. In order to estimate such average treatment effects, one approach is to impute the
+missing potential outcomes. In this paper we focus directly on the problem of imputing
+the missing entries in the Y(0) matrix for treated units with Wit = 1.
+In addition to partially observing the matrix Y, we may also observe covariate matrices
+X ∈ RN ×P and Z ∈ RT ×Q where columns of X are unit-specific covariates, and columns of
+Z are time-specific covariates. We may also observe unit/time specific covariates Vit ∈ RJ .
+Putting aside the covariates for the time being, the data can be thought of as consisting
+4
+
+of two N × T matrices, one incomplete and one complete,
+
+
+Y11
+
+
+
+ ?
+
+
+Y =  Y31
+
+ ..
+ .
+
+YN 1
+
+where
+
+Y12
+
+?
+
+...
+
+Y1T
+
+?
+
+Y23
+
+...
+
+?
+
+?
+..
+.
+
+Y33
+..
+.
+
+...
+..
+.
+
+?
+..
+.
+
+?
+
+YN 3 . . .
+
+?
+
+
+
+
+
+
+
+
+
+
+,
+
+
+
+
+
+
+
+
+
+
+and W = 
+
+
+
+
+
+
+ 1
+Wit =
+ 0
+
+0 0 1 ...
+
+0
+
+1 1 0 ...
+
+1
+
+0 1 0 ...
+.. .. .. . .
+.
+. . .
+
+1
+..
+.
+
+0 1 0 ...
+
+1
+
+
+
+
+
+
+
+,
+
+
+
+
+
+if (i, t) ∈ M,
+if (i, t) ∈ O,
+
+is an indicator for Yit being missing.
+
+3
+
+Patterns of Missing Data, Thin and Fat Matrices,
+and Horizontal and Vertical Regression
+
+In this section, we discuss a number of particular configurations of the matrices Y and W
+that are the focus of distinct parts of the general literature. This serves to put in context
+the problem, and to motivate previously developed methods from the literature on causal
+inference under unconfoundedness, the synthetic control literature, and the interactive fixed
+effect literature, and subsequently to develop formal connections between all three. First,
+we consider patterns of missing data. Second, we consider different shapes of the matrix
+Y. Third, we consider a number of specific analyses that focus on particular combinations
+of missing data patterns and shapes of the matrices.
+
+5
+
+3.1
+
+Patterns of Missing Data
+
+In the statistics literature on matrix completion the focus is on settings with randomly missing values, allowing for general patterns on the matrix of missing data indicators (Candès
+and Tao (2010); Recht (2011)). In many social science applications, however, there is a
+specific structure on the missing data.
+3.1.1
+
+Block Structure
+
+A leading example is a block structure, with a subset of the units treated during every
+period from a particular point in time T0 onwards.
+
+
+YN ×T
+
+
+
+
+
+
+
+
+
+=
+
+
+
+
+
+
+
+
+X X X X ...
+
+X
+
+X X X X ...
+
+X
+
+X X X X ...
+
+X
+
+X X X
+
+?
+
+...
+
+?
+
+X X X
+.. .. ..
+. . .
+
+?
+..
+.
+
+...
+..
+.
+
+?
+..
+.
+
+X X X
+
+?
+
+...
+
+?
+
+
+
+
+
+
+
+
+
+
+.
+
+
+
+
+
+
+
+
+There are two special cases of the block structure. Much of the literature on estimating
+average treatment effects under unconfoundedness focuses on the case where T0 = T , so
+that the only treated units are in the last period. We will refer to this as the single-treatedperiod block structure. In contrast, the synthetic control literature focuses on the case
+of with a single treated unit which are treated for a number of periods from period T0
+
+6
+
+onwards, the single-treated-unit block structure:
+
+
+
+
+
+
+
+
+
+Y=
+
+
+
+
+
+
+
+
+3.1.2
+
+X X X ...
+
+X X
+
+X X X ...
+
+X X
+
+X X X ...
+.. .. .. . .
+.
+. . .
+
+X
+..
+.
+
+?
+..
+.
+
+X X X ...
+
+X
+
+?
+↑
+
+treated period
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+and Y = 
+
+
+
+
+
+
+
+X X X ...
+
+X
+
+X X X ...
+
+X
+
+X X X ...
+.. .. .. . .
+.
+. . .
+
+X
+..
+.
+
+X X X ...
+
+X
+
+X X
+
+?
+
+...
+
+?
+
+
+
+← treated unit
+
+
+
+
+
+
+
+.
+
+
+
+
+
+
+
+Staggered Adoption
+
+Another setting that has received attention is characterized by staggered adoption of the
+treatment (Athey and Imbens (2018)). Here units may differ in the time they are first
+exposed to the treatment, but once exposed they remain in the treatment group forever
+after. This naturally arises in settings where the treatment is some new technology that
+units can choose to adopt (e.g., Athey and Stern (2002)). Here:
+
+
+YN ×T
+
+
+
+
+
+
+
+=
+
+
+
+
+
+
+
+X X X X ...
+
+X
+
+X X X X ...
+
+?
+
+X X
+
+?
+
+?
+
+...
+
+?
+
+X X
+.. ..
+. .
+
+?
+..
+.
+
+?
+..
+.
+
+...
+..
+.
+
+?
+..
+.
+
+?
+
+?
+
+?
+
+...
+
+?
+
+X
+
+7
+
+(never adopter)
+
+
+
+
+
+(late adopter) 
+
+
+
+.
+
+(medium adopter) 
+
+
+
+
+(early adopter)
+
+3.2
+
+Thin and Fat Matrices
+
+A second classification concerns the shape of the matrix Y. Relative to the number of
+time periods, we may have many units, few units, or a comparable number. These data
+configurations may make particular analyses more attractive. For example, Y may be a
+thin matrix, with N  T , or a fat matrix, with N  T , or an approximately square
+matrix, with N ≈ T :
+
+
+
+
+
+
+
+
+
+Y=
+
+
+
+
+
+
+
+
+or
+
+?
+
+X
+
+X
+
+?
+
+?
+
+?
+
+X
+
+?
+
+?
+..
+.
+
+?
+..
+.
+
+?
+
+?
+
+?
+
+
+
+X 
+
+
+X 
+
+
+X  (thin)
+
+
+? 
+
+.. 
+. 
+
+X
+
+
+
+
+
+
+
+
+Y=
+
+
+
+
+
+
+
+3.3
+
+
+
+?
+
+?
+
+
+
+?
+
+X X X ...
+
+
+
+Y= X X X X
+
+? X ? X
+
+X X ...
+
+?
+
+...
+
+?
+
+...
+
+?
+
+
+
+
+
+X  (fat),
+
+X
+
+
+
+?
+
+X X X X ...
+
+X
+
+?
+
+X
+
+?
+
+X ...
+
+X
+
+X X
+.. ..
+. .
+
+?
+..
+.
+
+X ...
+.. . .
+.
+.
+
+X
+..
+.
+
+?
+
+X X ...
+
+X
+
+?
+
+?
+
+
+
+
+
+
+
+ (approximately square).
+
+
+
+
+
+
+
+Horizontal and Vertical Regressions
+
+Two special combinations of missing data patterns and the shape of the matrices deserve
+particular attention because they are the focus of substantial separate literatures.
+
+8
+
+3.3.1
+
+Horizontal Regression and the Unconfoundedness Literature
+
+The unconfoundedness literature focuses primarily on the single-treated-period block structure with a thin matrix, and imputes the missing potential outcomes in the last period using
+control units with similar lagged outcomes. A simple version of that approach is to regress
+the last period outcome on the lagged outcomes and use the estimated regression to predict the missing potential outcomes. That is, for the units with (i, T ) ∈ M, the predicted
+outcome is
+
+ŶiT = β̂0 +
+
+T −1
+X
+
+β̂s Yis , where β̂ = arg min
+β
+
+s=1
+
+X
+
+YiT − β0 −
+
+T −1
+X
+
+!2
+βs Yis
+
+.
+
+(3.1)
+
+s=1
+
+i:(i,T )∈O
+
+We refer to this as a horizontal regression, where the rows of the Y matrix form the units
+of observation. A more flexible, nonparametric, version of this estimator would correspond
+to matching where we find for each treated unit i a corresponding control unit j with Yjt
+approximately equal to Yit for all pre-treatment periods t = 1, . . . , T − 1.
+3.3.2
+
+Vertical Regression and the Synthetic Control Literature
+
+The synthetic control literature focuses primarily on the single-treated-unit block structure
+with a fat or approximately square matrix. Doudchenko and Imbens (2016) discuss how
+the Abadie-Diamond-Hainmueller synthetic control method can be interpreted as regressing
+the outcomes for the treated unit prior to the treatment on the outcomes for the control
+units in the same periods. That is, for the treated unit in period t, for t = T0 , . . . , T , the
+predicted outcome is
+
+ŶN t = γ̂0 +
+
+N
+−1
+X
+i=1
+
+γ̂i Yit , where γ̂ = arg min
+γ
+
+X
+t:(N,t)∈O
+
+9
+
+YN t − γ0 −
+
+N
+−1
+X
+i=1
+
+!2
+γi Yit
+
+.
+
+(3.2)
+
+We refer to this as a vertical regression, where the columns of the Y matrix form the units
+of observation. As shown in Doudchenko and Imbens (2016) this is a special case of the
+Abadie et al. (2015) estimator, without imposing their restrictions that the coefficients are
+nonnegative and that the intercept is zero.
+Although this does not appear to have been pointed out previously, a matching version
+of this estimator would correspond to finding, for each period t where unit N is treated, a
+corresponding period s ∈ {1, . . . , T0 − 1} such that Yis is approximately equal to YN s for
+all control units i = 1, . . . , N − 1. This matching version of the synthetic control estimator
+clarifies the link between the treatment effect literature under unconfoundedness and the
+synthetic control literature.
+Suppose that the only missing entry is in the last period for unit N . In that case if we
+estimate the horizontal regression in (3.1), it is still the case that imputed ŶN T is linear
+in the observed Y1T , . . . , YN −1,T , just with different weights than those obtained from the
+vertical regression. Similarly, if we estimate the vertical regression in (3.2), it is still the
+case that ŶN T is linear in YN 1 , . . . , YN,T −1 , just with different weights from the horizontal
+regression.
+
+3.4
+
+Fixed Effects and Factor Models
+
+The horizontal regression focuses on a pattern in the time path of the outcome Yit , specifically the relation between YiT and the lagged Yit for t = 1, . . . , T −1, for the units for whom
+these values are observed, and assumes that this pattern is the same for units with missing
+outcomes. The vertical regression focuses on a pattern between units at times when we
+observe all outcomes, and assumes this pattern continues to hold for periods when some
+outcomes are missing. However, by focusing on only one of these patterns, cross-section
+or time series, these approaches ignore alternative patterns that may help in imputing the
+
+10
+
+missing values. An alternative is to consider approaches that allow for the exploitation of
+both stable patterns over time, and stable patterns accross units. Such methods have a
+long history in the panel data literature, including the literature on fixed effects, and more
+generally, factor and interactive fixed effect models (e.g., Chamberlain (1984); Arellano and
+Honoré (2001); Liang and Zeger (1986); Bai (2003, 2009); Pesaran (2006); Moon and Weidner (2015, 2017)). In the absence of covariates (although in this literature the coefficients
+on these covariates are typically the primary focus of the analyses), such models can be
+written as
+Yit =
+
+R
+X
+
+or Y = UV> + ε,
+
+γir δtr + εit ,
+
+(3.3)
+
+r=1
+
+where U is N × R and V is T × R. Most of the early literature, Anderson (1958) and
+Goldberger (1972)), focused on the thin matrix case, with N  T , where asymptotic
+approximations are based on letting the number of units increase with the number of time
+periods fixed. In the modern part of this literature (Bai (2003, 2009); Pesaran (2006);
+Moon and Weidner (2015, 2017); Bai and Ng (2017)) researchers allow for more complex
+asymptotics with both N and T increasing, at rates that allow for consistent estimation of
+the factors V and loadings U after imposing normalizations. In this literature it is typically
+assumed that the number of factors R is fixed, although not necessarily known. Methods
+for estimating the rank R are discussed in Bai and Ng (2002) and Moon and Weidner
+(2015).
+Xu (2017) implements this interactive fixed effect approach to the matrix completion
+problem in the special case with blocked assignment, with additional applications in Gobillon and Magnac (2013); Kim and Oka (2014) and Hsiao et al. (2012). Suppose the first NC
+units are in the control group, and the last NT = N − NC units are in the treatment group.
+The treatment group is exposed to the control treatment in the first T0 − 1 pre-treatment
+periods, and exposed to the active treatment in the post-treatment periods T0 , . . . , T . In
+11
+
+that case we can partition U and V accordingly and write
+
+UV> = 
+
+UC
+UT
+
+
+
+
+Vpre
+Vpost
+
+>
+ .
+
+Using the data from the control group pre and post, and the pre data only for the treatment
+group, we have
+
+YC = UC 
+
+Vpre
+Vpost
+
+>
+>
++ εT,pre
+and YT,pre = UT Vpre
+
+ + εC ,
+
+where the first equation can be used to estimate UC , Vpre , and Vpost , and the second is
+used to estimate UT , both by least squares after normalizing U and V. Note that this is
+not necessarily efficient, because YT,pre is not used to estimate Vpre .
+Independently, a closely related literature has emerged in machine learning and statistics on matrix completion (Srebro et al. (2005); Candès and Recht (2009); Candès and
+Tao (2010); Keshavan et al. (2010a,b); Gross (2011); Recht (2011); Rohde et al. (2011);
+Negahban and Wainwright (2011, 2012); Koltchinskii et al. (2011); Klopp (2014)). In this
+literature the starting point is an incompletely observed matrix, and researchers have proposed matrix-factorization approaches to matrix completion, similar to (3.3). The focus
+is not on estimating U and V consistently, only on imputing the missing elements of Y.
+Instead of fixing the rank of the underlying matrix, estimators rely on regularization, and
+in particular nuclear norm regularization.
+
+12
+
+4
+
+The Nuclear Norm Matrix Completion Estimator
+
+In the absence of covariates we model the N × T matrix of outcomes Y as
+Y = L∗ + ε,
+
+where
+
+E[ε|L∗ ] = 0 .
+
+(4.1)
+
+The εit can be thought of as measurement error. The goal is to estimate the matrix L∗ .
+To facilitate the characterization of the estimator, define for any matrix A, and given
+a set of pairs of indices O, the two matrices PO (A) and P⊥
+O (A) with typical elements:
+
+ A
+it
+PO (A)it =
+ 0
+
+if (i, t) ∈ O ,
+if (i, t) ∈
+/ O,
+
+
+ 0
+⊥
+and PO (A)it =
+ Ait
+
+if (i, t) ∈ O ,
+if (i, t) ∈
+/ O.
+
+A critical role is played by various matrix norms, summarized in Table 1. Some of these
+depend on the singular values, where, given the full Singular Value Decomposition (SVD)
+LN ×T = SN ×N ΣN ×T R>
+T ×T , the singular values σi (L) are the ordered diagonal elements of
+Σ.
+Table 1: Matrix Norms for Matrix L
+
+Schatten Norm
+
+kLkp
+
+Fröbenius Norm
+kLkF
+Rank Norm
+kLk0
+Nuclear Norm
+kLk∗
+Operator Norm
+kLkop
+Max Norm
+kLkP
+max
+Element Wise `1 Norm kLk1,e = i,t |Lit |
+
+P
+( i σi (L)p )1/p
+1/2
+P P
+P
+1/2
+N
+T
+2
+L
+( i σi (L)2 ) =
+i=1
+t=1 it
+P
+1
+Pi σi (L)>0
+i σi (L)
+maxi σi (L) = σ1 (L)
+max1≤i≤N,1≤t≤T |Lit |
+
+Now consider the problem of estimating L. Directly minimizing the sum of squared
+13
+
+differences,
+min
+L
+
+1
+1 X
+kPO (Y − L)k2F ,
+(Yit − Lit )2 = min
+L |O|
+|O|
+
+(4.2)
+
+(i,t)∈O
+
+does not lead to a useful estimator: if (i, t) ∈ M the objective function does not depend
+on Lit , and for other pairs (i, t) the estimator would simply be Yit . Instead, we regularize
+the problem by adding a penalty term λkLk, for some choice of the norm k · k.
+The estimator: The general form of our proposed estimator for L∗ is
+
+L̂ = arg min
+L
+
+1
+kPO (Y − L)k2F + λkLk∗
+|O|
+
+
+,
+
+(4.3)
+
+studied by Mazumder et al. (2010), with the penalty factor λ chosen through crossvalidation that will be described at the end of this section. We will call this the MatrixCompletion with Nuclear Norm Minimization (MC-NNM) estimator.
+Other commonly used Schatten norms would not work as well for this specific problem.
+For example, the Fröbenius norm on the penalty term would not have been suitable for
+estimating L∗ in the case with missing entries because the solution for Lit for (i, t) ∈ M is
+P
+always zero (which follows directly from the representation of kLkF = i,t L2it ). The rank
+norm is not computationally feasible for large N and T if the cardinality and complexity
+of the set M are substantial. Formally, the problem is NP-hard. In contrast, a major
+advantage of using the nuclear norm is that the resulting estimator can be computed using
+fast convex optimization programs, e.g. the SOFT-IMPUTE algorithm by Mazumder et al.
+(2010) that will be described next.
+Calculating the Estimator: The algorithm for calculating our estimator (in the case
+without additional covariates) goes as follows. Given the SVD for A, A = SΣR> , with
+
+14
+
+singular values σ1 (A), . . . , σmin(N,T ) (A), define the matrix shrinkage operator
+shrinkλ (A) = SΣ̃R> ,
+
+(4.4)
+
+where Σ̃ is equal to Σ with the i-th singular value σi (A) replaced by max(σi (A) − λ, 0).
+Now start with the initial choice L1 (λ, O) = PO (Y). Then for k = 1, 2, . . . , define,
+
+o
+n
+L
+(λ)
+,
+Lk+1 (λ, O) = shrink λ|O| PO (Y) + P⊥
+k
+O
+
+(4.5)
+
+2
+
+until the sequence {Lk (λ, O)}k≥1 converges. The limiting matrix L̂(λ, O) = limk→∞ Lk (λ, O)
+is our estimator given the regularization parameter λ.
+Cross-validation: The optimal value of λ is selected through cross-validation. We choose
+K (e.g., K = 5) random subsets Ok ⊂ O with cardinality b|O|2 /N T c to ensure that the
+fraction of observed data in the cross-validation data sets, |Ok /|O|, is equal to that in
+the original sample, |O|/(N T ). We then select a sequence of candidate regularization
+parameters λ1 > · · · > λL = 0, with a large enough λ1 , and for each subset Ok calculate
+L̂(λ1 , Ok ), . . . , L̂(λL , Ok ) and evaluate the average squared error on O \ Ok . The value of λ
+that minimizes the average squared error (among the K produced estimators corresponding
+to that λ) is the one chosen. It is worth noting that one can expedite the computation by
+using L̂(λi , Ok ) as a warm-start initialization for calculating L̂(λi+1 , Ok ) for each i and k.
+
+5
+
+Theoretical Bounds for the Estimation Error
+
+In this section we focus on the case that there are no covariates and provide theoretical
+results for the estimation error. Let Lmax be a positive constant such that kL∗ kmax ≤ Lmax
+(recall that kL∗ kmax = maxi,t |L∗it |). We also assume that L∗ is a deterministic matrix.
+15
+
+Then consider the following estimator for L∗ .
+
+L̂ =
+
+arg min
+L:kLkmax ≤Lmax
+
+5.1
+
+1
+kPO (Y − L)k2F + λkLk∗
+|O|
+
+
+.
+
+(5.1)
+
+Additional Notation
+
+First, we start by introduction some new notation. For each positive integer n let [n] be
+the set of integers {1, 2, . . . , n}. In addition, for any pair of integers i, n with i ∈ [n] define
+ei (n) to be the n dimensional column vector with all of its entries equal to 0 except the
+ith entry that is equal to 1. In other words, {e1 (n), e2 (n), . . . , en (n)} forms the standard
+basis for Rn . For any two matrices A, B of the same dimensions define the inner product
+hA, Bi ≡ trace(A> B). Note that with this definition, hA, Ai = kAk2F .
+Next, we describe a random observation process that defines the set O. Consider N
+independent random variables t1 , . . . , tN on [T ] with distributions π (i) . Specifically, for
+(i)
+
+each (i, t) ∈ [N ] × [T ], define πt
+
+≡ P[ti = t]. We also use the short notation Eπ when
+
+taking expectation with respect to all distributions π (1) , . . . , π (N ) . Now, O can be written
+o
+S n
+as O = N
+(i,
+1),
+(i,
+2),
+.
+.
+.
+,
+(i,
+t
+)
+.
+i
+i=1
+Also, for each (i, t) ∈ O, we use the notation Ait to refer to ei (N )et (T )> which is a N
+by T matrix with all entries equal to zero except the (i, t) entry that is equal to 1. The
+data generating model can now be written as
+Yit = hAit , L∗ i + εit ,
+
+∀ (i, t) ∈ O ,
+
+where noise variables εit are independent σ-sub-Gaussian random variables that are also
+independent of Ait . Recall that a random variable ε is σ-sub-Gaussian if for all real numbers
+t we have E[exp(tε)] ≤ exp(σ 2 t2 /2).
+Note that the number of control units (Nc ) is equal to the number of rows that have all
+16
+
+entries observed (i.e., Nc =
+
+PN
+
+can be written as Eπ [Nc ] =
+
+PN
+
+i=1 Iti =T ). Therefore,
+(i)
+i=1 πT . Defining
+
+the expected number of control units
+
+(i)
+
+pc ≡ min πT ,
+1≤i≤N
+
+we expect to have (on average) at least N pc control units. The parameter pc will play an
+important role in our main theoretical results. Specifically, assuming N and T are of the
+√
+same order, we will show that the average per entry error (i.e., kL̂−L∗ kF / N T ) converges
+√
+to 0 if pc grows larger than log3/2 (N )/ N up to a constant. To provide some intuition
+for such assumption on pc , assume L∗ is a matrix that is zero everywhere except in its ith
+row. Such L∗ is clearly low-rank. But recovering the entry L∗iT is impossible when it < T .
+(i)
+
+Therefore, πT cannot be too small. Since i is arbitrary, in general pc cannot be too small.
+Remark 5.1. It is worth noting that the sources of randomness in our observation process
+O are the random variables {ti }N
+i=1 that are assumed to be independent of each other. But
+we allow that distributions of these random variables to be functions of L∗ . We also assume
+that the noise variables {εit }it∈[N ]×[T ] are independent of each other and are independent
+of {ti }N
+i=1 . In §8 we discuss how our results could generalize to the cases with correlations
+among these noise variables.
+Remark 5.2. The estimator (5.1) penalizes the error terms (Yit − Lit )2 , for (i, t) ∈ O,
+equally. But the ex ante probability of missing entries in each row, the propensity score, increases as t increases. In §8.3, we discuss how the estimator can be modified by considering
+a weighted loss function based on propensity scores for the missing entries.
+
+17
+
+5.2
+
+Main Result
+
+The main result of this section is the following theorem (proved in §A.1) that provides an
+√
+upper bound for kL∗ − L̂kF / N T , the root-mean-squared-error (RMSE) of the estimator
+L̂. In literature on theoretical analysis of empirical risk minimization this type of upper
+bound is called an oracle inequality.
+Theorem 1. If the rank of L∗ is R, then there is a constant C such that with probability
+greater than 1 − 2(N + T )−2 ,
+
+
+s
+s
+s
+3
+kL∗ − L̂kF
+log(N
++
+T
+)
+R
+log(N
++
+T
+)
+R
+log
+(N
++
+T
+)
+,
+√
+≤ C max Lmax
+,σ
+,σ
+N p2c
+T p2c
+N p2c
+NT
+
+when the parameter λ is a constant multiple of σ max
+
+hp
+
+(5.2)
+
+i
+√
+N log(N + T ), T log3/2 (N + T ) /|O|.
+
+Interpretation of Theorem 1: In order to see when the RMSE of L̂ converges to zero
+as N and T grow, we note that the right hand side of (5.2) converges to 0 when L∗ is
+p
+low-rank (R is constant) and pc  log3/2 (N + T )/ min(N, T ). A sufficient condition for
+the latter, when N and T are of the same order, is that the lower bound for the average
+√
+number of control units (N pc ) grows larger than a constant times N log3/2 (N ). In §8 we
+will discuss how the estimator L̂ should be modified to obtain a sharper result that would
+hold for a smaller number of control units.
+Comparison with existing theory on matrix-completion: Our estimator and its
+theoretical analysis are motivated by and generalize existing research on matrix-completion
+Srebro et al. (2005); Mazumder et al. (2010); Candès and Recht (2009); Candès and Tao
+(2010); Keshavan et al. (2010a,b); Gross (2011); Recht (2011); Rohde et al. (2011); Negahban and Wainwright (2011, 2012); Koltchinskii et al. (2011); Klopp (2014). The main
+
+18
+
+difference is in our observation model O. Existing papers assume that entries (i, t) ∈ O
+are independent random variables whereas we allow for a dependency structure including
+staggered adoption where if (i, t) ∈ O then (i, t0 ) ∈ O for all t0 < t.
+
+6
+
+The Relationship with Horizontal and Vertical Regressions
+
+In the second contribution of this paper we discuss the relation between the matrix completion estimator and the horizontal (unconfoundedness) and vertical (synthetic control)
+approaches. To faciliate the discussion, we focus on the case with M containing a single
+pair, unit N in period T , M = {(N, T )}. In that case the various previously proposed
+versions of the vertical and horizontal regressions are both directly applicable, although
+estimating the coefficients may require regularization.
+The observed data are Y, an N × T matrix that can be partitioned as
+
+Y=
+
+Ỹ
+
+y1
+
+y2>
+
+?
+
+
+,
+
+where Ỹ is (N − 1) × (T − 1), y1 is (N − 1) × 1, and y2 is (T − 1) × 1.
+The matrix completion solution to imputing YN T can be characterized, for a given
+regularization parameter λ, as
+L
+
+mc−nnm
+
+
+(λ) = arg min
+L
+
+
+1
+2
+kPO (Y − L)kF + λkLk∗ .
+|O|
+
+19
+
+(6.1)
+
+The predicted value for the missing entry YN T is then
+ŶNmc−nnm
+= Lmc−nnm
+(λ).
+T
+NT
+
+(6.2)
+
+We are interested in comparing this estimator to horizontal regression estimator. Let
+us initially assume that the horizontal regression is well defined, without regularization, so
+that N > T . First define
+−1 
+
+
+Ỹ> y1 .
+β̂ hr = Ỹ> Ỹ
+Then the horizontal regression based prediction is
+ŶNhrT
+
+=
+
+y2> β̂ hr
+
+=
+
+y2>
+
+
+
+>
+
+Ỹ Ỹ
+
+−1 
+
+>
+
+
+
+Ỹ y1 .
+
+For the vertical (synthetic control) regression, initially assuming T > N , we start with
+γ̂
+
+vt
+
+
+
+= ỸỸ
+
+>
+
+−1 
+
+
+
+Ỹy2 ,
+
+leading to the horizontal regression based prediction
+
+−1 
+
+ŶNvtT = y1> γ̂ hr = y1> ỸỸ>
+Ỹy2 .
+The original (Abadie et al. (2010)) synthetic control estimator imposes the additional rePN −1
+γi = 1, leading to
+strictions γi ≥ 0, and i=1
+γ̂ sc−adh = arg min y2 − Ỹ> γ
+γ
+
+2
+
+subject to ∀i γi ≥ 0,
+
+,
+F
+
+N
+−1
+X
+i=1
+
+20
+
+γi = 1.
+
+Then the synthetic control based prediction is
+ŶNsc−adh
+= y1> γ̂ sc−adh .
+T
+The Doudchenko and Imbens (2016) modification allows for the possibility that N ≥ T
+and regularizes the estimator for γ. Focusing here on an elastic net regularization, their
+proposed estimator is
+γ̂
+
+vt−en
+
+
+= arg min
+γ
+
+>
+
+y2 − Ỹ γ
+
+2
+F
+
+
+
+1−α
+2
+.
+kγkF
++ λ α kγk1 +
+2
+
+Then the vertical elastic net prediction is
+ŶNvt−en
+= y1> γ̂ vt−en .
+T
+We can modify the horizontal regression in the same way to allow for restrictions on the
+β, and regularization, although such methods have not been used in practice.
+The question in this section concerns the relation between the various predictors,
+, and ŶNvt−en
+ŶNmc−nnm
+, ŶNhrT , ŶNvtT , ŶNsc−adh
+. The first result states that all these estimators
+T
+T
+T
+can be viewed as particular cases of matrix factorization estimators, with the difference
+coming in the way the estimation of the components of the matrix factorization is carried
+out.
+Theorem 2. All five estimators ŶNmc−nnm
+, ŶNhrT , ŶNvtT , ŶNsc−adh
+, and ŶNvt−en
+, can be written
+T
+T
+T
+in the form ŶNestT = L̂est
+N T , for est ∈ {mc − nnm, hr, vt, sc − adh, vt − en}, where
+L̂est = Aest Best> ,
+with Lest , Aest , and Best N × T , N × R and T × R dimensional matrices, and Aest and
+21
+
+Best estimated as
+est
+
+A ,B
+
+est
+
+
+
+
+= arg min
+A,B
+
+
+1
+PO Y − AB>
+|O|
+
+2
+F
+
+
++ penalty terms on (A, B) ,
+
+subject to restrictions on A and B, with the penalty terms and the restrictions specific to
+the estimator.
+Theorem 2 follows from the following result.
+Theorem 3. We have,
+(i) (nuclear norm matrix completion)
+(Aλmc−nnm , Bmc−nnm
+)
+λ
+
+
+= arg min
+A,B
+
+
+1
+PO Y − AB>
+|O|
+
+2
+F
+
+0
+
++λ
+
+kAk2F
+
++λ
+
+0
+
+kBk2F
+
+for λ0 = λ/2.
+(ii) (horizontal regression, defined if N > T ), R = T − 1
+hr
+
+
+
+hr
+
+(A , B ) = lim arg min
+λ↓0
+
+A,B
+
+
+1
+PO Y − AB>
+|O|
+
+subject to Ahr = 
+
+2
+F
+
++
+
+Ỹ
+y2>
+
+λkAk2F
+
++
+
+λkBk2F
+
++
+
+λkBk2F
+
+
+,
+
+
+,
+
+(iii) (vertical regression, defined if T > N ), R = N − 1
+vt
+
+
+
+vt
+
+(A , B ) = lim arg min
+λ↓0
+
+A,B
+
+
+1
+PO Y − AB>
+|O|
+
+subject to
+
+Bvt = 
+
+Ỹ>
+
+22
+
+y1>
+
+
+.
+
+2
+F
+
++
+
+λkAk2F
+
+
+,
+
+
+,
+
+(iv) (synthetic control), R = N − 1
+(A
+
+sc−adh
+
+,B
+
+sc−adh
+
+
+) = lim arg min
+A,B
+
+λ↓0
+
+
+1
+PO Y − AB>
+|O|
+
+2
+F
+
++
+
+λkAk2F
+
++
+
+λkBk2F
+
+
+,
+
+subject to
+
+B
+
+sc−adh
+
+=
+
+Ỹ>
+y1>
+
+
+,
+
+∀ i, AiT ≥ 0,
+
+N
+−1
+X
+
+AiT = 1,
+
+i=1
+
+(v) (elastic net), R = N − 1
+
+ 1
+
+(Avt−en , Bvt−en ) = lim arg min
+PO Y − AB>
+A,B  |O|
+λ↓0
+
+
+2
+F
+
++ λ
+
+
+
+
+
+1 − α  a2 
+2
+a3
+
+2
+
+F
+
+ 
+
+a2
+  ,
++α 
+
+a3
+
+
+1
+
+subject to
+
+Bvt−en = 
+
+Ỹ
+
+>
+
+y1>
+
+
+
+
+
+,
+
+where A = 
+
+Ã a1
+a3
+a>
+2
+
+
+.
+
+The proof is straightforward algebra and is omitted.
+Comment 1. For nuclear norm matrix completion, if L̂ is the solution to Equation (4.3)
+that has rank R̂, then one solution for A and B is given by
+A = SΣ1/2 ,
+
+B = RΣ1/2
+
+(6.3)
+
+is singular value decomposition of L̂. The proof of this fact is
+where L̂ = SN ×R̂ ΣR̂×R̂ R>
+T ×R̂
+provided in (Mazumder et al. (2010); Hastie et al. (2015)). 
+
+23
+
+Comment 2. For the horizontal regression the solution for B is
+
+
+1
+
+0
+
+...
+
+0
+
+
+
+
+
+
+
+hr
+B =
+
+
+
+
+
+0
+..
+.
+
+1
+..
+.
+
+...
+
+0
+..
+.
+
+0
+
+0
+
+...
+
+1
+
+
+
+
+
+,
+
+
+
+
+
+β̂1 β̂2 . . . β̂T −1
+and similarly for the vertical regression the solution for A is
+
+
+1
+
+0
+
+...
+
+0
+
+
+
+
+
+
+
+vt
+A =
+
+
+
+
+
+0
+..
+.
+
+1
+..
+.
+
+...
+
+0
+..
+.
+
+0
+
+0
+
+...
+
+1
+
+
+
+
+
+.
+
+
+
+
+
+γ̂1 γ̂2 . . . γ̂N −1
+The regularization in the elastic net version only affects the last row of this matrix, and
+replaces it with a regularized version of the regression coefficients. 
+Comment 3. The horizontal and vertical regressions are fundamentally different approaches, and they cannot easily be nested. Without some form of regularization they
+cannot be applied in the same setting, because the non-regularized versions require N > T
+or N < T respectively. As a result there is also no direct way to test the two methods
+against each other. Given a particular choice for regularization, however, one can use
+cross-validation methods to compare the two approaches. 
+
+24
+
+7
+
+Two Illustrations
+
+The objective of this section is to compare the accuracy of imputation for the matrix
+completion method with previously used methods. In particular, in a real data matrix Y
+where no unit is treated (no entries in the matrix are missing), we choose a subset of units
+as hypothetical treated units and aim to predict their values (for time periods following
+a randomly selected initial time). Then, we report the average root-mean-squared-error
+(RMSE) of each algorithm on values for the pseudo-treated (time, period) pairs. In these
+cases there is not necessarily a single right algorithm. Rather, we wish to assess which of
+the algorithms generally performs well, and which ones are robust to a variety of settings,
+including different adoption regimes and different configurations of the data.
+We compare the following estimators:
+• DID: Difference-in-differences based on regressing the observed outcomes on unit and
+time fixed effects and a dummy for the treatment.
+• VT-EN: The vertical regression with elastic net regularization, relaxing the restrictions from the synthetic control estimator.
+• HR-EN: The horizontal regression with elastic net regularization, similar to unconfoundedness type regressions.
+• SC-ADH: The original synthetic control approach by Abadie et al. (2010), based on
+the vertical regression with Abadie-Diamond-Hainmueller restrictions.
+• MC-NNM: Our proposed matrix completion approached via nuclear norm minimization, explained in Section 2 above.
+The comparison between MC-NNM and the two versions of the elastic net estimator,
+HR-EN and VT-EN, is particularly salient. In much of the literature researchers choose
+25
+
+ex ante between vertical and horizontal type regressions. The MC-NNM method allows
+one to sidestep that choice in a data-driven manner.
+
+7.1
+
+The Abadie-Diamond-Hainmueller California Smoking Data
+
+We use the control units from the California smoking data studied in Abadie et al. (2010)
+with N = 38, T = 31. Note that in the original data set there are 39 units but one of them
+(state of California) is treated which will be removed in this section since the untreated
+values for that unit are not available. We then artificially designate some units and time
+periods to be treated, and compare predicted values for those unit/time-periods to the
+actual values.
+We consider two settings for the treatment adoption:
+• Case 1: Simultaneous adoption where Nt units adopt the treatment in period T0 + 1,
+and the remaining units never adopt the treatment.
+• Case 2: Staggered adoption where Nt units adopt the treatment in some period after
+period T , with the actual adoption date varying among these units.
+In each case, the average RMSE for different ratios T0 /T is reported in Figure 1. For
+clarity of the figures, for each T0 /T , while all confidence intervals of various methods are
+calculated using the same ratio T0 /T , in the figure they are slightly jittered to the left or
+right. In the simultaneous adoption case, DID generally does poorly, suggesting that the
+data are rich enough to support more complex models. For small values of T0 /T , SC-ADH
+and HR-EN perform poorly while VT-EN is superior. As T0 /T grows closer to one, VTEN, HR-EN, SC-ADH and MC-NNM methods all do well. The staggered adoption results
+are similar with some notable differences; VT-EN performs poorly (similar to DID) and
+MC-NNM is the superior approach. The performance improvement of MC-NNM can be
+attributed to its use of additional observations (pre-treatment values of treatment units).
+26
+
+(a) Simultaneous adoption, Nt = 8
+
+(b) Staggered adoption, Nt = 35
+
+Figure 1: California Smoking Data
+
+7.2
+
+Stock Market Data
+
+In the next illustration we use a financial data set – daily returns for 2453 stocks over 10
+years (3082 days). Since we only have access to a single instance of the data, in order to
+observe statistical fluctuations of the RMSE, for each N and T we create 50 sub-samples
+by looking at the first T daily returns of N randomly sampled stocks for a range of pairs of
+(N, T ), always with N × T = 4900, ranging from very thin to very fat, (N, T ) = (490, 10),
+. . . (N, T ) = (70, 70), . . . (N, T ) = (10, 490), with in each case the second half the entries
+missing for a randomly selected half the units (so 25% of the entries missing overall), in
+a block design. Here we focus on the comparison between the HR-EN, VT-EN, and
+MC-NNM estimators as the shape of the matrix changes. We report the average RMSE.
+Figure 2 shows the results.
+
+27
+
+Figure 2: Stock Market Data
+
+In the T  N case the VT-EN estimator does poorly, not surprisingly because it
+attempts to do the vertical regression with too few time periods to estimate that well.
+When N  T , the HR-EN estimator does poorly. The most interesting finding is that
+the proposed MC-NNM method adapts well to both regimes and does as well as the best
+estimator in both settings, and better than both in the approximately square setting.
+The bottom graph in Figure 2 shows that MC-NNM approximates the data with a
+matrix of rank 4 to 12, where smaller ranks are used as N grows relative to T . This
+validates the fact that there is a stronger correlation between daily return of different
+stocks than between returns for different time periods of the same stock.
+
+28
+
+8
+
+Generalizations
+
+Here we provide a brief discussion on how our estimator and its analysis should be adapted
+to more general settings.
+
+8.1
+
+The Model with Covariates
+
+In Section 2 we described the basic model, and discussed the specification and estimation
+for the case without covariates. In this section we extend that to the case with unitspecific, time-specific, and unit-time specific covariates. For unit i we observe a vector of
+unit-specific covariates denoted by Xi , and X denoting the N × P matrix of covariates with
+ith row equal to Xi> . Similarly, Zt denotes the time-specific covariates for period t, with Z
+denoting the T × Q matrix with tth row equal to Zt> . In addition we allow for a unit-time
+specific J by 1 vector of covariates Vit .
+The model we consider is
+Yit =
+
+L∗it
+
++
+
+Q
+P X
+X
+
+∗
+Xip Hpq
+Zqt + γi∗ + δt∗ + Vit> β ∗ + εit .
+
+(8.1)
+
+p=1 q=1
+
+the εit is random noise. We are interested in estimating the unknown parameters L∗ , H∗ ,
+γ ∗ , δ ∗ and β ∗ . This model allows for traditional econometric fixed effects for the units (the
+γi∗ ) and time effects (the δt∗ ). It also allows for fixed covariate (these have time varying
+coefficients) and time covariates (with individual coefficients) and time varying individual
+covariates. Note that although we can subsume the unit and time fixed effects into the
+matrix L∗ , we do not do so because we regularize the estimates of L∗ , but do not wish to
+regularize the estimates of the fixed effects.
+
+29
+
+The model can be rewritten as
+ > ∗
+∗ >
+Y = L∗ + XH∗ Z> + Γ∗ 1>
+T + 1N (∆ ) + Vit β it + ε .
+
+(8.2)
+
+Here L∗ is in RN ×T , H∗ is in RP ×Q , Γ∗ is in RN ×1 and ∆∗ is in RT ×1 . An slightly richer
+version of this model that allows linear terms in covariates can be defined as by
+ > ∗
+∗ >
+Y = L∗ + X̃H̃∗ Z̃> + Γ∗ 1>
+T + 1N (∆ ) + Vit β it + ε
+
+(8.3)
+
+where X̃ = [X|IN ×N ], Z̃ = [Z|IT ×T ], and
+
+H̃∗ = 
+
+H∗X,Z H∗X
+H∗Z
+
+0
+
+
+
+
+where H∗XZ ∈ RP ×Q , H∗Z ∈ RN ×Q , and H∗X ∈ RP ×T . In particular,
+ > ∗
+∗ >
+Y = L∗ + X̃H̃∗X,Z Z̃> + H̃∗Z Z̃> + XH̃∗X + Γ∗ 1>
+T + 1N (∆ ) + Vit β it + ε
+
+(8.4)
+
+From now on, we will use the richer model (8.4) but abuse the notation and use notation
+X, H∗ , Z instead of X̃, H̃∗ , Z̃. Therefore, the matrix H∗ will be in R(N +P )×(T +Q) .
+We estimate H∗ , L∗ , δ ∗ , γ ∗ , and β ∗ by solving the following convex program,
+
+min 
+
+H,L,δ,γ,β
+
+X
+
+(i,t)∈O
+
+1
+kO|
+
+Here kHk1,e =
+
+Yit − Lit −
+
+Q
+P X
+X
+
+
+
+!2
+Xip Hpq Zqt − γi − δt − Vit β
+
++ λL kLk∗ + λH kHk1,e  .
+
+p=1 q=1
+
+P
+
+i,t
+
+|Hit | is the element-wise `1 norm. We choose λL and λH through
+
+cross-validation.
+Solving this convex program is similar to the covariate-free case. In particular, by using
+30
+
+a similar operator to shrinkλ , defined in §2, that performs coordinate descent with respect
+to H. Then we can apply this operator after each step of using shrinkλ . Coordinate descent
+with respect to γ, δ, and β is performed similarly but using a simpler operation since the
+function is smooth with respect to them.
+
+8.2
+
+Autocorrelated Errors
+
+One drawback of MC-NNM is that it does not take into account the time series nature of
+the observations. It is likely that the columns of ε exhibit autocorrelation. We can take this
+into account by modifying the objective function. Let us consider this in the case without
+covariates, and, for illustrative purposes, let us use an autoregressive model of order one.
+Let Yi· and Li· be the ith row of Y and L respectively. The original objective function for
+O = [N ] × [T ] is
+N
+
+T
+
+N
+
+1 X
+1 XX
+(Yit − Lit )2 + λL kLk∗ =
+(Yi· − Li· )(Yi· − Li· )> + λL kLk∗ .
+|O| i=1 t=1
+|O| i=1
+We can modify this to
+
+PN
+
+−1
+>
+i=1 (Yi· −Li· )Ω (Yi· −Li· ) /|O|+λL kLk∗ ,
+
+where the choice for the
+
+T × T matrix Ω would reflect the autocorrelation in the εit . For example, with a first order
+autoregressive process, we would use Ωts = ρ|t−s| , with ρ an estimate of the autoregressive
+coefficient. Similarly, for the more general version O ⊂ [N ] × [T ], we can use the function
+1 X
+|O|
+
+X
+
+(Yit − Lit )[Ω−1 ]ts (Yis − Lis ) + λL kLk∗ .
+
+(i,t)∈O (i,s)∈O
+
+8.3
+
+Weighted Loss Function
+
+Another limitation of MC-NNM is that it puts equal weight on all observed elements of the
+difference Y − L (ignoring the covariates). Ultimately we care solely about predictions of
+31
+
+the model for the missing elements of Y, and for that reason it is natural to emphasize the
+fit of the model for elements of Y that are observed, but that are similar to the elements
+that are missing. In the program evaluation literature this is often achieved by weighting
+the fit by the propensity score, the probability of outcomes for a unit being missing.
+We can do so in the current setting by modelling this probability in terms of the covariates and a latent factor structure. Let the propensity score be eit = P(Wit = 1|Xi , Zt , Vit ),
+and let E be the N × T matrix with typical element eit . Let us again consider the case
+without covariates. In that case we may wish to model the assignment W as
+WN ×T = EN ×T + η N ×T .
+We can estimate this using the same matrix completion methods as before, now without
+any missing values:
+Ê = arg min
+E
+
+1 X
+(Wit − eit )2 + λL kEk∗ .
+NT
+(i,t)
+
+Given the estimated propensity score we can then weight the objective function for estimating L∗ :
+L̂ = arg min
+L
+
+1 X
+êit
+(Yit − Lit )2 + λL kLk∗ .
+|O|
+1 − êit
+(i,t)∈O
+
+8.4
+
+Relaxing the Dependence of Theorem 1 on pc
+
+P
+(i)
+Recall from §5.1 that the average number of control units is N
+i=1 πT . Therefore, the fracP
+(i)
+tion of control units is N
+i=1 πT /N . However, the estimation error in Theorem 1 depends
+P
+(i)
+(i)
+on pc = min1≤i≤N πT rather than N
+i=1 πT /N . The reason for this, as discussed in §5.1 is
+due to special classes of matrices L∗ where most of the rows are nearly zero (e.g, when only
+one row is non-zero). In order to relax this constraint we would need to restrict the family
+32
+
+of matrices L∗ . An example of such restriction is given by Negahban and Wainwright (2012)
+where they assume L∗ is not too spiky. Formally, they assume the ratio kL∗ kmax /kL∗ kF
+√
+should be of order 1/ N T up to logarithmic terms. To see the intuition for this, in a
+√
+matrix with all equal entries this ratio is 1/ N T whereas in a matrix where only the (1, 1)
+entry is non-zero the ratio is 1. While both matrices have rank 1, in the former matrix the
+value of kL∗ kF is obtained from most of the entries. In such situations, one can extend our
+P
+(i)
+results and obtain an upper bound that depends on N
+i=1 πT /N .
+
+8.5
+
+Nearly Low-rank Matrices
+
+Another possible extension of Theorem 1 is to the cases where L∗ may have high rank, but
+most of its singular values are small. More formally, if σ1 ≥ · · · > σmin(N,T ) are singular
+Pmin(N,T )
+values of L∗ , one can obtain upper bounds that depend on k and r=k+1 σr for any
+k ∈ [min(N, T )]. One can then optimize the upper bound by selecting the best k. In the
+low-rank case such optimization leads to selecting k equal to R. This type of more general
+upper bound has been proved in some of prior matrix completion literature, e.g. Negahban
+and Wainwright (2012). We expect their analyses would be generalize-able to our setting
+(when entries of O are not independent).
+
+8.6
+
+Additional Missing Entries
+
+In §5.1 we assumed that all entries (i, t) of Y for t ≤ ti are observed. However, it may be
+possible that some such values are missing due to lack of data collection. This does not
+mean that any treatment occurred in the pre-treatment period. Rather, such scenario can
+occur when measuring outcome values is costly and can be missed. In this case, one can
+hS n
+oi
+N
+extend Theorem 1 to the setting with O =
+(i,
+1),
+(i,
+2),
+.
+.
+.
+,
+(i,
+t
+)
+\ Omiss , where
+i
+i=1
+each (i, t) ∈ ∪N
+i=1 {(i, 1), (i, 2), . . . , (i, ti )} can be in Omiss , independently, with probability p
+33
+
+for p that is not too large.
+
+9
+
+Conclusions
+
+We present new results for estimation of causal effects in panel or longitudinal data settings.
+The proposed estimator, building on the interactive fixed effects and matrix completion literatures has attractive computational properties in settings with large N and T , and allows
+for a relatively large number of factors. We show how this set up relates to the program
+evaluation and synthetic control literatures. In illustrations we show that the method
+adapts well to different configurations of the data, and find that generally it outperforms
+the synthetic control estimators from Abadie et al. (2010) and the elastic net estimators
+from Doudchenko and Imbens (2016).
+
+References
+Abadie, A., A. Diamond, and J. Hainmueller (2010). Synthetic control methods for comparative case studies: Estimating the effect of California’s tobacco control program. Journal
+of the American Statistical Association 105 (490), 493–505.
+Abadie, A., A. Diamond, and J. Hainmueller (2015). Comparative politics and the synthetic
+control method. American Journal of Political Science, 495–510.
+Abadie, A. and J. Gardeazabal (2003). The economic costs of conflict: A case study of the
+basque country. American Economic Review 93 (-), 113–132.
+Anderson, T. W. (1958). An introduction to multivariate statistical analysis, Volume 2.
+Wiley New York.
+
+34
+
+Arellano, M. and B. Honoré (2001). Panel data models: some recent developments. Handbook of econometrics 5, 3229–3296.
+Athey, S. and G. W. Imbens (2018). Design-based analysis in difference-in-differences settings with staggered adoption. Technical report, National Bureau of Economic Research.
+Athey, S. and S. Stern (2002). The impact of information technology on emergency health
+care outcomes. The RAND Journal of Economics 33 (3), 399432.
+Bai, J. (2003). Inferential theory for factor models of large dimensions. Econometrica 71 (1),
+135–171.
+Bai, J. (2009). Panel data models with interactive fixed effects. Econometrica 77 (4),
+1229–1279.
+Bai, J. and S. Ng (2002). Determining the number of factors in approximate factor models.
+Econometrica 70 (1), 191–221.
+Bai, J. and S. Ng (2017). Principal components and regularized estimation of factor models.
+arXiv preprint arXiv:1708.08137 .
+Bühlmann, P. and S. Van De Geer (2011). Statistics for high-dimensional data: methods,
+theory and applications. Springer Science & Business Media.
+Candès, E. J. and Y. Plan (2010). Matrix completion with noise. Proceedings of the
+IEEE 98 (6), 925–936.
+Candès, E. J. and B. Recht (2009). Exact matrix completion via convex optimization.
+Foundations of Computational mathematics 9 (6), 717.
+Candès, E. J. and T. Tao (2010). The power of convex relaxation: Near-optimal matrix
+completion. IEEE Trans. Inf. Theor. 56 (5), 2053–2080.
+35
+
+Chamberlain, G. (1984). Panel data. Handbook of econometrics 2, 1247–1318.
+Doudchenko, N. and G. W. Imbens (2016). Balancing, regression, difference-in-differences
+and synthetic control methods: A synthesis. Technical report, National Bureau of Economic Research.
+Gobillon, L. and T. Magnac (2013). Regional policy evaluation: Interactive fixed effects
+and synthetic controls. Review of Economics and Statistics (00).
+Goldberger, A. S. (1972). Structural equation methods in the social sciences. Econometrica:
+Journal of the Econometric Society, 979–1001.
+Gross, D. (2011). Recovering low-rank matrices from few coefficients in any basis. IEEE
+Trans. Information Theory 57 (3), 1548–1566.
+Hastie, T., R. Mazumder, J. D. Lee, and R. Zadeh (2015). Matrix completion and low-rank
+svd via fast alternating least squares. J. Mach. Learn. Res. 16 (1), 3367–3402.
+Hsiao, C., H. Steve Ching, and S. Ki Wan (2012). A panel data approach for program
+evaluation: measuring the benefits of political and economic integration of hong kong
+with mainland china. Journal of Applied Econometrics 27 (5), 705–740.
+Imbens, G. W. and D. B. Rubin (2015). Causal Inference in Statistics, Social, and Biomedical Sciences. Cambridge University Press.
+Keshavan, R. H., A. Montanari, and S. Oh (2010a, June). Matrix completion from a few
+entries. IEEE Trans. Inf. Theor. 56 (6), 2980–2998.
+Keshavan, R. H., A. Montanari, and S. Oh (2010b, August). Matrix completion from noisy
+entries. J. Mach. Learn. Res. 11, 2057–2078.
+
+36
+
+Kim, D. and T. Oka (2014). Divorce law reforms and divorce rates in the usa: An interactive
+fixed-effects approach. Journal of Applied Econometrics 29 (2), 231–245.
+Klopp, O. (2014). Noisy low-rank matrix completion with general sampling distribution.
+Bernoulli 20 (1), 282–303.
+Koltchinskii, V., K. Lounici, A. B. Tsybakov, et al. (2011). Nuclear-norm penalization
+and optimal rates for noisy low-rank matrix completion. The Annals of Statistics 39 (5),
+2302–2329.
+Liang, K.-Y. and S. L. Zeger (1986). Longitudinal data analysis using generalized linear
+models. Biometrika 73 (1), 13–22.
+Mazumder, R., T. Hastie, and R. Tibshirani (2010). Spectral regularization algorithms
+for learning large incomplete matrices. Journal of machine learning research 11 (Aug),
+2287–2322.
+Moon, H. R. and M. Weidner (2015). Linear regression for panel with unknown number of
+factors as interactive fixed effects. Econometrica 83 (4), 1543–1579.
+Moon, H. R. and M. Weidner (2017). Dynamic linear panel regression models with interactive fixed effects. Econometric Theory 33 (1), 158–195.
+Negahban, S. and M. J. Wainwright (2011). Estimation of (near) low-rank matrices with
+noise and high-dimensional scaling. The Annals of Statistics, 1069–1097.
+Negahban, S. and M. J. Wainwright (2012). Restricted strong convexity and weighted
+matrix completion: Optimal bounds with noise. Journal of Machine Learning Research 13 (May), 1665–1697.
+
+37
+
+Negahban, S. N., P. Ravikumar, M. J. Wainwright, and B. Yu (2012). A unified framework
+for high-dimensional analysis of M -estimators with decomposable regularizers. Statistical
+Science 27 (4), 538–557.
+Pesaran, M. H. (2006). Estimation and inference in large heterogeneous panels with a
+multifactor error structure. Econometrica 74 (4), 967–1012.
+Recht, B. (2011). A simpler approach to matrix completion. Journal of Machine Learning
+Research 12 (Dec), 3413–3430.
+Rohde, A., A. B. Tsybakov, et al. (2011). Estimation of high-dimensional low-rank matrices.
+The Annals of Statistics 39 (2), 887–930.
+Rosenbaum, P. R. and D. B. Rubin (1983). The central role of the propensity score in
+observational studies for causal effects. Biometrika 70 (1), 41–55.
+Rubin, D. B. (1974). Estimating causal effects of treatments in randomized and nonrandomized studies. Journal of Educational Psychology 66 (5), 688–701.
+Srebro, N., N. Alon, and T. S. Jaakkola (2005). Generalization error bounds for collaborative prediction with low-rank matrices. In L. K. Saul, Y. Weiss, and L. Bottou (Eds.),
+Advances in Neural Information Processing Systems 17, pp. 1321–1328.
+Tibshirani, R. (1996). Regression shrinkage and selection via the lasso. Journal of the
+Royal Statistical Society. Series B (Methodological), 267–288.
+Tropp, J. A. (2012). User-friendly tail bounds for sums of random matrices. Foundations
+of Computational Mathematics 12 (4), 389–434.
+Xu, Y. (2017). Generalized synthetic control method: Causal inference with interactive
+fixed effects models. Political Analysis 25 (1), 57–76.
+38
+
+A
+
+Online Appendix for “ Matrix Completion Methods for Causal Panel Data Models”: Proofs
+
+A.1
+
+Proof of Theorem 1
+
+First, we will discuss three main steps that are needed for the proof.
+Step 1: We show an upper bound for the sum of squared errors for all (i, t) ∈ O in terms of
+P
+the regularization parameter λ, rank of L∗ , kL∗ −L̂kF , and kEkop where E ≡ (i,t)∈O εit Ait .
+Lemma 1 (Adapted from Negahban and Wainwright (2011)). Then for all λ ≥ 3kEkop /|O|,
+X hAit , L∗ − L̂i2
+√
+≤ 10λ R kL∗ − L̂kF .
+|O|
+
+(A.1)
+
+(i,t)∈O
+
+This type of result has been shown before by Recht (2011); Negahban and Wainwright
+(2011); Koltchinskii et al. (2011); Klopp (2014). For convenience of the reader, we include
+its proof in §A. Similar results also appear in the analysis of LASSO type estimators (for
+example see Bühlmann and Van De Geer (2011) and references therein).
+Step 2: The upper bound provided by Lemma 1 contains λ and also requires the condition
+λ ≥ 3kEkop /|O|. Therefore, in order to have a tight bound, it is important to show an
+upper bound for kEkop that holds with high probability. Next lemma provides one such
+result.
+Lemma 2. There exist a constant C1 such that
+kEkop ≤ C1 σ max
+
+i
+hp
+√
+N log(N + T ), T log3/2 (N + T ) ,
+
+39
+
+with probability greater than 1 − (N + T )−2 .
+This result uses a concentration inequality for sum of random matrices to find a bound
+for kEkop . We note that previous papers, Recht (2011); Negahban and Wainwright (2011);
+Koltchinskii et al. (2011); Klopp (2014), contain a similar step but in their case O is
+obtained by independently sampling elements of [N ]×[T ]. However, in our case observations
+from each row of the matrix are correlated. Therefore, prior results do not apply. In fact,
+the correlation structure deteriorates the type of upper bound that can be obtained for
+kEkop .
+Step 3: The last main step is to show that, with high probability, the random variable on the left hand side of (A.1) is larger than a constant fraction of kL̂ − L∗ k2F . In
+high-dimensional statistics literature this property is also referred to as Restricted Strong
+Convexity, Negahban et al. (2012); Negahban and Wainwright (2011, 2012). The following
+Lemma states this property for our setting and its proof that is similar to the proof of
+Theorem 1 in (Negahban and Wainwright, 2012) or Lemma 12 in (Klopp, 2014) is omitted.
+Lemma 3. If the estimator L̂ defined above satisfies kL̂ − L∗ kF ≥ κ for a positive number
+κ, then,
+
+p
+Pπ
+
+c
+
+2
+
+kL̂ −
+
+L∗ k2F
+
+≤
+
+X
+
+∗ 2
+
+hAit , L̂ − L i
+
+
+
+
+
+(i,t)∈O
+
+
+≥ 1 − exp −
+
+p2c κ2
+32 T L2max
+
+
+.
+
+Now we are equipped to prove the main theorem.
+Proof of Theorem 1. Let ∆ = L∗ − L̂. Then using Lemma 2 and selecting λ equal to
+
+40
+
+3kEkop /|O| in Lemma 1, with probability greater than 1 − (N + T )−2 , we have
+2
+
+X hAit , ∆i
+≤
+|O|
+
+hp
+i
+√
+√
+30C1 σ R max
+N log(N + T ), T log3/2 (N + T )
+k∆kF .
+
+|O|
+
+(i,t)∈O
+
+(A.2)
+
+Now, we use Lemma 3 to find a lower bound for the left hand side of (A.2). But first note
+that if p2c k∆k2F /(32 T L2max ) ≤ 2 log(N + T ) then
+k∆kF
+√
+≤ 8Lmax
+NT
+
+s
+
+log(N + T )
+N p2c
+
+p
+holds which proves Theorem 1. Otherwise, using Lemma 3 for κ = (8Lmax /pc ) T log(N + T ),
+
+1
+P
+
+2
+
+pc k∆k2F ≤
+
+X
+
+hAit , ∆i2
+
+
+
+
+≥1−
+
+
+
+(i,t)∈O
+
+1
+.
+(N + T )2
+
+(A.3)
+
+Combining this result, (A.2), and union bound we have, with probability greater than
+1 − 2(N + T )−2 ,
+√
+k∆k2F ≤ 60C1 σ R max σ
+
+s
+
+N log(N + T )
+,
+p2c
+
+s
+
+!
+T
+log3/2 (N + T ) k∆kF .
+p2c
+
+The main result now follows after dividing both sides with
+
+A.2
+
+√
+N T k∆kF .
+
+Proof of Lemma 1
+
+Variants of this Lemma for similar models have been proved before. But for completeness
+we include its proof that is adapted from Negahban and Wainwright (2011).
+
+41
+
+Proof of Lemma 1. Let
+f (L) ≡
+
+X (Yit − Lit )2
++ λkLk∗ .
+|O|
+
+(i,t)∈O
+
+Now, using the definition of L̂,
+f (L̂) ≤ f (L∗ ) ,
+which is equivalent to
+X εit hL∗ − L̂, Ait i
+X hL∗ − L̂, Ait i2
++2
++ λkL̂k∗ ≤ λkL∗ k∗ .
+|O|
+|O|
+
+(A.4)
+
+(i,t)∈O
+
+(i,t)∈O
+
+Now, defining ∆ ≡ L∗ − L̂ and using the definition of E, the above equation gives
+X h∆, Ait i2
+2
+≤−
+h∆, Ei + λkL∗ k∗ − λkL̂k∗
+|O|
+|O|
+
+(A.5)
+
+(i,t)∈O
+
+(a)
+
+2
+k∆k∗ kEkop + λkL∗ k∗ − λkL̂k∗
+|O|
+2
+k∆k∗ kEkop + λk∆k∗
+≤
+|O|
+(b) 5
+≤ λk∆k∗ .
+3
+≤
+
+(A.6)
+(A.7)
+(A.8)
+
+Here, (a) uses inequality |hA, Bi| ≤ kAkop kBkmax which is due to the fact that operator
+norm is dual norm to nuclear norm, and (b) uses the assumption λ ≥ 3kEkop /|O|. Before
+continuing with the proof of Lemma 1 we state the following Lemma that is proved later
+in this section.
+Lemma 4. Let ∆ ≡ L∗ − L̂ for λ ≥ 3kEkop /|O| Then there exist a decomposition ∆ =
+∆1 + ∆2 such that
+42
+
+(i) h∆1 , ∆2 i = 0.
+(ii) rank(∆1 ) ≤ 2r.
+(iii) k∆2 k∗ ≤ 3k∆1 k∗ .
+Now, invoking the decomposition ∆ = ∆1 + ∆2 from Lemma 4 and using the triangle
+inequality, we obtain
+(c)
+(d) √
+(e) √
+k∆k∗ ≤ 4k∆1 k∗ ≤ 4 2rk∆1 kF ≤ 4 2rk∆kF .
+
+(A.9)
+
+where (c) uses Lemma 4(iii), (d) uses Lemma 4(ii) and Cauchy-Schwarz inequality, and
+(e) uses Lemma 4(i). Combining this with (A.8) we obtain
+X h∆, Ait i2
+√
+≤ 10λ r k∆kF ,
+|O|
+
+(A.10)
+
+(i,t)∈O
+
+which finishes the proof of Lemma 1.
+Proof of Lemma 4. Let L∗ = UN ×r Sr×r (VT ×r )> be the singular value decomposition for
+the rank r matrix L∗ . Let PU be the projection operator onto column space of U and let
+PU ⊥ be the projection operator onto the orthogonal complement of the column space of U.
+Let us recall a few linear algebra facts about these projection operators. If columns of U are
+PN
+P
+>
+denoted by u1 , . . . , u0 , since U is unitary, PU = ri=1 ui u>
+i . Similarly, PU ⊥ =
+i=r+1 ui ui
+where u1 , . . . , u0 , ur+1 , . . . , uN forms an orthonormal basis for RN . In addition, the projector
+operators are idempotent (i.e., P2U = PU , P2U ⊥ = PU ⊥ ), PU + PU ⊥ = IN ×N .
+Define PV and PV ⊥ similarly. Now, we define ∆1 and ∆2 as follows:
+∆2 ≡ PU ⊥ ∆PV ⊥
+
+,
+
+43
+
+∆1 ≡ ∆ − ∆2 .
+
+It is easy to see that
+∆1 = (PU + PU ⊥ )∆(PV + PV ⊥ ) − PU ⊥ ∆PV ⊥
+
+(A.11)
+
+= PU ∆ + PU ⊥ ∆PV .
+
+(A.12)
+
+Using this fact we have
+h∆1 , ∆2 i = trace ∆> PU PU ⊥ ∆PV ⊥ + PV ∆> PU ⊥ PU ⊥ ∆PV ⊥
+
+= trace PV ∆> PU ⊥ ∆PV ⊥
+
+= trace ∆> PU ⊥ ∆PV ⊥ PV = 0
+
+
+
+(A.13)
+(A.14)
+(A.15)
+
+that gives part (i). Note that we used trace(AB) = trace(BA).
+Looking at (A.12), part (ii) also follows since both PU and PV have rank r and sum of
+two rank r matrices has rank at most 2r.
+Before moving to part (iii), we note another property of the above decomposition of
+∆ that will be needed next. Since the two matrices L∗ and ∆2 have orthogonal singular
+vectors to each other,
+kL∗ + ∆2 k∗ = kL∗ k∗ + k∆2 k∗ .
+
+(A.16)
+
+On the other hand, using inequality (A.6), for λ ≥ 3kEkop /|O| we have
+
+
+∗
+
+
+
+2
+k∆k∗ kEkop
+|O|
+2
+≤ λk∆k∗
+3
+2
+≤ λ (k∆1 k∗ + k∆2 k∗ ) .
+3
+
+λ kL̂k∗ − kL k∗ ≤
+
+44
+
+(A.17)
+
+Now, we can use the following for the left hand side
+kL̂k∗ − kL∗ k∗ = kL∗ + ∆1 + ∆2 k∗ − kL∗ k∗
+≥ kL∗ + ∆2 k∗ − k∆1 k∗ − kL∗ k∗
+(f )
+
+= kL∗ k∗ + k∆2 k∗ − k∆1 k∗ − kL∗ k∗
+
+= k∆2 k∗ − k∆1 k∗ .
+Here (f ) follows from (A.16). Now, combining the last inequality with (A.17) we get
+k∆2 k∗ − k∆1 k∗ ≤
+
+2
+(k∆1 k∗ + k∆2 k∗ ) .
+3
+
+That finishes proof of part (iii).
+
+A.3
+
+Proof of Lemma 2
+
+First we state the matrix version of Bernstein inequality for rectangular matrices (see Tropp
+(2012) for a derivation of it).
+Proposition 1 (Matrix Bernstein Inequality). Let Z1 , . . . , ZN be independent matrices in
+Rd1 ×d2 such that E[Zi ] = 0 and kZi kop ≤ D almost surely for all i ∈ [N ] and a constant R.
+Let σZ be such that
+
+σZ2 ≥ max
+
+
+
+
+N
+X
+
+
+
+i=1
+
+E[Zi Z>
+i ]
+
+,
+op
+
+45
+
+N
+X
+i=1
+
+
+
+
+E[Z>
+i Zi
+op
+
+
+
+.
+
+Then, for any α ≥ 0
+
+
+
+N
+X
+
+
+
+i=1
+
+P
+
+
+
+
+Zi
+op
+
+
+−α2
+≥ α ≤ (d1 + d2 ) exp
+.
+
+2σZ2 + (2Dα)/3
+
+
+(A.18)
+
+Proof of Lemma 2. Our goal is to use Proposition 1. Define the sequence of independent
+random matrices B1 , . . . , BN as follows. For every i ∈ [N ], define
+
+Bi =
+
+ti
+X
+
+εit Ait .
+
+t=1
+
+PN
+By definition, E =
+i=1 Bi and E[Bi ] = 0 for all i ∈ [N ]. Define the bound D ≡
+p
+C2 σ log(N + T ) for a large enough constant C2 . For each (i, t) ∈ O define ε̄it = εit I|εit |≤D .
+Pi
+ε̄it Ait for all i ∈ [N ].
+Also define Bi = tt=1
+Using union bound and the fact that for σ-sub-Gaussian random variables εit we have
+P(|εit | ≥ t) ≤ 2 exp{−t2 /(2σ 2 )} gives, for each α ≥ 0,
+
+P{ kEkop ≥ α} ≤ P
+
+≤P
+
+≤P
+
+
+
+
+
+
+
+N
+X
+i=1
+N
+X
+
+
+
+
+
+N
+X
+
+
+
+i=1
+
+≥α
+
+Bi
+op
+
+≥α
+
+Bi
+
+i=1
+
+op
+
+≥α
+
+Bi
+op
+
+46
+
+
+
+
+
+
+
+
+
+
+
++
+
+X
+
+P{|εit | ≥ D}
+
+(i,t)∈O
+
+
++ 2|O| exp
+
++
+
+−D2
+2σ 2
+
+1
+.
+(N + T )3
+
+
+
+(A.19)
+
+Now, for each i ∈ [N ], define Zi ≡ Bi − E[Bi ]. Then,
+N
+X
+i=1
+
+≤
+
+Bi
+
+N
+X
+
+"
+Zi
+
+i=1
+
+op
+
+≤
+
+i=1
+
++ E
+
+Bi
+
+1≤i≤N
+
+op
+
+N
+X
+
+#
+X
+
+op
+
+"
+Zi
+
+#
+X
+
++ E
+
+1≤i≤N
+
+op
+
+≤
+
+Bi
+
+N
+X
+i=1
+
+F
+
+√
++ NT E
+
+Zi
+op
+
+"
+
+#
+X
+
+1≤i≤N
+
+Bi
+
+.
+max
+
+But since each εit has mean zero,
+q
+|E[ε̄it ]| = |E[εit I|εit |≤D ]| = |E[εit I|εit |≥D ]| ≤ E[ε2it ] P(|εit | ≥ D)
+p
+≤ 2σ 2 exp[−D2 /(2σ 2 )]
+σ
+≤
+.
+(N + T )4
+Therefore,
+√
+NT E
+
+"
+
+√
+σ NT
+σ
+≤
+≤
+,
+4
+(N + T )
+(N + T )3
+
+#
+X
+
+Bi
+
+1≤i≤N
+
+max
+
+which gives
+N
+X
+i=1
+
+≤
+
+Bi
+op
+
+N
+X
+
+Zi
+
+i=1
+
++
+op
+
+σ
+.
+(N + T )3
+
+(A.20)
+
+√
+We also note that kZi kop ≤ 2D T for all i ∈ [N ]. The next step is to calculate σZ
+
+47
+
+defined in the Proposition 1. We have,
+N
+X
+
+E[Zi Z>
+i ]
+
+i=1
+
+N
+X
+
+
+≤ max E [(ε̄it − E[ε̄it ])2 ]
+(i,t)∈O
+
+"
+E
+
+
+≤ 2σ 2 max 
+i∈[N ]
+
+#
+ei (N )ei (N )>
+
+t=1
+
+i=1
+
+op
+
+ti
+X
+
+(A.21)
+op
+
+
+X
+
+(i)
+tπt  ≤ 2T σ 2
+
+(A.22)
+
+t∈[T ]
+
+and
+N
+X
+
+E[Z>
+i Zi ]
+
+i=1
+
+≤ 2σ 2
+op
+
+N
+X
+
+"
+E
+
+ti
+X
+
+et (T )et (T )>
+
+t=1
+
+i=1
+
+
+
+(A.23)
+op
+
+X
+
+T
+X
+
+i∈[N ]
+
+t0 =t
+
+= 2σ 2 max 
+t∈[T ]
+
+#
+
+
+(i)
+πt0  = 2N σ 2 .
+
+(A.24)
+
+Note that here we used the fact that random variables ε̄it − E[ε̄it ] are independent of each
+other and centered which means all cross terms of the type E{(ε̄it − E[ε̄it ])(ε̄js − E[ε̄js ])}
+are zero for (i, t) 6= (j, s). Therefore, σZ2 = 2σ 2 max(N, T ) works. Applying Proposition 1,
+we obtain
+
+P
+
+
+N
+ X
+
+
+i=1
+
+
+
+
+Zi
+op
+
+α2
+√
+≥ α ≤ (N + T ) exp −
+
+4σ 2 max(N, T ) + (4Dα T )/3
+
+
+
+
+3
+≤ (N + T ) exp − min
+16
+
+48
+
+
+
+
+
+α2
+α
+, √
+2
+σ max(N, T ) D T )
+
+
+.
+
+Therefore, there is a constant C3 such that with probability greater than 1 − exp(−t),
+N
+X
+i=1
+
+≤ C3 σ max
+
+Zi
+
+p
+
+p
+max(N, T )[t + log(N + T )], T log(N + T )[t + log(N + T )] .
+
+op
+
+Using this for a t that is a large enough constant times log(N + T ), together with (A.19)
+and (A.20), shows with probability larger than 1 − 2(N + T )−3
+i
+hp
+√
+max(N, T ) log(N + T ), T log3/2 (N + T )
+hp
+i
+√
+3/2
+= C1 σ max
+N log(N + T ), T log (N + T ) ,
+
+kEkop ≤ C1 σ max
+
+for a constant C1 .
+
+49
+
+

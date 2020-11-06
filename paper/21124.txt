@@ -1,0 +1,3584 @@
+NBER WORKING PAPER SERIES
+
+IMPROVING POLICY FUNCTIONS IN HIGH-DIMENSIONAL DYNAMIC GAMES
+Carlos A. Manzanares
+Ying Jiang
+Patrick Bajari
+Working Paper 21124
+http://www.nber.org/papers/w21124
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+April 2015
+
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2015 by Carlos A. Manzanares, Ying Jiang, and Patrick Bajari. All rights reserved. Short sections
+of text, not to exceed two paragraphs, may be quoted without explicit permission provided that full
+credit, including © notice, is given to the source.
+
+Improving Policy Functions in High-Dimensional Dynamic Games
+Carlos A. Manzanares, Ying Jiang, and Patrick Bajari
+NBER Working Paper No. 21124
+April 2015
+JEL No. C44,C55,C57,C73,L1
+ABSTRACT
+In this paper, we propose a method for finding policy function improvements for a single agent in
+high-dimensional Markov dynamic optimization problems, focusing in particular on dynamic games.
+Our approach combines ideas from literatures in Machine Learning and the econometric analysis of
+games to derive a one-step improvement policy over any given benchmark policy. In order to reduce
+the dimensionality of the game, our method selects a parsimonious subset of state variables in a datadriven manner using a Machine Learning estimator. This one-step improvement policy can in turn
+be improved upon until a suitable stopping rule is met as in the classical policy function iteration
+approach.We illustrate our algorithm in a high-dimensional entry game similar to that studied by
+Holmes (2011) and show that it results in a nearly 300 percent improvement in expected profits as
+compared with a benchmark policy.
+Carlos A. Manzanares
+Department of Economics
+Vanderbilt University
+VU Station B, Box #351819
+2301 Vanderbilt Place, Nashville, TN 37235
+carlos.a.manzanares@Vanderbilt.Edu
+Ying Jiang
+Department of Economics
+University of Washington
+305 Savery Hall, Box 353330
+Seattle, WA 98195-3330
+jiangy82@uw.edu
+
+Patrick Bajari
+University of Washington
+331 Savery Hall
+UW Economics Box 353330
+Seattle, Washington 98195-3330
+and NBER
+Bajari@uw.edu
+
+1
+
+Introduction
+Many dynamic games of interest in economics have state spaces that are potentially very large,
+
+and solution algorithms considered in the economics literature do not scale to problems of this size.
+Consider the game of Chess, which is a two-player board game involving sequential moves on a
+board consisting of 64 squares and which can be characterized as Markovian, with the existing
+board con…guration serving as the current state. Since games end after the maximum allowable 50
+number of moves, solving for pure Markov-perfect equilibrium strategies is in principle achievable
+using backward induction, since all allowable positions of pieces and moves could be mapped into an
+extensive form game tree.1 In practice, however, there are at least two challenges to implementing
+this type of solution method.
+The …rst challenge is the high number of possible branches in the game tree. For example,
+an upper bound on the number of possible terminal nodes is on the order of 1046 .2 Fully solving
+for equilibrium strategies requires computing and storing state transition probabilities at each of a
+very large number of nodes, which is both analytically and computationally intractable.
+The second challenge is deriving the strategies of opponents. Equilibrium reasoning motivates
+…xed-point methods for deriving equilibrium best responses. However, it is not clear that equilibrium assumptions will generate good approximations of opponent play in Chess, since players
+may engage in suboptimal strategies, making Nash-style best responses derived a priori possibly
+suboptimal. Similarly, it is not clear whether developing and solving a stylized version of Chess
+would produce strategies relevant for playing the game.
+Recently, researchers in computer science and arti…cial intelligence have made considerable
+progress deriving strategies for high-dimensional dynamic games such as Chess using a general
+approach very di¤erent from that used by economists, which has two broad themes. First, to derive
+player strategies, they rely more heavily on data of past game play than on equilibrium assumptions.
+Second, instead of focusing on deriving optimal strategies, they focus on continually improving upon
+the best strategies previously implemented by other researchers or game practitioners. This general
+approach has provided a series of successful strategies for high-dimensional games.3
+In this paper, we propose an approach which proceeds in this spirit, combining ideas developed
+by researchers in computer science and arti…cial intelligence with those developed by econometricians for studying dynamic games to solve for policy improvements for a single agent in high1
+
+Recently, researchers have found that this is even more complicated for games like Chess, which may have no
+uniform Nash equilibria in pure or even mixed positional strategies. See Boros, Gurvich and Yamangil (2013) for this
+assertion.
+2
+See Chinchalkar (1996).
+3
+These include, inter-alia, the strategy of the well-publicized computer program “Deep Blue”(developed by IBM),
+which was the …rst machine to beat a reigning World Chess Champion, and the counterfactual regret-minimization
+algorithm for the complex multi-player game Texas Hold’em developed by Bowling, Burch, Johanson and Tammelin
+(2015), which has been shown to beat successful players in practice.
+
+2
+
+dimensional dynamic games, where strategies are restricted to be Markovian. For an illustration, we
+consider the problem of computing a one-step improvement policy for a single retailer in the game
+considered in Holmes (2011). He considers the decision by chain store retailers of where to locate
+physical stores. We add to his model the decision of where to locate distribution centers as well.
+In our game, there are 227 physical locations in the United States and two rival retailers, which
+each seek to maximize nation-wide pro…ts over seven years by choosing locations for distribution
+centers and stores.
+This game is complicated for several reasons. First, store location decisions generate both
+own …rm and competitor …rm spillovers. On the one hand, for a given …rm, clustering stores in
+locations near distribution centers lowers distribution costs. On the other hand, it also cannibalizes
+own store revenues, since consumers substitute between nearby stores. For the same reason, nearby
+competitor stores lower revenues for a given store. Second, the game is complicated because it is
+dynamic, since we make distribution center and store decisions irreversible. This forces …rms to
+consider strategies such as spatial preemption, whereby …rm entry in earlier time periods in‡uences
+the pro…tability of these locations in future time periods.
+Using our algorithm, we derive a one-step improvement policy for a hypothetical retailer and
+show that our algorithm generates a 289 percent improvement over a strategy designed to approximate the actual facility location patterns of Wal-Mart. This algorithm can be characterized by two
+attributes that make it useful for deriving strategies to play high-dimensional games. First, instead
+of deriving player strategies using equilibrium assumptions, we utilize data on a large number of
+previous plays of the game. Second, we employ an estimation technique from Machine Learning
+that reduces the dimensionality of the game in a data-driven manner, which simultaneously makes
+estimation feasible.
+The data provides us with sequences of actions and states describing many plays of the game,
+indexed by time, and the assumption that strategies are Markovian allows us to model play in
+any particular period as a function of a set of payo¤ relevant state variables.4 Using this data,
+we estimate opponent strategies as a function of the state, as well as a law of motion. We also
+borrow from the literature on the econometrics of games and estimate the choice-speci…c value
+function, making the choice-speci…c value function the dependent variable in an econometric model.5
+After …xing the strategy of the agent for all time periods beyond the current time period using a
+benchmark strategy, we use the estimated opponent strategies and law of motion to simulate and
+then estimate the value of a one-period deviation from the agent’s strategy in the current period.6
+4
+
+We note that in principle there is some scope to test the Markov assumption. For example, we could do a
+hypothesis test of whether information realized prior to the current period is signi…cant after controlling for all payo¤
+relevant states in the current period.
+5
+See Pesendorfer and Schmidt-Dengler (2008) for an example using this approach. Also see Bajari, Hong, and
+Nekipelov (2013) for a survey on recent advances in game theory and econometrics.
+6
+In practice, the benchmark strategy could represent a previously proposed strategy that represents the highest
+
+3
+
+This estimate is used to construct a one-step improvement policy by maximizing the choice-speci…c
+value function in each period as a function of the state, conditional on playing the benchmark
+strategy in all time periods beyond the current one.
+Since the settings we consider involve a large number of state variables, estimating opponent
+strategies, the law of motion, and the choice-speci…c value function in this algorithm is infeasible
+using conventional methods. For example, in our spatial location game, one way to enumerate the
+current state is to de…ne it as a vector of indicator variables representing the national network
+of distribution center and store locations for both …rms. This results in a state vector that contains 1817 variables and achieves an average cardinality in each time period on the order of 1085 .7
+Although this enumeration allows us to characterize opponent strategies, the law of motion, and
+choice-speci…c value functions of this game as completely non-parametric functions of the state
+variables, it is potentially computationally wasteful and generates three estimation issues. First,
+the large cardinality of the state vector makes it unlikely that these models are identi…ed. Second,
+if they are identi…ed, they are often ine¢ ciently estimated since there are usually very few observations for any given permutation of the state vector. Moreover, when estimating the choice-speci…c
+value function, remedying these issues by increasing the scale of the simulation is computationally infeasible. Third, when the number of regressors is large, researchers often …nd in practice
+that many of these regressors are highly multicollinear, and in the context of collinear regressors,
+out-of-sample predictive accuracy under most norms is often maximized using a relatively small
+number of regressors. To the extent that some state variables are relatively unimportant, these
+estimation and computational issues motivate the use of well-speci…ed approximations. However, in
+high-dimensional settings, it is often di¢ cult to know a priori which state variables are important.
+As a consequence, we utilize a technique from Machine Learning which makes estimation and
+simulation in high-dimensional contexts feasible through an approximation algorithm that selects
+the parsimonious set of state variables that minimizes the loss associated with predicting our outpayo¤s agents have been able to …nd in practice. For example, in spectrum auctions, we might use the well known
+"straightforward bidding" strategy or the strategy proposed by Bulow, Levin, and Milgrom (2009).
+7
+1817 = 227 2 (own distribution center indicators for two merchandise classes) + 227 2 (own store indicators
+for two types of stores) + 227 2 (opponent distribution center indicators for two merchandise classes) + 227 2
+(opponent store indicators for two types of stores) + 1 (location-speci…c population variable). The state space
+cardinality for the second time period is calculated as follows. In each time period, we constrain the number of
+distribution centers and stores that each …rm can open, and at the start of the game (in the …rst time period),
+we allocate …rm facilities randomly as described in the Appendix. Only locations not currently occupied by …rm i
+facilities of the same type are feasible. In the …rst time period, the number of feasible locations for placing facilities of
+each type in the second time period include: 220, 226, 211, and 203, and among available locations, each …rm chooses
+4 distribution centers and 8 stores of each type. The order of the resulting cardinality of the state space in the second
+period (only including the cardinality of the state attributable to …rm i facilities; also not including the cardinality
+of the population variable) is the product of the possible combinations of distribution centers and store locations of
+220
+226
+211
+203
+each type, i.e.
+107 107 1013 1013 = 1043 . The cardinality of the
+4
+4
+8
+8
+state attributable to …rm i facilities is calculated in a similar manner, and the total cardinality of the state (not
+considering the population variable) is the product of the cardinality attributable to …rm i and i facilities. State
+space cardinality calculations attributable to …rm i facilities for all time periods are available in the Appendix.
+
+4
+
+comes of interest using a …xed metric. Machine Learning refers to a set of methods developed
+and used by computer scientists and statisticians to estimate models when both the number of
+observations and controls is large, and these methods have proven very useful in practice for predicting accurately in cross-sectional settings. See Hastie et al. (2009) for a survey. There has been
+relatively little attention to the problem of estimation when the number of controls is very large
+in econometrics until recently. See Belloni, Chernozhukov, and Hansen (2010) for a survey of some
+recent work. In our illustration, we utilize a Machine Learning method known as Component Wise
+Gradient Boosting (CWGB), which we describe in detail in Section 2.2. This technique was developed and characterized theoretically in a series of articles by Breiman (1998, 1999), Friedman et
+al. (2000), and Friedman (2001). Also see Hastie et al. (2009) for an introduction to the method.8
+As with many other ML methods, CWGB works by projecting the estimand functions of interest
+onto a low-dimensional set of parametric basis functions of regressors, with the regressors and basis
+functions chosen in a data-driven manner. CWGB methods can accommodate non-linearity in the
+data generating process, are computationally simple, and, unlike many other non-linear estimators,
+are not subject to problems with convergence in practice. As a result of the estimation process,
+CWGB often reduces the number of state variables dramatically, and we …nd that these parsimonious approximations perform well in our application as compared with other variable and model
+selection procedures, suggesting that many state representations in economics might be computationally wasteful.9 For example, we …nd that choice-speci…c value functions in our spatial location
+game are well-approximated by between 6 and 7 state variables (chosen from the original 1817).
+Our algorithm contributes a data-driven method for deriving policy improvements in highdimensional dynamic Markov games which can be used to play these games in practice. Highdimensional dynamic games include, for example, Chess, Go, Texas Hold ’em, spectrum auctions,
+and the entry game we study in this paper. It also extends a related literature in approximate
+dynamic programming (ADP). ADP is a set of methods developed primarily by engineers to study
+Markov decision processes in high-dimensional settings. See Bertsekas (2012) for an extensive survey of this …eld. Within this literature, our approach is most related to the rollout algorithm, which
+is a technique that also generates a one-step improvement policy based on a choice-speci…c value
+function estimated using simulation. See Bertsekas (2013) for a survey of these algorithms. Although originally developed to solve for improvement policies in dynamic engineering applications,
+the main idea of rollout algorithms–obtaining an improved policy starting from another subopti8
+
+We choose this method because among the methods considered, it had the highest level of accuracy in out-ofsample prediction. We note that there are relatively few results about “optimal” estimators in high-dimensional
+settings. In practice, researchers most often use out-of-sample …t as a criteria for deciding between estimators.
+9
+As with other Machine Learning estimators, the relative performance of CWGB as compared with other methods
+may depend on the application considered. In general, Machine Learning methods do not necessarily dominate
+existing estimators in econometrics. For example, Hansen (forthcoming) shows that whether the Lasso estimator
+generates a lower mean-squared error than OLS depends on the extent to which many of the true coe¢ cients on
+regressors are equal to zero, i.e. the extent to which the parameter space is "sparse."
+
+5
+
+mal policy using a one-time improvement–has been applied to Markov games by Abramson (1990)
+and Tesauro and Galperin (1996). We appear to be the …rst to formalize the idea of estimating
+opponent strategies and the law of motion as inputs into the simulation and estimation of the
+choice-speci…c value function when applying rollout to multi-agent Markov games. This is facilitated by separating the impact of opponent strategies on state transitions from the payo¤ function
+in the continuation value term of the choice-speci…c value function, which is a separation commonly
+employed in the econometrics of games literature. Additionally, we extend the rollout literature
+by using a recently developed Machine Learning estimator to select regressors in high-dimensional
+contexts in a data-driven manner.
+We note that in practice there are several limitations to the approach we describe. A …rst is that
+we do not derive an equilibrium of the game. Hence we are unable to address the classic questions
+of comparative statics if we change the environment. That said, to the best of our knowledge, the
+problem of how to derive equilibria in games with very large state spaces has not been solved in
+general. We do suspect that …nding a computationally feasible way to derive policy improvements
+in this setting may be useful as researchers make …rst steps in attacking this problem. A second
+limitation is that we assume opponent strategies are …xed. In practice, competitors might reoptimize
+their strategies after observing our play.10 A third limitation is that we do not derive theoretical
+characterizations of the optimality properties of our Machine Learning estimator or policy function
+improvements, i.e. whether our policy function improvements converge generally. Many Machine
+Learning estimators, including the one we use in this paper, simultaneously perform model selection
+and estimation at the same time. This feature can generate corner solutions, making the derivation
+of fundamental estimator properties, such as consistency and asymptotic distributions, potentially
+more challenging. Although Machine Learning estimators are typically used on datasets that are
+very large, often making sampling distributions a less important criteria than predictive accuracy,
+sampling distributions may in‡uence the convergence of our policy function improvements in the
+context of smaller samples.
+That said, it is not clear that equilibrium theory is a particularly useful guide to play in these
+settings, even if theory tells us that equilibrium exists and is unique. In economics, much of the
+guidance has been based on solving very stylized versions of these games analytically or examining
+the behavior of subjects in laboratory experiments. Our method complements these approaches
+by providing strategies useful for playing high-dimensional games in practice. Arti…cial intelligence
+and computer science researchers, along with decision makers in industry and policy have used data
+as an important input into deriving strategies to play games. We believe that our example shows
+that certain economic problems may bene…t from the intensive use of data and modeling based on
+10
+
+It may be possible to mitigate this problem to some extent in practice. For example, if researchers can observe
+newly reoptimized opponent play, they can reestimate opponent strategies and use our method to derive new policy
+improvements to compete against these strategies.
+
+6
+
+econometrics and Machine Learning.
+The rest of the paper proceeds as follows. The next section describes the class of games for
+which our algorithm is useful and then describes Component-Wise Gradient Boosting as well as an
+algorithm for generating policy function improvements. Section 3 describes two applications, the
+chain store entry game described previously as well as an application in progress where we seek to
+improve-upon a recently developed strategy for Texas Hold’em. Section 4 concludes.
+
+2
+
+Method Characterization
+
+2.1
+
+Game Model
+In this section, we formally characterize a class of games for which our method is useful for
+
+…nding policy function improvements.
+2.1.1
+
+Preliminaries
+
+We de…ne a discrete number of time periods, denoted as t = 1; :::; T with T < 1, and a discrete
+
+number of players, denoted as i 2 I
+
+as players
+
+i, where
+
+i
+
+f1; :::; N g. We refer to the competitors of a reference player i
+
+f: (i \ I)g. Finally, we denote observations of player actions and states
+
+(de…ned below) found within data using the index l = 1; :::; L with L < 1.
+2.1.2
+
+State
+
+De…ne a state vector, denoted as st for each t, as
+st
+
+(s1t ; :::; sKs t ) 2 St
+
+RKs
+
+where s1t ; :::; sKs t represent a set of Ks state variables at time t, St represents the support of st ,
+and RKs represents the Ks -ary Cartesian product over Ks sets of real numbers R. The set St can
+
+be discrete, continuous, or both. In practice, the number of state variables, i.e. Ks , can be large.
+At time t, the state at time t + 1 is random and is denoted as St+1 with realization St+1 = st+1 .
+Importantly, in the econometrics of games literature, researchers often seek to model functions
+of the state, such as payo¤s, opponent strategies, and the law of motion (de…ned formally in the
+subsections that follow), using general functional forms. In these settings, the cardinality of St ,
+denoted as jSt j, becomes important, and this cardinality is potentially very large. For example,
+
+in our entry game application, although Ks = 1817, the average jSt j (average by time period) is
+greater than 1085 . See the Appendix for a derivation of the cardinality of the state in our entry
+game application.
+We also de…ne the dimension-reduced state vector that remains as a result of the ComponentWise Gradient Boosting (CWGB) estimation process described in Section 2.2. De…ne this state
+
+7
+
+vector, denoted as e
+st for all t, as
+
+e
+st
+
+s1t ; :::; sKs;GB t 2 Set
+
+RKs;GB
+
+where Ks;GB represents the number of state variables that remain after CWGB, such that
+Ks;GB
+
+Ks . In practice, it is often the case that the dimension of e
+st is much smaller than the
+
+dimension of the original state vector st , i.e. Ks;GB is much smaller than Ks , making the cardinality
+of Set much smaller than the cardinality of St . This cardinality reduction plays an important role
+
+in making the forward simulation step of our algorithm feasible (see Section 2.2), since we only
+simulate realizations of the dimension-reduced state rather than realizations of the original state.
+2.1.3
+
+Actions
+
+Each player chooses a vector of feasible actions, denoted as ait for all t, and de…ned as
+ait
+
+(a1it ; :::; aKa it ) 2 Ait
+
+RKa
+
+where a1it ; :::; aKa it represent a set of Ka action variables at time t, Ait represents the discrete
+
+support of ait , and RKa represents the Ka -ary Cartesian product over Ka sets of real numbers
+R. We abuse the notation of ait by suppressing its possible dependence on st . We further de…ne
+the pro…le of actions across all competitors
+A
+
+it
+
+RKa (N 1) ,
+
+support At
+
+i as a
+
+it
+
+(a1t ; :::; ai
+
+1t ; ai+1t ; :::; aN t )
+
+and a pro…le of actions across all players including i as at
+
+with support
+
+(a1t ; :::; aN t ) with
+
+RKa N .
+
+The action vector serves as either an outcome variable or set of regressors in the models es-
+
+timated in Section 2.2. In practice, when actions represent an outcome, we rede…ne Ait so as to
+constrain its cardinality to be su¢ ciently small, since our method requires us to evaluate policies
+
+at each action in Ait for a subset of states. This often means that we will rede…ne the problem such
+
+that each action we consider is a scalar rather than a vector, which is separately denoted as ait to
+distinguish it from ait . For example, in our entry game application, Ka = 1 and ait is a scalar 0, 1
+indicator over the choice of placing a facility in a given location, which gives jAit j = 2 for all t.
+
+When actions represent a set of regressors, as is the case when estimating the law of motion in
+
+Section 2.2, we allow the dimensionality of the action vector to remain high. As is the case with the
+state vector, the CWGB estimation process selects a subset of the original action variables, which
+we de…ne as
+
+where Ka;GB
+
+Ka .
+
+eit
+a
+
+a1it ; :::; aKa;GB it 2 Aeit
+
+8
+
+RKa;GB
+
+2.1.4
+
+Law of Motion
+
+We make the following assumption on the evolution of states over time.
+Assumption (A1). States evolve according to the Markov property, i.e. for all st+1 2 St+1 ,
+
+st 2 St , and at 2 At ,
+
+F (St+1
+
+st+1 js1 ; :::; st ; a1 ; :::; at ) = F (St+1
+
+st+1 jst ; at )
+
+where,
+F (St+1
+
+st+1 jst ; at )
+
+Pr (S1t+1
+
+s1t+1 ; :::; SKs t+1
+
+sKs t+1 jst ; at )
+
+Here, F (:) represents the cdf of St+1 , which we deem the law of motion. In some applications,
+the law of motion may vary across time periods, although we abstract away from this possibility for
+expositional simplicity. We allow the transitions for a subset of state variables to be independent
+of player actions.
+2.1.5
+
+Period Return
+
+The von Neumann-Morgenstern utility function for player i at time t is:
+ui (st ; ait ; a
+where
+
+it
+
+it )
+
+i (st ; ait ; a it )
+
++
+
+it
+
+is a continuous random variable observed only by player i at time t and which has a
+
+density f ( it ) and cumulative distribution function F ( it ). The error
+
+it
+
+can be interpreted as
+
+a preference shock unobserved by both the econometrician as well as by the other players and
+which makes player strategies as a function of the state random (see Section 2.1.6). It can also be
+interpreted as an unobserved state variable. See Rust (1987) for a discussion of this interpretation
+within the context of dynamic optimization problems. We make the following assumption on the
+distribution of
+
+it .
+
+Assumption (A2). The private shock
+
+it
+
+is distributed iid across agents, actions, states, and
+
+time.
+The term
+
+i (st ; ait ; a it )
+
+vector for players i and
+
+is a scalar which is a function of the current state st and the action
+
+i, i.e.
+
+i (st ; ait ; a it )
+
+: St
+
+Ait
+
+A
+
+numbers. We assume payo¤s are additively separable over time.
+2.1.6
+
+it
+
+! R, where R is the set of real
+
+Strategies
+
+We assume that players choose actions simultaneously at each time t. A strategy for agent i is
+a vector-valued function ait =
+
+i (st ; it ),
+
+which maps the state at time t and agent i’s time t private
+
+shock to agent i’s time t action vector ait . From the perspective of all other players
+9
+
+i, player i’s
+
+policy function as a function of the state can be represented by the conditional probability function
+i (Ait
+
+= ait jst ), such that:
+i (Ait
+
+where dF ( it )
+
+f ( it ) d
+
+it
+
+= ait jst ) =
+
+Z
+
+I f i (st ;
+
+it )
+
+= ait g dF ( it )
+
+and where the notation Ait emphasizes that actions are random
+
+from the perspective of other players (we use the notation Ait when actions are a random variable rather than a random vector). Abusing notation, we often abbreviate
+i.
+
+i (Ait
+
+= ait jst ) as
+
+Further de…ne the product of the pro…le of policy functions for all players i at time t as
+Y
+i (A it = a it jst )
+j (Ajt = ajt jst ), which we abbreviate as
+i (a it jst ). Finally, we sepj2 i
+
+arately denote a potentially suboptimal policy function for player i at time t as
+
+i,
+
+which plays a
+
+special role in our policy improvement algorithm detailed in Section 2.2. For simplicity, we abstract
+away from the possibility that each player’s policy function changes over time. It is straightforward
+to relax this simpli…cation in what follows.
+2.1.7
+
+Value Function and Choice-Speci…c Value Function
+
+Value Function. Let
+
+be a common discount factor. We de…ne the following ex ante value
+
+function for player i at time t,
+
+Vi (st ;
+max
+
+it )
+
+8
+<
+
+ait 2Ait :
+a
+
+X
+
+i (st ; ait ; a it )
+
++
+
+it
+
++ ESt+1 ;
+
+it+1
+
+[Vi (st+1 ;
+
+it+1 )jst ; ait ; a it ]
+
+it 2A it
+
+9
+=
+i (a it jst )
+;
+
+(1)
+
+where,
+
+ESt+1 ;
+
+it+1
+
+[Vi (st+1 ;
+
+it+1 )jst ; ait ; a it ]
+
+=
+Z
+
+st+1 2St+1
+
+Z
+
+Vi (st+1 ;
+it+1
+
+it+1 )dF
+
+(st+1 jst ; ait ; a
+
+it ) dF
+
+(
+
+it+1 )
+
+where it is assumed agent i makes the maximizing choice ait in each period t = 1; :::; T and
+that the value function is implicitly indexed by the pro…le of policy functions for all agents. We
+allow opponent strategies to be optimal or suboptimal, which facilitates the use of our method in
+practical game settings. The expectation ESt+1 ;
+
+it+1
+
+is taken over all realizations of the state St+1 ,
+
+conditional on the current state and actions, and the unobserved private shock for agent i in period
+t + 1.
+10
+
+Choice-Speci…c Value Function. We also de…ne the following ex ante choice-speci…c value
+function for player i:
+
+Vi (st ;
+a
+
+it ; ait ;
+X
+
+i)
+i (st ; ait ; a it )
+
++
+
+it
+
++ ESt+1 ;
+
+[Vi (st+1 ;
+
+it+1
+
+it+1 ;
+
+i )jst ; ait ; a it ]
+
+it 2A it
+
+i (a it jst )
+
+(2)
+
+where,
+
+ESt+1 ;
+
+it+1
+
+[Vi (st+1 ;
+
+it+1 ;
+
+i )jst ; ait ; a it ]
+
+Z
+
+=
+Z
+
+st+1 2St+1
+
+Vi (st+1 ;
+
+it+1 ;
+
+i )dF
+
+it+1
+
+(st+1 jst ; ait ; a
+
+it ) dF
+
+(
+
+it+1 )
+
+Our choice-speci…c value function represents the value of a particular action choice ait , conditional on the state st , the agent’s private shock,
+by agent i beyond the current time period,
+
+i.
+
+it ,
+
+and a potentially suboptimal strategy played
+
+Both value functions we de…ne abstract away from
+
+the possibility that the value function changes over time. This simpli…cation is not necessary for
+implementing our method and can be relaxed if researchers have access to enough data to e¢ ciently
+estimate separate choice-speci…c value functions per time period.
+
+2.2
+
+Policy Function Improvement
+In this section, we outline our algorithm for generating a one-step improvement policy as well
+
+as our Machine Learning estimator of choice.
+Algorithm 1 We generate a one-step improvement policy according to the following steps:
+1. Estimate the strategies of competitors, and, if necessary, the law of motion and the payo¤
+function, using a Machine Learning estimator to select a parsimonious subset of state variables.
+2. Fix an initial strategy for the agent.
+3. Use the estimated competitor strategies, payo¤ function, law of motion, and …xed agent strategy to simulate play.
+4. Use this simulated data to estimate the choice-speci…c value function.
+5. Obtain a one-step improvement policy.
+
+11
+
+6. Repeat by returning to step 1 and using the one-step improvement policy as the …xed initial
+agent strategy.
+Since we seek to improve a strategy of a reference agent i, we assume the researcher knows
+F(
+
+it+1 )
+
+for this agent. In particular, for expositional clarity, we set
+
+it
+
+= 0 for all t = 1; :::; T for
+
+agent i. Prior to describing the steps of Algorithm 1 in detail, we describe our Machine Learning
+estimator.
+2.2.1
+
+Component-Wise Gradient Boosting
+
+We use Component-Wise Gradient Boosting (CWGB) in Algorithm 1, Step 1, to estimate
+models corresponding to opponent strategies, and, if necessary, the law of motion and payo¤ function for a reference agent i. CWGB is a speci…c variant of boosting methods, which are a popular
+class of Machine Learning methods that accommodate the estimation of both linear and nonlinear models. Boosting methods work by sequentially estimating a series of simple models, deemed
+"base learners," and then forming a "committee" of predictions from these models through weighted
+averaging. See Hastie et al. (2009) for a survey of boosting methods.
+We present the linear variant of CWGB we employ and then brie‡y discuss how this setup can
+be generalized to nonlinear contexts. To facilitate the description of CWGB, we show how it can
+be used to estimate the opponents’ strategy functions, i.e.
+
+j
+
+for j 2
+
+i, which are estimations
+
+employed in Algorithm 1, Step 1. We assume researchers have access to a random sample of previous
+plays of the game for each player j 2
+
+i, i.e. fajlt ; slt gL;T
+l=1;t=1 , where the subscript l = 1; :::; L indexes
+
+individual observations of play attributable to player j. For the purposes of this description, we
+assume the support of ajt is binary, 0, 1, which means that the linear CWGB estimator we employ
+e¤ectively estimates a linear probability model of the probability of choice ajt conditional on the
+dimension-reduced state vector e
+st .11 The estimator works according to the following steps.
+Algorithm 2 CWGB Estimator (Linear)
+
+1. Initialize the iteration 0 model, denoted as
+
+bc=0
+j ,
+
+by setting
+
+bc=0
+j
+
+=
+
+1
+LT
+
+tializing the model with the empirical mean of the outcome variable.12
+
+L X
+T
+X
+
+ajlt , i.e. ini-
+
+l=1 t=1
+
+2. In the …rst step, estimate Ks univariate linear regression models (without intercepts) of the relationship between ajt and each skt as the sole regressor, denoted as bb (s1t ) = b s1t ; :::; bb (sK t ) =
+s1t
+
+b
+
+s
+
+b
+sKs t sKs t where each b (:) is a linear base learner and each skt is a univariate linear regression
+
+parameter.13
+
+11
+
+Section 2.2.2 discusses the case where the support of ajt is not binary.
+We abuse notation slightly here, since in principle, L can vary by time period.
+13
+These linear regression models could also be estimated with an intercept term, which would vary for each of the
+Ks models.
+12
+
+12
+
+3. Choose the model with the best OLS …t, denoted as bbW 1 (sW 1t ) for some W 1 2 f1; :::; Ks g.
+Update the iteration 1 model as bj (Ajt = ajt jsW 1t )c=1 = bc=0
++ bbW 1 (sW 1t ) and use it to
+j
+calculate the iteration 1 …tted residuals.
+
+4. Using the iteration 1 …tted residuals as the new outcome variable, estimate an individual
+univariate linear regression model (without an intercept) for each individual regressor skt
+as in iteration 1. Choose the model with the best OLS …t, denoted as bbW 2 (sW 2t ) for some
+W 2 2 f1; :::; Ks g. Update the iteration 2 model as:
+
+where
+(we set
+
+bj (Ajt = ajt jsW 1t ; sW 2t )c=2 = bj (Ajt = ajt jsW 1t )c=1 + bbW 2 (sW 2t )
+
+is called the "step-length factor," which is often chosen using k-fold cross-validation
+= 0:01). Use bj (Ajt = ajt jsW 1t ; sW 2t )c=2 to calculate iteration 2 residuals.
+
+5. Continue in a similar manner for a …xed number of iterations to obtain the …nal model (we use
+C = 1000 iterations). The number of iterations is often chosen using k-fold cross-validation.
+As a consequence of this estimation process, it is usually the case that some regressors never
+comprise the best …t model in any iteration. If so, then this variable is excluded from the …nal
+model, yielding the dimension-reduced state vector e
+st de…ned in section 2.1.2 and the estimated
+opponent strategy models bj (Ajt = ajt je
+st ) for each ajt 2 Ajt and j 2
+
+i. CWGB estimates are
+
+easily computed using one of several available open-source packages, including H2 O as well as
+
+mboost and gbm in R.14 For the linear variant of CWGB, we use the glmboost function available
+in the mboost package of R. See Hofner et al. (2014) for an introduction to implementing CWGB
+
+in R using the mboost package.
+The total number of iterations C and the step length factor
+
+are tuning parameters for the
+
+algorithm, typically chosen using k-fold cross-validation. Cross-validation is a subset of the out-ofsample testing that is used as the primary criteria for judging the performance of Machine Learning
+models in practice. Out-of-sample testing involves the creation of a training dataset, which is used
+to estimate the models of interest, and a testing dataset (a "holdout" sample), which is used to
+evaluate the performance of these estimators. The separation of training and testing datasets is
+important for evaluating estimators, since in general, adding regressors to a model often reduces
+training sample prediction error but does not necessarily improve out-of-sample prediction error. A
+common criteria for evaluating estimator performance on the testing dataset is the Mean-Squared
+Error (MSE) criteria. Training and testing models is feasible in settings where the number of
+observations is large, since this allows both datasets to have a su¢ cient number of observations to
+14
+H2 O is an open source software developed for implementing Machine Learning methods on particularly
+large datasets and is available from http://0xdata.com/. The documentation for the gbm and mboost packages
+in R, respectively, are available from http://cran.r-project.org/web/packages/gbm/index.html and http://cran.rproject.org/web/packages/mboost/index.html.
+
+13
+
+generate precise estimates. See Hastie et al. (2009) for an introduction to the common practice of
+training and testing in Machine Learning.
+Of C and , the number of iterations (C) has proven to be the most important tuning parameter
+in CWGB models, and the most useful practical criterion for choosing
+(e.g.,
+
+= 0:01 or
+
+is that it should be small
+
+= 0:1, see Hofner et al. (2014) and Schmid and Hothorn (2008)). On the
+
+one hand, choosing a C that is too large may result in over…tting, i.e. low MSE in sample, but
+poor MSE out-of-sample. On the other hand, choosing a C that is too low also results in poor
+out-of-sample performance. As a consequence, C is often chosen by minimizing cross-validation
+error on randomly chosen holdout samples. For example, when performing 10-fold cross validation
+for a given value of C in this context, the researcher randomly chooses 10% of the observations
+to include in a holdout sample. Then Algorithm 2 is run on the remaining 90% of the data, i.e.
+the training sample, to obtain the estimated model, which used to compute the MSE on the 10%
+testing sample. This process is repeated nine additional times using the same value of C, each with
+a di¤erent randomly chosen holdout and training sample, and the total MSE across all 10 folds is
+recorded. A 10-fold cross-validation procedure is carried out for every candidate value of C, and the
+value of C that generates the lowest total MSE is chosen. More generally, K-fold cross-validation
+generates K testing samples. The mboost package provides a simple command for implementing
+K-fold cross-validation automatically.15
+Generalizations of CWGB are achieved primarily through the choice of alternative base learners
+b (:), subsets of regressors included in each base learner model, and loss functions. For example,
+nonlinear versions of gradient boosting might employ regression trees instead of linear b (:), or they
+might use subsets of regressors larger than one as part of the base learning models to accommodate
+interactions among regressors. We direct readers interested in a more comprehensive introduction
+to boosting methods to Hastie et al. (2009) and Hofner et al. (2014).
+2.2.2
+
+Opponent Strategies, Period Return, and the Law of Motion (Step 1)
+
+The …rst step of Algorithm 1 involves estimating opponent strategy functions, and if needed,
+the payo¤ function for agent i and the law of motion. To do so, we make the following assumption.
+Assumption (A3). Researchers have access to iid random samples of the form (i) fajlt ; slt gL;T
+l=1;t=1
+
+for each j 2
+
+i, (ii) f
+
+L;T
+i (slt ; alt ) ; slt ; alt gl=1;t=1 ,
+
+elt gL;T
+and (iii) fe
+slt+1 ; e
+slt ; a
+l=1;t=1 .
+
+We invoke (A3)(i) to estimate a separate strategy function model for each j 2
+
+model denoted as bj (Ajt = ajt je
+st
+
+).16
+
+i, with each
+
+As a prerequisite to estimation, we assume the action space
+
+can be rede…ned in a way that makes it low-dimensional, as described in Section 2.1.3. In our
+15
+
+See Hofner et al. (2014) for details on selecting C using cross-validation.
+If feasible, in some contexts it may be desirable to estimate separate strategy function models for each feasible
+action, i.e. bj (Ajt = ajt je
+st ) for ajt 2 Ajt . We employ this estimation strategy in our entry game application,
+described in Section 3.
+16
+
+14
+
+application described in Section 3, we assume the support of the action is binary 0,1, noting that
+there are more general forms of boosting estimators capable of classi…cation in the case of discrete
+categorical variables with more than two choices.17 For the binary case, we propose estimating a
+linear probability model using CWGB as demonstrated in Algorithm 2. We abuse the notation of
+e
+st , since in practice, the state variables included in e
+st may vary across models.
+
+Often, the payo¤ function for agent i may be known. However, in many settings, it may be
+
+desirable and feasible to estimate these payo¤ functions. Under (A3)(ii), we assume researchers
+have access to a random sample of scalar payo¤s for agent i along with corresponding states and
+actions. We propose estimating the payo¤ function using CWGB and denote this estimate as
+et ), where again, e
+et represent the dimension-reduced state and action vectors selected
+bi (e
+st ; a
+st and a
+
+by CWGB, keeping in mind that the selected state variables may be di¤erent from those selected
+by CWGB to produce the opponent strategy function estimates.
+
+Under some circumstances, such as in the entry game application we study in Section 3, the law
+of motion is deterministic and need not be estimated. In settings where the law of motion must
+be estimated, the outcomes (st+1 ) will be high-dimensional, making the estimation of the law of
+motion infeasible or at least computationally burdensome. We therefore propose estimating only the
+evolution of the state variables collected across all dimension-reduced states selected by the CWGB
+estimation processes for all opponent strategy functions and the payo¤ function. We abuse the
+notation of this state vector by also denoting it as e
+st = (s1t ; :::; sM t ), where M is the total number of
+state variables retained across all CWGB-estimated opponent strategy and payo¤ function models.
+
+This restricts attention only to those state variables selected under the CWGB selection criteria
+for all other estimands of interest, rather than the state variables that comprise the original state
+vector st . If the action vector is also high-dimensional, we use the dimension-reduced action vector
+et selected in the payo¤ function estimation process. Using (A3)(iii) we assume researchers have
+a
+
+access to a random sample of these state and action variables. Estimation of the law of motion using
+the retained state and action variables can proceed ‡exibly and the exact estimator used depends
+on the application and on the nature of the state variables. We propose estimating a separate model
+et )
+for each outcome state variable included in e
+st+1 . These estimated models are denoted as fbk (e
+st ; a
+
+et ) can be estimated using linear regressions,
+for each k = 1; :::; M . If skt+1 is continuous, fbk (e
+st ; a
+et ) + m
+which generates models that takes the form skt+1 = fbk (e
+st ; a
+b t for k = 1; :::; M , where m
+b t is
+
+a residual. If skt+1 is discrete and it’s support is binary 0; 1, then a parametric or semiparametric
+
+et can be used (for
+estimator of the probability of this state transition as a function of e
+st and a
+
+example, a probit model or again, OLS). If skt+1 is discrete and its support is categorical, then an
+
+estimator for categorical variables can be used (for example, the multinomial logit).
+
+17
+This includes, e.g., the recently proposed gradient boosted feature selection algorithm of Zheng et al. (2014). We
+note that the implementation of this algorithm requires large datasets, i.e. those where the number of observations
+is much larger than the number of regressors.
+
+15
+
+2.2.3
+
+Initial Strategy for Agent (Step 2)
+
+The second step involves …xing an initial strategy for the agent, i.e., choosing the potentially
+suboptimal policy function for player i, i.e.
+
+i.
+
+In practice, this policy function can be any
+
+optimal or suboptimal policy, including previously proposed strategy that represents the highest
+payo¤s researchers or game players have been able to …nd in practice. For example, if we were
+studying a game such as multi-player Texas Hold’em, we might start with the counterfactual regret
+minimization strategy recently proposed by Bowling et al. (2015). Regardless of the choice of
+
+i,
+
+Algorithm 1 is designed to weakly improve upon this strategy. However, a particularly suboptimal
+choice for
+2.2.4
+
+i
+
+may slow the convergence of our one-step improvements in subsequent iterations.
+
+Simulating Play (Step 3)
+
+We simulate play for the game using bj (Ajt = ajt je
+st ) for all j 2
+
+payo¤ function, and
+
+i.
+
+i, the law of motion, the
+
+We describe the case where both the law of motion and period return
+
+functions are estimated since it is straightforward to implement what follows when these functions
+are known and deterministic. Our simulation focuses only on the state variables selected across
+all CWGB-estimated models for opponent strategies and the period return function, i.e. e
+st as
+introduced in Section 2.2.2. Denote simulated variables with the superscript . First, we generate
+an initial state e
+s1 . This can be done by either randomly selecting a state from the support of e
+s1
+
+or by restricting attention to particular "focal" states. For example, in an industry game, focal
+states of interest might include the current state of the industry or states likely to arise under
+certain policy proposals. We then generate period t = 1 actions. For competitors, we choose
+actions a
+
+i1
+
+by drawing upon the estimated probability models generated by opponent strategies
+
+bj (Ajt = ajt je
+st ) for each j 2
+
+strategy
+
+i
+
+i. For the agent, we choose actions ai1 by using the …xed agent
+
+generally while randomly permuting a deviation to this action in some simulation runs
+
+or time periods. Given choices for ai1 and a i1 , and also given s1 , we draw upon the estimated
+e1 ) for k = 1; :::; M to generate s2 . We draw sek2 from these models in
+law of motion models fbk (e
+s1 ; a
+two ways, depending upon whether sek2 is discrete or continuous. For discrete state variables, fbk (:)
+is a probability distribution, and we draw upon this probability distribution to choose sek2 . For
+continuous state variables, fbk (:) is a linear regression model. We use this linear regression model to
+generate a prediction for the next period state variable, which represents it’s mean value. We then
+
+draw upon the empirical distribution of estimated residuals generated by our original sample (see
+e )+m
+Section 2.2.2) to select a residual to add to the model prediction. This gives se = fbk (e
+s ;a
+b .
+k2
+
+t
+
+t
+
+t
+
+and e
+st+1 for t = 2; :::; T similarly by randomly deviating from i , and
+also by drawing upon bj (:) and fb(:), respectively. This simulation sequence produces data used
+We choose each ait , a
+
+it ,
+
+to estimate the choice-speci…c value of a one-period deviation from
+
+compute payo¤s and generate the simulated sums for each t = 1; :::; T :
+16
+
+i.
+
+In all time periods, we
+
+Vi (e
+slt ; ailt ;
+
+i)
+
+=
+
+T
+X
+
+( )
+
+=t
+
+t
+
+sl
+i (e
+
+el )
+;a
+
+(3)
+
+The simulated sums represent the discounted payo¤s of choice ailt , given that the agent plays
+i,
+
+each opponent j 2
+
+i plays according to bj (:), and the law of motion evolves as dictated by
+
+fbk (:) for k = 1; :::; M . These simulated sums provide us with outcome variables for estimation of
+
+the choice-speci…c value functions in Step 4.
+
+The low-dimensionality of each e
+st greatly reduces the simulation burden in two ways. First, the
+
+simulation only needs to reach points in the support of each e
+st , rather than all points in the full
+
+support of st , which is computationally infeasible. Second, reducing the number of regressors may
+lead to more reliable estimates of bj (:), and fbk (:) due to a variety of potential statistical issues
+encountered in settings where the number of regressors is large. When the number of regressors is
+large, researchers often …nd in practice that many of these regressors are highly multicollinear, and
+in the context of collinear regressors, out-of-sample prediction is often maximized using a relatively
+small number of regressors. A large number of regressors may also cause identi…cation issues using
+conventional models. Good estimates of these models lead to better predictions, which in turn allow
+the simulation to reliably search across the space of state variables that are strategically likely to
+arise when forming data for the choice-speci…c value function estimates. This in turn generates
+more reliable estimates of the choice-speci…c value functions, which leads to better improvements
+in Step 5.
+The simulation process provides us with a sample of simulated data of the form:
+fVi (e
+slt ; ailt ;
+
+slt ; ailt gL;T
+i) ; e
+l=1;t=1
+
+for player i. We use this simulated data to estimate the choice-speci…c value function for agent
+i in the next step.
+2.2.5
+
+Estimating Choice-Speci…c Value Function (Step 4)
+
+If there is smoothness in the value function, this allows us to pool information from across
+our simulations in Step 3 to reduce variance in our estimator. Note that the simulated choice
+speci…c value function will be equal to the choice speci…c value function plus a random error due to
+simulation. If we have an unbiased estimator, adding error to the dependent variable of a regression
+does not result in a biased estimator.
+We propose pooling the simulated data fVi (e
+slt ; ailt ;
+
+slt ; ailt gL;T
+i) ; e
+l=1;t=1
+
+over time and estimating
+
+separate choice-speci…c value functions for each action ait 2 Ait using linear regressions (with
+intercepts), where each Vi (e
+slt ; ailt ; i ) is the outcome variable and e
+slt are the regressors. We denote
+b
+each estimated model as Vi (e
+st ; ait ; i ).
+17
+
+2.2.6
+
+One-Step Improvement Policy (Step 5)
+
+We generate a one-step improvement policy for player i, denoted as b1i , which represents policy
+
+function which maximizes the estimated choice-speci…c value function in the corresponding period
+t conditional on
+
+i,
+
+i.e. we seek the policy function vector b1i 18 such that, for all t = 1; :::; T
+
+b1i
+
+(
+
+i
+
+: Set ! Ait
+
+i
+
+n
+st ; ait ;
+= arg maxait 2Ait Vbi (e
+for all e
+st 2 St
+
+i)
+
+1:
+
+o )
+
+(4)
+
+Each b1i is "greedy" in that it searches only for the action choices that maximize the estimated
+
+choice-speci…c value function in the current period conditional on the agent’s …xed strategy
+rather than the actions that maximize the value of choices across all time periods. Once
+obtained, this strategy vector can be used to generate
+
+i
+
+b1i
+
+i,
+
+is
+
+in the following iteration, repeating
+
+Algorithm 1 again to obtain a second-step improvement b2i , and so forth until a suitable stopping
+rule is met.
+
+3
+
+Empirical Illustrations
+
+3.1
+
+Application In Progress (Texas Hold’Em)
+In an application in progress, we apply our algorithm to the popular poker game Texas Hold’em,
+
+which is a game of imperfect information with a state space cardinality of 3:16
+
+1017 . Bowling
+
+et al. (2015) developed an iterative counterfactual regret minimization (CFR) algorithm, which is
+the best performing strategy developed for Texas Hold’em to date. We use the CFR strategy as
+an input to our method, inserting it as the initial …xed strategy for our reference agent and also as
+the strategy for opponents. Using these inputs, we attempt to derive a policy that improves-upon
+the CFR strategy.
+
+3.2
+
+Chain Store Entry Game Institutional Background and Data
+According to the U.S. Census, U.S. retail sales in 2012 totaled $4.87 trillion, representing 30
+
+percent of nominal U.S. GDP. The largest retailer, Wal-Mart, dominates retail trade, with sales
+accounting for 7 percent of the U.S. total in 2012.19 Wal-Mart is not only the largest global retailer,
+it is also the largest company by total revenues of any kind in the world.20 Notwithstanding their
+importance in the global economy, there has been a relative scarcity of papers in the literature
+As with the other policy functions, we abuse notation by suppressing the dependence of b1i on the corresponding
+states.
+19
+Total U.S. retail sales collected from the Annual Retail Trade Survey (1992-2012), available:
+http://www.census.gov/retail/. Wal-Mart share of retail sales collected from the National Retail Federation, Top 100
+Retailers (2013), available: https://nrf.com/resources/top-retailers-list/top-100-retailers-2013.
+20
+Fortune Global 500 list (2014), available: http://fortune.com/global500/.
+18
+
+18
+
+studying chain store retailers in a way that explicitly models the multi-store dimension of chain
+store networks, primarily due to modeling di¢ culties.21
+Wal-Mart, along with other large chain store retailers such as Target, Costco or Kmart, operate
+large networks of physical store and distribution center locations around the world and compete
+in several product lines, including general merchandise and groceries, and via several store types,
+including regular stores, supercenters, and discount warehouse club stores. For example, by the end
+of 2014, Wal-Mart had 42 distribution centers and 4203 stores in the U.S., with each distribution
+center supporting from 90 to 100 stores within a 200-mile radius.22
+In our illustration, we model a game similar to the one considered by Holmes (2011), who
+studies the physical store location decisions of Wal-Mart. Our game consists of two competing
+chain store retailers which seek to open a network of stores and distribution centers from the
+years t = 2000; :::; 2006 across a …nite set of possible physical locations in the United States.23
+One location corresponds to a metropolitan statistical area (MSA) as de…ned by the U.S. Census
+Bureau and is indexed by l = 1; :::; L with support L and L = 227 possible locations.24 We
+
+extend the game in Holmes (2011) by modeling the decision of where to locate distribution centers
+as well as stores. Each …rm sells both food and general merchandise and can open two types
+
+of distribution centers–food and general merchandise–and two types of stores–supercenters and
+regular stores. Supercenters sell both food and general merchandise and are supplied by both types
+of distribution centers, while regular stores sell only general merchandise and are supplied only by
+general merchandise distribution centers.25
+At a given time period t, each …rm i will have stores and distribution centers in a subset of
+locations, observes the facility network of the competitor as well as the current population of each
+MSA, and decides in which locations to open new distribution centers and stores in period t + 1.
+We collect MSA population and population density data from the US Census Bureau.26 As in
+Holmes (2011), we focus on location decisions and abstract away from the decision of how many
+21
+
+For recent exceptions, see Aguirregabiria and Vicentini (2014), Holmes (2011), Jia (2008), Ellickson, Houghton,
+and Timmins (2013), and Nishida (2014).
+22
+The total number of stores …gure excludes Wal-Mart’s 632 Sam’s Club discount warehouse club stores.
+23
+Throughout the paper, we use the notation t = 2000; :::; 2006 and t = 1; :::; T with T = 7 interchangeably.
+24
+Census Bureau, County Business Patterns, Metropolitan Statistical Areas, 1998 to 2012. Available at:
+http://www.census.gov/econ/cbp/. All raw data used in this paper, which includes a list of MSA’s used, is available
+from: http://abv8.me/4bL.
+25
+Additionally, each …rm operates import distribution centers located around the country, where each import
+distribution center supplies both food and general merchandise distribution centers. We abstract away from decisions
+regarding import distribution center placement, …xing and making identical the number and location of import
+distribution centers for both …rms. Speci…cally, we place import distribution centers for each competitor in the
+locations in our sample closest to the actual import distribution center locations of Wal-Mart during the same time
+period. See the Appendix for details.
+26
+Our population density measure is constructed using MSA population divided by MSA land area by square miles
+in 2010, both collected from the U.S. Census Bureau. Population data by MSA was obtained from the Metropolitan
+Population Statistics, available: http://www.census.gov/population/metro/data/index.html. Land area in square
+miles by MSA in 2010 was obtained from the Patterns of Metropolitan and Micropolitan Population Change: 2000
+to 2010, available: http://www.census.gov/population/metro/data/pop_data.html.
+
+19
+
+facilities to open in each period. Instead, we constrain each competitor to open the same number
+of distribution centers of each category actually opened by Wal-Mart annually in the United States
+from 2000 to 2006, with the exact locations and opening dates collected from data made publicly
+available by an operational logistics consulting …rm.27 We also constrain each competitor to open
+two supercenters for each newly opened food distribution center and two regular stores for each
+newly opened general merchandise distribution center.28 Finally, we use the distribution center
+data to endow our competitor with a location strategy meant to approximate Wal-Mart’s actual
+expansion patterns as documented by Holmes (2011), which involved opening a store in a relatively
+central location in the U.S., opening additional stores in a pattern that radiated from this central
+location out, and never placing a store in a far-o¤ location and …lling the gap in between. This
+pattern is illustrated in Figure 1.29
+
+3.3
+
+Chain Store Entry Game Model
+In this section, we adapt our theoretical game model developed in Section 2.1 to the chain
+
+store entry game characterized in Section 3.2.
+State. Our state vector is comprised of indicator variables over facility placement decisions
+by …rm i and …rm
+
+i across all locations, as well as a location-speci…c characteristic (population),
+
+resulting in Ks = 8L + 1 = 1817 variables. For example, the …rst L indicator variables take a value
+of 1 if …rm i has placed a general merchandise distribution center in location l, 0 otherwise. The
+next L indicators work similarly with respect to …rm i food distribution centers, and so forth for …rm
+i regular stores and supercenters. Similarly, the …nal 4L indicators represent facility placements by
+…rm
+
+i. Finally, we include a discrete variable representing the population for a given location l.
+
+Actions. As introduced in Section 3.2, we force each competitor to open a pre-speci…ed aggregate number of distribution centers and stores in each period.30 The set of feasible locations is
+constrained by the period t state, since for a given facility type q, …rm i can open at most one
+facility per location.31 Further, we restrict …rms to open at most one own store of any kind in each
+MSA, with …rms each choosing regular stores prior to supercenters in period t. Given these constraints and also given the designated number of aggregate facility openings in each period, at time
+27
+This included thirty food distribution centers and …fteen general merchandise distribution centers. WalMart distribution center locations with opening dates were obtained from MWPVL International, available:
+http://www.mwpvl.com/html/walmart.html. We also provide a list in the Appendix.
+28
+This results in a total of sixty supercenters and thirty regular stores opened over the course of the game by each
+…rm.
+29
+Data prepared by Holmes (2011), available: http://www.econ.umn.edu/~holmes/data/WalMart/.
+30
+We force …rms to open the following number of facilities in each period (food distribution centers, general
+merchandise distribution centers, regular stores, and supercenters): (4; 4; 8; 8) in t = 2000, (5; 2; 4; 10) in t = 2001,
+(6; 1; 2; 12) in t = 2002, (2; 3; 6; 4) in t = 2003, (3; 3; 6; 6) in t = 2004, and (3; 1; 2; 6) in t = 2005. Note that these
+vectors each represent facility openings for the next period, e.g. (4; 4; 8; 8) in t = 2000 designates the number of
+openings to be realized in t = 2001.
+31
+See the Appendix for details.
+
+20
+
+t, …rm i chooses a vector of feasible actions (locations) ait with Ka = 4L = 908. This action vector
+is comprised of indicator variables over facility placement choices by …rm i across all locations.
+For example, the …rst L indicator variables take a value of 1 if …rm i chooses to place a general
+merchandise distribution center in location l at time t + 1, 0 otherwise. Similarly, the remaining 3L
+indicator variables represent placement decisions for food distribution centers, regular stores, and
+supercenters, respectively. We assume that once opened, distribution centers and stores are never
+closed. As documented by Holmes (2011), Wal-Mart rarely closes stores and distribution centers
+once opened, making this assumption a reasonable approximation for large chain store retailers.32
+Law of Motion.
+
+Since we assume the state is comprised of only the current network of
+
+facilities and populations, rather than their entire history, this game is Markov. Since we assume
+that all players have perfect foresight with respect to MSA-level population, the law of motion is a
+deterministic mapping from the current state and the current actions taken by players i and
+
+i to
+
+the state in period t + 1.
+Strategies. The policy function for each agent maps the current state to location choices in
+the following period. The probabilities induced by the strategy of opponent
+
+i are also de…ned as
+
+before, since our agent i does not observe the period t location choices of opponent player
+time period t +
+
+i until
+
+1.33
+
+Period Return. The period t payo¤s for …rm i represents operating pro…ts for location l.
+In this game, operating pro…ts are parametric and deterministic functions of the current locationspeci…c state and are similar to the operating pro…ts speci…ed by Holmes (2011). Since customers
+substitute demand among nearby stores, operating pro…ts in a given location are a function of both
+own and competitor facility presence in nearby locations. They are also a function of locationspeci…c variable costs, distribution costs, population, and population density. For simplicity of
+exposition, we ignore the separate contribution of population density in the period return when
+de…ning the state and instead use population as the lone non-indicator location-speci…c characteristic of interest. The Appendix provides the details of our pro…t speci…cation.
+Choice-Speci…c Value Function. The choice-speci…c value function for agent i in this game is
+a "local" facility and choice-speci…c value function, which is de…ned as the period t location-speci…c
+discounted expected operating pro…ts of opening facility q 2 ff; g; r; scg in location l for …rm i,
+
+where f represents food distribution centers, g represents general merchandise distribution centers,
+32
+
+Also see MWPVL International’s list of WalMart distribution center openings and closing for additional support
+for this assertion, available from: http://www.mwpvl.com/html/walmart.html.
+33
+Since in our illustration our state is "location-speci…c" in that it includes only the population of a particular
+location l (rather than the vector of populations across all locations), we ignore the e¤ect of populations across
+locations on opponent strategies. Although this is likely a misspeci…cation, we de…ne the state in this way to take
+advantage of cross-sectional di¤erences in location populations when estimating the choice-speci…c value function,
+rather than relying only on across-time variation. We show in our Results section that our state is well-approximated
+by our speci…cation. In practice, researchers with access to large datasets might include the entire vector of populations
+or other location-speci…c characteristics in the state.
+
+21
+
+r represents regular stores, and sc represents supercenters. We denote this facility-speci…c choicespeci…c value function as Vi st ; aqilt ;
+
+i
+
+, where aqilt replaces the action vector ait and represents the
+
+decision by …rm i of whether to locate facility q in location l, 0 otherwise. We focus on facility and
+location-speci…c value functions in order to take advantage of cross-sectional di¤erences in value
+when estimating the choice-speci…c value function in the next section. The choice-speci…c value
+function is also conditional on a set of pro…t parameters, which is a dependence we suppress to
+simplify the notation. Details regarding all parameters are presented in the Appendix.34
+
+3.4
+
+Chain Store Entry Game Policy Function Improvement
+We adapt our algorithm to derive a one-step improvement policy over a benchmark strategy
+
+in our chain store entry game.
+Opponent Strategies and the Law of Motion (Step 1). In our illustration, we do not
+estimate models corresponding to opponent strategies. Instead, we force the competitor to open
+distribution centers in the exact locations and at the exact times chosen by Wal-Mart from 2000
+to 2006, placing stores in the MSA’s closest to these distribution centers. Speci…cally, for b
+
+i
+
+for
+
+all simulations, we force our competitor to place food and general merchandise distribution centers
+in the MSA’s in our sample closest to the exact locations of newly opened Wal-Mart distribution
+centers of each kind during the years 2000 to 2006, as detailed in Tables 4 and 5. We then open
+regular stores in the two closest feasible MSA’s to each newly opened …rm i general merchandise
+distribution center. After making this decision, we determine the closest …rm i general merchandise
+distribution center to each newly opened …rm i food distribution center and open supercenters in the
+two feasible MSA’s closest to the centroid of each of these distribution center pairs. Additionally,
+we do not estimate a law of motion, since it is deterministic in our example. We also do not estimate
+34
+
+There are two primary di¤erences between the model developed in Section 2.1 and the model implied by our chain
+store game. The …rst di¤erence is the timing of actions. In the chain store application, in period t, agents decide
+on store locations in period t + 1. This makes the time t period return deterministic, since all player actions have
+already been realized. The second di¤erence is that the law of motion is deterministic, since the state is comprised of
+indicators over location choices, and period t actions deterministically determine period t + 1 location choices. Also,
+we assume perfect foresight by all competitors on the population variable, which represents the only variable in the
+state vector that is not a location indicator. As in Section 2.2, we assume that it = 0 for t = 1; :::; T for our reference
+agent. As a result, the choice-speci…c value function for the value of placing facility q in location l in our chain store
+entry game for the reference agent i takes the form:
+Vi (st ; aqilt ;
+
+i)
+
+=
+
+i
+
+(st ) + ESt+1 [Vi (st+1 ;
+
+i )jst ; ait
+
+(aqilt )]
+
+(5)
+
+where,
+ESt+1 [Vi (st+1 ;
+
+i )jst ; ait
+
+(aqilt )] =
+
+X
+
+Vi (st+1 (st ; ait (aqilt ) ; a
+
+a tt 2A it
+
+it ) ;
+
+i)
+
+i
+
+(a
+
+it jst )
+
+where the randomness in St+1 is due only to the randomness in the opponent’s strategy
+i (a it jst ), the notation
+ait (aqilt ) indicates that facility choices by agent i across all locations at time t are conditional on the facility and
+location-speci…c choice aqilt , and the notation st+1 (st ; ait (aqilt ) ; a it ) indicates that st+1 is conditional on st , ait (aqilt ),
+and a it .
+
+22
+
+the payo¤ function for agent i, since we assume that it is known.
+Initial Strategy for Agent (Step 2). In our illustration, for the …rst-step policy improvement, we choose distribution center locations randomly over all remaining MSA’s not currently
+occupied by an own-…rm general merchandise or food distribution center, respectively (the number chosen per period is constrained as previously described). We then open regular stores and
+supercenters in the closest feasible MSA’s to these distribution centers exactly as described for the
+competitor. For second-step policy improvements and beyond, we use the previous step’s improvement strategy as the …xed agent strategy.
+Simulating Play (Step 3). We simulate play for the game using the opponent’s strategy
+as described in Step 1, the law of motion, and
+
+i.
+
+We generate an initial state s1 by 1) for the
+
+agent, randomly placing distribution centers around the country and placing stores in the MSA’s
+closest to these distribution centers, and 2) for the competitor, placing distribution centers in the
+exact locations chosen by Wal-Mart in the year 2000 and placing stores in the MSA’s closest to
+these distribution centers. This results in seven food distribution centers, one general merchandise
+distribution center, two regular stores, and fourteen supercenters allocated in the initial state
+(t = 2000). In all speci…cations, store placement proceeds as follows. We open regular stores in the
+two closest feasible MSA’s to each newly opened …rm i general merchandise distribution center.
+After making this decision, we determine the closest …rm i general merchandise distribution center
+to each newly opened …rm i food distribution center and open supercenters in the two feasible
+MSA’s closest to the centroid of each of these distribution center pairs. We then generate period
+t = 1 actions. For the competitor, we choose locations a
+
+i1
+
+according to the opponent strategy
+
+from Step 1. For the agent, we choose a subset of facility locations using the …xed agent strategy
+i,
+
+and the remaining facilities randomly, i.e. by choosing aqil1 = 1 or aqil1 = 0 for each facility
+
+q 2 ff; g; r; scg and each location l = 1; :::; L by drawing from a uniform random variable. For
+
+example, in t = 2000, of the 8 supercenters agent i must choose to enter in t = 2001, we choose 6
+using
+
+i
+
+and 2 randomly (i.e., we place supercenters in the two feasible locations with the highest
+
+random draws). These choices specify the state in period t = 2, i.e. s2 . We choose each aqilt and
+a
+
+it
+
+for t = 2; :::; T
+
+1 similarly using
+
+i,
+
+a subset of random location draws, and the opponent
+
+strategy. For each location l and period t = 1; :::; T
+by each choice
+
+aqilt
+
+1, we calculate the expected pro…ts generated
+
+2 f0; 1g, i.e. the simulated sums presented in de…nition 3, substituting aqilt for
+
+ailt . This provides us with a sample of simulated data of the form Vi slt ; aqilt ;
+
+i
+
+; slt ; aqilt
+
+L;T
+l=1;t=1
+
+for …rm i and each simulation run.
+Estimating Choice-Speci…c Value Function (Step 4). We focus on eight estimands,
+Vi st ; aqilt ;
+
+i
+
+for each q 2 ff; g; r; scg and choice aqilt 2 f0; 1g.
+
+De…ning the state as "location-
+
+speci…c" through the location-speci…c population variable allows us to exploit di¤erences in value
+across locations when estimating the choice-speci…c value functions. This simpli…cation is not
+
+23
+
+necessary for implementing Algorithm 1 but greatly reduces the simulation burden, since each
+individual simulation e¤ectively provides 227 sample observations rather than 1. We employ CWGB
+q
+Algorithm 2, with outcomes Vi slt ; ailt
+;
+
+i
+
+and regressors slt , and we pool observations across
+
+simulation runs, locations, and time. This estimation process produces eight models, denoted as
+Vbi e
+st ; aqilt ; i for q 2 ff; g; r; scg and aqilt 2 f0; 1g, where we abuse notation by not acknowledging
+the potential di¤erences in the dimension-reduced vectors e
+st across models, which need not include
+
+the same state variables.35
+
+One-Step Improvement Policy (Step 5). To derive each b1i , we …rst compute the di¤erence
+
+in the CWGB estimated local choice and facility-speci…c value functions between placing a facility
+st ; aqilt = 0; i , for each facility type q 2
+Vbi e
+st ; aqilt = 1; i
+q in location l versus not, i.e. Vbi e
+
+ff; g; r; scg and location l = 1; :::; L. Then, for each q, we rank these di¤erences over all locations
+and choose the highest ranking locations to place the pre-speci…ed number of new facilities allowed
+in each period. This algorithm for choosing facility locations over all time periods represents our
+
+one-step policy improvement policy b1i .36 A second-step policy improvement is obtained by using
+b1i to generate
+
+3.5
+
+i,
+
+and repeating the steps of Algorithm 1.37
+
+Chain Store Entry Game Results
+
+The models resulting from using the CWGB procedure are presented in Table 1. Table 1 lists
+both the …nal coe¢ cients associated with selected state variables in each model, as well as the proportion of CWGB iterations for which univariate models of these state variables resulted in the best
+…t (i.e. the selection frequency). For example, during the CWGB estimation process which generated the model for general merchandise distribution centers and ag = 1, i.e. Vbi e
+st ; ag = 1; i ,
+ilt
+
+ilt
+
+univariate models of the population variable were selected in 53 percent of the iterations.
+
+This table reveals three salient features of these models. The …rst is that the CWGB procedure
+
+drastically reduces the number of state variables for each model, from 1817 to an average of 7
+variables. For example, one of the most parsimonious models estimated is that for regular stores
+with arilt = 1, i.e. Vbi (e
+st ; arilt = 1; i ), which consists of a constant, the population covariate, and
+indicators for own regular store entry in …ve markets: Allentown, PA, Hartford, CT, Kansas City,
+
+MO, San Francisco, CA, and Augusta, GA. This reduces the average state space cardinality per
+35
+
+In our chain store entry game application, we estimate the choice-speci…c value function using CWGB rather than
+OLS, where OLS is proposed in Section 2.2. This is necessary because our state vector remains high-dimensional in
+the chain store game, since we do not estimate opponent policy functions, our agent’s payo¤ function is known, and
+since the law of motion is deterministic. In settings where the policy functions of opponents and (if necessary) the
+agent’s payo¤ function are estimated using CWGB, the CWGB estimator typically reduces the dimension of the state
+vector su¢ ciently, making further model selection unnecessary when estimating the choice-speci…c value function.
+36
+We note that by choosing b1i in this way, we do not choose a true greedy maximum action vector ait in each period
+t, since focusing on location and facility-speci…c choice-speci…c value functions e¤ectively assumes that facilities in all
+other locations are chosen according to i . Nonetheless, we show in the next Section that b1i generates a substantial
+improvement in our illustration.
+37
+Our code for implementing the chain store application is available at: http://abv8.me/4g8.
+
+24
+
+time period from more than 1085 (not including population) to 32 (25 ) multiplied by the cardinality
+of the population variable.
+The second and related feature is that all models draw from a relatively small subset of the
+original 1816 own and competitor facility presence indicators. It is also interesting to observe
+which MSA indicators comprise this subset, which is made up primarily of indicators associated
+with medium-sized MSA’s in our sample scattered across the country. What explains this pattern
+is that in the simulated data used for estimation, even across many simulations, only a subset of
+MSA’s are occupied by …rm facilities. Among those occupied, occasionally, the agent experiences
+either heavy gains or heavy losses, which are compounded over time, since we do not allow …rms
+to close facilities once they are opened. These particularly successful or painful facility placements
+tend to produce univariate models that explain levels of the choice-speci…c value function well,
+which results in their selection by the CWGB procedure, typically across several models. For
+example, a series of particularly heavy losses were sustained by the agent as a result of placing a
+regular store in Augusta, GA, which induced the CWGB procedure to choose this indicator at a
+high frequency–25 percent, 15 percent, and 18 percent of iterations–across three di¤erent models,
+with each model associating this indicator with a large negative coe¢ cient. As a result, our one-step
+improvement policy b1i tended to avoid placing distribution centers and stores in this location.
+
+The third salient feature apparent from Table 1 is that population is the state variable selected
+
+most consistently. Across all CWGB models, population is selected with a frequency of roughly
+53 percent in each model, while facility presence indicator variables are selected at much smaller
+rates.38
+For a variety of parameter speci…cations, Table 2 compares per-store revenues, operating income, margins, and costs, averaged over all time periods and simulations, for three strategies: 1) the
+one-step improvement policy for the agent, 2) a random choice agent strategy, where distribution
+centers and stores are chosen as speci…ed for
+
+i
+
+(in all time periods t; :::; T
+
+1), and 3) the com-
+
+petitor’s strategy (benchmark). The three parameter speci…cations correspond to three scenarios:
+a baseline speci…cation, a high penalty for urban locations, and high distribution costs.39 As shown
+in this table when comparing revenues, in the baseline scenario, the one-step improvement policy
+outperforms the random choice strategy by 354 percent. Similarly, it outperforms the competitor’s strategy by 293 percent. In the high urban penalty and high distribution cost speci…cations,
+the one-step improvement policy outperforms the random choice strategy by 355 percent and 350
+38
+
+For comparison, in the Appendix (Table 8), we estimate OLS models of the choice-speci…c value functions of
+interest by using only the state variables selected by the corresponding boosted regression model from Table 1.
+Overall, the post selection OLS models have similar coe¢ cients to the boosted regression models.
+39
+The parameter values in the baseline speci…cation were chosen to calibrate competitor per-store returns to those
+actually received by Wal-Mart in the U.S. during the same time period. The high urban penalty and high distribution
+cost speci…cations were chosen to explore the sensitivity of the relative returns generated by our one-step improvement
+policy to these parameters.
+
+25
+
+percent, respectively, and the competitor strategy by 293 percent and 294 percent, respectively.
+The relative returns of the one-step improvement policies seem fairly invariant to the parameter
+speci…cations, which is understandable since each is constructed using a choice-speci…c value function estimated under each respective parameter speci…cation. The one-step improvement policies
+appear to adjust the agent’s behavior accordingly in response to these parameter changes.
+Table 3 provides a comparison of per-store revenues, operating income, margins, and costs by
+revenue type and strategy, averaged over all time periods and simulations in the baseline scenario,
+and compares these to Wal-Mart’s revenue and operating income …gures for 2005. The competitor’s
+strategy generates average operating income per store (of both types) of $4:40 million, which is
+similar to that actually generated by Wal-Mart in 2005 of $4:49 million, and larger than the of
+the random choice strategy, which generates $3:26 million. The one-step improvement policy does
+much better, with an operating income per store of over $18 million, corresponding to revenues
+per store of $244 million, versus $62 million for the competitor and $54 million for the random
+choice strategy. Moreover, the one-step improvement policy achieves a slightly higher operating
+margin than the other two strategies: 7:55 percent versus 7:09 percent for the competitor and 6:07
+percent for the random choice strategy. One reason for the success of the improvement strategy
+appears to be that it targets higher population areas than the other strategies, which generates
+higher revenues in our simulation. Speci…cally, it targets MSA’s with an average population of
+2:39 million versus 0:84 million for the random choice strategy and 1:01 million for the competitor.
+That the average population of competitor locations is relatively small is understandable, since
+the competitor progresses as Wal-Mart did, placing distribution centers and stores primarily in the
+Midwest and radiating out towards the east coast, while the improvement strategy searches for
+value-improving locations for distribution centers and stores in a less restricted manner across the
+country.
+These facility placement pattern di¤erences are visually detectable in Figure 2, which shows
+distribution center and store location patterns for the agent and the competitor in a representative
+simulation, with the agent using the one-step improvement policy. As shown in these …gures, the
+agent scatters distribution centers and stores across the population dense MSA’s in the United
+States, while the competitor has a concentration of distribution centers and stores primarily in the
+Midwest and east coast. By the end of 2006, the agent has a strong presence on the West coast
+with eight facilities in California, while the competitor only opens four facilities in this region.
+Although visually these pattern di¤erences seem subtle, they generate large di¤erences in revenues
+and operating income, as highlighted by Table 3.
+Finally, we generate additional policy improvements after the …rst one-step policy improvement
+by randomly deviating from each one-step policy improvement and otherwise repeating the steps
+of Algorithm 1. As shown in Figure 3, the …rst one-step policy improvement generates almost all
+
+26
+
+gains in payo¤s, and all subsequent policy improvements generate returns very close to the …rst
+one-step policy improvement. For example, using the baseline speci…cation, while the …rst one-step
+policy improvement generates total revenues per store for the agent of $244:44 million, up from
+the total revenues per store generated by the random choice strategy of $53:61 million, the second
+through …fth-step policy improvements generate total revenues per store of between $244:43 and
+$244:60 million. Similarly, while the …rst one-step policy improvement generates operating income
+per store of $11:55 million, up from the operating income per store generated by the random choice
+strategy of $1:94 million, the second through …fth-step policy improvements generate operating
+income per store of between $11:23 million and $11:55 million.
+
+4
+
+Conclusion
+This paper develops a method for deriving policy function improvements for a single agent in
+
+high-dimensional Markov dynamic optimization problems and in particular dynamic games. The
+approach has two attributes that make it useful for deriving policies in realistic game settings.
+The …rst is that we impose no equilibrium restrictions on opponent behavior and instead estimate
+opponent strategies directly from data on past game play. This allows us to accommodate a richer
+set of opponent strategies than equilibrium assumptions would imply. A second is that we use a
+Machine Learning method to estimate opponent strategies and, if needed, the payo¤ function for
+a reference agent and the law of motion. This method makes estimation of the agent’s choicespeci…c value function feasible in high-dimensional settings, since as a consequence of estimation,
+the estimator reduces the dimension of the state space in a data-driven manner. Data-driven
+dimension-reduction proceeds by choosing the state variables that minimize the loss associated
+with predicting the outcomes of interest according to a …xed metric, making the estimates lowdimensional approximations of the original functions. In our illustration, we show that our functions
+of interest are well-approximated by these low-dimensional representations, suggesting that datadriven dimension-reduction might serve as a helpful tool for economists seeking to make their
+models less computationally wasteful.
+We use the method to derive policy function improvements for a single retailer in a dynamic
+spatial competition game among two chain store retailers similar to the one considered by Holmes
+(2011). This game involves location choices for stores and distribution centers over a …nite number
+of time periods. This game becomes high-dimensional primarily because location choices involve
+complementarities across locations. For example, clustering own stores closer together can lower
+distribution costs but also can cannibalize own store revenues, since consumers substitute demand
+between nearby stores. For the same reason, nearby competitor stores lower revenues for a given
+store. Since we characterize the state as a vector enumerating the current network of stores and
+distribution centers for both competitors, the cardinality of the state becomes extremely large (on
+27
+
+the order of > 1085 per time period), even given a relatively small number of possible locations
+(227). We derive an improvement policy and show that this policy generates a nearly 300 percent
+improvement over a strategy designed to approximate Wal-Mart’s actual facility placement during
+the same time period (2000 to 2006).
+
+References
+[1] Abramson, Bruce (1990), "Expected-Outcome: A General Model of Static Evaluation," IEEE
+Transactions on Pattern Analysis and Machine Intelligence 12(2), 182-193.
+[2] Aguirregabiria, Victor and Gustavo Vicentini (2014), “Dynamic Spatial Competition Between
+Multi-Store Firms,” Working Paper, February.
+[3] Bajari, Patrick, Ying Jiang, and Carlos A. Manzanares (2015),“Improving Policy Functions in
+High-Dimensional Dynamic Games: An Entry Game Example,” Working Paper, March.
+[4] Bajari, Patrick, Han Hong, and Denis Nekipelov (2013), “Game Theory and Econometrics:
+A Survey of Some Recent Research,” Advances in Economics and Econometrics, 10th World
+Congress, Vol. 3, Econometrics, 3-52.
+[5] Belloni, Alexandre, Victor Chernozhukov, and Christian Hansen (2010), “Inference Methods
+for High-Dimensional Sparse Econometric Models,” Advances in Economics & Econometrics,
+ES World Congress 2010, ArXiv 2011.
+[6] Bertsekas, Dimitri P. (2012). Dynamic Programming and Optimal Control, Vol. 2, 4th ed.
+Nashua, NH: Athena Scienti…c.
+[7] — — –(2013), "Rollout Algorithms for Discrete Optimization: A Survey," In Pardalos, Panos
+M., Ding-Zhu Du, and Ronald L. Graham, eds., Handbook of Combinatorial Optimization, 2nd
+ed., Vol. 21, New York: Springer, 2989-3013.
+[8] Boros, Endre, Vladimir Gurvich, and Emre Yamangil (2013), “Chess-Like Games May Have
+No Uniform Nash Equilibria Even in Mixed Strategies,” Game Theory 2013, 1-10.
+[9] Bowling, Michael, Neil Burch, Michael Johanson, and Oskari Tammelin (2015), “Heads-Up
+Limit Hold’em Poker is Solved,” Science 347(6218), 145-149.
+[10] Breiman, Leo (1998), “Arcing Classi…ers (with discussion),” The Annals of Statistics 26(3),
+801-849.
+[11] — — – (1999), “Prediction Games and Arcing Algorithms,” Neural Competition 11(7), 14931517.
+28
+
+[12] Bulow, Jeremy, Jonathan Levin, and Paul Milgrom (2009), “Winning Play in Spectrum Auctions,” Working Paper, February.
+[13] Chinchalkar, Shirish S. (1996), “An Upper Bound for the Number of Reachable Positions”,
+ICCA Journal 19(3), 181–183.
+[14] Ellickson, Paul B., Stephanie Houghton, and Christopher Timmins (2013), “Estimating network economies in retail chains: a revealed preference approach,” The RAND Journal of
+Economics 44(2), 169-193.
+[15] Friedman, Jerome H. (2001), “Greedy Function Approximation: A Gradient Boosting Machine,” The Annals of Statistics 29(5), 1189-1232.
+[16] Friedman, Jerome H., Trevor Hastie, and Robert Tibshirani (2000), “Additive Logistic Regression: A Statistical View of Boosting,” The Annals of Statistics 28(2), 337-407.
+[17] Hansen, Bruce, (2015), "The Risk of James-Stein and Lasso Shrinkage," Econometric Reviews,
+forthcoming.
+[18] Hastie, Trevor, Robert Tibshirani, and Jerome H. Friedman (2009). The Elements of Statistical
+Learning (2nd ed.), New York: Springer Inc.
+[19] Hofner, Benjamin, Andreas Mayr, Nikolay Robinzonov, and Matthias Schmid (2014), “Modelbased Boosting in R,” Computational Statistics 29(1-2), 3-35.
+[20] Holmes, Thomas J. (2011), “The Di¤usion of Wal-Mart and Economies of Density,” Econometrica 79(1), 253-302.
+[21] Jia, Panle (2008), “What Happens When Wal-Mart Comes to Town: An Empirical Analysis
+of the Discount Retailing Industry,” Econometrica 76(6), 1263-1316.
+[22] Nishida, Mitsukuni (2014), “Estimating a Model of Strategic Network Choice:
+The Convenience-Store Industry in Okinawa,” Marketing Science 34(1), 20-38.
+[23] Pesendorfer, Mardin, and Philipp Schmidt-Dengler (2008), "Asymptotic Least Squares Estimators for Dynamic Games," Review of Economic Studies 75(3), 901-928.
+[24] Rust, John (1987), "Optimal Replacement of GMC Bus Engines: An Empirical Model of
+Harold Zurcher," Econometrica 55(5), 999-1033.
+[25] Schmid, Matthias and Torsten Hothorn (2008), "Boosting Additive Models Using ComponentWise P-Splines," Computational Statistics & Data Analysis 53(2), 298-311.
+
+29
+
+[26] Xu, Zhixiang, Gao Huang, Kilian Q. Weinberger, and Alice X. Zheng (2014), "Gradient
+boosted feature selection," In Proceedings of the 20th ACM SIGKDD international conference on Knowledge discovery and data mining, 522-531. ACM.
+
+30
+
+Figure 1: Wal-Mart Distribution Center and Store Di¤usion Map (1962 to 2006).
+
+31
+
+Figure 2: Simulation Results, Representative Simulation (2000 to 2006).
+
+32
+
+Figure 3: Multi-step Policy Improvement.
+
+33
+
+34
+4.12 107
+
+1.64 101
+(0.530)
+-1.69 107
+(0.113)
+-4.85 106
+(0.061)
+-8.70 106
+(0.051)
+-1.55 107
+(0.049)
+-1.08 107
+(0.196)
+
+Vbi (agilt = 1)
+
+-8.47 106
+(0.302)
+-1.34 106
+(0.032)
+-5.09 105
+(0.015)
+-1.35 106
+(0.050)
+-1.81 106
+(0.051)
+-9.74 105
+(0.024)
+9.37 106
+
+1.42 101
+(0.526)
+
+Vbi (agilt = 0)
+
+3.11 107
+
+-1.48 107
+(0.252)
+
+1.93 101
+(0.526)
+-1.53 107
+(0.072)
+-4.23 106
+(0.065)
+-6.39 106
+(0.059)
+-5.42 106
+(0.026)
+
+Vbi (afilt = 1)
+
+-8.47 106
+(0.303)
+-1.35 106
+(0.033)
+-5.05 105
+(0.015)
+-1.35 106
+(0.050)
+-1.80 106
+(0.050)
+-9.65 105
+(0.023)
+9.37 106
+
+1.42 101
+(0.526)
+
+Vbi (afilt = 0)
+
+6.24 106
+
+-1.15 106
+(0.054)
+-2.13 106
+(0.045)
+-1.77 106
+(0.159)
+-3.57 106
+(0.153)
+
+1.18 101
+(0.531)
+-2.09 106
+(0.058)
+
+Vbi (arilt = 1)
+
+-8.48 106
+(0.303)
+-1.35 106
+(0.033)
+-5.06 105
+(0.015)
+-1.35 106
+(0.050)
+-1.80 106
+(0.050)
+-9.66 105
+(0.023)
+9.38 106
+
+1.42 101
+(0.526)
+
+Vbi (arilt = 0)
+
+1.72 107
+
+1.95 101
+(0.533)
+-7.81 106
+(0.053)
+-2.37 106
+(0.064)
+-3.57 106
+(0.059)
+-3.54 106
+(0.035)
+-1.11 106
+(0.079)
+-9.28 106
+(0.177)
+
+Vbi (asc
+ilt = 1)
+
+-8.47 106
+(0.302)
+-1.34 106
+(0.032)
+-5.05 105
+(0.015)
+-1.35 106
+(0.050)
+-1.81 106
+(0.051)
+-9.74 105
+(0.024)
+9.37 106
+
+1.42 101
+(0.526)
+
+Vbi (asc
+ilt = 0)
+
+Note: Selection frequencies are shown in parentheses. Results are based on 1000 simulation runs. We use glmboost function in mboost package in R
+with linear base-learners, a squared-error loss function used for observation-weighting, 1000 iterations per boosted regression model, and a step size
+of 0.01. The covariate Own Entry Regstore City, State represents own-…rm regular store entry in the listed MSA; similarly, Rival Entry Regstore
+City, State represents competitor regular store entry in the listed MSA, and Rival Entry GM Dist City, State represents competitor general
+merchandise distribution center entry in the listed MSA.
+
+Constant
+
+Rival Entry GM Dist Hickory, NC
+
+Rival Entry GM Dist Dover, DE
+
+Rival Entry GM Dist Cumberland, MD
+
+Rival Entry GM Dist Columbia, MO
+
+Rival Entry GM Dist Clarksville, TN
+
+Rival Entry Regstore Albany, GA
+
+Own Entry Regstore Augusta, GA
+
+Own Entry Regstore San Francisco, CA
+
+Own Entry Regstore Kansas City, MO
+
+Own Entry Regstore Hartford, CT
+
+Own Entry Regstore Boulder, CO
+
+Own Entry Regstore Allentown, PA
+
+Population
+
+Choice-Specifc Value Function
+
+Table 1: Choice-Speci…c Value Function Estimates, Boosted Regression Models (Baseline Speci…cation)
+
+35
+
+244.09
+53.67
+62.15
+18.29
+3.09
+4.25
+7.49%
+5.77%
+6.83%
+21.26
+5.62
+5.91
+0.20
+0.05
+0.04
+17.21
+4.76
+5.16
+0.80
+0.73
+0.56
+0.56
+0.37
+0.28
+0.51
+0.48
+0.48
+
+18.44
+3.26
+4.40
+7.55%
+6.07%
+7.09%
+21.28
+5.64
+5.91
+0.20
+0.05
+0.04
+17.23
+4.78
+5.16
+0.79
+0.74
+0.56
+0.60
+0.37
+0.28
+0.34
+0.32
+0.32
+
+CWGB 2
+(high-urban-penalty)
+
+244.23
+53.79
+62.14
+
+CWGB 1
+(baseline)
+
+0.34
+0.32
+0.32
+
+0.84
+0.55
+0.42
+
+1.21
+1.10
+0.85
+
+17.33
+4.84
+5.18
+
+0.20
+0.05
+0.04
+
+21.42
+5.73
+5.93
+
+7.28%
+5.08%
+6.42%
+
+17.91
+2.78
+4.01
+
+245.87
+54.64
+62.47
+
+CWGB 3
+(high-dist-cost)
+
+Note: Results are based on 1000 simulation runs for each speci…cation. The parameter values for each speci…cation are available in the Appendix.
+
+Revenue (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Operating Income (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Operating Margin
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Variable Cost Labor (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Variable Cost Land (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Variable Cost Other (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Import Distribution Cost (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Domestic Distribution Cost (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+Urban Cost Penalty (millions of $)
+Agent, One-Step Improvement
+Agent, Random Choice
+Competitor
+
+Model
+
+Table 2: Simulation Results by Speci…cation (Per-Store Average)
+
+36
+
+53.79
+30.81
+33.13
+3.26
+1.64
+2.34
+6.07%
+5.33%
+7.05%
+0.74
+0.43
+0.44
+0.37
+0.28
+0.12
+5.64
+0.05
+4.78
+0.32
+0.84
+296
+
+18.44
+8.46
+14.43
+7.55%
+7.10%
+7.99%
+0.79
+0.55
+0.35
+0.60
+0.51
+0.13
+21.28
+0.20
+17.23
+0.34
+2.39
+528
+
+Random Choice
+
+244.23
+119.19
+180.71
+
+One-Step Improvement
+
+1.01
+264
+
+5.91
+0.04
+5.16
+0.32
+
+0.28
+0.21
+0.10
+
+0.56
+0.30
+0.38
+
+7.09%
+6.64%
+7.73%
+
+4.40
+2.43
+2.85
+
+62.14
+36.61
+36.89
+
+Competitor
+
+–
+–
+
+–
+–
+–
+–
+
+–
+–
+–
+
+–
+–
+–
+
+7.38%
+–
+–
+
+4.49
+–
+–
+
+60.88
+–
+–
+
+Wal-Mart (2005)
+
+Note: Results are based on 1000 simulation runs. The baseline speci…cation parameter values are available in the Appendix.
+
+Revenue (millions of $)
+All Goods
+General Merchandise
+Food
+Operating Income (millions of $)
+All Goods
+General Merchandise
+Food
+Operating Margin (millions of $)
+All Goods
+General Merchandise
+Food
+Import Distribution Cost (millions of $)
+All Goods
+General Merchandise
+Food
+Domestic Distribution Cost (millions of $)
+All Goods
+General Merchandise
+Food
+Variable Costs and Urban Penalty (millions of $)
+Labor Cost, All Goods
+Land Cost, All Goods
+Other Cost, All Goods
+Urban Cost Penalty, All Goods
+MSA Population
+Population (millions)
+Population Density (Population/Square Miles)
+
+Statistic
+
+Table 3: Simulation Results by Merchandise Type (Baseline Speci…cation, Per-Store Average)
+
+5
+
+Appendix
+
+5.1
+
+Section 3.2 Details
+Import Distribution Centers. During the 2000 to 2006 time period, Wal-Mart operated
+
+import distribution centers in Mira Loma, CA, Statesboro, GA, Elwood, IL, Baytown, TX, and
+Williamsburg, VA. See http://www.mwpvl.com/html/walmart.html for this list. For our simulation
+(over all time periods), we endow each …rm with an import distribution center in each MSA in our
+sample physically closest to the above listed cities. These include [with Wal-Mart’s corresponding
+import distribution center location in brackets]: Riverside, CA [Mira Loma, CA], Savannah, GA
+[Statesboro, GA], Kankakee, IL [Elwood, IL], Houston, TX [Baytown, TX], and Washington, DC
+[Williamsburg, VA].
+General Merchandise and Food Distribution Centers. We constrain each competitor to
+open the same number of general merchandise and food distribution centers in each period as actually opened by Wal-Mart. Additionally, we constrain the competitor to open general merchandise
+and food distribution centers in the MSA’s in our sample closest to the actual distribution centers
+opened by Wal-Mart in the same period. Tables 4 and 5 present both the distribution centers
+opened by Wal-Mart, as well as the distribution center locations opened by the competitor in all
+simulations.
+Table 4: General Merchandise Distribution Centers
+Year
+
+Wal-Mart Location
+
+Competitor’s Location
+
+2000
+2001
+2001
+2001
+2001
+2002
+2002
+2003
+2004
+2004
+2004
+2005
+2005
+2005
+2006
+
+LaGrange, GA
+Coldwater, MI
+Sanger, TX
+Spring Valley, IL
+St. James, MO
+Shelby, NC
+Tobyhanna, PA
+Hopkinsville, KY
+Apple Valley, CA
+Smyrna, DE
+St. Lucie County, FL
+Grantsville, UT
+Mount Crawford, VA
+Sealy, TX
+Alachua, FL
+
+Columbus, GA
+Jackson, MI
+Sherman, TX
+Peoria, IL
+Columbia, MO
+Hickory, NC
+Scranton, PA
+Clarksville, TN
+Riverside, CA
+Dover, DE
+Miami, FL
+Salt Lake City, UT
+Cumberland, MD
+Houston, TX
+Gainesville, FL
+
+37
+
+Table 5: Food Distribution Centers
+
+5.2
+
+Year
+
+Wal-Mart Location
+
+Competitor’s Location
+
+2000
+2000
+2000
+2000
+2000
+2000
+2000
+2001
+2001
+2001
+2001
+2002
+2002
+2002
+2002
+2002
+2003
+2003
+2003
+2003
+2003
+2003
+2004
+2004
+2005
+2005
+2005
+2006
+2006
+2006
+2007
+2007
+
+Corinne, UT
+Johnstown, NY
+Monroe, GA
+Opelika, AL
+Pauls Valley, OK
+Terrell, TX
+Tomah, WI
+Auburn, IN
+Harrisonville, MO
+Robert, LA
+Shelbyville, TN
+Cleburne, TX
+Henderson, NC
+MacClenny, FL
+Moberly, MO
+Washington Court House, OH
+Brundidge, AL
+Casa Grande, AZ
+Gordonsville, VA
+New Caney, TX
+Platte, NE
+Wintersville (Steubenville), OH
+Fontana, CA
+Grandview, WA
+Arcadia, FL
+Lewiston, ME
+Ochelata, OK
+Pottsville, PA
+Sparks, NV
+Sterling, IL
+Cheyenne, WY
+Gas City, IN
+
+Salt Lake City, UT
+Utica-Rome, NY
+Athens, GA
+Columbus, GA
+Oklahoma City, OK
+Dallas, TX
+LaCrosse, WI
+FortWayne, IN
+KansasCity, MO
+New Orleans, LA
+Huntsville, AL
+Dallas, TX
+Raleigh, NC
+Jacksonville, FL
+Columbia, MO
+Columbus, OH
+Montgomery, AL
+Phoenix, AZ
+Washington, DC
+Houston, TX
+Cheyenne, WY
+Pittburgh, PA
+Riverside,CA
+Yakima,WA
+PuntaGorda,FL
+Boston,MA
+Tulsa,OK
+Reading,PA
+Reno,NV
+Rockford,IL
+Cheyenne,WY
+Muncie,IN
+
+Section 3.3 Details
+
+State Space Cardinality Calculation. Calculations for the cardinality of the part of the state
+space attributable to …rm i as de…ned in our illustration are listed in Table 6.
+
+38
+
+39
+2.11 1041
+
+5.84
+1.40
+3.74
+2.45
+
+5.33 1043
+
+7.51 1037
+
+1007
+1016
+1009
+1004
+
+1004
+1018
+1011
+1002
+
+6.34 1035
+
+1.63
+1.55
+1.14
+2.20
+
+181
+179
+211
+220
+
+2
+12
+6
+1
+
+2003
+
+1010
+1007
+1004
+1006
+
+2.86 10
+7.64 1042
+
+242
+
+2.68 1028
+
+2.75
+2.70
+2.09
+1.73
+
+167
+161
+205
+219
+
+6
+4
+2
+3
+
+2004
+
+1010
+1010
+1006
+1006
+6.40 1032
+
+1.89
+1.49
+1.37
+1.66
+
+157
+151
+203
+216
+
+6
+6
+3
+3
+
+2005
+
+1004
+1010
+1006
+1002
+3.12 1022
+
+1.04
+1.07
+1.31
+2.13
+
+145
+143
+200
+213
+
+2
+6
+3
+1
+
+2006
+
+–
+
+–
+–
+–
+–
+
+–
+–
+–
+–
+
+30
+60
+30
+15
+
+Total facilities
+
+Note: The cardinality calculations represent the cardinality of the state attributable to …rm i facilities only. The cardinality attributable to …rm -i
+facilities is the same that attributable to …rm i facilities. The total cardinality of the state is the product of the cardinality attributable to …rm i
+facilities, …rm -i facilities, and the population variable.
+
+Total number of possible terminal nodes (generated by state)
+Average state space cardinality (over all time periods)
+
+State space cardinality
+
+1013
+1013
+1007
+1008
+
+8.52
+6.22
+9.50
+1.06
+
+Number of possible combinations
+Regular Stores
+2.57 1004
+Supercenters
+6.47 1021
+Food DC
+5.61 1012
+General Merchandise DC
+2.27 1002
+
+195
+191
+216
+222
+
+4
+10
+5
+2
+
+8
+8
+4
+4
+211
+203
+220
+226
+
+2002
+
+2001
+
+227
+225
+227
+227
+
+Number of feasible locations
+Regular Stores
+Supercenters
+Food DC
+General Merchandise DC
+
+Year
+2000
+Number of location decisions
+Regular Stores
+2
+Supercenters
+14
+Food DC
+7
+General Merchandise DC
+1
+
+Table 6: State Space Cardinality Calculation
+
+Constraints on …rm location choices. For a given …rm i, we allow each location l to accommodate up to four …rm i facilities at one time: one import distribution center, one food distribution
+center, one general merchandise distribution center, and one store of either type. Symmetrically,
+the competitor …rm can also place up to four facilities in the same location l, for a maximum
+number of eight facilities per location. We assume that neither …rm can place two of its own stores
+(regardless of type) in one location. This approximates actual store placement patterns by big box
+retailers such as Wal-Mart well for small MSA’s, which usually accommodate only one own-store
+at a time, but less so for larger MSA’s, which might contain several own-stores. One additional
+constraint we impose is that in each period t, each …rm chooses regular stores prior to choosing
+supercenters. Since we allow only one …rm i store of any type per MSA, each …rm’s constrained
+set of possible supercenter locations are a function of period t regular store location choices.
+Pro…t Speci…cation. For a given …rm i, sales revenues for a store in location l depend on the
+proximity of other …rm i stores and …rm
+
+i stores, where
+
+i denotes the competitor …rm. Note
+
+that since we allow only one store of any kind per MSA, we can refer to a store by its location,
+i.e. we refer to a store in location l as store l. Let the portion of the state vector attributable
+to locations for food distribution centers (f ), general merchandise distribution centers (g), regular
+stores (r), and supercenters (sc) be denoted as sfit , sgit ,srit , and ssc
+it , where each vector is of length
+L, and sqit
+
+sq1t ; :::; sqLt for q 2 ff; g; r; scg. Also denote the population for location l at time t
+
+f
+sc
+as poplt . For store l of …rm i at time t, denote food revenues as Rilt
+ssc
+it ; s it ; poplt and general
+g
+merchandise revenues as Rilt
+(sit ; s
+
+it ; poplt ),
+
+where sit
+
+I (srit + ssc
+it > 0) with support Sit , I (:)
+
+represents the indicator function, each element of sit is denoted as silt , food revenues are a function
+of the proximity of supercenter locations for both …rms, general merchandise revenues are a function
+of the proximity of store locations of both types for both …rms, and both classes of revenue are a
+
+function location-speci…c population poplt .40 Although we do not model consumer choice explicitly,
+our revenue speci…cation implies that consumers view other own-stores and competitor-stores as
+substitutes for any given store.41
+We assume that revenues are a function of the parameter vector #i = ( i ;
+
+i; i ; i;i )
+
+and specify
+
+total revenues for store l and …rm i at time t in the following way:
+sc
+Rilt ssc
+it ; s it ; sit ; s
+
+it ; poplt ; #i
+
+f
+g
+sc
+= Rilt
+ssc
+it ; s it ; poplt ; #i + Rilt (sit ; s
+
+it ; poplt ; #i )
+
+(6)
+
+where,
+40
+It is conceivable that close-proximity regular stores could cannibalize food revenues of a given supercenter store
+l to the extent that consumers buy food incidentally while shopping for general merchandise. In that case, a nearby
+regular store might attract the business of these consumers, who could refrain from making the incidental food
+purchases they might have made at supercenter store l. Because we expect this e¤ect to be small, we model food
+revenues as conditional only on the presence of nearby supercenters.
+41
+Holmes (2011) speci…es revenue in a similar way but derives consumers’store substitution patterns from demand
+estimates obtained using data on Wal-Mart sales.
+
+40
+
+f
+sc
+Rilt
+ssc
+it ; s it ; poplt ; #i =
+2
+0
+
+4 i poplt @1 +
+ssc
+ilt
+
+g
+Rilt
+(sit ; s
+
+it ; poplt ; #i )
+
+2
+
+=
+
+i;
+
+X sscimt
+i
+dlm
+m6=l
+
+0
+
+silt 4 i poplt @1 +
+
+i;
+
+X s imt
+i
+dlm
+m6=l
+
+I fdlm
+
+X ssc
+imt
+60g + i;i
+dlm
+
+I fdlm
+
+X simt
+60g + i;i
+dlm
+
+I fdlm
+
+m6=l
+
+I fdlm
+
+m6=l
+
+13
+
+60gA5
+
+13
+
+60gA5
+
+In this speci…cation, both classes of revenue depend on the proximity of own-stores and competitorX sy
+X sy
+imt
+imt
+60g and i; i
+I fdlm 60g for y 2 fsc; g,
+stores through the terms i;i
+dlm I fdlm
+dlm
+m6=l
+
+m6=l
+
+respectively, where m indexes a location di¤erent from location l, and dlm represents the distance
+from location l to a di¤erent location m. The parameters
+
+i;i
+
+and
+
+i; i
+
+represent the average e¤ect
+
+on revenues of close-proximity own-stores and competitor-stores, respectively.
+that the parameters
+
+i;i
+
+and
+
+i; i
+
+Since we assume
+
+are negative, intuitively, these terms represent a deduction to
+
+revenues induced by own-stores or competitor-stores that are close in proximity to store l, since we
+assume that consumers view these stores as substitutes for store l. With respect to own-stores, this
+revenue substitution e¤ect is deemed own-store "cannibalization," which is an important dimension
+of chain-store location decisions as documented by Holmes (2011) for the case of Wal-Mart. With
+respect to competitor stores, this e¤ect re‡ects competition. The strength of the e¤ect is weighted
+by dlm , with stores in locations that are farther away from store l having a smaller e¤ect on revenues
+than those that are close by. The indicators I fdlm
+
+60g take a value of 1 if location m is closer
+
+than 60 miles away from location l, 0 otherwise, which imposes the assumption that stores located
+
+farther than 60 miles have no e¤ect on store l revenues. This assumption is slightly unrealistic,
+but we impose it since our sample only includes 227 MSA’s in the U.S., which means there are few
+MSA’s within, for example, a 30 mile radius of any MSA in our sample. With more MSA’s, this
+cuto¤ distance can be reduced. We assume that the parameters
+
+i;i
+
+and
+
+i; i
+
+are the same across
+
+revenue categories to simplify the exposition. Both types of revenue are dependent on population
+at time t, xlt , through a common scalar parameter
+food,
+
+f
+Rilt
+
+i.
+
+Additionally, since regular stores don’t sell
+
+= 0 for all regular stores.
+
+As in Holmes (2011), we abstract from price variation and assume each …rm sets constant
+prices across all own-stores and time, which is motivated by simplicity and is not necessarily far
+from reality for a chain-store retailer like Wal-Mart, which is known to set prices according to an
+every-day-low-price strategy. Denoting
+
+as the proportion of sales revenue that is net of the cost
+
+41
+
+e (:) represents revenues net of COGS for …rm i, store l, time t,
+of goods sold (COGS), then Rilt
+
+and revenue type e 2 fg; f g.
+
+Firms incur three types of additional costs: 1) distribution costs attributable to store sales,
+
+2) store-level variable costs, and store-level …xed costs.
+
+In order to sell a given set of goods in
+
+time period t at store l, as in Holmes (2011), we assume that each …rm incurs distribution costs to
+deliver these goods from general merchandise or food distribution centers (or both for supercenters)
+to store l. In addition, we assume that …rms incur distribution costs when transporting these goods
+from import distribution centers to either general merchandise or food distribution centers. We
+introduce these latter distribution costs in order to model location decisions for general merchandise
+and food distribution centers. Denote the distribution costs incurred by …rm i to sell goods from
+f
+imp
+g
+store l at time t as DCilt , which take the form: DCilt = &dglt + dimp
+lgt + &dlt + dlf t . Here, dlt and
+
+dflt represent the distance from store l to the nearest …rm i general merchandise distribution center
+or food distribution center, respectively. In our game simulation, if store l is a regular store, we
+assume that it is supplied exclusively by the own-general merchandise distribution center in the
+MSA physically closest to store l. Similarly, if store l is a supercenter, it is supplied exclusively by
+the own-food distribution center and own-general merchandise distribution center in the MSA(’s)
+closest to store l. Further, dimp
+lgt represents the distance between the general merchandise distribution
+center that supplies store l and the nearest import distribution center, while dimp
+lf t represents the
+distance between the food distribution center that supplies store l (if store l is a supercenter) and
+the nearest import distribution center. We assume that distribution costs are a …xed proportion
+of these distances, captured by the parameters & and , and interpret …xed distribution costs as the
+costs incurred to operate a truck over the course of one delivery of goods per day, aggregated over
+one year. This model approximates the daily truck delivery distribution model actually employed
+by Wal-Mart, as documented by Holmes (2011). Finally, if store l is a regular store, &dflt + dimp
+lf t = 0
+since regular stores do not sell food.
+The remainder of our costs for both …rms are speci…ed almost exactly as in Holmes (2011) for
+the case of Wal-Mart, so we describe them succinctly and direct the interested reader to that work
+for additional description. Firms incur variable costs in the form of labor, land, and other costs (all
+costs not attributable to land or labor). Variable land costs are motivated by the store modi…cation
+patterns of Wal-Mart, which frequently changes parking lot size, building size, and shelf space to
+accommodate changes in sales patterns. The quantity of labor, land, and other inputs needed are
+assumed to be a …xed proportion of total store revenues, such that for …rm i, store l, and time
+e =
+t, Laborilt
+
+Labor Re ,
+ilt
+
+Landeilt =
+
+Land Re ,
+ilt
+
+e =
+and Otherilt
+
+Other Re ,
+ilt
+
+for merchandise segment
+
+e 2 fg; f g. The prices of land and labor per unit of input are represented by wages and rents speci…c
+to store l at time t, denoted as wagelt and rentlt . We collect data on rents and wages for each
+
+time period and each MSA. We de…ne rents as the median (per-MSA) residential home value per
+
+42
+
+square-foot from Zillow, and wages as the annual retail sector payroll divided by the total number
+of employees (per-MSA), provided by the U.S. Census County Business Patterns dataset (MSA
+level).42 The price of the other input is normalized to 1. We focus only on …xed costs that vary by
+location, since costs that are constant across locations do not matter for the decision of where to
+locate stores and distribution centers. As documented by Holmes (2011), there are disadvantages
+for big box retailers like Wal-Mart of locating stores in urban locations, including, for example,
+increased non big box retailer shopping options for consumers. The …xed-cost disadvantage of
+locating stores in urban locations is modeled as a as a function of the population density at time t
+of the location hosting store l, denoted as P opdenlt .43 This function, u (P opdenlt ), is quadratic in
+logs, e.g.:
+u (P opdenlt ) = ! 0 + ! 1 ln (P opdenlt ) + ! 2 ln (P opdenlt )2
+Given this speci…cation for revenues and costs, …rm i operating pro…ts for store l at time t take
+the following form:
+i (st )
+
+ilt
+
+where,
+
+e
+ilt
+
+e
+= Rilt
+
+hh
+
+g
+ilt
+
+e
+W agelt Laborilt
+
+&dglt
+
+i h
+dimp
++
+lgt
+
+Rentlt Landeilt
+
+f
+ilt
+
+&dflt
+
+dimp
+lf t
+
+i
+
+i
+u (P opdenlt )
+
+(7)
+
+e
+Otherilt
+for merchandise segment e 2 fg; f g
+
+If store l is a regular store, the pro…t component
+
+h
+
+f
+ilt
+
+&dflt
+
+i
+= 0, since regular stores
+dimp
+lf t
+
+sell only general merchandise. We assume that if …rm i operates no store in location l at time t,
+then
+
+ilt
+
+= 0. Note that we use the
+
+notation to make clear that the we omit population density
+
+from the location-speci…c state described in Section 3.3 and instead only include location-speci…c
+population.
+We de…ne a discount factor
+productivity parameter
+
+and set it to
+
+= 0:95. As in Holmes (2011), we de…ne an exogenous
+
+that represents gradual increases in average sales per-store, motivated by
+
+gradual increases in average sales per-store experienced by Wal-Mart.44 Pro…t parameter values
+for each speci…cation are presented in Table 7.
+
+42
+The Zillow data is available from http://www.zillow.com/, and the Census data is available from
+http://www.census.gov/econ/cbp/.
+43
+See Section 3.2 for details on our population density de…nition and data source.
+44
+Unlike in Holmes (2011), for simplicity of exposition, we make this productivity parameter constant over time.
+One source of these increases is an expansion in the variety of products o¤ered for sale.
+
+43
+
+44
+
+Revenue parameter g
+Revenue parameter f
+Revenue parameter (i; i)
+Revenue parameter (i;i)
+Distribution cost parameters &
+Distribution cost parameters
+Input parameters labor
+Input parameters land
+Input parameters other
+Urban location quadratic cost parameter ! 0
+Urban location quadratic cost parameter ! 1
+Urban location quadratic cost parameter ! 2
+Discount factor
+Productivity parameter
+Markup
+
+Model
+
+CWGB Speci…cation 1
+(baseline)
+60
+60
+-0.5
+-0.5
+1400
+1400
+3.61
+5 10 6
+0.07
+0
+20000
+20000
+0.95
+1.07
+0.24
+CWGB Speci…cation 2
+(high-urban-penalty)
+60
+60
+-0.5
+-0.5
+1400
+1400
+3.61
+5 10 6
+0.07
+0
+30000
+30000
+0.95
+1.07
+0.24
+
+Table 7: Parameter Values by Speci…cation
+CWGB Speci…cation 3
+(high-dist-cost)
+60
+60
+-0.5
+-0.5
+2100
+2100
+3.61
+5 10 6
+0.07
+0
+20000
+20000
+0.95
+1.07
+0.24
+
+5.3
+
+Section 3.5 Details
+
+Table 8 presents OLS models of the choice-speci…c value functions of interest using state variables
+selected by the corresponding boosted regression models in Table 1 and simulation data generated
+under the baseline speci…cation of parameters.
+
+45
+
+46
+2.77 107 .
+(1.58 107 )
+
+1.70 101 ***
+(1.15 100 )
+-1.86 107
+(2.37 107 )
+-7.26 106
+(1.91 107 )
+-9.72 106
+(2.08 107 )
+-1.33 107
+(2.37 107 )
+NA
+NA
+
+Vbi (agilt = 1)
+
+NA
+NA
+-1.44 106 ***
+(1.03 105 )
+-5.54 105 ***
+(1.03 105 )
+-2.35 106 ***
+(1.03 105 )
+-1.98 106 ***
+(1.03 105 )
+-1.03 106 ***
+(1.03 105 )
+6.36 103
+(7.43 104 )
+
+1.48 101 ***
+(1.76 10 2 )
+
+Vbi (agilt = 0)
+
+3.25 107 **
+(1.18 107 )
+
+-1.91 107
+(1.51 107 )
+
+1.99 101 ***
+(8.53 10 1 )
+-1.38 107
+(1.26 107 )
+-6.26 106
+(1.02 107 )
+-6.68 106
+(1.08 107 )
+-6.06 106
+(1.14 107 )
+
+Vbi (afilt = 1)
+
+NA
+NA
+-1.44 106 ***
+(1.03 105 )
+-5.50 105 ***
+(1.03 105 )
+-2.35 106 ***
+(1.03 105 )
+-1.98 106 ***
+(1.03 105 )
+-1.03 106 ***
+(1.03 105 )
+5.08 103
+(7.43 104 )
+
+1.48 101 ***
+(1.76 10 2 )
+
+Vbi (afilt = 0)
+
+2.27 106
+(2.22 106 )
+
+106
+106 )
+106
+106 )
+NA
+NA
+-3.10 106
+(2.77 106 )
+
+-1.75
+(1.59
+-1.89
+(2.11
+
+1.35 101 ***
+(5.99 10 1 )
+-2.43 106
+(2.38 106 )
+
+Vbi (arilt = 1)
+
+NA
+NA
+-1.44 106 ***
+(1.03 105 )
+-5.51 105 ***
+(1.03 105 )
+-2.35 106 ***
+(1.03 105 )
+-1.98 106 ***
+(1.03 105 )
+-1.03 106 ***
+(1.03 105 )
+4.31 103
+(7.43 104 )
+
+1.48 101 ***
+(1.76 10 2 )
+
+Vbi (arilt = 0)
+
+1.48 107 *
+(6.04 106 )
+
+2.00 101 ***
+(5.99 10 1 )
+-7.22 106
+(6.51 106 )
+-3.52 106
+(5.26 106 )
+-3.73 106
+(5.56 106 )
+-3.88 106
+(5.85 106 )
+NA
+NA
+-9.38 106
+(7.76 106 )
+
+Vbi (asc
+ilt = 1)
+
+NA
+NA
+-1.44 106 ***
+(1.03 105 )
+-5.50 105 ***
+(1.03 105 )
+-2.35 106 ***
+(1.03 105 )
+-1.98 106 ***
+(1.03 105 )
+-1.03 106 ***
+(1.03 105 )
+5.14 103
+(7.43 104 )
+
+1.48 101 ***
+(1.76 10 2 )
+
+Vbi (asc
+ilt = 0)
+
+Note: Each column represents an OLS regression model of the indicated choice-speci…c value function run only on the state variables selected by the
+corrresponding boosted regression model from Table 1. Standard errors are shown in parentheses. Signi…cance levels are indicated by: ‘***’0.001 ‘**’0.01 ‘*’
+0.05 ‘.’ 0.1 ‘’1. Results are based on 1000 simulation runs. Some OLS variables return “NA” for variables that do not vary. However, since the boosted model
+uses no intercept in its component individual univariate regressions, it returns a coe¢ cient under these circumstances. The covariate Own Entry Regstore City,
+State represents own-…rm regular store entry in the listed MSA; similarly, Rival Entry Regstore City, State represents competitor regular store entry in the listed
+MSA, and Rival Entry GM Dist City, State represents competitor general merchandise distribution center entry in the listed MSA.
+
+Constant
+
+Rival Entry GM Dist Hickory, NC
+
+Rival Entry GM Dist Dover, DE
+
+Rival Entry GM Dist Cumberland, MD
+
+Rival Entry GM Dist Columbia, MO
+
+Rival Entry GM Dist Clarksville, TN
+
+Rival Entry Regstore Albany, GA
+
+Own Entry Regstore Augusta, GA
+
+Own Entry Regstore San Francisco, CA
+
+Own Entry Regstore Kansas City, MO
+
+Own Entry Regstore Hartford, CT
+
+Own Entry Regstore Boulder, CO
+
+Own Entry Regstore Allentown, PA
+
+Population
+
+Choice-Specifc Value Function
+
+Table 8: Choice-Speci…c Value Function Estimates, OLS Models (Baseline Speci…cation)
+
+

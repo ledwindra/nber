@@ -8,8 +8,7 @@ from random import randint
 
 class ID:
     def __init__(self):
-        # len(os.listdir('paper/'))
-        self.nber_id = randint(0, 1000)
+        self.nber_id = randint(0, len(os.listdir('paper/')))
 
 class HTML(ID):
     

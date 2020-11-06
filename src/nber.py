@@ -41,19 +41,30 @@ class Paper:
         return date(x.year, x.month, x.day)
     
     def citation_title(self):
-        return self.content.find('meta', {'name': 'citation_title'}).attrs['content']
+        try:
+            return self.content.find('meta', {'name': 'citation_title'}).attrs['content']
+        except AttributeError:
+            return None
     
     def citation_author(self):
-        return [x.attrs['content'] for x in self.content.find_all('meta', {'name': 'citation_author'})]
+        try:
+            return [x.attrs['content'] for x in self.content.find_all('meta', {'name': 'citation_author'})]
+        except AttributeError:
+            return None
 
     def citation_publication_date(self):
-        citation_publication_date = self.content.find('meta', {'name': 'citation_publication_date'})
-        citation_publication_date = self.to_date(datetime.strptime(citation_publication_date.attrs['content'], '%Y/%m/%d'))
-        
-        return citation_publication_date
+        try:
+            citation_publication_date = self.content.find('meta', {'name': 'citation_publication_date'})
+            citation_publication_date = self.to_date(datetime.strptime(citation_publication_date.attrs['content'], '%Y/%m/%d'))
+            return citation_publication_date
+        except AttributeError:
+            return None
     
     def paper_datetime(self):
-        return [x.attrs['datetime'][:10] for x in self.content.find_all('time')]
+        try:
+            return [x.attrs['datetime'][:10] for x in self.content.find_all('time')]
+        except AttributeError:
+            return None
     
     def issue_date(self):
         return self.to_date(datetime.strptime(self.paper_datetime()[0], '%Y-%m-%d'))

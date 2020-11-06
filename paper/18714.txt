@@ -1,0 +1,1341 @@
+NBER WORKING PAPER SERIES
+
+SOLVING DYNAMIC PROGRAMMING PROBLEMS ON A COMPUTATIONAL
+GRID
+Yongyang Cai
+Kenneth L. Judd
+Greg Thain
+Stephen J. Wright
+Working Paper 18714
+http://www.nber.org/papers/w18714
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+January 2013
+
+Cai and Judd gratefully acknowledge National Science Foundation support (SES- 0951576). We also
+thank Miron Livny for his generous support and access to the HTCondor cluster at the University of
+Wisconsin-Madison. The views expressed herein are those of the authors and do not necessarily reflect
+the views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2013 by Yongyang Cai, Kenneth L. Judd, Greg Thain, and Stephen J. Wright. All rights reserved.
+Short sections of text, not to exceed two paragraphs, may be quoted without explicit permission provided
+that full credit, including © notice, is given to the source.
+
+Solving Dynamic Programming Problems on a Computational Grid
+Yongyang Cai, Kenneth L. Judd, Greg Thain, and Stephen J. Wright
+NBER Working Paper No. 18714
+January 2013
+JEL No. C61,C63,G11
+ABSTRACT
+We implement a dynamic programming algorithm on a computational grid consisting of loosely coupled
+processors, possibly including clusters and individual workstations. The grid changes dynamically during
+the computation, as processors enter and leave the pool of workstations. The algorithm is implemented
+using the Master-Worker library running on the HTCondor grid computing platform. We implement
+value function iteration for several large dynamic programming problems of two kinds: optimal growth
+problems and dynamic portfolio problems. We present examples that solve in hours on HTCondor but
+would take weeks if executed on a single workstation. The use of HTCondor can increase a researcher’s
+computational productivity by at least two orders of magnitude.
+Yongyang Cai
+Hoover Institution
+Stanford University
+Stanford, CA 94305
+yycai@stanford.edu
+
+Greg Thain
+Computer Science Department
+University of Wisconsin-Madison
+WI 53706, USA
+gthain@cs.wisc.edu
+
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+
+Stephen J. Wright
+Computer Science Department
+University of Wisconsin-Madison
+WI 53706, USA
+swright@cs.wisc.edu
+
+1
+
+Introduction: Motivation and Model
+
+Many economic optimization problems require weeks or months of CPU
+time, or even more, to solve because of the “curse of dimensionality”. Parallelization is a natural approach to break the “curse of dimensionality”
+because it allows you to use hundreds of hours of CPU time within one wall
+clock hour if you have hundreds of CPUs working together. This paper uses
+a user-friendly parallelization tool, Master-Worker (MW), on HTCondor to
+show that dynamic programming problems can fully utilize the potential
+value of parallelism on hardware available to most economists. It also is one
+of the first large uses of parallel computation in dynamic programming.
+Dynamic programming (DP) is the essential tool in solving problems of
+dynamic and stochastic controls in economic analysis. Many DP problems
+are solved by value function iteration, where the period t value function
+is computed from the period t + 1 value function, and the value function
+is known at the terminal time T . A set of discrete and approximation
+nodes will be chosen and the period t value function at those nodes will be
+computed and then we can use some approximation methods to approximate
+the value function. For every approximation node, there is a time-consuming
+optimization problem to be solved. Moreover, these optimization problems
+are independent, allowing them to be solved efficiently in parallel.
+This paper is constructed as follows. Section 2 gives an introduction
+of HTCondor-MW system. Section 3 describes DP algorithms. Section 4
+introduces two types of parallel DP algorithms in the HTCondor-MW system. Section 5 and 6, respectively, give computational results of the parallel
+DP algorithms in the HTCondor-MW system for solving multidimensional
+optimal growth problems and dynamic portfolio optimization problems.
+
+2
+
+A Grid Platform
+
+The HTCondor system is a high-throughput computing (HTC), open-source
+software framework for distributed parallelization of computationally intensive tasks on a cluster of computers. The HTCondor software is freely
+available to all; see http://research.cs.wisc.edu/htcondor/index.html for details. HTCondor acts as a management tool for identifying, allocating and
+managing available resources to solve large distributed computations. For
+
+2
+
+example, if a workstation on a network is currently unused, HTCondor will
+detect that fact, and send it a task. HTCondor will continue to use that
+workstation until a higher-priority user (such as a student sitting at the keyboard) appears, at which time HTCondor ends its use of the workstation.
+This is called “cycle scavenging” and allows a system to take advantage of
+essentially free computing time. HTCondor can also be used on a dedicated
+cluster.
+The HTCondor team at the University of Wisconsin-Madison has developed several “flavors” of HTCondor, each fine-tuned for some specific type of
+parallel programming. In this paper we use the HTCondor Master-Worker
+(MW) system for parallel algorithms to solve DP problems. The HTCondor MW system consists of two entities: a master process and a cluster of
+worker processes. The master process decomposes the problem into small
+tasks and puts those tasks in a queue. Each worker process first examines
+the queue, takes the “top” problem off the queue and solves it. The worker
+then sends the results to the master, examines the queue of unfinished tasks,
+and repeats this process until the queue is empty. The workers’ execution is
+a simple cycle: take a task off master’s queue, do the task, and then send the
+results to the master. While the workers are solving the tasks, the master
+collects the results and puts new tasks on the queue. This is a file-based,
+remote I/O scheme that serves as the message-passing mechanism between
+the master and the workers.
+The MW paradigm helps the user circumvent the parallel programming
+challenges, such as load balancing, termination detection, and the distribution of information across compute nodes. Moreover, computation in the
+MW paradigm is fault-tolerant: if a worker cannot complete a task, due
+to machine failure or interruption by another user, the master can detect
+this and put that task back on the queue for another worker to execute.
+The user can request any number of workers, independent of the number of
+tasks. HTCondor can make use of a heterogeneous collection of computers,
+where the fast computers will solve more tasks but slower computers can
+still contribute.
+HTCondor is an example of “High Throughput Computing” (HTC) and
+is a valuable alternative to “High Performance Computing” (HPC). HPC is
+typically associated with supercomputers. Its advantage is the specialized
+communication hardware that allows for rapid communication among pro-
+
+3
+
+cessors. However, a supercomputer program is assigned a large, but fixed,
+number of processors; therefore, HPC can be efficient only if an algorithm
+can keep large numbers of processors busy during the entire computation.
+Algorithms that need different numbers of processors at different stages cannot be implemented efficiently on HPC architectures. There are also access
+problems with HPC. Due to the necessity of having a block of processors,
+users must reserve time, and the lag time between requesting time and getting access increases with the number of desired processors and requested
+time. Moreover, economists face substantial bureaucratic hurdles in getting
+access to supercomputer time because the people who control supercomputers impose requirements that are met by few economists. In particular, the
+authors have been told that DOE supercomputers available to the general
+scientific community are not available to economists who want to analyze
+policy issues, such as taxation problems.
+In contrast, HTC is a paradigm with much greater flexibility and lower
+cost. The marginal social cost of CPU time used in HTCondor is essentially
+zero because it is using CPU time that otherwise would go unused. HTCondor manages the number of processors being used in response to processor
+availability and the needs of the computational procedure. If HTCondor
+sees that a computation needs hundreds of processors, it will give the computation what it needs if the resources are available, but if it later sees that a
+computation needs only a dozen processors, it can free up unused processors
+and allocate them to other computations. HTC is opportunistic, utilizing
+any resource that becomes available and not forcing the user to make reservations. The disadvantage of HTC is that interprocessor communication
+will generally be slower. While this does limit the amount of parallelization
+that can be exploited, HTC environments can still efficiently use hundreds
+of processors for many problems. This paper shows that DP is that kind of
+problem.
+For any researcher, the critical measure of computational cost has two
+components: the time between his submission of a job and when he receives
+the results, and the time he needs to spend getting access to a computer
+system. On this dimension, HTC may dominate HPC for any researcher,
+but even more so for economists where HTC is not just an option but is the
+only option.
+
+4
+
+3
+
+Dynamic Programming
+
+In economics and finance, we often encounter a finite horizon optimal decisionmaking problem that can be expressed in the following general model:
+V0 (x0 , θ0 ) =
+
+max
+
+at ∈D(xt ,θt ,t)
+
+E
+
+(T −1
+X
+
+)
+β t ut (xt , at ) + β T VT (xT , θT ) ,
+
+t=0
+
+where xt is a continuous state process with an initial state x0 , θt is a discrete
+state process with an initial state θ0 , and at is an action variable (xt , θt and
+at can be vectors), ut (x, a) is a utility function at time t < T and VT (x, θ)
+is a given terminal value function, β is the discount factor (0 < β ≤ 1),
+D(xt , θt , t) is a feasible set of at , and E{·} is the expectation operator.
+The DP model for the finite horizon problems is the basic Bellman equation,
+Vt (x, θ) =
+
+max
+a∈D(x,θ,t)
+
+ut (x, a) + βE{Vt+1 (x+ , θ+ )},
+
+for t = 0, 1, . . . , T − 1, where (x+ , θ+ ) is the next-stage state conditional on
+the current-stage state (x, θ) and action a, and Vt (x, θ) is called the value
+function at stage t while the terminal value function VT (x, θ) is given.
+
+3.1
+
+Numerical DP Algorithms
+
+In DP problems, if state variables and control variables are continuous, then
+value functions must be approximated in some computationally tractable
+manner. It is common to approximate value functions with a finitely parameterized collection of functions; that is, V (x, θ) ≈ V̂ (x, θ; b), where b is
+a vector of parameters. The functional form V̂ may be a linear combination
+of polynomials, or it may represent a rational function or neural network
+representation, or it may be some other parameterization specially designed
+for the problem. After the functional form is fixed, we focus on finding
+the vector of parameters, b, such that V̂ (x, θ; b) approximately satisfies
+the Bellman equation (Bellman, 1957). Algorithm 1 is the parametric DP
+method with value function iteration for finite horizon problems with both
+multidimensional continuous and discrete states. (More detailed discussion
+of numerical DP can be found in Cai (2009), Judd (1998) and Rust (2008).)
+In the algorithm, n is the dimension for the continuous states x, and d is the
+dimension for discrete states θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd , where D is
+5
+
+Algorithm 1 Parametric Dynamic Programming with Value Function Iteration for Problems with Multidimensional Continuous and Discrete States
+Initialization. Given a finite set of θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd
+and the probability transition matrix P = pj,j 0 D×D where pj,j 0 is
+0
+the transition probability from θj ∈ Θ to θj ∈ Θ for 1 ≤ j, j 0 ≤ D.
+Choose a functional form for V̂ (x, θ; b) for all θ ∈ Θ, and choose the
+approximation grid, Xt = {xit : 1 ≤ i ≤ Nt } ⊂ Rn . Let V̂ (x, θ; bT ) =
+VT (x, θ). Then for t = T − 1, T − 2, . . . , 0, iterate through steps 1 and
+2.
+Step 1. Maximization step. Compute
+vi,j =
+
+max
+
+a∈D(xi ,θj ,t)
+
+ut (xi , θj , a) + βE{V̂ (x+ , θ+ ; bt+1 )},
+
+for each xi ∈ Xt and θj ∈ Θ, 1 ≤ i ≤ Nt , 1 ≤ j ≤ D, where the
+next-stage discrete state θ+ is random with probability mass function
+0
+0
+Pr(θ+ = θj | θj ) = pj,j 0 for each θj ∈ Θ, and x+ is the next-stage
+state transition from xi and may be also random.
+Step 2. Fitting step. Using an appropriate approximation method, for each
+1 ≤ j ≤ D, compute btj , such that V̂ (x, θj ; btj ) approximates {(xi , vi,j ):
+1 ≤ i ≤ Nt } data, i.e., vi,j ≈ V̂ (xi , θj ; btj ) for all xi ∈ Xt . Let bt =
+n
+o
+btj : 1 ≤ j ≤ D .
+
+the number of different discrete state vectors. The transition probabilities
+0
+
+from θj to θj for 1 ≤ j, j 0 ≤ D are given.
+
+3.2
+
+Approximation
+
+An approximation scheme has two ingredients: basis functions and approximation nodes. Approximation nodes can be chosen as uniformly spaced
+nodes, Chebyshev nodes, or some other specified nodes. From the viewpoint of basis functions, approximation methods can be classified as either
+spectral methods or finite element methods. A spectral method uses globally
+P
+nonzero basis functions φj (x) such that V̂ (x; b) = m
+j=0 bj φj (x). Examples
+of spectral methods include ordinary polynomial approximation, ordinary
+Chebyshev polynomial approximation, shape-preserving Chebyshev polynomial approximation (Cai and Judd, 2012b), and Chebyshev-Hermite approximation (Cai and Judd, 2012c). In contrast, a finite element method uses
+6
+
+local basis functions φj (x) that are nonzero over sub-domains of the approximation domain. Examples of finite element methods include piecewise
+linear interpolation, shape-preserving rational function spline interpolation
+(Cai and Judd, 2012a), cubic splines, and B-splines. See Cai (2009), Cai
+and Judd (2010), and Judd (1998) for more details.
+3.2.1
+
+Chebyshev Polynomial Approximation
+
+Chebyshev polynomials on [−1, 1] are defined as Tj (x) = cos(j cos−1 (x)),
+while general Chebyshev polynomials on [xmin , xmax ] are defined as Tj ((2x −
+xmin −xmax )/(xmax −xmin )) for j = 0, 1, 2, . . .. These polynomials are orthog´ xmax
+onal under the weighted inner product: hf, gi = xmin
+f (x)g(x)w(x)dx with
+
+−1/2
+the weighting function w(x) = 1 − ((2x − xmin − xmax )/(xmax − xmin ))2
+.
+A degree m Chebyshev polynomial approximation for V (x) on [xmin , xmax ]
+is
+V̂ (x; b) =
+
+m
+X
+
+
+bj Tj
+
+j=0
+
+2x − xmin − xmax
+xmax − xmin
+
+
+,
+
+(1)
+
+where b = {bj } are the Chebyshev coefficients.
+If we choose the Chebyshev nodes on [xmin , xmax ]: xi = (zi + 1)(xmax −
+xmin )/2 + xmin with zi = − cos ((2i − 1)π/(2m0 )) for i = 1, . . . , m’, and
+Lagrange data {(xi , vi ) : i = 1, . . . , m0 } are given (where vi = V (xi )), then
+the coefficients bj in (1) can be easily computed by the Chebyshev regression
+algorithm (see Judd, 1998).
+3.2.2
+
+Multidimensional Complete Chebyshev Approximation
+
+In a d-dimensional approximation problem, let the domain of the value function be
+
+
+x = (x1 , . . . , xn ) : xmin
+≤ xj ≤ xmax
+, j = 1, . . . , n ,
+j
+j
+
+for some real numbers xmin
+and xmax
+with xmax
+> xmin
+for j = 1, . . . , n.
+j
+j
+j
+j
+min
+max = (xmax , . . . , xmax ). Then we deLet xmin = (xmin
+n
+1 , . . . , xn ) and x
+1
+
+note [xmin , xmax ] as the domain.
+
+Let α = (α1 , . . . , αn ) be a vector of
+
+nonnegative integers. Let Tα (z) denote the product Tα1 (z1 ) · · · Tαn (zn ) for
+z = (z1 , . . . , zn ) ∈ [−1, 1]n . Let
+
+7
+
+
+Z(x) =
+
+max
+2xn − xmin
+2x1 − xmin
+− xmax
+n − xn
+1
+1
+,...,
+max
+min
+max
+min
+xn − xn
+x1 − x1
+
+
+
+for any x = (x1 , . . . , xn ) ∈ [xmin , xmax ].
+Using these notations, the degree-m complete Chebyshev approximation
+for V (x) is
+X
+
+V̂m (x; b) =
+
+bα Tα (Z(x)) ,
+
+(2)
+
+0≤|α|≤m
+
+where |α| =
+
+Pn
+
+j=1 αj
+
+for the nonnegative integer vector α = (α1 , . . . , αn ).
+
+Pn
+m+n
+So the number of terms with 0 ≤ |α| =
+for the
+j=1 αi ≤ m is
+n
+degree-m complete Chebyshev approximation in Rn .
+
+3.3
+
+Numerical Integration
+
+In the objective function of the Bellman equation, we often need to compute
+the conditional expectation of V (x+ ). When the random variable is continuous, we have to use numerical integration to compute the expectation.
+Gaussian quadrature rules are often applied in computing the integration.
+3.3.1
+
+Gauss-Hermite Quadrature
+
+In the expectation operator of the objective function of the Bellman equation, if the random variable has a normal distribution, then it will be good
+to apply the Gauss-Hermite quadrature formula to compute the numerical integration. That is, if we want to compute E{f (Y )} where Y has a
+distribution N (µ, σ 2 ), then
+ˆ
+E{f (Y )} = (2πσ 2 )−1/2
+= (2πσ 2 )−1/2
+
+∞
+
+ˆ−∞
+∞
+
+f (y)e−(y−µ)
+
+2 /(2σ 2 )
+
+dy
+
+√
+2√
+f ( 2 σ x + µ)e−x 2σdx
+
+−∞
+1
+.
+= π− 2
+
+m
+X
+
+√
+ωi f ( 2σxi + µ),
+
+i=1
+
+where ωi and xi are the Gauss-Hermite quadrature with m weights and nodes
+over (−∞, ∞). See Cai (2009), Judd (1998), Stroud and Secrest (1966) for
+more details.
+If Y is log normal, i.e., log(Y ) has a distribution N (µ, σ 2 ), then we can
+
+8
+
+assume that Y = eX where X ∼ N (µ, σ 2 ), thus
+m
+ √
+
+. − 21 X
+E{f (Y )} = E{f (e )} = π
+ωi f e 2σxi +µ .
+X
+
+i=1
+
+3.3.2
+
+Multidimensional Integration
+
+If we want to compute a multidimensional integration, we could apply the
+product rule. For example, suppose that we want to compute E{f (X)},
+where X is a random vector with multivariate normal distribution N (µ, Σ)
+over Rn , where µ is the mean column vector and Σ is the covariance matrix,
+then we could do the Cholesky factorization first, i.e., find a lower triangular
+matrix L such that Σ = LL> . This is feasible as Σ must be a positive semidefinite matrix from the covariance property. Thus,
+ˆ
+E{f (X)} = ((2π) det(Σ))
+
+(2π)n det(L)2
+
+=
+
+> Σ−1 (y−µ)/2
+
+−1/2
+
+n
+
+f (y)e−(y−µ)
+Rn
+
+−1/2
+
+ˆ
+
+f
+
+√
+
+dy
+
+
+>
+2Lx + µ e−x x 2n/2 det(L)dx
+
+Rn
+n
+.
+= π− 2
+
+m
+X
+
+···
+
+i1 =1
+
+√
+
+m
+X
+
+ωi1 · · · ωid f
+
+√
+
+2l1,1 xi1 + µ1 ,
+
+in =1
+
+2(l2,1 xi1 + l2,2 xi2 ) + µ2 , · · · ,
+
+√
+
+
+2
+
+n
+X
+
+
+
+!
+
+ln,j xij  + µn , (3)
+
+j=1
+
+where ωi and xi are the Gauss-Hermite quadrature with m weights and
+nodes over (−∞, ∞), li,j is the (i, j)-element of L, and det(·) means the
+matrix determinant operator.
+
+4
+
+Parallel Dynamic Programming
+
+The numerical DP algorithms can be applied easily in the HTCondor MW
+system for DP problems with multidimensional continuous and discrete
+states. To solve these problems, numerical DP algorithms with value function iteration have the maximization step that is mostly time-consuming in
+numerical DP. That is,
+vi,j =
+
+max
+
+a∈D(xi ,θj ,t)
+
+u(xi , θj , a) + βE{V̂ (x+ , θ+ ; bt+1 )},
+
+9
+
+Algorithm 2 Type-I Parallel Dynamic Programming with Value Function
+Iteration for the Master
+Initialization. Given a finite set of θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd .
+Set bT as the parameters of the terminal value function. For t =
+T − 1, T − 2, . . . , 0, iterate through steps 1 and 2.
+Step 1. Separate the maximization step into D tasks, one task per θ ∈ Θ.
+Each task contains parameters bt+1 , stage number t and the corresponding task identity for some θj . Then send these tasks to the
+workers.
+Step 2. Wait until all tasks are done by the workers. Then collect parameters btj from the workers, for all 1 ≤ j ≤ D, and let bt =
+n
+o
+btj : 1 ≤ j ≤ D .
+
+for each continuous state point xi in the finite set Xt ⊂ Rn and each discrete
+state vector θj ∈ Θ, where Nt is the number of points of Xt and D is the
+number of points of Θ. So there are Nt × D small-size maximization problems. Thus, if the Nt × D is large (that is very possible in high-dimensional
+problems), then it will take a huge amount of time to do the DP maximization step. However, these Nt × D small-size maximization problems can be
+naturally parallelized in the HTCondor MW system, in which one or several
+maximization problem(s) could be treated as one task.
+
+4.1
+
+Type-I Parallelization
+
+When D is large but Nt has a medium size, we could separate the Nt × D
+maximization problems into D tasks, where each task corresponds to a discrete state vector θj and all continuous state nodes set Xt . Algorithm 2 is the
+architecture for the master processor, and Algorithm 3 is the corresponding
+architecture for the workers.
+
+4.2
+
+Type-II Parallelization
+
+If the number of nodes for continuous states, Nt , is large, or the maximization step for each node is time-consuming, then it will be possible to break
+the task for one θj into subtasks and maintain parallel efficiency. If the
+fitting method requires all points {(xi , vi,j ): 1 ≤ i ≤ Nt } to construct the
+
+10
+
+Algorithm 3 Type-I Parallel Dynamic Programming with Value Function
+Iteration for the Workers
+Initialization. Given a finite set of θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd
+and the probability transition matrix P = pj,j 0 D×D where pj,j 0 is
+0
+the transition probability from θj ∈ Θ to θj ∈ Θ for 1 ≤ j, j 0 ≤ D.
+Choose a functional form for V̂ (x, θ; b) for all θ ∈ Θ.
+Step 1. Get parameters bt+1 , stage number t and the corresponding task
+identity for one θj ∈ Θ from the master, and then choose the approximation grid, Xt = {xit : 1 ≤ i ≤ Nt } ⊂ Rn .
+Step 2. For this given θj , compute
+vi,j =
+
+max
+
+a∈D(xi ,θj ,t)
+
+u(xi , θj , a) + βE{V̂ (x+ , θ+ ; bt+1 )},
+
+for each xi ∈ Xt , 1 ≤ i ≤ Nt , where the next-stage discrete state θ+ ∈
+0
+Θ is random with probability mass function P(θ+ = θj | θj ) = pj,j 0
+for each θj 0 ∈ Θ, and x+ is the next-stage state transition from xi and
+may be also random.
+Step 3. Using an appropriate approximation method, compute btj such
+that V̂ (x, θj ; btj ) approximates {(xi , vi,j ): 1 ≤ i ≤ Nt }, i.e., vi,j ≈
+V̂ (xi , θj ; btj ) for all xi ∈ Xt .
+Step 4. Send btj and the corresponding task identity for θj to the master.
+
+11
+
+Algorithm 4 Type-II Parallel Dynamic Programming with Value Function
+Iteration for the Master
+Initialization. Given a finite set of θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd .
+Choose a functional form for V̂ (x, θ; b) for all θ ∈ Θ, and choose the
+approximation grid, Xt = {xit : 1 ≤ i ≤ Nt } ⊂ Rn . Set bT as the
+parameters of the terminal value function. For t = T − 1, T − 2, . . . , 0,
+iterate through steps 1 and 2.
+Step 1. Separate Xt into M disjoint subsets with almost equal sizes:
+Xt,1 , . . . , Xt,M , and separate the maximization step into M × D tasks,
+one task per (Xt,m , θj ) with θj ∈ Θ, for m = 1, . . . , M and j =
+1, . . . , D. Each task contains the parameters bt+1 , the stage number t and the corresponding task identity for (Xt,m , θj ). Then send
+these tasks to the workers.
+Step 2. Wait until all tasks are done by the workers. Then collect all vi,j
+from the workers, for 1 ≤ i ≤ Nt , 1 ≤ j ≤ D.
+Step 3. Using an appropriate approximation method, for each θj ∈ Θ, compute btj such that V̂ (x, θj ; btj ) approximates {(xi , vi,j ): 1 ≤ i ≤ Nt },
+n
+o
+i.e., vi,j ≈ V̂ (xi , θj ; btj ) for all xi ∈ Xt . Let bt = btj : 1 ≤ j ≤ D .
+
+approximation, then each worker cannot do step 3 and 4 along with step
+1 and 2 in Algorithm 3, as it has only an incomplete set of approximation
+nodes xi for one given θj . Therefore, the fitting step is executed by the
+master. Thus we have Algorithm 4 for the master process and Algorithm 5
+for the workers.
+If it is quick to compute btj in the fitting step (e.g., Chebyshev polynomial approximation using Chebyshev regression algorithm), then we can
+just let the master do the fitting step like the type-II parallel DP algorithm.
+However, if the fitting step is time-consuming, then the master could send
+these fitting jobs for each discrete state θj to the workers, and then collect
+the the new approximation parameters.
+
+4.3
+
+Sparsity
+
+In many cases, the probability transition matrix is sparse and this fact can
+be exploited to reduce communication cost. For example, suppose that
+a worker is given the task to compute the value function for θj . When
+
+12
+
+Algorithm 5 Type-II Parallel Dynamic Programming with Value Function
+Iteration for the Workers
+Initialization. Given a finite set of θ ∈ Θ = {θj : 1 ≤ j ≤ D} ⊂ Rd
+and the probability transition matrix P = pj,j 0 D×D where pj,j 0 is
+0
+the transition probability from θj ∈ Θ to θj ∈ Θ for 1 ≤ j, j 0 ≤ D.
+Choose the approximation grid, Xt = {xit : 1 ≤ i ≤ Nt } ⊂ Rn , which
+is the same with the set Xt in the master.
+Step 1. Get the parameters bt+1 , stage number t and the corresponding
+task identity for one (Xt,m , θj ) with θj ∈ Θ from the master.
+Step 2. For this given θj , compute
+vi,j =
+
+max
+
+a∈D(xi ,θj ,t)
+
+u(xi , θj , a) + βE{V̂ (x+ , θ+ ; bt+1 )},
+
+for all xi ∈ Xt,m , where the next-stage discrete state θ+ ∈ Θ is random
+0
+0
+with probability mass function P(θ+ = θj | θj ) = pj,j 0 for each θj ∈ Θ,
+and x+ is the next-stage state transition from xi and may be also
+random.
+Step 3. Send vi,j for these given xi ∈ Xt,m and θj , to the master process.
+
+it computes the expectation in the objective function of the maximization
+0
+
+problems, it only needs access to the value functions for those θj which can
+reached from θj in one period. That is,
+E{V̂ (x+ , θ+ ; bt+1 )} =
+
+X
+
+0
+
+pj,j 0 E{V̂ (x+ , θj ; bt+1
+j 0 )}.
+
+1≤j 0 ≤D, pj,j 0 6=0
+
+Therefore, when the master forms the description of a task for a worker,
+it only needs to include those bt+1
+with nonzero transition probability pj,j 0
+j0
+t+1
+(instead nof the whole set of parameters,
+to
+o b ) in the tasks corresponding
+0
+t+1
+j
+0
++
+j
+j
+θ , i.e., bj 0 : pj,j 0 > 0, 1 ≤ j ≤ D where pj,j 0 = P(θ = θ | θ ), and
+
+then send this subset of bt+1 to the workers in Step 1 of Algorithm 2 or 4.
+This saves on master-worker communication costs.
+
+13
+
+5
+
+Application on Stochastic Optimal Growth Models
+
+We consider a multi-dimensional stochastic optimal growth problem. We
+assume that there are d sectors, and let kt = (kt,1 , . . . , kt,d ) denote the capital stocks of these sectors which is a d-dimensional continuous state vector
+at time t. Let θt = (θt,1 , . . . , θt,d ) ∈ Θ = {θtj : 1 ≤ j ≤ D} ⊂ Rd denote
+current productivity levels of the sectors which is a d-dimensional discrete
+state vector at time t, and assume that θt follows a Markov process with
+a stable probability transition matrix, denoted as θt+1 = g(θt , ξt ) where
+ξt are i.i.d. disturbances. Let lt = (lt,1 , . . . , lt,d ) denote elastic labor supply levels of the sectors which is a d-dimensional continuous control vector
+variable at time t. Assume that the net production function of sector i
+at time t is f (kt,i , lt,i , θt,i ), for i = 1, . . . , d. Let ct = (ct,1 , . . . , ct,d ) and
+It = (It,1 , . . . , It,d ) denote, respectively, consumption and investment of the
+sectors at time t. We want to find an optimal consumption and labor supply decisions such that expected total utility over a finite-horizon time is
+maximized, i.e.,
+V0 (k0 , θ0 ) =
+
+max
+
+kt ,It ,ct ,lt
+
+s.t.
+
+E
+
+(T −1
+X
+
+)
+β t u(ct , lt ) + β T VT (kT , θT ) ,
+
+t=0
+
+kt+1,j = (1 − δ)kt,j + It,j + t,j , j = 1, . . . , d,
+
+2
+It,j
+ζ
+Γt,j = kt,j
+− δ , j = 1, . . . , d,
+2
+kt,j
+d
+X
+
+(ct,j + It,j − δkt,j ) =
+
+j=1
+
+d
+X
+
+(f (kt,j , lt,j , θt,j ) − Γt,j ) ,
+
+j=1
+
+θt+1 = g(θt , ξt ),
+where k0 and θ0 are given, δ is the depreciation rate of capital, Γt,j is the
+investment adjustment cost of sector j, and ζ governs the intensity of the
+friction, t = (t,1 , . . . , t,d ) are serially uncorrellated i.i.d. disturbances with
+E{t,i } = 0, and VT (k, θ) is a given terminal value function. For this finitehorizon model, Cai and Judd (2012c) solve some of its simplified problem.
+An infinite-horizon version of this model is introduced in Den Haan et al
+(2011), Juillard and Villemot (2011), and a nonlinear programming method
+for dynamic programming is introduced in Cai et al. (2013a) to solve the
+
+14
+
+multi-country growth model with infinite horizon.
+
+5.1
+
+Dynamic Programming Model
+
+The DP formulation of the multi-dimensional stochastic optimal growth
+problem is
+
+Vt (k, θ) = max u(c, l) + βE Vt+1 (k + , θ+ ) | θ ,
+c,l,I
+
+s.t.
+
+kj+ = (1 − δ)kj + Ij + j , j = 1, . . . , d,
+
+2
+Ij
+ζ
+Γj = kj
+− δ , j = 1, . . . , d,
+2
+kj
+d
+X
+
+(cj + Ij − δkj ) =
+
+j=1
++
+
+d
+X
+
+(f (kj , lj , θj ) − Γj ) ,
+
+j=1
+
+θ = g(θ, ξt ),
+
+for t = 0, . . . , T − 1, where k = (k1 , . . . , kd ) is the continuous state vector
+and θ = (θ1 , . . . , θd ) ∈ Θ = {(ϑj,1 , . . . , ϑj,d ) : 1 ≤ j ≤ D} is the discrete
+state vector, c = (c1 , . . . , cd ), l = (l1 , . . . , ld ), and I = (I1 , . . . , Id ) are control
+variables,  = (1 , . . . , d ) are i.i.d. disturbance with mean 0, and k + =
+
+(k1+ , . . . , kd+ ) and θ+ = θ1+ , . . . , θd+ ∈ Θ are the next-stage state vectors.
+Numerically, V (k, θ) is approximated with given values at finite nodes, so
+the approximation is only good at a finite range. That is, the state variable
+must be in a finite range [k, k̄], then we should have the restriction k + ∈
+[k, k̄]. Here k = (k 1 , ..., k d ), k̄ = (k̄1 , ..., k̄d ), and k + ∈ [k, k̄] denotes that
+ki+ ∈ [k i , k̄i ] for all 1 ≤ i ≤ d. Moreover, we should add c > 0 and l > 0 in
+the constraints.
+
+5.2
+
+Numerical Example
+
+In the following numerical example, we see the application of parallelization of numerical DP algorithms for the DP model of the multi-dimensional
+stochastic optimal growth problem. We let T = 5, β = 0.8, δ = 0.025,
+ζ = 0.5, [k, k̄] = [0.2, 3.0]d , f (ki , li , θi ) = θi Akiψ li1−ψ with ψ = 0.36 and
+A = (1 − β)/(ψβ) = 1, for i = 1, . . . , d, and
+"
+#
+d
+X
+li1+η − 1
+(ci /A)1−γ − 1
+u(c, l) =
+− (1 − ψ)
+,
+1−γ
+1+η
+i=1
+
+15
+
+with γ = 2 and η = 1.
+In this example, we let d = 4. So this is a DP example with 4-dimensional
+continuous states and 4-dimensional discrete states. Here we assume that
+the possible values of θi and θi+ are
+ϑ1 = 0.85, ϑ2 = 0.9, ϑ3 = 0.95, ϑ4 = 1.0, ϑ5 = 1.05, ϑ6 = 1.1, ϑ7 = 1.15,
+and the probability transition matrix from θi to θi+ is a 7 × 7 tridiagonal
+matrix:
+
+
+
+
+
+0.75 0.25
+
+
+ 0.25 0.50 0.25
+
+
+0.25 0.50 0.25
+
+P =
+..
+..
+
+.
+.
+0.25
+
+
+..
+
+. 0.50 0.25
+
+0.25 0.75
+
+
+
+
+
+
+,
+
+
+
+
+
+
+for each i = 1, . . . , 4, and we assume that θ1+ , . . . , θd+ are independent of each
+other. That is,
+Pr[θ+ = (ϑi1 , . . . , ϑi4 ) | θ = (ϑj1 , . . . , ϑj4 )] = Pi1 ,j1 Pi2 ,j2 Pi3 ,j3 Pi4 ,j4 ,
+where Piα ,jα is the (iα , jα ) element of P , for any iα , jα = 1, . . . , 7, α =
+1, . . . , 4.
+In addition, we assume that 1 , . . . , 4 are i.i.d., and each i has 3 discrete
+values:
+δ1 = −0.01, δ2 = 0.0, δ3 = 0.01,
+while their probabilities are q1 = 0.25, q2 = 0.5 and q3 = 0.25, respectively.
+That is,
+Pr[ = (δn1 , . . . , δn4 )] = qn1 qn2 qn3 qn4 ,
+for any nα = 1, 2, 3, α = 1, . . . , 4. Moreover, 1 , . . . , 4 are assumed to be
+independent of θ1+ , . . . , θ4+ .
+
+16
+
+Therefore,
+E{V (k + , θ+ ) | θ = (ϑj1 , . . . , ϑj4 )}
+=
+
+3
+X
+
+6
+X
+
+qn1 qn2 qn3 qn4
+
+n1 ,n2 ,n3 ,n4 =1
+
+Pi1 ,j1 Pi2 ,j2 Pi3 ,j3 Pi4 ,j4 ×
+
+(4)
+
+i1 ,i2 ,i3 ,i4 =1
+
+V (k̂1+ + δn1 , . . . , k̂4+ + δn4 , ϑi1 , . . . , ϑi4 ),
+where k̂α+ = (1 − δ)kα + Iα , for any iα = 1, . . . , 7, α = 1, . . . , 4.
+From the formula (4), it seems that we should compute the value function
+V at a large number of points up to 34 ∗ 74 = 194, 481 in order to evaluate
+the expectation. But in fact, we can take advantage of the sparsity of the
+probability transition matrix P . After canceling the zero probability terms,
+the evaluation of the expectation will need to compute the value function
+at a number of points ranging from 34 ∗ 24 = 1, 296 to 34 ∗ 34 = 6, 561,
+which is far less that the case without using the sparsity. Moreover, the
+communication cost between the master and workers is also far less than
+the case without using the sparsity.
+The continuous value function approximation is the complete degree-6
+Chebyshev polynomial approximation method (2) with 74 = 2401 Chebyshev nodes for continuous state variables, the optimizer is NPSOL (Gill, P.,
+et al., 1994), and the terminal value function is chosen as
+VT (k, θ) = u(f (k, e, e), e)/(1 − β),
+where e is the vector with 1’s everywhere. Here e is chosen because it is
+the steady state labor supply for the corresponding infinite-horizon problem
+and is also the average value of θ.
+
+5.3
+
+HTCondor-MW Results
+
+We use the master algorithm 2 and the worker algorithm 3 to solve the
+optimal growth problem. There are seven possible values of θi for each
+i = 1, . . . , 4, and each task consists of updating the value function at one
+specific θj ; therefore, the total number of HTCondor-MW tasks for one value
+function iteration is 74 = 2401. Furthermore, we use seven approximation
+nodes in each continuous dimension to construct a degree six complete polynomial; therefore, each task computes 2401 small-size maximization prob17
+
+Table 1: Statistics of Parallel DP under HTCondor-MW for the growth
+problem
+Wall clock time for all 3 VFIs
+8.28 hours
+Wall clock time for 1st VFI
+0.34 hours
+Wall clock time for 2nd VFI
+3.92 hours
+Wall clock time for 3rd VFI
+4.01 hours
+Total time workers were up (alive)
+16.9 days
+Total cpu time used by all workers
+16.5 days
+Number of (different) workers
+50
+Average Number Present Workers
+49
+Overall Parallel Performance
+98.6%
+lems as there are 2401 Chebyshev nodes.
+Under HTCondor, we assign 50 workers to do this parallel work. Table
+1 lists some statistics of our parallel DP algorithm under HTCondor-MW
+system for the growth problem after running 3 value function iterations
+(VFI). The last line of Table 1 shows that the parallel efficiency of our
+parallel numerical DP method is very high (up to 98.6%) for this example.
+We see that the total cpu time used by all workers to solve the optimal
+growth problem is nearly 17 days, i.e., it will take nearly 17 wall clock days
+to solve the problem without using parallelism. However, it takes only 8.28
+wall clock hours to solve the problem if we use the parallel algorithm and
+50 worker processors.
+Table 2 gives the parallel efficiency with various number of worker processors for this optimal growth model. We see that it has an almost linear
+speed-up when we add the number of worker processors from 50 to 200. We
+see that the wall clock time to solve the problem is only 2.26 hours now if
+the number of worker processors increases to 200.
+Parallel efficiency drops from 99% to 92% when we move from 100 processors to 200. This is not the critical fact for a user. The most important
+fact is that requesting 200 processors reduced the waiting time from submission to final output by 1.6 hours. Focussing on the user’s waiting time
+is one of the values of the HTC approach to parallelization.
+
+18
+
+Table 2: Parallel efficiency for various numbers of worker processors
+# Worker Parallel
+Average task
+Total wall clock
+processors efficiency wall clock time (second)
+time (hour)
+50
+98.6%
+199
+8.28
+100
+97%
+185
+3.89
+200
+91.8%
+186
+2.26
+
+6
+
+Application to Dynamic Portfolio Problems with
+Transaction Costs
+
+We consider a dynamic portfolio problem with transaction costs. We assume
+that an investor begins with some initial wealth W0 , invests it in several
+assets, and manages it at every time t so as to maximize the expected
+utility of wealth at a terminal time T . We assume a power utility function
+for terminal wealth, u(W ) = W 1−γ /(1 − γ) where γ > 0 and γ 6= 1. Let
+R = (R1 , . . . , Rn )> be the random one-period return of n risky assets, and
+Rf be the return of the riskless asset. The portfolio share for asset i at
+the beginning of period t is denoted xt,i , and let xt = (xt,1 , . . . , xt,n )> . The
+difference between wealth and the wealth invested in stocks is invested in
+bonds. At the beginning of every period, the investor has a chance to rebalance the portfolio with a proportional transaction cost rate τ for buying
++
+or selling stocks. Let δt,i
+W denote the amount of asset i purchased, expressed
+−
++ −
+as a fraction of wealth, and let δt,i
+W denote the amount sold, where δt,i
+, δt,i ≥
+
+0, for periods t = 0, . . . , T − 1.
+We assume that the riskless return Rf and the risky assets’ return R may
+be dependent on a discrete time stochastic process θt (could be a vector),
+denoted by Rf (θt ) and R(θt ) respectively, for t = 0, . . . , T − 1. Then the
+
+19
+
+dynamic portfolio problem becomes
+V0 (W0 , x0 , θ0 ) =
+
+max
+
+δ + ,δ − ≥0
+
+s.t.
+
+E {u(WT )} ,
+
+(5)
+
+Wt+1 = e> Xt+1 + Rf (θt )(1 − e> xt − yt )Wt ,
++
+−
+Xt+1,i = Ri (θt )(xt,i + δt,i
+− δt,i
+)Wt ,
+
+yt = e> (δt+ − δt− + τ (δt+ + δt− )),
+xt+1,i = Xt+1,i /Wt+1 ,
+θt+1 = g(θt , ξt ),
+t = 0, . . . , T − 1;
+
+i = 1, . . . , n,
+
+where e is the column vector with 1’s everywhere, Xt+1 = (Xt+1,1 , . . . , Xt+1,n )> ,
+− >
++ >
+−
++
+, . . . , δt,n
+) . Here, Wt+1 is time t + 1
+, . . . , δt,n
+) , and δt− = (δt,1
+δt+ = (δt,1
+
+wealth, Xt+1,i is time t + 1 wealth in asset i, yt Wt is the change in bond
+holding, and xt+1,i is the allocation of risky asset i.
+
+6.1
+
+Dynamic Programming Model
+
+The DP model of the multi-stage portfolio optimization problem (5) is
+Vt (W, x, θ) =
+
+max
+
+δ + ,δ − ≥0
+
+
+E Vt+1 (W + , x+ , θ+ ) ,
+
+for t = 0, 1, . . . , T − 1, while the terminal value function is VT (W, x, θ) =
+W 1−γ /(1−γ). Given the isoelasticity of VT , we know that the value function
+can be rewritten as
+Vt (Wt , xt , θt ) = Wt1−γ · Ht (xt , θt ),
+for some functions Ht (xt , θt ), where Wt and xt are respectively wealth and allocation fractions of stocks right before re-balancing at stage t = 0, 1, . . . , T ,
+
+20
+
+and
+Ht (x, θ) =
+
+
+max E Π1−γ · Ht+1 (x+ , θ+ ) ,
+
+δ + ,δ −
+
+s.t.
+
+(6)
+
+δ + ≥ 0, δ − ≥ 0,
+x + δ + − δ − ≥ 0,
+y ≤ 1 − e> x,
+θ+ = g(θ, ξt ),
+
+where HT (x, θ) = 1/(1 − γ), and
+y ≡ e> (δ + − δ − + τ (δ + + δ − )),
+si ≡ Ri (θ)(xi + δi+ − δi− ),
+Π ≡ e> s + Rf (θ)(1 − e> x − y),
+x+
+≡ si /Π,
+i
+for i = 1, . . . , n and t = 0, 1, . . . , T − 1. See Cai, Judd and Xu (2013b) for a
+detailed discussion of this dynamic portfolio optimization problem.
+Since Wt and xt are separable, we can just assume that Wt = 1 dollar
+for simplicity. Thus, at time t, δ + and δ − are the amounts for buying and
+selling stocks respectively, y is the change in bond holding, s is the nextstage amount vector of dollars on the stocks, Π is the total wealth at the
+next stage, and x+ is the new fraction vector of the stocks at the next stage.
+In this model, the state variables, x and x+ , are continuous in [0, 1]n .
+
+6.2
+
+Numerical Examples
+
+We choose a portfolio with n = 6 stocks and one riskless bond. The investor
+wants to maximize the expected terminal utility after T = 6 years with the
+terminal utility, u(W ) = W 1−γ /(1−γ), with γ = 4. At the beginning of each
+year t = 0, 1, . . . T − 1, the investor has a chance to rebalance the portfolio
+with a proportional transaction cost rate τ = 0.002 for buying or selling
+stocks. We assume that the stock returns are independent each other, and
+stock i has a log-normal annual return, i.e., log(Ri ) ∼ N (µi −σi2 /2, σi2 ) with
+µi = 0.07 and σi = 0.25, for i = 1, . . . , n. We assume that the bond has a
+riskless annual return exp (rt ), while the interest rate rt is a discrete Markov
+chain, with rt = 0.01, 0.02, 0.03, 0.04 or 0.05, and its transition probability
+21
+
+matrix is
+
+
+
+
+0.7 0.3
+
+
+ 0.3 0.4 0.3
+
+P =
+0.3 0.4 0.3
+
+
+0.3 0.4 0.3
+
+0.3 0.7
+
+
+
+
+.
+
+
+
+
+We use the degree-4 complete Chebyshev polynomials (2) as the approximation method, and choose 5 Chebyshev nodes on each dimension, so that
+we can apply the Chebyshev regression algorithm to compute the approximation coefficients in the fitting step of numerical DP algorithms. Thus, the
+number of approximation nodes is 56 = 15, 625 for each discrete state, so
+the total number of small-size maximization problems for one value function
+iteration is 5 × 56 = 78, 125. We use the product Gauss-Hermite quadrature
+formula (3) with 5 nodes for each dimension, so the number of quadrature
+nodes is 56 = 15, 625 for each discrete state. Therefore, after using the
+sparsity of the probability transition matrix, the computation of the expectation in the objective function of the maximization problem (6) includes
+2 × 56 = 31, 250 or 3 × 56 = 46, 875 evaluations of the approximated value
+function at stage t + 1 for each approximation node. We use NPSOL as our
+optimization solver for solving the maximization problem (6) .
+
+6.3
+
+HTCondor-MW Results
+
+We apply Algorithm 4 and 5 to solve the high-dimensional dynamic portfolio problem. Each HTCondor-MW task solves 25 small-size maximization
+problems, implying that each value function iteration is broken into 3,125
+MTCondor-MW tasks. Our HTCondor program requested 200 workers, and
+was given 194 processors on average.
+Table 3 lists some statistics of our parallel DP algorithm under HTCondorMW system for the portfolio problem with six stocks and one bond with
+stochastic interest rates. The parallel efficiency of our parallel numerical DP
+method is 94.2% for this example, even when we use 200 workers. Moreover, the total cpu time used by all workers to solve the dynamic portfolio
+optimization problem is more than 27 days, i.e., it will take more than 27
+days to solve the problem using a single core. However, it takes only about
+3.6 wall clock hours to solve the problem if we use the type-II parallel DP
+algorithm and 200 worker processors. This reduction in “waiting time” cost
+22
+
+Table 3: Statistics of Parallel DP under HTCondor-MW for the 7-asset
+portfolio problem with stochastic interest rate
+Wall clock time for all 6 VFIs
+3.6 hours
+Wall clock time for 1st VFI
+4.8 minutes
+Wall clock time for 2nd VFI
+43.4 minutes
+Wall clock time for 3rd VFI
+40.6 minutes
+Wall clock time for 4th VFI
+41.5 minutes
+Wall clock time for 5th VFI
+42.9 minutes
+Wall clock time for 6th VFI
+43.7 minutes
+Total time workers were up (alive)
+29.3 days
+Total cpu time used by all workers
+27.4 days
+Number of (different) workers
+200
+Average Number Present Workers
+194
+Overall Parallel Performance
+94.2%
+to a researcher makes it possible to solve problems that essentially cannot
+be solved on a laptop.
+
+7
+
+Conclusion
+
+This paper presents the parallel dynamic programming methods in HTCondor Master-Worker system. That system can be used to solve very demanding high-dimensional dynamic programming problems efficiently. While we
+only used DP examples, the simple structure of parallelization used for DP
+problems is similar to parallelization strategies that can be used for many
+other economic problems, such as computing high-dimensional dynamic general equilibrium problems. HTCondor Master-Worker is clearly a powerful
+tool with many potential applications for economists.
+
+23
+
+References
+[1] Bellman, R. (1957). Dynamic Programming. Princeton University
+Press.
+[2] Cai, Y. (2009). Dynamic Programming and Its Application in Economics and Finance. PhD thesis, Stanford University.
+[3] Cai, Y., and K.L. Judd (2010). Stable and efficient computational methods for dynamic programming. Journal of the European Economic Association, Vol. 8, No. 2-3, 626–634.
+[4] Cai, Y., and K.L. Judd (2012a). Dynamic programming with shapepreserving rational spline Hermite interpolation. Economics Letters,
+Vol. 117, No. 1, 161–164.
+[5] Cai, Y., and K.L. Judd (2012b). Shape-preserving dynamic programming. Mathematical Methods of Operations Research, DOI:
+10.1007/s00186-012-0406-5.
+[6] Cai, Y., and K.L. Judd (2012c). Dynamic programming with Hermite
+approximation. NBER working paper No. w18540.
+[7] Cai, Y., K.L. Judd, T.S. Lontzek, V. Michelangeli, and C.-L. Su
+(2013a). Nonlinear programming method for dynamic programming.
+Hoover working paper.
+[8] Cai, Y., K.L. Judd and R. Xu (2013b). Numerical solutions of dynamic
+portfolio optimization with transaction costs. Hoover working paper.
+[9] Den Haan, W.J., K.L. Judd and M. Juillard (2011). Computational
+suite of models with heterogeneous agents II: Multi-country real business cycle models. Journal of Economic Dynamics & Control, 35, 175–
+177.
+[10] Judd, K.L. (1998). Numerical Methods in Economics. The MIT Press.
+[11] Gill, P., W. Murray, M.A. Saunders and M.H. Wright (1994). User’s
+Guide for NPSOL 5.0: a Fortran Package for Nonlinear Programming.
+Technical report, SOL, Stanford University.
+
+24
+
+[12] Juillard, M., and S. Villemot (2011). Multi-country real business cycle
+models: Accuracy tests and test bench. Journal of Economic Dynamics
+& Control, 35, 178–185.
+[13] Rust, J. (2008). Dynamic Programming. In: New Palgrave Dictionary
+of Economics, ed. by Steven N. Durlauf and Lawrence E. Blume. Palgrave Macmillan, second edition.
+[14] Stroud, A., and D. Secrest (1966), Gaussian Quadrature Formulas. Englewood Cliffs, NJ: Prentice Hall.
+
+25
+
+

@@ -1,0 +1,1945 @@
+NBER WORKING PAPER SERIES
+
+HOW TO SOLVE DYNAMIC STOCHASTIC MODELS COMPUTING EXPECTATIONS
+JUST ONCE
+Kenneth L. Judd
+Lilia Maliar
+Serguei Maliar
+Working Paper 17418
+http://www.nber.org/papers/w17418
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+September 2011
+
+Lilia Maliar and Serguei Maliar acknowledge support from the Hoover Institution at Stanford University,
+the Ivie, the Ministerio de Ciencia e Innovación and FEDER funds under the project SEJ-2007-62656,
+and the Generalitat Valenciana under the grants BEST/2011/283 and BEST/2011/282, respectively.
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2011 by Kenneth L. Judd, Lilia Maliar, and Serguei Maliar. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+
+How to Solve Dynamic Stochastic Models Computing Expectations Just Once
+Kenneth L. Judd, Lilia Maliar, and Serguei Maliar
+NBER Working Paper No. 17418
+September 2011
+JEL No. C63
+ABSTRACT
+We introduce a technique called "precomputation of integrals" that makes it possible to compute conditional
+expectations in dynamic stochastic models in the initial stage of the solution procedure. This technique
+can be applied to any set of equations that contains conditional expectations, in particular, to the Bellman
+and Euler equations. After the integrals are precomputed, we can solve stochastic models as if they
+were deterministic. We illustrate the benefits of precomputation of integrals using one- and multi-agent
+numerical examples.
+
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+Lilia Maliar
+Office T-24 Hoover Institution
+Stanford University
+CA 94305-6010, USA
+maliarl@stanford.edu
+
+Serguei Maliar
+Office T-24 Hoover Institution
+Stanford University
+CA 94305-6010, USA
+maliars@stanford.edu
+
+1
+
+Introduction
+
+In existing global methods for solving dynamic stochastic models, a conditional expectation function is computed in each iteration.1 Re-computing expectations in each iteration
+is costly, and the cost grows rapidly when the number of random variables increases (because the dimensionality of integrals increases), when more accurate integration methods
+are used (because the number of integration nodes increases), and when models become
+more complex (because numerical solvers are used more intensively, which involves additional evaluations of integrals).
+In this paper, we introduce a simple technique that makes it possible to compute
+conditional expectations in the initial stage of the solution procedure. The key idea is
+to approximate the integrand — expression inside the conditional expectation — with a
+parametric function whose basis functions are separable in endogenous and exogenous
+state variables. (This property is satisfied for many polynomial families including ordinary, Chebyshev and Hermite polynomials as well as for many nonpolynomial families of
+functions.) With such basis functions, we can construct integrals of exogenous state variables for any given values of endogenous state variables before the beginning of iterations.
+Subsequently, in the iterative procedure, values of conditional expectation functions can
+be immediately derived using the precomputed integrals. Eﬀectively, this allows us to
+solve stochastic problems as if they were deterministic, with the corresponding reduction
+in cost. We call the proposed technique precomputation of integrals.
+Precomputation of integrals works under very general assumptions and can be applied
+to any set of equations that contains conditional expectations, including the Bellman and
+Euler equations. Furthermore, precomputation of integrals is compatible with essentially
+all computational techniques used by existing global solution methods, including a variety
+of approximating functions, solution domains, integration rules, fitting methods and iterative schemes for finding unknown parameters of approximating functions. That is, apart
+from precomputation of integrals, the rest of our solution procedure is standard. Finally,
+given that we must approximate integrals just once, we can use very accurate integration
+methods that would be intractable inside an iterative cycle.
+We illustrate the technique of precomputation of integrals in two applications. One
+is a simple, one-agent neoclassical growth model, and the other is a more challenging,
+multi-agent model with up to 20 heterogeneous agents. We study both the Bellman
+and Euler equation algorithms. In our numerical examples, solution algorithms based on
+precomputation of integrals proved to be accurate, fast and reliable.
+The rest of the paper is as follows: In Section 2, we set up the test model. In Section 3,
+we show how to precompute integrals for ordinary polynomial functions of state variables.
+1
+For reviews of methods for solving dynamic economic models, see Taylor and Uhlig (1990), Rust (1996,
+2008), Gaspar and Judd (1997), Judd (1998), Marimon and Scott (1999), Santos (1999), Christiano and
+Fisher (2000), Miranda and Fackler (2002), Aruoba, Fernández-Villaverde and Rubio-Ramírez (2006),
+Stachursky (2009), Den Haan (2010), and Kollmann, Maliar, Malin and Pichler (2011).
+
+2
+
+In Section 4, we apply the precomputation technique to the Bellman and Euler equations.
+In Section 5, we discuss generalizations of the precomputation technique. In Section 6, we
+discuss compatibility of precomputation of integrals with other computational techniques
+in the literature. In Section 7, we present our numerical results. Finally, in Section 8, we
+conclude.
+
+2
+
+Neoclassical stochastic growth model
+
+To illustrate the technique of precomputation of integrals, we use the standard neoclassical
+growth model.
+
+2.1
+
+The set up
+
+The representative agent solves
+max
+
+{+1  }=0∞
+
+0
+
+∞
+X
+
+   ( )
+
+(1)
+
+=0
+
+s.t.  + +1 = (1 − )  +   ( ) 
+¡
+¢
+ln +1 =  ln  + +1 
++1 ∼ N 0 2 
+
+(2)
+(3)
+
+where the initial condition (0  0 ) is given;  is the expectation operator conditional
+on information at time ;  ,  and  are consumption, capital and productivity level,
+respectively;  ∈ (0 1) is the discount factor;  ∈ (0 1] is the depreciation rate of capital;
+ ∈ (−1 1) is the autocorrelation coeﬃcient of the productivity level;  ≥ 0 is the
+standard deviation of the productivity shock;  and  are the utility and production
+functions, respectively, both of which are strictly increasing, continuously diﬀerentiable
+and concave.
+
+2.2
+
+Bellman equation
+
+We can characterize a solution to the model (1)—(3) by using dynamic programming
+approach. We solve for the value function  ( ) that satisfies the Bellman equation,
+ ( ) = max
+{ () +  [ (0  0 )]}
+0
+
+(4)
+
+ 
+
+s.t. 0 = (1 − )  +  () − 
+0
+
+0
+
+ln  =  ln  +  
+
+0
+
+¡
+
+ ∼ N 0 
+
+2
+
+¢
+
+(5)
+
+
+(6)
+
+where the primes on variables denote next-period values, and  [ (0  0 )] ≡  [ (0  0 ) | ]
+is an expectation of  ( 0  0 ) conditional on state ( ).
+3
+
+2.3
+
+Euler equation
+
+We can also characterize a solution of the model (1)—(3) by formulating the Lagrangian
+function and deriving the first-order conditions (without formulating the Bellman equation). This yields the Euler equation
+1 () =  [1 (0 ) (1 −  + 0 1 ( 0 ))] 
+
+(7)
+
+where  denotes a first-order derivative of a function  with respect the -th argument.
+Under the Euler equation approach, we solve for policy functions  =  ( ) and  0 =
+ ( ) that satisfy (5), (6) and (7).
+
+3
+
+Precomputation of integrals under ordinary polynomials
+
+The Bellman and Euler equations contain conditional expectation functions,  [ (0  0 )]
+and  [1 (0 ) (1 −  + 0 1 (0 ))], respectively. The key idea of our precomputation technique is to approximate an integrand (which is  (0  0 ) and 1 (0 ) (1 −  + 0 1 (0 )) in
+the Bellman and Euler equations, respectively) with a parametric function for which conditional expectation can be characterized for any parameter vector and any state of the
+world. An example of such a function is a complete ordinary polynomial,
+P ( ; ) = 0 + 1  + 2  + 3 2 + 4  + 5 2 +  +   
+
+(8)
+
+where  ≡ (0  1    ) ∈ R+1 is a vector of polynomial coeﬃcients, and  is a degree of
+the polynomial. Taking into account that 0 is known at present and that 0 =  exp (0 ),
+we can represent conditional expectation of P (0  0 ; ) as follows
+ [P (0  0 ; )]
+i
+h
+2
+=  0 + 1  0 + 2  exp (0 ) + 3 (0 ) + 4 0  exp (0 ) +  +   exp (0 )
+2
+
+= 0 + 1 0 + 2   [exp (0 )] + 3 ( 0 ) + 4 0   [exp (0 )] +  +   exp (0 )
+2
+
+= 0 I0 + 1 I1 0 + 2 I2  + 3 I3 ( 0 ) + 4 I4 0  +  +  I 
+2
+
+= 0 + 1 0 + 2  + 3 (0 ) + 4 0  +  +  
+≡ P (0   ; )  (9)
+
+where  ≡ (0  1    ) ∈ R+1 , and the coeﬃcients  and  are related by
+ =  I 
+
+ = 0 1  
+
+(10)
+
+where I0 = I1 = I3 = I6  = 1, I2 = I4 = I7 =  =  [exp (0 )], I5 = I8 =  =
+ [exp (20 )], ..., I =  [exp (0 )].
+4
+
+The integrals I0   I can be computed up-front without solving the model (i.e.,
+precomputed). Let  be the -th moment of the function exp (0 ),  = 0 1  . Since,
+by assumption, 0 ∼ N (0 2 ), we have
+!
+Ã
+Z +∞
+0 2
+1
+(
+)
+exp (0 ) exp − 2 0 
+(11)
+ ≡  [exp (0 )] = √
+2
+2 −∞
+Note that there is a pattern in the sequence of I’s in terms of ’s,
+{I0  I1  I2  I3  I4  I5  I6  I7  I8  I9   I }
+
+= {1 1 1  1 1  2  1 1  2  3    }  (12)
+
+where 0 = 1. Once I’s are computed, an evaluation of conditional expectation becomes
+trivial. Namely, conditional expectation of a polynomial function is given by the same
+polynomial function but evaluated at a diﬀerent coeﬃcients vector, i.e.,  [P (0  0 ; )] =
+P (0   ; ).
+
+4
+
+Characterizing the solution under precomputation
+of integrals
+
+In this section, we reformulate the Bellman and Euler equations using the technique of
+precomputation of integrals.
+
+4.1
+
+Bellman equation algorithm
+
+We parameterize the true value function  ( ) with a flexible functional form b ( ; )
+given by the polynomial (8). Using the precomputation result (9), we rewrite the Bellman
+equation (4)—(6) as
+n
+o
+
+0 
+b
+b
+ () +   (   ; ) ,
+(13)
+ ( ; ) = max
+0
+ 
+
+0
+
+s.t.  = (1 − )  +  () − 
+
+¡
+¢
+ln  =  ln  +  
+ ∼ N 0 2 
+ = 0 1  
+ =  I 
+0
+
+0
+
+0
+
+(14)
+
+(15)
+(16)
+
+
+where = indicates that the corresponding equality is satisfied approximately. In the transformed Bellman equation (13)—(16), the eﬀect of uncertainty on the solution is summarized
+by the moments (11) which determine the relation between  and . To solve the Bellman
+equation, we proceed in two steps.
+
+5
+
+Algorithm 1. Bellman equation algorithm
+Precomputation of integrals. Construct {I0   I } using (11), (12).
+Transformed problem. Find  that solves (13)—(16).
+Apart from the fact that  and  diﬀer, the transformed Bellman equation (13)—(16) is
+standard and can be solved using a variety of solution algorithms available in the literature;
+we describe an example of such an algorithm in Appendix B.
+
+4.2
+
+Euler equation algorithm
+
+The precomputation technique introduced in Section 3 assumes that the function we parameterize is the same as the function for which we need to compute the expectation.
+This is true for the Bellman equation approach that parameterizes  ( ) and requires
+us to compute  [ ( 0  0 )]. However, this is not true for a Euler equation algorithm that
+typically parameterizes policy functions like  ( ) or  ( ) but needs to compute
+ [1 (0 ) (1 −  + 0 1 ( 0 ))]. To adapt the precomputation technique to the Euler equation, we make a change of variables, namely, we introduce a new variable  0 that stands
+for the integrand in (7), which implies
+ ≡ 1 () [1 −  + 1 ()] 
+
+(17)
+
+In terms of  and 0 , the Euler equation (7) is
+
+=  [ 0 ] 
+1 −  + 1 ()
+
+(18)
+
+If we approximate the function  =  ( ), we have the same function under the expectation,  [ (0  0 )], and thus, the results of Section 3 apply.
+b ( ; ) given
+We parameterize the function  ( ) with a flexible functional form 
+by the polynomial (8). Using the precomputation result (9), we rewrite the Euler equation
+(18) as
+b ( ; )
+
+ b 0 
+= 
+(   ; ) 
+(19)
+0
+1 −  +  ()
+
+Again, after integrals are precomputed, all the eﬀect of uncertainty on the solution is
+compressed into a mapping between the vectors  and . To solve the model, we proceed
+in two steps.
+Algorithm 2. Euler equation algorithm
+Precomputation of integrals. Construct {I0   I } using (11), (12).
+Transformed problem. Find  that solves (14)—(17) and (19).
+6
+
+As in the case of the Bellman equation, we can use a variety of solution algorithms to
+solve the transformed problem; see Appendix B for an example of such an algorithm.
+In some applications, it might be preferable to approximate policy functions other than
+the function  ( ) because such policy functions are better behaved or more convenient
+for certain purposes than others; see Maliar, Maliar and Judd (2011) for examples. We
+can extend the precomputation technique to those cases by approximating other policy
+functions jointly with  ( ). As an example, in Appendix C, we show how to use the
+precomputation technique for approximating the capital policy function  0 =  ( ).
+
+4.3
+
+Relation between the Bellman and Euler equations under
+precomputation of integrals
+
+If a solution to the Bellman equation is interior (4)—(6), it satisfies the first-order and
+envelope conditions, which, respectively, are
+1 () =  [1 (0  0 )] 
+1 ( ) = 1 () [1 −  + 1 ()] 
+
+(20)
+(21)
+
+The envelope condition (21) implies that the supplementary variable , introduced in (17),
+is eﬀectively the derivative of the value function,  =  ( ) = 1 ( ).
+Unlike the original Euler equation (7), the conditions (20) and (21) are directly suitable for precomputation of integrals since they contain 1 ( ) and  [1 (0  0 )]. The
+precomputation result (9) can be applied to the derivative of the value function 1 ( )
+in the same way as it was applied to the value function  ( ). The resulting Euler equab ( ; ) and 
+b (0   ; ), we
+tion is identical to (19) up to notations, namely, instead of 
+have b1 ( ; ) and b1 (0   ; ), respectively. That is, in the studied example, approximating the derivative of the value function 1 ( ) leads to the same solution algorithm
+(Algorithm 2) as approximating the supplementary function  ( ).
+
+5
+
+Generalization of precomputation of integrals
+
+In this section, we provide a general description of the precomputation technique. Let
+ ∈ R and  ∈ R be vectors of endogenous and exogenous state variables, respectively.
+We make the following three assumptions:
+A1. Each basis function of an approximating function is multiplicatively separable in
+ and , i.e.,
+
+X
+P ( ; ) =
+  ()  () 
+(22)
+=0
+
+7
+
+where  ≡ (0    ) ∈ R+1 ;  ()  () is the -th basis function; by convention,
+0 () 0 () is equal to 1;   : R → R and  : R → R for  = 1  .
+A2. Next-period endogenous state variables 0 are -measurable.
+A3. Exogenous state variables follow a stochastic process  0 =  ( 0 ), where 0 ∈ Ω ⊆
+R is the vector of
+with a density function  : RR→ R+ that is known at 
+R disturbances
+and that satisfies 0 ∈Ω  (0 ) 0 = 1. Moreover, integrals of type 0 ∈Ω  ( ( 0 ))  (0 ) 0
+exist and are finite.
+Proposition 1. Under the assumptions A1—A3, we have
+ [P (0   0 ; ) | ] = P (0   ( ) ; ) 
+where  ≡  [0 ], and  ≡ (0    ) and  are related by
+Z
+ ( ( 0 ))
+ (0 ) 0 
+ = 
+
+(
+(
+))
+0
+ ∈Ω 
+
+(23)
+
+(24)
+
+Proof: This result is obtained as follows
+Z
+0 0
+ [P (   ; ) | ] =
+P (0   0 ; )  (0 ) 0
+A1
+
+=
+
+Z
+
+∈Ω
+
+Z
+
+
+X
+X
+0
+0
+0
+0 A2
+0
+  ( )  ( )  ( )  =
+  ( )
+
+0 ∈Ω =0
+
+=0
+
+A3
+
+=
+
+
+X
+
+  (0 )  ( ( ))
+
+=0
+
+Z
+
+0 ∈Ω
+
+0 ∈Ω
+
+ ( ( 0 ))  (0 ) 0
+
+ ( ( 0 ))
+ (0 ) 0
+ ( ( ))
+
+
+X
+=
+  (0 )  ( ( )) = P (0   ( ) ; ) 
+
+¥
+
+=0
+
+Few comments about our assumptions are in order. A1 holds not only for the ordinary
+polynomials (8) but also for orthogonal polynomial families (like Chebyshev, Hermite
+and Legendre families), as well as for many nonpolynomial families (for example,   ()
+and  () can be trigonometric functions). A2 means that next-period endogenous state
+variables are known with certainty at present. A3 means that endogenous state variables
+have finite moments. To construct the conditional expectation function, we set the nextperiod exogenous state variables at the values  ( ). In the example of Section 3, such
+reference values allow us to separate out the exogenous state variables and the integrals
+of disturbances, making the integrals (11) independent of the economy’s state. Using
+the result of Proposition 1, we can precompute conditional expectation functions in the
+Bellman and Euler equations under very general assumptions; see Appendix A.
+8
+
+6
+
+Combining precomputation of integrals with other
+techniques in the literature
+
+Precomputation of integrals is compatible with a variety of computational techniques used
+by existing global solution methods. First, we can use diﬀerent solution domains such
+as a tensor-product grid, a set of simulated points (these two domains are used in the
+present paper), a Smolyak grid (introduced in Krueger and Kubler, 2004), and a cluster
+grid (proposed in Judd, Maliar and Maliar, 2010). Second, we can use a variety of approximation methods for fitting the unknown functions to the data such as least-squares
+methods based on singular value decomposition or QR factorization, Tikhonov regularization, least-absolute deviations method, and principal component regression method; see
+Judd, Maliar and Maliar (2011). Finally, we can use diﬀerent integration formulas and
+diﬀerent iterative schemes for finding unknown parameters of approximating functions;
+these techniques are discussed in the remainder of the section.
+
+6.1
+
+Integration formulas
+
+Numerical integration is an approximation of integrals by a weighted sum of values that
+an integrand  takes in a finite set of nodes,
+Z
+
+X
+¡ ¢
+0
+0
+0
+0 
+ ( )  ( )  =
+   0 
+(25)
+ [ ( )] =
+0 ∈Ω
+
+=1
+
+where 0 and   are the -th integration node and weight, respectively. Integration formulas diﬀer in their choices of integration nodes and weights. Typically, there is a trade
+oﬀ between the accuracy and cost: integration formulas with more nodes (and thus, with
+a higher cost) lead to more accurate approximations.
+Unidimensional integrals can be accurately computed by discretizing an autoregressive process into a finite-state Markov chain (see Tauchen, 1986) or by using Gaussian
+quadrature formulas (see, e.g., Judd, 1992). These techniques can be extended to multidimensional case using a product rule, however, the cost grows exponentially with the
+number of random variables ("curse of dimensionality"). A feasible and accurate alternative for high-dimensional integrals is non-product monomial formulas; see, e.g., Judd
+(1988, pp. 271-275) for a description of some monomial formulas. The cost of monomial
+formulas grows with the dimensionality only polynomially (e.g., linearly and quadratically). Another tractable alternative in high-dimensional applications is Monte Carlo
+integration (see Rust, 1996, and Geweke, 1996, for a discussion), however, it delivers
+significantly lower accuracy than that attained by deterministic integration methods; see
+Judd et al. (2011) for comparison results.
+Precomputation of integrals can be performed using any of the numerical integration
+methods discussed above (for some stochastic processes for shocks, integrals of type (25)
+9
+
+can be precomputed analytically; see Maliar and Maliar, 2005, for an example). Since
+precomputation of integrals is a one-time fixed-cost operation, we can use very accurate
+integration methods that would be too expensive to use inside an iterative cycle.
+
+6.2
+
+Iterative methods for finding fixed points
+
+The number of evaluations of integrals (and hence, the gains from precomputation of
+integrals) highly depends on the technique used for finding fixed-point parameters of approximating functions. Three techniques that are used in the literature are time iteration,
+fixed-point iteration and (quasi)-Newton methods; see Judd (1998, pp. 553-558 and 103119) for a review. All three techniques can be applied to both the Bellman and Euler
+equations.
+Time iteration requires us to find a numerical solution to a non-linear optimization
+problem in each grid point (namely, to find a maximum of the Bellman operator or to
+find a solution to the Euler equation). An integral of type (25) must be evaluated many
+times in each iteration, which makes time iteration expensive; see Aruoba et al. (2006).
+An endogenous-grid technique of Carroll (2005) can reduce the cost of time iteration,
+however, this technique is not trivial to implement for complex models.2
+In turn, fixed-point iteration does not require us to find a solution to the Bellman and
+Euler equations in each iteration but ensures that successive approximations converge to
+a fixed-point in the limit.3 In this case, integrals are evaluated just once per iteration.
+However, the rate of convergence of fixed-point iteration is generally slower than that of
+time iteration, and the number of integral evaluations might be still very large.
+Finally, (quasi)-Newton methods perform multiple evaluations of integrals when computing derivatives of the objective function with respect to parameters of approximating
+functions. The number of integral evaluations varies substantially with a quality of initial
+guess, a parameterization of the model and a design of the optimization method; see Judd
+(1992) for a discussion and numerical experiments.
+Precomputation of integrals is compatible with all three iterative techniques, which
+can be implemented in the usual way. The diﬀerence is that, in our case, iterations will
+not involve evaluations of integrals.
+2
+
+For our model, Carroll’s (2005) technique requires us to introduce a new variable  0 ≡ 0  ( 0 ) +
+(1 − ) 0 and to rewrite the Bellman equation as  ( ) = max { ( − 0 ) +  [ ( 0  0 )]}. Using an
+endogenous grid on 0 (instead of ) makes it possible to compute  [ ( 0  0 )] with just one evaluation
+per iteration. However, in a similar model with labor,  0 = 0  ( 0  0 ) + (1 − ) 0 depends on labor 0 ,
+and  [ ( 0  0 )] cannot be computed without solving for control variables; see Barillas and FernándezVillaverde (2007) for a method that constructs an endogenous grid by iteration on the labor policy
+function.
+3
+Fixed-point iteration is common for solution algorithms iterating on the Euler equation; see, e.g.,
+Marcet (1988), Miranda and Helmberger (1988), Marcet and Lorenzoni (1999). It is also used in the
+context of an algorithm iterating on the Bellman equation; see Maliar and Maliar (2005).
+
+10
+
+7
+
+Numerical examples
+
+In this section, we assess the performance of the global Bellman and Euler equation
+methods developed in Sections 4.1 and 4.2.
+
+7.1
+
+Implementation details
+
+To parameterize the model (1)—(3), we assume  ( ) =
+
+1−
+−1
+
+1−
+
+with  =
+
+©1
+
+ª
+
+1
+3
+,
+3
+
+ ( ) =  with  = 036 and  = 1−(1−)
+(the latter value normalizes the deter
+ministic steady state of capital to one), and  = 099,  = 0025,  = 095,  = 001.
+To precompute
+the ¡moments
+in (11), we use a 10-node Gauss-Hermite quadrature rule
+¢ª
+ P10 ©
+0
+ =
+exp
+
+
+,
+where
+0 and  are the -th integration node and weight,
+
+
+=1
+respectively.
+We use the simplest possible solution domain, namely, a rectangular, uniformly spaced
+grid of 10 × 10 points for capital and productivity within the ergodic range. We compute
+polynomial approximations of degrees up to 5. To solve for the unknown polynomial
+coeﬃcients, we use fixed-point iteration. A detailed description of the global methods is
+provided in Appendix B.
+As a measure of accuracy, we report the mean and maximum of unit-free Euler equation
+errors on a stochastic simulation of 10,000 observations. We use MATLAB software,
+version 7.6.0.324 (R2008a) and a desktop computer ASUS with Intel(R) Core(TM)2 Quad
+CPU Q9400 (2.66 GHz), RAM 4MB.
+
+7.2
+
+Results
+
+In Table 1, we provide the results for the global Bellman equation algorithm.
+Table 1: Accuracy and speed of the Bellman equation algorithm.
+Polynomial
+degree
+1st
+2nd
+3rd
+4th
+5th
+
+ = 13
+L∞
+CPU
+-1.63
+2.72
+-3.50
+0.10
+failed
+-6.27 -5.81
+0.12
+failed
+L1
+-1.64
+-3.83
+
+L1
+-1.64
+-3.65
+-4.83
+-5.96
+-7.12
+
+=1
+L∞
+-1.63
+-3.42
+-4.39
+-5.36
+-6.43
+
+CPU
+8.60
+0.14
+0.16
+0.17
+0.18
+
+L1
+-1.64
+-3.20
+-4.12
+-5.06
+-6.04
+
+=3
+L∞
+CPU
+-1.63 13.45
+-2.67
+0.20
+-3.29
+0.22
+-4.12
+0.26
+-4.92
+0.25
+
+
+
+Notes: L1 and L∞ are, repectively, the average and maximum of absolute approximation errors across
+optimality condition and test points (in log10 units) on a stochastic simulation of 10,000 observations;
+CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient of risk aversion.
+
+This algorithm is successful in finding solutions under  = 1 and  = 3 however
+fails under  = 13 for polynomials of degrees 3 and 5. The reason is that parametric
+
+approximations of value function do not necessarily satisfy the property of monotonicity;
+see Judd (1998, p. 438) for a discussion. We do not resolve this issue because it is related
+to interpolation and not to precomputation of integrals.4 Whenever our approximation
+of value function is monotone, the approximation errors decrease with each polynomial
+degree by one or more order of magnitude. High-degree polynomial solutions are fairly
+accurate, in particular, for the fifth-degree polynomial, the errors are of order 10−5 −10−6 .
+The results for the global Euler equation algorithm are provided in Table 2.
+Table 2: Accuracy and speed of the Euler equation algorithm.
+Polynomial
+degree
+1st
+2nd
+3rd
+4th
+5th
+
+L1
+-3.59
+-5.00
+-5.98
+-7.24
+-8.44
+
+ = 13
+L∞
+-3.37
+-4.49
+-5.54
+-6.69
+-7.89
+
+CPU
+0.74
+0.74
+0.54
+0.48
+0.27
+
+L1
+-3.39
+-4.64
+-5.68
+-6.83
+-8.01
+
+=1
+L∞
+-3.24
+-4.21
+-5.19
+-6.18
+-7.32
+
+CPU
+1.20
+1.16
+0.72
+0.73
+0.40
+
+L1
+-2.98
+-3.91
+-4.81
+-5.79
+-6.63
+
+=3
+L∞
+-2.68
+-3.53
+-4.31
+-5.07
+-5.85
+
+CPU
+1.90
+1.84
+1.48
+1.23
+0.91
+
+
+
+Notes: L1 and L∞ are, repectively, the average and maximum of absolute approximation errors across
+optimality condition and test points (in log10 units) on a stochastic simulation of 10,000 observations;
+CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient of risk aversion.
+
+The performance of this algorithm is superior to that of the Bellman equation algorithm: it is successful in finding the solutions in all cases and produces much smaller
+approximation errors (of order 10−6 − 10−8 ). The accuracy is higher because the Euler
+equation algorithm parameterizes the derivative of the value function while the Bellman
+equation algorithm parameterizes the value function itself and eﬀectively, loses one polynomial degree.
+Finally, in Appendix D, we illustrate precomputation of integrals in the context of a
+model with up to 20 heterogeneous agents that was studied in Judd et al. (2011) using a
+generalized stochastic simulation algorithm (GSSA). In the context of GSSA, Judd et al.
+(2011) found that there is a significant trade-oﬀ between accuracy and speed depending
+on the integration method used (Monte Carlo, Gaussian quadrature and monomial integration methods). Precomputation of integrals eﬀectively eliminates the above trade-oﬀ.
+Given that we need to compute integrals just once, we can do it very accurately at a relatively low (fixed) cost. As a result, GSSA based on precomputation of integrals possesses
+two valuable features — high accuracy of solutions (characteristic for the versions of GSSA
+based on accurate but expensive multipoint Gaussian quadrature and monomial rules)
+4
+
+Two techniques can ensure monotonicity of parametric approximations. One is to impose restrictions
+on the derivatives of the estimated functions; this is easy to do under linear programming methods
+described in Judd et al. (2011). The other is to use parametric functions that preserve shape; see Judd
+(1998, p. 440).
+
+and a low cost (characteristic for versions of GSSA based on cheap but far less accurate
+Monte Carlo methods).
+
+8
+
+Conclusion
+
+Many existing solution methods in the literature rely on parametric functions that satisfy
+the assumption of separability used in the present paper. For such methods, we can
+precompute integrals in the stage of initialization. The resulting transformed stochastic
+problem has the same computational complexity as a similar deterministic problem. Our
+technique of precomputation of integrals is very general and can be applied to essentially
+any set of equations that contains conditional expectations. Precomputation of integrals
+can save programming eﬀorts, reduce a computational burden and increase accuracy of
+solutions. It is of special value in computationally intense applications.
+
+References
+[1] Aruoba, S., J. Fernández-Villaverde and J. Rubio-Ramírez, (2006). Comparing solution methods for dynamic equilibrium economies. Journal of Economic Dynamics
+and Control 30, 2477-2508.
+[2] Barillas, F. and J. Fernandez-Villaverde, (2007). A generalization of the endogenous
+grid method. Journal of Economic Dynamics and Control, Elsevier 31, 2698-2712.
+[3] Carroll, K. (2005). The method of endogenous grid points for solving dynamic stochastic optimal problems, Economic letters 91, 312-320.
+[4] Christiano, L. and D. Fisher, (2000). Algorithms for solving dynamic models with
+occasionally binding constraints. Journal of Economic Dynamics and Control 24,
+1179-1232.
+[5] Den Haan, W., (2010), Comparison of solutions to the incomplete markets model
+with aggregate uncertainty. Journal of Economic Dynamics and Control 34, 4—27.
+[6] Gaspar, J. and K. Judd, (1997). Solving large-scale rational-expectations models.
+Macroeconomic Dynamics 1, 45-75.
+[7] Geweke, J., (1996). Monte Carlo simulation and numerical integration. In Handbook
+of Computational Economics (H. Amman, D. Kendrick, and J. Rust, eds.), Amsterdam: Elsevier Science, pp. 733-800.
+[8] Judd, K., (1992). Projection methods for solving aggregate growth models. Journal
+of Economic Theory 58, 410-452.
+13
+
+[9] Judd, K., (1998). Numerical Methods in Economics. Cambridge, MA: MIT Press.
+[10] Judd, K., L. Maliar and S. Maliar, (2010). A cluster-grid projection method: solving
+problems with high dimensionality. NBER working paper 15965.
+[11] Judd, K., L. Maliar and S. Maliar, (2011). Numerically stable and accurate stochastic
+simulation approaches for solving dynamic models. Quantitative Economics 2, 173210.
+[12] Kollmann, R., S. Maliar, B. Malin and P. Pichler, (2011). Comparison of solutions
+to the multi-country real business cycle model. Journal of Economic Dynamics and
+Control 35, 186-202.
+[13] Krueger, D. and F. Kubler, (2004). Computing equilibrium in OLG models with
+production. Journal of Economic Dynamics and Control 28, 1411-1436.
+[14] Maliar, L. and S. Maliar, (2005). Solving nonlinear stochastic growth models: an
+algorithm iterating on value function by simulations. Economics Letters 87, 135-140.
+[15] Maliar, S., L. Maliar and K.L. Judd, (2011), Solving the multi-country real business
+cycle model using ergodic set methods. Journal of Economic Dynamic and Control
+35, 207-228.
+[16] Marcet, A. (1988). Solving non-linear models by parameterizing expectations. Unpublished manuscript, Carnegie Mellon University, Graduate School of Industrial
+Administration.
+[17] Marcet, A., and G. Lorenzoni (1999). The parameterized expectation approach: some
+practical issues. In Computational Methods for Study of Dynamic Economies (R.
+Marimon and A. Scott, eds.). Oxford University Press, New York, pp. 143-171.
+[18] Marimon, R. and A. Scott, (1999). Computational Methods for Study of Dynamic
+Economies, Oxford University Press, New York.
+[19] Miranda, M. and P. Fackler, (2002). Applied Computational Economics and Finance.
+Cambridge: MIT Press.
+[20] Miranda, M. and P. Helmberger (1988). The eﬀects of commodity price stabilization
+programs. American Economic Rewiev 78, 46-58.
+[21] Rust, J., (1996). Numerical dynamic programming in economics. In Handbook of
+Computational Economics (H. Amman, D. Kendrick and J. Rust eds.), Amsterdam:
+Elsevier Science, pp. 619-722.
+
+14
+
+[22] Rust, J., (2008). Dynamic programming. In The New Palgrave Dictionary of Economics (S. Durlauf and L. Blume eds.), Palgrave Macmillan.
+[23] Santos, M., (1999). Numerical solution of dynamic economic models, in: J. Taylor and
+M. Woodford (Eds.), Handbook of Macroeconomics, Amsterdam: Elsevier Science,
+pp. 312-382.
+[24] Stachursky, J., (2009). Economic Dynamics: Theory and Computation. Cambridge:
+MIT Press.
+[25] Tauchen, G., (1986). Finite state Markov chain approximations to univariate and
+vector autoregressions. Economic Letters 20, 177-181.
+[26] Taylor, J. and H. Uhlig, (1990). Solving nonlinear stochastic growth models: a comparison of alternative solution methods. Journal of Business and Economic Statistics
+8, 1-17.
+
+15
+
+Supplement to "How to Solve Dynamic Stochastic
+Models Computing Expectations Just Once":
+Appendices
+Kenneth L. Judd
+Lilia Maliar
+Serguei Maliar
+
+Appendix A: Precomputation of integrals in the Bellman and
+Euler equations in a general setup
+In this section, we show how to precompute integrals in the Bellman and Euler equations in a general setup. We focus on a class of stochastic infinite-horizon optimization
+problems in which both state and control variables take a continuum of possible values.
+Precomputing integrals in the Bellman equation We assume that the problem has
+a recursive formulation, so that its solution satisfies the Bellman equation in the relevant
+area of the state space
+ ( ) = max
+{ () +  [ (0   0 ) | ]} 
+0
+
+(26)
+
+s.t  (   0 ) = 0
+ 0 =  ( 0 ) 
+
+(27)
+(28)
+
+ 
+
+where  ∈ R ,  ∈ R and  ∈ R are vectors of endogenous state variables, exogenous
+state variables and control variables, respectively; the return function  : R → R is
+continuously diﬀerentiable, strictly increasing and strictly concave;  : R +2 + → R
+is a vector-valued function which is continuously diﬀerentiable in ,  0 , , 0 ; the set
+{( 0 ) :  (   0 ) = 0} is convex and compact; the vector of disturbances 0 ∈ Ω ⊆
+R has a probability distribution which is known at present;  0 in (28) has finite moments;
+and 0 is known at present.
+A solution is a value function  ( ) (and the corresponding set of policy functions
+0 =  ( ) and  =  ( )) that satisfies (26)—(28) in the relevant area of the state
+space. We assume that the functions   and  satisfy jointly a set of regularity
+conditions that ensures that the solution exists and is unique. To simplify the presentation,
+we did not include  and  in , and we did not include  0 and  0 in , however, the
+technique of precomputation of integrals applies to these cases as well.
+
+16
+
+Under the result of Proposition 1, precomputation of integrals leads us to the following
+Bellman equation,
+n
+o
+
+b (0   ( ) ; )
+
+()
++
+
+
+(29)
+b ( ; ) = max
+0
+ 
+
+s.t. (23), (24), (27) and (28),
+
+where the approximating function b ( ; ) is of type (22).
+
+Precomputing integrals in the Euler equation To derive first-order conditions, we
+use the Bellman equation. An interior solution to (26)—(28) satisfies
+ (   0 )
+ ()
+−
+= 0
+
+
+¾
+½
+ (   0 )
+ (0   0 )
+−
+
+= 0
+
+0
+0
+
+(30)
+(31)
+
+where  ∈ ,  ∈ , and  ∈ R is a vector of Lagrange multipliers associated with the
+constraints (27). Furthermore, by the envelope theorem, we have
+ (   0 )
+ ( )
+= −
+
+
+
+
+(32)
+
+Taking (32) one period ahead and substituting the resulting condition into (31), we obtain
+a set of the Euler equations
+¾
+½
+0
+0 0
+00
+ (   0 )
+0  (       )
+
+(33)
+= − 
+
+0
+0
+¡
+¢
+As in Section 4.2, we replace the integrands of (33) with new variables 10   0  ,
+−0
+
+ ( 0 0   0  00 )
+≡ 0 =  (0   0 ) 
+0
+
+(34)
+
+Under the result of Proposition 1, we can precompute the integrals in the Euler equation
+(33) to obtain
+∙
+¸−1
+0
+0
+
+(
+
+
+
+
+(
+
+
+
+)
+)
+
+
+
+0
+b (   ( ) ; )
+b ( ; ) =  
+
+(35)
+
+
+0
+
+b ( ; ),  = 1   , are of type (22).
+where the approximating functions 
+Finally, for the general model (26)—(28), we have two results that were previously
+discussed in the context of the one-agent model of Sections 2—4. First, the supplementary
+17
+
+functions  ( ),  = 1   , coincide with the corresponding derivatives of the value
+()]
+function [
+. Second, the technique of precomputation of integrals can be extended
+
+to the case when we parameterize and approximate policy functions of variables other
+than  ’s. In particular, we can premultiply both sides of the -th Euler equation (35) by
+the corresponding state variable 0 and re-arrange the terms to obtain
+0
+
+b (0   ( ) ; )  (   0 ) ∙  (   0 ) ¸−1
+ 
+=
+0 
+0
+
+b
+
+
+
+ ( ; )
+
+
+(36)
+
+b  ( ; ) jointly with 
+b ( ; ). Namely, we can iterate on the
+We can now solve for 
+b ( ; ) as a tool for
+coeﬃcients of the endogenous state variables  using the function 
+computing conditional expectations; in Appendices C and D, we illustrate this procedure
+by way of examples.
+
+Appendix B: Bellman and Euler equation algorithms for solving
+the neoclassical stochastic growth model
+In this section, we provide a description of the Bellman and Euler equation algorithms,
+which we use to solve the neoclassical stochastic growth model described in Section 2.
+Both algorithms use fixed-point iteration, FPI, for finding the coeﬃcients of the approximating functions.
+Algorithm 1—FPI (Bellman equation algorithm based on FPI)
+• Initialization:
+(a) Parameterize the value function  ( ) using a flexible functional form b ( ; )
+(we use the ordinary polynomials (8)).
+
+(b) Choose an initial guess on the coeﬃcients vector (1) (we use a low-accuracy
+linear solution).
+(c) Construct a grid {   }=1 to be used as a solution domain (we simulate the linear solution 10,000 periods forward, compute the minimum and
+maximum values of capital and productivity in the simulation, and split the
+obtained capital and productivity intervals into 10 equally spaced intervals to
+construct a product grid of 100 points).
+(d) Precompute  moments of exp (0 ) using (11) and construct the sequence
+{I0   I } using (12).
+18
+
+¡
+¢
+• Step 1. At iteration , use () to compute the values b1    ; () in each grid
+point  = 1  . Compute the corresponding values of  using (21) and find
+0
+
+using (14). Use the precomputation result (16), to infer the value function on
+the grid,
+´
+³
+()
+0
+
+
+V ≡  ( ) +     ; 
+
+• Step 2. Find b that minimizes the errors  in the regression equation,
+V = b (   ; ) +  
+
+(We use a linear least-squares regression method based on QR factorization).
+
+• Step 3. Check for convergence and end the solution procedure if
+¯
+¯
+
+0 ()
+0 (−1) ¯
+) − (
+)
+1 X ¯¯ (
+¯
+¯
+¯  10−11 
+()
+0
+¯
+ =1 ¯
+( )
+o
+o
+n
+n
+0 ()
+0 (−1)
+)
+and (
+)
+are the capital choices obtained
+where (
+=1
+
+=1
+
+on iterations  and  − 1, respectively, and |·| denotes absolute value.
+
+• Step 4. Compute (+1) for iteration  + 1 using fixed-point iteration with damping
+(+1) = (1 − ) () + b
+where the damping parameter is  = 01. Go to Step 1.
+
+Algorithm 2—FPI (Euler equation algorithm based on FPI)
+• Initialization:
+
+b ( ; )
+(a) Parameterize the function  ( ) using a flexible functional form 
+(we use the ordinary polynomials (8)).
+(b)-(d) The same as in Algorithm 1—FPI.
+¡
+¢
+b    ; () in each grid
+• Step 1. At iteration , use () to compute the values 
+0
+point  = 1  . Compute the corresponding values of 
+using (14). Find
+the values of  on the grid by combining the precomputation result (16) with the
+condition (18)
+´
+³
+0
+b 
+  ; () [1 −  + 1 ( )] 
+ =  
+• Step 2. Find b that minimizes the errors  in the regression equation,
+b (   ; ) +  
+ = 
+
+(We use a linear least-squares regression method based on QR factorization).
+
+• Steps 3 and 4. The same as in Algorithm 1—FPI.
+19
+
+Accuracy check We generate a new random draw of 10 200 points and discard the
+first 200 points. At each point (   ), we compute unit-free Euler equation error using
+a 10-node Gauss-Hermite quadrature rule,
+"
+#
+¡ 0 ¢
+test
+
+0
+X
+£
+¡
+¤
+¢
+
+
+ 
+ 0
+1 −  +  exp 0 test  0 (0 ) − 1
+E (   ) ≡
+ test
+
+
+(
+)
+
+=1
+are the -th integration node and weight;  and 0  follow from the
+where 0 test and  test
+
+budget constraint (14).
+
+Appendix C: Euler equation approach: alternative
+parameterizations
+Depending on the application, some policy functions can be more convenient for the
+purpose of approximation than others (for example, because some functions are better
+behaved or preferable for certain computations).5 We can use a simple transformation of
+the Euler equation that allows us to approximate any policy function. As an example,
+let us consider the capital policy function 0 =  ( ). Premultiplying both sides of the
+Euler equation (7) by  0 and rearranging the terms, we obtain an equivalent representation
+of the Euler equation (as long as 0  0),
+¸
+∙
+1 (0 )
+0
+0
+0
+0
+(1 −  +  1 ( ))  
+(37)
+ = 
+1 ()
+We have expressed the variable 0 in two ways: as an outcome of the policy function and
+as a conditional expectation of a random variable. We can compute the capital policy
+function as a fixed point of (37) by evaluating conditional expectation functions inside
+the iterative cycle as is done in Judd et al. (2010, 2011).
+In this section, we show how to implement the iteration on (37) by precomputing
+integrals. Using the results of Section 4.2, we rewrite the Euler equation (37) in the form
+b (0   ; )
+ 
+[1 −  +  0 ()] 0 
+ =
+b
+ ( ; )
+0
+
+(38)
+
+We parameterize the capital policy function 0 =  ( ) with a flexible functional form
+b ( ; ) where  is the coeﬃcients vector, and we solve for both functions 
+b ( ; )
+
+b (0   ; ) simultaneously. We again proceed in two steps.
+and 
+5
+
+For example, in the context of multi-country growth models, Maliar et al. (2011) argue that a
+capital policy function has less curvature than consumption and labor policy functions and hence, can
+be approximated more accurately. Moreover, knowing the capital policy function makes it possible
+to compute endogenous state variables in all grid points or integration nodes or time periods without
+solving for control variables which allows us to vectorize computations and to increases the speed in some
+applications.
+
+20
+
+Algorithm 3. Euler equation algorithm with capital-policy-function parameterization
+Precomputation of integrals. Construct {I0   I } using (11) and (12).
+Transformed problem. Find  and  that solve (14), (15), (16), (17) and (38).
+Below, we describe a version of Algorithm 3 that relies on FPI. We iterate only on the
+b ( ; ) just as a supplementary
+coeﬃcients of the capital policy function , and we use 
+tool for computing the expectations.
+Algorithm 3—FPI (Euler equation algorithm with capital-policy-function parameterization based on FPI)
+• Initialization:
+(a) Parameterize the policy functions  0 =  ( ) and  =  ( ) with flexible
+b ( ; ) and 
+b ( ; ), respectively (in both cases, we use
+functional forms 
+the ordinary polynomials (8)).
+(b)-(d) The same as in Algorithm 1—FPI.
+¡
+¢
+0
+b    ;  () in each
+=
+• Step 1. At iteration , use () to compute the values 
+grid point  = 1  . Compute the corresponding values of  using (14) and of
+ using (17), namely,
+ = 1 ( ) [1 −  +  1 ( )] 
+• Step 2. Find b that minimizes the errors  in the regression equation,
+b (   ; ) +  
+ = 
+³
+´
+³
+´
+0
+b 
+b    ; b using
+Find the values of 
+  ; b
+ on the grid that correspond to 
+the precomputation result (16). Use (38) to compute the value of next-period capital
+on the grid, denoted by
+³
+´
+0
+b 
+
+  ; b
+
+0
+0
+´ (1 −  + 1 ( )) 
+≡ ³
+
+
+b    ; b
+
+Find b that minimizes the errors  in the regression equation,
+0
+b (   ; ) +  
+=
+
+
+(To implement both regressions, we use a linear least-squares regression method
+based on QR factorization).
+• Steps 3 and 4. The same as in Algorithm 1—FPI.
+
+Results In Table 3, we provide the results for the Euler equation method parameterizing
+the capital policy function (Algorithm 3—FPI).
+Table 3: Accuracy and speed of the Euler equation algorithm (capital-policy-function
+parameterization) in the one-agent model.
+Polynomial
+degree
+1st
+2nd
+3rd
+4th
+5th
+
+L1
+-3.84
+-5.26
+-6.10
+-7.38
+-8.56
+
+ = 13
+L∞
+-3.58
+-4.66
+-5.80
+-6.85
+-7.99
+
+CPU
+0.16
+0.14
+0.11
+0.11
+0.06
+
+L1
+-3.65
+-4.98
+-5.92
+-7.09
+-8.13
+
+=1
+L∞
+-3.32
+-4.35
+-5.39
+-6.29
+-7.28
+
+CPU
+0.09
+0.07
+0.05
+0.05
+0.03
+
+L1
+-3.24
+-4.30
+-4.96
+-5.59
+-6.33
+
+=3
+L∞
+-2.76
+-3.61
+-4.16
+-4.82
+-5.67
+
+CPU
+0.05
+0.04
+0.03
+0.03
+0.03
+
+
+
+Notes: L1 and L∞ are, repectively, the average and maximum of absolute approximation errors across
+optimality condition and test points (in log10 units) on a stochastic simulation of 10,000 observations;
+CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient of risk aversion.
+
+The performance of this version of the Euler equation algorithm is somewhat better
+than that of the Euler equation algorithm parameterizing the function  ( ). Namely,
+the accuracy of Algorithm 3—FPI is higher by about a half order of magnitude and the
+running time is significantly smaller than those of Algorithm 2—FPI. Presumably, this is
+because the capital policy function is close to linear and is easier to approximate numerically.
+
+Appendix D: A multicountry analysis
+In this section, we describe the multicountry model analyzed in Section 7. This model
+is identical to the one used in Judd et al. (2011) to assess the performance of the GSSA
+method.
+The model A social planner maximizes a weighted sum of the expected lifetime utilities
+of  agents (interpreted as countries) subject to the aggregate resource constraint, i.e.,
+Ã∞
+!
+
+X
+X
+¡
+¢
+max
+0
+
+   
+(39)
+=1
+
+
+{ +1 }=0∞ =1
+=0
+subject to
+
+X
+=1
+
+ =
+
+
+X
+£   ¡ ¢
+¤
+
+   +  (1 − ) − +1
+
+=1
+
+22
+
+(40)
+
+where  ,  ,  ,  ,   and   are consumption, capital, productivity level, utility function, production function and welfare weight of a country  ∈ {1  }, respectively;  is
+the discount¡factor; and
+¡ 1
+¢  is the depreciation
+¢ rate. The initial condition (k0  a0 ) is given,
+1
+
+
+where k ≡     and a ≡     . The process for productivity shocks in the
+country  is given by
+ln  =  ln −1 +  ,
+(41)
+where  ≡  + with  ∼  (0 ) and  ∼  (0 ) being a common-for-all-countries
+and country-specific productivity shocks, respectively;  is the autocorrelation coeﬃcient
+of the productivity shock; and  is the standard deviation of the productivity shocks.
+¡1
+¢
+ >
+Thus, the shocks follow a multivariate Normal distribution
+
+
+
+
+
+
+⎞ ∼ N (0  Σ) with
+⎛
+2
+2
+2 ... 
+
+⎝
+... ... ... ⎠ ∈ R× being a
+0 ∈ R being a vector of zero means and Σ =
+2
+... 22
+variance-covariance matrix.
+Optimality conditions An interior solution to the planner’s problem (39)—(41) satisfies
+the following first-order conditions
+¡ ¢
+(42)
+  1  =  
+©
+£
+¡  ¢¤ª
+
+(43)
+ =  +1 1 −  + +1 1 +1
+
+where  is the Lagrange multiplier associated with the aggregate constraint (40). Also,
+
+the solution satisfies a set of transversality conditions, lim  +1
+= 0 for  = 1  .
+→∞
+
+Optimality conditions after precomputation of integrals Let us introduce a new
+
+that represents the expression inside conditional expectation in (43), which
+variable +1
+implies
+¡ ¢£
+¡ ¢¤
+ ≡   1  1 −  +  1  
+(44)
+
+
+where the condition (42) was used to eliminate  . In terms of  and +1
+, the Euler
+equation (43) is
+£  ¤
+
+¡  ¢ =  +1
+
+(45)
+ 
+1 −  +  1 
+¡
+¢
+
+b
+We parameterize the function  =  (k  a ) with a flexible functional
+£  ¤ form  k  a ;  ,
+ = 1  . Under the results of Proposition 1, the integral  +1 can be precomputed.
+If we use a complete ordinary hpolynomial, we need to compute
+conditional expectations of
+¡ 1 ¢1 ¡ 2 ¢2 ¡  ¢ i
+, where a power  on +1 can
++1  +1
+polynomial terms of type  +1
+
+23
+
+take a value from 0 to  with  being the polynomial degree. Under (23) and (24), this
+requires us to approximate multidimensional integrals of type
+£
+¡
+¢¤
+ exp 1 1+1 + 2 2+1 +  +  
++1
+Z +∞ Z +∞
+¡
+¢ 1
+2
+
+=
+
+exp 1 1+1 + 2 2+1 +  +  
++1 +1 +1 +1  (46)
+−∞
+
+−∞
+
+There is a variety of numerical integration techniques in the literature that can be used
+for approximating the integral (46). See, for example, Judd et al. (2011) for a detailed description and examples of multidimensional integration methods including Gauss-Hermite
+quadrature product rules and non-product monomial formulas. Prior to integration, correlated random variables must be normalized using a Cholesky decomposition.
+b,
+We next formulate a version of the Euler equation (45) in terms of 
+¡
+¢
+b k  a ; 
+¢
+
+ b ¡
+¡ ¢ =
+  k+1  a ;  
+(47)
+ 
+1 −  +  1 
+¡
+¢
+b k  a ;  ,  = 1  , are given by the ordinary
+If the approximating functions 
+polynomial (22), the coeﬃcients vectors  and  are related by conditions of type (10).
+Policy functions to parameterize We search for a solution in the form of  capital
+
+policy functions +1
+=   (k , a ),  = 1  . We parameterize each capital policy
+¡
+¢
+b  k , a ;   , where   is the coeﬃcients vector,
+function by a flexible functional form 
+and we rewrite (44) and (47) as
+¡
+¢    ¡ ¢ £
+¡ ¢¤
+b k  a ;  =
+ 1  1 −  +  1  
+(48)
+
+¡
+¢
+b k+1  a ;  £
+¡ ¢¤ 
+ 
+
+1 −  +  1  +1
+=
++1
+
+(49)
+b (k  a ;  )
+
+
+In the transformed Euler equation (48), the eﬀect of uncertainty on the solution is again
+captured by a set of precomputed integrals (46) that determines the relation between 
+and  .
+Algorithm 4. Euler equation algorithm for the multicountry model
+Precomputation of integrals. Construct {I0   I } using (46).
+Transformed problem. Find   and  ,  = 1   that solve (10), (39), (40), (41), (48)
+and (49).
+We next describe a version of Algorithm 4 based on stochastic simulation and FPI. As
+in the
+used¢ to solve the one-agent model, we will iterate on
+¡ case of
+¢ Algorithm 3—FPI
+¡
+
+
+
+b
+b
+ k , a ;  and use  k  a ;  ,  = 1  , just as a supplementary tool for
+computing conditional expectations.
+24
+
+Algorithm 4 —FPI (Euler equation algorithm based on stochastic simulation
+and FPI)
+• Initialization:
+
+=   (k , a ) and  =  (k , a ) with flexible functional
+(a) Parameterize +1
+¡
+¢
+¡
+¢
+b  k , a ;  and 
+b k  a ;  , respectively (in both cases, we use the
+forms 
+ordinary polynomials (8)).
+¡ ¢(1)
+(1)
+(we use a
+(b) Choose an initial guess on the coeﬃcients vectors (1 )   
+deterministic steady state).
+
+(c) Fix the simulations length  and the initial condition (k0  a0 ). Draw and fix for
+all simulations a sequence of productivity levels {a }=1 using the equation
+(41) (we use  = 2 000 and (k0  a0 ) = (1 1) where 1 ≡ (1  1) ∈ R ).
+
+(d) Precompute the moments {1    } in (46) and construct the sequence {I0   I }
+(we use a monomial integration formula with 2 2 + 1 integration nodes, as described in Judd et al., 2011).
+¡
+¢
+
+b  k , a ;   ,
+• Step 1. At iteration , use the assumed capital policy functions +1
+=
+ = 1  , to recursively calculate a sequence of capital stocks {k+1 }=0 corresponding to a given sequence of productivity levels {a }=0 .
+© ª
+• Step 2. Given {k  a  k+1 }=0 , calculate  =0 ,  = 1  , satisfying
+(40) and (42).
+• Step 3. For each country  = 1  , compute  using (44). Find b that minimizes
+the errors  in the regression equation,
+¡
+¢
+b k  a ;  +  
+ = 
+³
+´
+³
+´
+
+b k  a ; b using the
+b k+1  a ; b
+Find the values of 
+ that correspond to 
+precomputation results (10). Compute the right side of (49) at  = 0   − 1,
+¡
+¢
+b k+1  a ;  £
+¡ ¢¤ 
+
+1 −  +  1  +1
+ ≡ 
+
+b (k  a ;  )
+
+
+• Step 4. For each country  = 1  , find b that minimizes the errors  in the
+regression equation,
+¡
+¢
+b  k  a ;   +  
+ = 
+25
+
+• Step 5. For each country  = 1  , compute the coeﬃcients vectors for the
+subsequent iteration  + 1 using fixed-point iteration,
+¡  ¢(+1)
+¡ ¢()
+¡ ¢(+1)
+
+= (1 − ) 
++  b
+
+(50)
+where  = 01 is a damping parameter.
+
+Iterate on Steps 1—5 until convergence,
+¯
+¡  ¢(−1) ¯¯
+ X
+ ¯ ¡  ¢()
+X
+−
++1
+
+1
+¯ +1
+¯
+¯
+¯  10−7 
+¡
+¢
+()
+¯
+¯
+ ·  =1
+
+=1
+
+(51)
+
++1
+
+¡  ¢(−1)
+¡  ¢()
+and +1
+are the -th country’s capital stocks obtained on iterations,
+where +1
+ and  − 1, respectively.
+Parameterization
+of the model and accuracy evaluation To solve the model, we
+¡ ¢
+assume   = ln  ,  ( ) =  with  = 036,  = 099,  = 0025,  = 095 and
+ = 001. We assume that the planner assigns equal weights to all countries   = 1,
+which implies that all countries have an identical consumption,  =  for all  = 1  .
+To evaluate the accuracy of solutions, we report unit-free Euler equation errors on a
+simulation of 10,000 observations. To approximate integrals in our accuracy checks, we
+use a monomial integration rule with 2 2 + 1 nodes as in Judd et al. (2011).
+Results In Table 4, we provide the results produced by the Euler equation algorithm
+based on stochastic simulation and FPI (Algorithm 4—FPI).
+Table 4: Accuracy and speed of the Euler equation algorithm (capital-policy-function
+parameterization) in the multicountry model.
+Polynomial
+degree
+1st
+2nd
+3rd
+4th
+5th
+
+L1
+-4.45
+-5.71
+-6.87
+-7.78
+-7.54
+
+ =2
+L∞
+CPU
+-3.01
+10
+-3.87
+80
+-4.94
+32
+-5.64
+105
+-5.36
+277
+
+L1
+-4.41
+-5.44
+-6.20
+-7.23
+-
+
+ =4
+L∞
+CPU
+-3.04
+27
+-3.73
+123
+-4.41
+455
+-5.14 3317
+-
+
+L1
+-4.36
+-5.34
+-6.24
+-
+
+ =6
+L∞
+CPU
+-2.98
+35
+-3.74
+214
+-4.35 2555
+-
+
+L1
+-4.53
+-5.34
+-
+
+ = 20
+L∞
+CPU
+-3.06
+76
+-3.80 5352
+-
+
+
+
+Notes: L1 and L∞ are, respectively, the average and maximum of absolute approximation errors across
+optimality conditions and test points (in log10 units). CPU is the time necessary for computing a solution
+(in seconds);  is the number of heterogeneous countries.
+
+As is seen from the table, we obtain highly accurate solutions: the maximum approximation error ranges from 10−536 for the model with  = 2 to 10−38 for the model with
+
+ = 20. These accuracy levels are comparable to those attained by the versions of GSSA
+that use accurate integration methods; see Judd et al. (2011, Table 5). The diﬀerence
+between the version of GSSA introduced in Judd et al. (2011) and the one studied in the
+present paper is that in the former case, integrals are re-computed in each iteration while
+in the latter case, integrals are precomputed. As a result, our cost of finding solutions is
+generally much lower than that in Judd et al. (2011). For example, it takes us about 43
+minutes (2555 seconds) to compute a polynomial approximation of degree 3 for the model
+with  = 6. For comparison, the version of GSSA in Judd et al. (2011) needs about 18
+hours (65,663 seconds) to find a solution of comparable accuracy; see Judd et al. (2011,
+Table 5).
+
+27
+
+

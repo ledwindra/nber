@@ -1,0 +1,2750 @@
+NBER WORKING PAPER SERIES
+
+APPROXIMATING HIGH-DIMENSIONAL DYNAMIC MODELS:
+SIEVE VALUE FUNCTION ITERATION
+Peter Arcidiacono
+Patrick Bayer
+Federico A. Bugni
+Jonathan James
+Working Paper 17890
+http://www.nber.org/papers/w17890
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+March 2012
+
+Arcidiacono, Bayer, and Bugni thank the National Science Foundation for research support via grant
+SES-1124193. The views expressed herein are those of the authors and do not necessarily reflect the
+views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2012 by Peter Arcidiacono, Patrick Bayer, Federico A. Bugni, and Jonathan James. All rights reserved.
+Short sections of text, not to exceed two paragraphs, may be quoted without explicit permission provided
+that full credit, including © notice, is given to the source.
+
+Approximating High-Dimensional Dynamic Models: Sieve Value Function Iteration
+Peter Arcidiacono, Patrick Bayer, Federico A. Bugni, and Jonathan James
+NBER Working Paper No. 17890
+March 2012
+JEL No. C13,C14,C54,C61,C63,C73
+ABSTRACT
+Many dynamic problems in economics are characterized by large state spaces which make both computing
+and estimating the model infeasible. We introduce a method for approximating the value function
+of high-dimensional dynamic models based on sieves and establish results for the: (a) consistency,
+(b) rates of convergence, and (c) bounds on the error of approximation. We embed this method for
+approximating the solution to the dynamic problem within an estimation routine and prove that it provides
+consistent estimates of the model's parameters. We provide Monte Carlo evidence that our method
+can successfully be used to approximate models that would otherwise be infeasible to compute, suggesting
+that these techniques may substantially broaden the class of models that can be solved and estimated.
+
+Peter Arcidiacono
+Department of Economics
+201A Social Sciences Building
+Duke University
+Durham, NC 27708
+and NBER
+psarcidi@econ.duke.edu
+Patrick Bayer
+Department of Economics
+Duke University
+213 Social Sciences
+Durham, NC 27708
+and NBER
+patrick.bayer@duke.edu
+
+Federico A. Bugni
+Department of Economics
+Duke University
+Box 90097
+Durham, NC 27708
+federico.bugni@duke.edu
+Jonathan James
+Department of Economics, Duke University
+Box 90097
+Durham, NC 27708
+jwj8@duke.edu
+
+1
+
+Introduction
+
+Dynamic problems in economics (and many other disciplines) are characterized by large state spaces
+that routinely make the model difficult or impossible to compute. Faced with these challenges,
+researchers proceed in a number of different ways including analyzing a static version of the problem,
+simplifying the dynamic problem to a setting where the state space is manageable, or employing a
+number of techniques for approximating the value and policy functions that characterize the solution
+to the problem. The problems analyzed in many broad literatures in economics ranging from models
+of market equilibrium (which are almost always treated in a static framework) to strategic or social
+interactions in networks (static or myopic dynamics) to dynamic games (typically characterized
+by a small number of players and states) to matching problems (almost always analyzed as static
+problems) remain limited by this large state space problem.
+In recent years, techniques for approximating value functions in large state space problems
+have been developed using simulation and interpolation (Keane and Wolpin (1994)) or parametric
+policy iteration (PPI) (Rust (2000) and Bénitez-Silva, Hall, Hitsch, Pauletto, and Rust (2000)).
+The main idea behind these methods is to approximate the value function using flexible functions
+of the relevant state variables. Simulation and interpolation has been applied by Keane and Wolpin
+(1997) and Crawford and Shum (2005) among many others. PPI has been applied to a single agent
+setting in Hendel and Nevo (2006) and to a dynamic game in Sweeting (2011). While the potential
+application of these methods is great, the literature contains very few formal results regarding
+the quality of the approximation and, therefore, provides little formal or practical foundation for
+researchers to use as they apply these methods (see Powell (2008) for a summary of the related
+literature and a discussion of the lack of formal results).
+In this paper, we consider an alternative, but related, method for approximating value functions
+that we refer to as sieve value function iteration (SVFI).1 We develop the method in the context of a
+generic single agent dynamic programming problem that can have either a finite or infinite horizon.
+The SVFI method involves approximating the integrated value function with a nonparametric sieve
+function. For any sieve function (i.e., for a particular choice of parameters), one can evaluate the
+Bellman equation and compute a notion of distance between the approximation and its contraction,
+and thus characterize how close the Bellman equation comes to holding. We approximate the value
+function by choosing the parameters of the sieve function that come as close as possible to making
+the Bellman equation hold exactly. Since the sieve space is a simple space, this minimization
+problem is relatively easy to solve. Moreover, as the sequence of sieve spaces becomes a better and
+better approximation of the original functional space F, our approximation converges to the true
+value function.
+In order to analyze the formal properties of the SVFI method, we assume that the complexity
+of the sieve space, n, increases to infinity. In this sense our SVFI approximation technique becomes
+non-parametric and we establish a number of results:
+1
+
+For an excellent review of the method of sieves see Chen (2007).
+
+2
+
+1. Consistency: we show that the sieve approximation converges to the true value function as
+the richness of the sieve space increases.
+2. Rates of convergence: we provide the first results in the literature for the rate at which the
+approximating function converges to the true value function.
+3. Iteration of Bellman operator: we characterize how rates of convergence are affected by
+iterating the Bellman operator, pointing out for the first time that this has the potential to
+improve performance in certain applications.
+4. Bound on the error of approximation: following arguments in Rust (2000), we provide an
+upper bound to the error of approximation to the unknown true value function that is feasible
+to compute.
+To the best of our knowledge, this is the first paper to formally establish the first three points for the
+SVFI approximation. While the consistency of the SVFI might be an expected result, establishing
+the rate of convergence of the SVFI approximation and understanding the effects of increasing
+the number of iterations on the quality of the approximation are two useful formal contributions
+to this literature. The fourth result, already present in Rust (2000), is included for the sake of
+completeness. This is an incredibly valuable feature of SVFI because it ensures that one can bound
+the extent of approximation error relative to the true value function even when the true value
+function cannot be computed, i.e., the case of relevance in very large state space problems. This
+also serves as a natural guide to researchers as they implement the SVFI, providing a clear sense
+of whether the approximation is reasonable for any given specification of the sieve function. Taken
+together, these results provide a formal foundation for the use of SVFI methods for approximating
+large state space problems.
+The SVFI approach is quite straightforward to understand and implement and, thus, has the
+potential to be widely applied in economics and other disciplines. The framework can also be flexibly
+implemented. It is possible, for example, to estimate the parameters of the sieve approximation
+function by minimizing the distance in the Bellman operator for only a large subset of the states
+in the state space. This is attractive for problems with large finite or infinite state spaces.
+The method can be applied equally well to infinite and finite horizon problems. For finite
+horizon problems, we develop two strategies for approximating value function. First, we show
+how SVFI can be used to approximate the value functions at each time period using a traditional
+backwards recursion solution method. More interestingly, by including the time to the horizon as
+another state variable in the sieve function, we show how it is possible to approximate a single
+sieve function that provides an approximation of the value function at each point in time without
+solving the problem backwards. The particular features of the application in question will generally
+determine which of these approaches is computationally lighter or easier to implement.
+Having developed this general method for approximating value functions, we then formally
+show how SVFI can be used to estimate the structural parameters of large state space dynamic
+3
+
+problems in empirical applications. Conceptually it is easy to see that for any particular guess of
+the model’s structural parameters, SVFI can be used to approximate the solution to the dynamic
+problem and thus compute the approximate value and policy functions as well as conditional choice
+probabilities. By comparing these objects to their empirical counterparts in the data it is possible
+to compute a wide variety of objective functions that would be appropriate for estimating the
+structural parameters. We show that it is possible to consistently estimate the model’s structural
+parameters by embedding SVFI within the estimation algorithm.
+We close the paper by demonstrating the performance of SVFI in a particular Monte Carlo
+application, inspired by the famous bus-engine replacement problem of Rust (1987), in which a
+firm must dynamically manage its entire fleet of buses. We begin by analyzing an infinite horizon
+problem with a state space that is finite and relatively large but manageable, i.e., for which it
+is still possible to compute the value function exactly at each state. We demonstrate that SVFI
+approximates value functions for this problem very closely in a tiny fraction of the time that it
+takes to compute the exact solution to the problem. We show that an accurate approximation can
+be obtained even when the Bellman operator is evaluated at a small, randomly, drawn subset of
+the full set of states and compare the speed and accuracy of alternative methods for minimizing
+this distance, including non-linear least squares, an iterative least squares method, and methods
+that iterate the Bellman operator. We extend this problem to an infinite state space by adding a
+continuous state variable, again demonstrating that it is possible to approximate the solution exceptionally well in a reasonably short amount of computation time. We then analyze an analogous
+finite horizon problem, comparing the speed and accuracy of SVFI approximations using (i) the
+traditional backwards recursion solution method in which we compute a separate sieve approximation function at each point in time and (ii) an approach that treats time to the horizon as a state
+variable, yielding a single time-interacted sieve approximation function.
+We complete the Monte Carlo section of the paper, by evaluating the performance of SVFI
+approximation within the context of the estimation of the structural parameters of the model.
+Returning to the infinite horizon problem, we demonstrate that SVFI accurately estimates with
+only a minimal impact on the effective standard errors while being much faster to compute. In
+particular, we propose estimating the sieve parameters outside of the estimation of the structural
+parameters in a manner similar to Aguirregabiria and Mira (2002) swapping of the nested fixed
+point algorithm. Further, it is straightforward to examine how the estimated structural parameters
+are affected by the dimension of the sieve and, therefore, to ensure that the sieve is sufficiently rich
+such that its impact on the estimated structural parameters is minimal.
+The rest of the paper proceeds as follows. In section 2 we describe the optimization problem.
+Sections 3 and 4 develop formal results for infinite horizon problems and finite horizon problems,
+respectively. In particular, we establish properties of the approximation including consistency and
+rates of convergence. In section 5, we show how to use SVFI in estimation as well as properties of the
+estimator. Section 6 investigates the small sample properties of our approximations, establishing
+both the speed and reliability of our methods. Section 7 concludes.
+
+4
+
+2
+
+The dynamic decision problem
+
+In this paper, we are interested in approximating the value function of a single agent solving a
+dynamic decision problem. We begin by introducing the general problem. In every period t ∈ N,
+the agent observes the current value of a state (xt , εt ) and chooses an action at in a finite choice
+set A(xt ). The first component xt is observed by the researcher whereas the second component
+εt ≡ {εt (a) : a ∈ A(xt )} is not. We assume that xt ∈ X and εt ∈ E. Conditional on this
+information, the agent solves the following optimization problem:
+
+
+T
+X
+
+Vt (xt , εt ) = sup E
+(2.1)
+β j−t [u(xj , aj ) + εj (aj )] xt , εt ,
+
+
+Πt
+j=t
+
+where Πt = {{aj }∞
+j=t : at = A(xt )} and u(xt , at ) + εt (at ) denotes the period utility of making
+decision at in state (xt , εt ), u(xt , at ) representing the structural part (possibly known up to a finite
+dimensional parameter) and εt (at ) representing the residual part, unobserved by the researcher.
+The objective of this paper is to provide a computationally feasible approximation to the value
+functions (i.e. {Vt (·)}Tt=1 ) and study its properties. In general, we might be interested in approximating these function because we want to do welfare analysis (i.e. which can be conducted directly
+using these functions) or because we are interested in any other feature of the problem that can be
+computed from these functions (i.e. optimal decision rules, conditional choice probabilities (CCPs),
+etc.).
+The formulation in Equation (2.1) encompasses both finite horizon problems (i.e. T = ∞)
+and infinite horizon problems (i.e. T < ∞). Following the dynamic programming literature, our
+strategy to approximate the value function in Equation (2.1) is to show that it is the unique solution
+to a (functional) Bellman equation, and construct an approximation based on this representation.
+Given that the Bellman equation representation of the finite and infinite horizon problems are
+fundamentally different, it is convenient to divide the rest of the discussion into these two cases.
+
+3
+
+Approximation in infinite horizon problems
+
+This section describes the application of non-parametric sieve methods to approximate the value
+functions in Equation (2.1) when the dynamic problem has an infinite horizon (i.e. T = ∞).
+The distinctive feature of the infinite horizon problem is that the value function of the problem
+is stationary (i.e. Vt (·) = V (·), ∀t ∈ N), provided that we impose mild additional assumptions
+to the problem. In particular, we follow Rust (1987) and Rust (1988) and assume that the joint
+stochastic process {xt , εt , at } is a controlled Markov process that satisfies the following conditional
+
+5
+
+independence (CI) assumption:
+dP (xt+1 , εt+1 |xt , εt , at , xt−1 , εt−1 , at−1 , . . . ) = dP (xt+1 , εt+1 |xt , εt , at ), (Markov)
+
+(3.1)
+
+= dP (εt+1 |xt+1 , xt , εt , at )dP (xt+1 |xt , εt , at ),(3.2)
+= dP (εt+1 |xt+1 )dP (xt+1 |xt , at ). (CI)
+
+(3.3)
+
+Under these assumptions, the literature provides several ways of formulating the value function in
+Equation (2.1) as the recursive solution of a Bellman equation. In particular, these include: (a) the
+social surplus function formulation discussed in Rust (1987) and Rust (1988), (b) the conditional
+value function formulation of Rust (1987), and (c) the choice-specific value function formulation of
+Rust (1988). Rather than describing each of these formulations in the main text, we now introduce
+a single unified formulation that encompasses all of these formulations.2
+According to our unified formulation, the value functions in Equation (2.1) are stationary and
+solve the following Bellman equation:
+V (s) = max {u(s, a) + βE(F (V, s0 )|s, a)}, ∀s ∈ S,
+
+(3.4)
+
+a∈A(s)
+
+where s is the current value of the state, s0 is the future value of the state, S is the state space,
+a represents the action chosen by the agent, A(s) is the set of actions available to the agent when
+the state is s, and F is a known functional of the value function V (·) and the future state s0 that
+satisfies certain known properties.3
+
+3.1
+
+Approximating the value function
+
+In order to discuss the approximation of V , we must first define the space to which this function
+belongs. In particular, assume that V belongs to a functional space, denoted F. For example, we
+can take F to be the space of measurable, bounded, real-valued functions from S to R. We define
+a metric d in this space, making (F, d) a normed vector space. If we do not indicate otherwise, the
+metric is the sup-norm metric, i.e., for any f1 , f2 ∈ F:
+d(f1 , f2 ) = sup |f1 (s) − f2 (s)|.
+
+(3.5)
+
+s∈S
+
+Furthermore, we assume that this metric space is complete, i.e., it is a Banach space. Consider the
+following (functional) operator Γ : F → F:
+(Γθ)(s) = max {u(s, a) + βE(F (θ, s0 )|s, a)}, ∀s ∈ S.
+
+(3.6)
+
+a∈A(s)
+
+2
+
+Section B of the appendix describes each of these formulations and shows that all of them are special cases of
+our unified formulation.
+3
+Among other properties, F : F ×S satisfies: (a) monotonicity: for functions f1 , f2 with f1 (s) ≤ f2 (s) for all s ∈ S,
+then F (f1 , s0 ) ≤ F (f2 , s0 ) and (b) discounting: for any function f and any α ∈ R, βF (f + α, s0 ) = βF (f, s0 ) + βα.
+
+6
+
+According to the definition in Equation (3.4), the value function is the fixed point of this operator.
+Furthermore, under Blackwell (1965) sufficient conditions (see, e.g., Stokey and Lucas (1989),
+Theorem 3.3), the operator Γ can be shown to be a contraction mapping. Thus, as a consequence
+of the contraction mapping theorem (see, e.g., Stokey and Lucas (1989), Theorem 3.2), it follows
+that the value function is the unique fixed point of the contraction mapping. In particular, if we
+consider F to be a space of functions that map S → R and we consider any metric d : F × F → R,
+then, the value function is the unique solution to the following minimization problem:
+inf d(θ, Γθ)
+
+θ∈F
+
+(3.7)
+
+As a consequence, if it is possible to solve the minimization problem in Equation (3.7), then
+the solution has to be unique and equal to the value function. Unfortunately, there are several
+situations of practical relevance in which this minimization problem is computationally infeasible.
+In this paper we focus on the difficulties that arise when the state space is too large, i.e., the
+cardinality of the set S is either infinity or finite but too large to permit the use of traditional
+methods.
+The approximation method we propose is inspired by the sieves non-parametric estimation
+method. Instead of solving the original minimization problem (Equation (3.7)), we replace the
+original (possibly infinite dimensional) parameter space F with a sequence of simpler (often finite
+dimensional) parameter spaces, called sieves. Throughout this paper, the sequence of sieve spaces
+will be denoted by {Θn }n≥1 , where n ∈ N is an index that represents the computation power of the
+problems that we can handle. In order for this replacement to produce an accurate approximation
+of the unknown value function, it will be required that the sieve space sequence {Θn }n≥1 to become
+increasingly more complex (i.e. for any n ∈ N, Θn ⊂ Θn+1 ⊆ F) and dense in F as n → ∞.
+For a given computational power (i.e. for a given sieve space Θn ), our method produces an
+approximation, denoted θ̂n . In essence, we replace the complex parameter space F by the sieve
+parameter space Θn and, loosely speaking, our approximation will be given as:
+θ̂n ≈ argmin d(θ, Γθ).
+
+(3.8)
+
+θ∈Θn
+
+That is, we will seek to choose the parameters of the sieve to get as close to a fixed point of the
+Bellman operator as possible. Naturally, the quality of the approximation will be determined by
+the sieve space Θn used to approximate the original parameter space F.
+We introduce a definition of consistency of the approximation and rate of convergence of the
+approximation.
+Definition 3.1 (Consistency). θ̂n is a consistent approximation to V if and only if:
+d(θ̂n , V ) = op (1), as n → ∞.
+
+(3.9)
+
+To be precise, this is an approximation problem and not an estimation problem. In other words,
+7
+
+there are no data and, hence, no random sampling error4 .
+Definition 3.2 (Rate of Convergence). θ̂n converges to V at a rate of γn−1 if and only if:
+d(θ̂n , V ) ≤ Op (γn ),
+
+(3.10)
+
+where γn = o(1) as n → ∞.
+
+3.2
+
+Assumptions
+
+We now provide a list of the assumptions used in this section. As we show in Example 3.1, all of
+these assumptions are satisfied in dynamic decision problems that have a very large but finite state
+space.
+Assumption 3.1. (F, d) is a complete metric space of functions that map S onto R and Γ : F → F
+is a contraction mapping with modulus β ∈ (0, 1).
+Assumption 3.2. For any n ∈ N, dn is a pseudo-metric in (F, d) such that ∃K1 , K2 > 0,
+K1 dn (f1 , f2 ) − η1,n ≤ d(f1 , f2 ) ≤ K2 dn (f1 , f2 ) + η1,n ,
+
+(3.11)
+
+where η1,n = Op (γ1,n ) and γ1,n = o(1), uniformly in f1 , f2 ∈ F.
+Assumption 3.3. For any n ∈ N and some k ∈ N there is enough computational power such that:
+a. (Computation of the CM) For some k ∈ N and any θ ∈ Θn , we can compute Γk θ, where
+Γθ is given by:
+(Γθ)(s) = sup
+
+
+
+u(s, a) + βE(F (θ, s0 )|s, a) , ∀s ∈ S.
+
+(3.12)
+
+a∈A(s)
+
+b. (Approximate minimization) We can find θn ∈ Θn that satisfies:
+dn (θn , Γk θn ) ≤ inf dn (θ, Γk θ) + η2,n .
+θ∈Θn
+
+(3.13)
+
+where η2,n = Op (γ2,n ) and γ2,n = o(1).
+Assumption 3.4. For any f ∈ F:
+inf d(θ, f ) = η3,n (f ),
+
+θ∈Θn
+
+(3.14)
+
+where η3,n (f ) = Op (γ3,n (f )) and γ3,n (f ) = o(1).
+4
+
+The only reason why we use op (1) notation instead of o(1) notation is that, in general, we allow for randomness
+in the approximation. The randomness might occur, e.g., in: (a) the choice of the sieve space or (b) the solution to
+the approximation problem.
+
+8
+
+We now briefly comment on each of the assumptions. Even though Assumption 3.1 might look
+innocuous, it is not. The definition of a contraction mapping is associated to a metric space (F, d).
+In particular, note that the definition is associated to the particular metric d. In other words, if
+(F, d1 ) and (F, d2 ) are two metric spaces, it is possible that a mapping Γ : F → F is a contraction
+mapping with respect to d1 but not with respect to d2 . This is the relevant case in the context
+of single agent dynamic decision problems. According to Blackwell (1965) sufficient conditions,
+the mapping Γ in Equation (3.6) can be shown to be a contraction mapping with respect to the
+sup-norm metric. Unfortunately, it is not possible to show that the same mapping is a contraction
+mapping with respect to other metrics, such as the lp -metric (for some p > 0)5 .
+In cases in which the state space S is too large, it might not be computationally possible to
+work with the metric d directly, but we might be able to compute an associated pseudo-metric dn .
+In order for this replacement to produce interesting results, we need to assume that the difference
+between the metric d and the pseudo-metric dn vanishes at a certain rate. This is what Assumption
+3.2 accomplishes.
+If we had the computational capability to solve the minimization problem in Equation (3.7),
+then the solution to that problem would be the object of interest. The motivation for this paper,
+however, is to consider cases in which the size of the state space S makes solving the minimization
+problem in Equation (3.7) impossible. Assumption 3.3 describes precisely which operations are
+within our computational possibilities. Let n denote the capability of our computing power, which
+by assumption is limited. For any n ∈ N, we choose a space of functions (sieve), denoted Θn so
+that certain mathematical operations can be approximately solved. In particular, we assume that
+we can: (a) compute the k th iteration of the Bellman equation mapping for any function in the
+sieve space Θn and (b) minimize an objective function within the sieve space Θn , possibly up to a
+small error denoted by η2,n . In case the original objective function can be exactly minimized, then
+we can always take η2,n = 0 in Assumption 3.3.
+The strategy to approximate the fixed point is to replace the original parameter space F with a
+sequence of approximating sieve spaces {Θn }n≥1 . In order to guarantee that this replacement does
+not affect the asymptotic properties, Assumption 3.4 requires that any function v that belongs to
+the original parameter space F can be approximated by an element in the sieve space, possibly
+up to a small error denoted by η3,n (f ). In order to guarantee that this error is, in fact, small,
+it is convenient to understand the properties of the original parameter space F. The better we
+understand this space, the better we can choose the sieve space Θn to approximate it. One way to
+understand the parameter space F is to be able to restrict it as much as possible. For a very useful
+result to achieve this goal, see Corollary 1 in page 52 of Stokey and Lucas (1989).
+In order to illustrate these assumptions, we consider the following example.
+Example 3.1 (Large but finite state space). Suppose that the agent solves the value function
+in Equation (3.4) where the state-space S is finite but large, i.e., #S = N < ∞. By means of
+Corollary 1, page 52 in Stokey and Lucas (1989) we can show that the value function belongs to
+5
+
+This is true for all formulations of the problem.
+
+9
+
+B(S), i.e., the space of bounded functions that map S onto [−B, B] ∈ R, for some B < ∞. This
+implies that we can take the relevant metric space to be (F, d), with F = B(S) and d equal to the
+sup-norm metric, i.e.,
+d(f1 , f2 ) = sup |f1 (s) − f2 (s)| = max |f1 (si ) − f2 (si )|, for all f1 , f2 ∈ F.
+i=1,...,N
+
+s∈S
+
+(3.15)
+
+We now verify all of the assumptions. We begin with Assumption 3.1. By arguments in Stokey
+and Lucas (1989), page 47, (F, d) is a complete metric space of functions that map S onto R. By
+the Blackwell (1965) sufficient conditions, it is easy to see that Γ : F → F is a contraction mapping
+with modulus β ∈ (0, 1).
+Given that #S = N is a large number, we might not be able to compute d exactly. Instead, for
+any n ∈ N with n < N , we might be able to compute:
+dn (f1 , f2 ) = max |f1 (si ) − f2 (si )|, for all f1 , f2 ∈ F.
+i=1,...,n
+
+(3.16)
+
+This is a pseudo-norm in (F, d). Notice that for any f1 , f2 ∈ F:
+|dn (f1 , f2 ) − d(f1 , f2 )| = η1,n ,
+
+(3.17)
+
+with η1,n = maxi=n+1,...,N |f1 (si ) − f2 (si )| ≤ max {N − n, 0} B, and so η1,n = Op (γ1,n ) and γ1,n =
+o(1). This verifies Assumption 3.2 with K1 = K2 = 1.
+Another possibility is to make the sieve space Θn depend only on a finite number n ∈ N of points
+with n < N and work directly with the original metric d. In this case, dn = d and consequently,
+η1,n = 0. A third possibility is to use an alternative pseudo-metric given by:
+1/p
+
+
+dn (f1 , f2 ) = 
+
+X
+
+|f1 (si ) − f2 (si )|p 
+
+, for all f1 , f2 ∈ F,
+
+(3.18)
+
+i=1,...,n
+
+for some p > 0 and n ∈ N. In order to verify Assumption 3.2 we notice that:
+dn (f1 , f2 ) ≤ max |f1 (si ) − f2 (si )| ≤ N 1/p dn (f1 , f2 ),
+
+(3.19)
+
+dn (f1 , f2 ) + η1,n ≤ d(f1 , f2 ) ≤ N 1/p dn (f1 , f2 ) + η1,n ,
+
+(3.20)
+
+i=1,...,n
+
+and, therefore:
+
+with η1,n = maxi=n+1,...,N |f1 (si )−f2 (si )| ≤ max {N − n, 0} B, and so it follows that η1,n = Op (γ1,n )
+and γ1,n = o(1). This verifies Assumption 3.2 with K1 = 1 and K2 = N 1/p .
+Assumption 3.3 can be assumed to hold. Part a is a very mild assumption. Part b is a much
+stronger assumption as it assumes that we can (approximately) solve a minimization problem with
+respect to the sup-norm pseudo-metric. It becomes a milder assumption if we use the l2 pseudometric.
+10
+
+Finally, Assumption 3.4 requires that the sieve space Θn can approximate the original space F.
+This is a relatively mild assumption. Then, for any n ∈ N, we take Θn to be the set of polynomial
+functions defined in S of degree n. Then, Weierstrass Theorem (see, e.g., Royden (1988), page 128,
+proposition 8) implies that:
+(3.21)
+inf d(θ, v) = o(1), ∀v ∈ F,
+θ∈Θn
+
+as required by Assumption 3.4. Results on the rate of convergence of the o(1) term are available
+from Chen (2007), and references therein (e.g. Lorentz (1966) and Powell (1981), Chapters 15-16.)
+
+3.3
+
+An iterative procedure to implement the minimization
+
+We close this section by discussing a final practical computational issue: solving the approximate
+minimization problem described in Equation (3.13). For some problems the solution to Equation
+(3.13) might to be too computationally difficult to solve directly. In order to compute a solution
+in these circumstances, we now introduce an iterative procedure to implement this minimization
+problem.
+Let {η1,n }n∈N be as in Assumption 3.2 and let k ∈ N and {η2,n }n∈N be as in Assumption 3.3.
+Furthermore, assume that γ1,n = O(γ2,n ), where γ1,n and γ2,n are as in Assumptions 3.2 and 3.3.
+For an arbitrary f ∈ Θn , consider the following iterative procedure:
+1. Choose a function θn ∈ Θn such that:
+dn (θn , Γk f ) = inf dn (θ, Γk f ).
+
+(3.22)
+
+θ∈Θn
+
+2. If max{dn (θn , Γk f ), dn (θn , f )} ≤ η2,n , then stop the algorithm. Otherwise, set f = θn and
+repeat the previous step.
+If the algorithm stops, then it is easy to see that θn ∈ Θn satisfies Equation (3.13). To see why,
+consider the following argument:
+dn (θn , Γk θn ) ≤ dn (θn , Γk f ) + dn (Γk f, Γk θn )
+
+(3.23)
+
+≤ dn (θn , Γk f ) + K1−1 d(Γk f, Γk θn ) + K1−1 η1,n
+
+(3.24)
+
+≤ dn (θn , Γk f ) + K1−1 β k d(f, θn ) + K1−1 η1,n
+f ) + K1−1 β k K2 dn (f, θn ) + K1−1 β k K2 η1,n
+K1−1 β k K2 ) + (K1−1 β k K2 + K1−1 )η1,n
+
+k
+
+≤ dn (θn , Γ
+
+≤ η2,n (1 +
+
+0
+0
+= η2,n
+≤ inf dn (θ, Γk θ) + η2,n
+,
+θ∈Θn
+
+(3.25)
++
+
+K1−1 η1,n
+
+(3.26)
+(3.27)
+(3.28)
+
+0
+where η2,n
+≡ η2,n (1 + K1−1 β k K2 ) + (K1−1 β k K2 + K1−1 )η1,n and, thus, under our assumptions,
+0
+η2,n
+= Op (γ2,n ) and γ2,n = o(1). The first inequality follows from the triangular inequality (applied
+to the pseudo-metric dn ), the second and fourth inequalities follow from Assumption 3.2, the third
+
+11
+
+inequality follows from the fact that Γ is a contraction mapping with modulus β, the fifth inequality
+0 ,
+follows from the stopping rule in the algorithm, the following equality follows by definition of η2,n
+and the final inequality follows from the fact that the pseudo-metric dn is positive. The result is
+0
+completed by noticing that, under our assumptions, η2,n
+= O(η2,n ).
+In practice, the minimization problem in Equation (3.22) can be relatively easy to solve and, in
+particular, much easier than the approximate minimization problem in Equation (3.13). For example, when dn is the l2 -metric (i.e. sum of squared differences) and Θn is the space of polynomials
+then the minimization problem in Equation (3.22) is a least-squares problem.
+Having defined the dynamic decision problem and laid out basic definitions and assumptions,
+we now introduce our method for approximating the value function and prove a series of results
+regarding the properties of this approximation. We begin by analyzing infinite horizon problems,
+taking up finite horizon problems in the following section of the paper.
+
+3.4
+
+Definition of the approximation
+
+Under Assumption 3.1, the Contraction Mapping Theorem (see, e.g., Stokey and Lucas (1989),
+Theorem 3.2, page 50) indicates that the contraction mapping Γ defined by Equation (3.6) has
+a unique fixed point. As we have explained, Equation (3.4) implies this fixed point is the value
+function of interest, which we have denoted by V ∈ F. As we have explained, this motivates us
+to consider the (unfeasible) optimization problem in Equation (3.7) or, more generally, for some
+k ∈ N, the following (equally unfeasible) optimization problem:
+inf d(θ, Γk θ).
+
+θ∈F
+
+(3.29)
+
+Even though the objective function can be computed, the sample space of the problem under consideration makes the domain of the optimization, F, too complex to handle. In order to circumvent
+this issue, we consider replacing the space F with a sequence of approximating spaces or sieves.
+According to Assumption 3.4, the sequence of spaces {Θn }n≥1 becomes a good approximation of F
+as our computational possibilities, n, diverge to infinity. In particular, this motives us to consider
+the following alternative optimization problem:
+inf d(θ, Γk θ).
+
+θ∈Θn
+
+(3.30)
+
+In certain situations, minimizing with respect to the metric d might not be computationally easy
+or even possible. In those cases, it is convenient to consider replacing the metric d with a suitable
+pseudo-metric dn according to Assumption 3.2. This leads us to consider the following optimization
+problem:
+inf dn (θ, Γk θ).
+(3.31)
+θ∈Θn
+
+In certain settings, the above minimization problem might only be feasible up to a certain residual
+term that will vanish as n diverges to infinity. This is precisely the case described in Assumption
+12
+
+3.3 (part b). This progression naturally leads to the definition of our SVFI approximation.
+Definition 3.3 (Sieve Value Function Approximation). Assume Assumption 3.3. Then the SVFI
+approximation of V is any θ̂n ∈ Θn that satisfies:
+dn (θ̂n , Γk θ̂n ) ≤ inf dn (θ, Γk θ) + η2,n .
+θ∈Θn
+
+(3.32)
+
+where η2,n = Op (γ2,n ) and γ2,n = o(1).
+Unlike the optimization problems in Equations (3.7) or (3.29), Assumption 3.3 guarantees that
+the SVFI approximation is the (approximate) solution to the feasible minimization problem in
+Equation (3.32).
+
+3.5
+
+Properties of the approximation
+
+All of the findings of this section are corollaries of the following lemma.
+Lemma 3.1. Assume Assumptions 3.1-3.4. Then, the SVFI approximation satisfies:
+d(θ̂n , V ) ≤
+
+(1 + K2 K1−1 )η1,n + K2 η2,n + K1−1 K2 (1 + β k )η3,n (V )
+,
+1 − βk
+
+(3.33)
+
+where V ∈ F is the unique fixed point of Γ in (F, d).
+Lemma 3.1 is the key result to establish the consistency of the SVFI approximation, derive its
+rate of convergence, and investigate the finite sample properties of its approximation error. The
+following result establishes the consistency and the rate of convergence of the approximation.
+Theorem 3.1. Assume Assumptions 3.1-3.4. Then, the SVFI approximation satisfies:
+d(θ̂n , V ) = Op (max{γ1,n , γ2,n , γ3,n (V )}),
+
+(3.34)
+
+where max{γ1,n , γ2,n , γ3,n (V )} = o(1) as n → ∞, and V ∈ F is the unique fixed point of Γ in
+(F, d). This implies that the SVFI approximation:
+1. is consistent approximation of V , i.e., d(θ̂n , V ) = op (1), as n → ∞.
+−1 −1 −1
+2. converges to V at a rate of min{γ1,n
+, γ2,n , γ3,n (V )}.
+
+Theorem 3.1 implies that the rate of convergence of the approximation depends on the rate at
+which three errors converge to zero. These errors are:
+1. The error of approximating the metric d with the approximate pseudo-metric dn according
+−1
+to Equation (3.11), denoted by η1,n , which converges to zero at a rate of γ1,n
+.
+2. The error of approximation when minimizing the objective function dn (θ, Γk θ) in Equation
+−1
+(3.32), denoted by η2,n , which converges to zero at a rate of γ2,n
+.
+13
+
+Table 1: Value of constants associated to the upper bound on the
+error of approximation for different number of iterations.a
+1
+1/(1 − β k )
+(1 + β k )/(1 − β k )
+a
+
+10
+19
+
+Number of iterations: k
+2
+3
+4
+5
+6
+5.26
+9.53
+
+3.69
+6.38
+
+2.91
+4.82
+
+2.44
+3.88
+
+2.13
+3.27
+
+7
+1.92
+2.83
+
+The discount factor β is set to 0.9.
+
+3. The error of approximating the value function V ∈ F with an element in the sieve space Θn ,
+−1
+denoted by η3,n (V ), which converges to zero at a rate of γ3,n
+(V ).
+The slowest of these three rates determines the rate of convergence of the approximation. The
+motivation for introducing sieve approximations was the fact that working with the original space F
+was computationally infeasible, i.e., the third source of error η3,n (V ) cannot be avoided. However,
+it might be possible to avoid the other sources of error. In other words, it might be possible to use
+dn = d, leading to γ1,n = 0, or it might be possible to solve the minimization of dn (θ, Γk θ) exactly,
+leading to γ2,n = 0. If so, then, the convergence rate of this source of error is infinity, effectively
+−1 −1 −1
+, γ2,n , γ3,n (V )}.
+disappearing from the expression for the rate of convergence min{γ1,n
+It is interesting to notice that the findings in Theorem 3.1 do not depend on the number of
+contraction mapping iterations k in Assumption 3.3 (in particular, they hold even if k = 1). The
+choice of k affects several constants associated with the rates of convergence, which are “hidden” in
+the Op notation. While these constants are not relevant for the asymptotic results, they can be very
+relevant for finite values of the computational power n. The right tool for this analysis is Equation
+(3.33) in Lemma 3.1, which provides a concrete upper bound on the error of approximation that can
+be used to study the effect of changes in k that is valid for any value of n. This result reveals that
+the three sources of error are each associated with a constant that depend on k. In particular, the
+error terms η1,n , η2,n , and η3,n are associated to the constants (1 + K2 K1−1 )/(1 − β k ), K2 /(1 − β k ),
+and K1−1 K2 (1 + β k )/(1 − β k ), respectively. A corollary of this is that, ceteris paribus, an increase
+in the number of value function iterations k reduces the value of the upper bound of the error of
+approximation. In particular, Table 1 illustrates that there are significant gains in precision from
+raising the value of k when the discount factor is β = 0.9. For example, changing the number
+of iterations from k = 1 to k = 2 reduces the (upper bound on the) error of approximation by
+approximately 50%.
+We illustrate the tradeoffs associated with increasing the number of contraction mapping iterations k in the Monte Carlo analysis in Section 6.
+
+14
+
+4
+
+Approximation in finite horizon dynamic problems
+
+This section describes the application of non-parametric sieve methods to approximate the value
+functions in Equation (2.1) when the dynamic problem has a finite horizon (i.e. T < ∞). The
+distinctive feature of the finite horizon problem is that the value function of the problem is no
+longer stationary (i.e. Vt (·) depends on the time index). As time passes and the terminal period T
+approaches, the agent’s value function changes.
+Using backward induction, the value function in any given period can be expressed the optimized choice between instantaneous utility and the discounter value for the immediately proceeding
+period. By repeating the arguments used to develop the unified formulation used in the infinite
+horizon case, we use s to denote the current value of the state, s0 to denote the future value of the
+state, S to denote the state space, a to denote the action chosen by the agent, A(s) to denote the
+space of actions available to the agent when the state is s, and F to be a known functional of Vt+1 (·)
+and s0 that satisfies certain known properties. Based on this notation, in every period t = 1, . . . , T ,
+the agent solves an optimization problem characterized by the following value function:
+Vt (s) = max {u(s, a) + βE(F (Vt+1 , s0 )|s, a)}, ∀s ∈ S,
+
+(4.1)
+
+a∈A(s)
+
+where the variables and functions are defined as in Equation (3.4) and:
+VT +1 (s) = 0, ∀s ∈ S.
+
+(4.2)
+
+Using the notation developed in Equation (3.6), the sequence of value functions {Vt }Tt=1 can be
+defined as follows: VT = ΓVT +1 with a zero terminal value, i.e., VT +1 (s) = 0, ∀s ∈ S.6
+The approximation procedure developed for the infinite horizon problem must be modified to
+accommodate several distinct features of the finite horizon setup. First, the finite horizon problem
+requires an approximation for the value function at each point in time; the infinite horizon problem
+is stationary, i.e., the agent solves the same problem every period, and thus only requires the
+approximation of a single value function V . Second, the approximation procedure developed for
+the infinite horizon problem required the value function V to be a fixed point in a contraction
+mapping. Clearly, this will not be true for the non-stationary finite horizon problem. As time
+progresses, the last period of the game approaches and this affects the value of participating in the
+game. Thus the value functions of the finite horizon problem are not fixed points to any mapping,
+but are instead a finite sequence of functions that are sequentially related.
+With enough computational power, the set of functions {Vt }Tt=1 could be computed exactly
+using backward induction. Nevertheless, for economic models with large state spaces, the exact
+implementation of backward induction might be too computationally challenging or even impossible.
+6
+
+It should be noted that each of the objects in Equation (4.1), i.e., the set of possible actions A(·), the period
+utility function u(·), the expectation operator E(·), and the functional F (·), could be allowed to be time-specific
+without affecting any of the theoretical results to follow. We opted to keep these elements time invariant to simplify
+the exposition and to relate them easily to elements in Equation (3.4).
+
+15
+
+The objective of this section is to propose a sieve value function approximation for such settings.
+For a given computational power (i.e. for a given sieve space Θn ), our approximation method
+produces a sequence of approximations: {θ̂n,t }Tt=1 where, for all t = 1, . . . , T , θ̂n,t is the sieve value
+function approximation for Vt .
+We consider two approximation procedures. The first is, essentially, the sieve approximation
+version of a traditional backward induction. The value function is first approximated for the last
+period and this approximate function is used to solve for the (approximate) value function for
+the previous period. Continuing to work backwards yields an approximate value function for each
+period. Implementing this procedure requires using computational routines that are specifically
+tailored for the finite horizon setup.
+The second procedure entails expanding the state space to include time as a state variable. To
+the best of our knowledge, this procedure is novel to our paper. While this procedure is less intuitive
+than backward induction, it has the advantage of being implemented with the same computational
+routines developed above for the infinite horizon problem.
+
+4.1
+
+Approximation using backward induction
+
+The computation of the sequence of value functions {Vt }Tt=1 by backward induction is well understood and requires no further discussion. This section proposes an approximation to these value
+functions using sieves. The approximation requires the following assumptions. By repeating previous arguments, it is easy to see that these assumptions are satisfied in dynamic decision problems
+that have a very large but finite state space.
+Assumption 4.1. (F, d) is a complete metric space of functions that map S onto R, where d is
+the sup-norm metric, i.e.,
+d(f1 , f2 ) = sup ||f1 (s) − f2 (s)||, ∀f1 , f2 ∈ F.
+
+(4.3)
+
+s∈S
+
+Assumption 4.2. For any n ∈ N, dn is a pseudo-metric in (F, d) such that ∃K1 , K2 > 0,
+K1 dn (f1 , f2 ) − λ1,n ≤ d(f1 , f2 ) ≤ K2 dn (f1 , f2 ) + λ1,n ,
+
+(4.4)
+
+where λ1,n = Op (υ1,n ) and υ1,n = o(1), uniformly in f1 , f2 ∈ F.
+Assumption 4.3. For any n ∈ N there is enough computational power such that:
+a. (Computation of the CM) For any θ ∈ Θn ∪ VT +1 , we can compute Γθ given by:
+(Γθ)(s) = sup
+
+
+
+u(s, a) + βE(F (θ, s0 )|s, a) , ∀s ∈ S.
+
+a∈A(s)
+
+16
+
+(4.5)
+
+b. (Approximate minimization) For any f ∈ F, we can find θn ∈ Θn that satisfies:
+dn (θn , f ) ≤ inf dn (θ, f ) + λ2,n .
+θ∈Θn
+
+(4.6)
+
+where λ2,n = Op (υ2,n ) and υ2,n = o(1), uniformly in f ∈ F.
+Assumption 4.4. For any f ∈ F:
+inf d(θ, f ) = λ3,n ,
+
+θ∈Θn
+
+(4.7)
+
+where λ3,n = Op (υ3,n ) and υ3,n = o(1), uniformly in f ∈ F.
+Assumption 4.5. For all f1 , f2 ∈ F, a ∈ A(s), and s ∈ S:
+E[F (f1 , s0 ) − F (f2 , s0 )|s, a] ≤ d(f1 , f2 ).
+
+(4.8)
+
+We now briefly comment on each of the assumptions with focus on the differences with Assumptions 3.1-3.4. With respect to Assumption 3.1, Assumption 4.1 eliminates the contraction mapping
+requirement with the requirement that d is the sup-norm metric. As we have already explained,
+these two assumptions are not that different, as the mapping Γ in Equation (3.6) can be shown
+to be a contraction mapping with respect to the sup-norm metric but not with respect to other
+metrics. Assumption 4.2 is identical to Assumption 3.2. Assumption 4.3 is very similar to Assumption 3.3. The differences between the two are the following. First, Assumption 3.3(a) assumed
+that one could compute the k th iteration of the Bellman equation mapping for any function in the
+sieve space Θn , whereas Assumption 4.3(a) explicitly requires this to be true for k = 1. Second,
+Assumption 3.3(b) assumed that one could (approximately) minimize a specific objective function
+within the sieve space Θn , whereas Assumption 4.3(b) assumes that one can (approximately) find
+the best approximation within the sieve space Θn for any function in F. The difference between
+Assumption 3.3(b) and Assumption 4.3(b) is that the error of minimization has to converge to zero
+(in probability) uniformly in f ∈ F. Assumption 4.4 strengthens Assumption 3.4 as it requires
+that inf θ∈Θn d(θ, f ) converges to zero (in probability) uniformly in f ∈ F. In other words, instead
+of requiring a vanishing error of approximation of any particular function, we require that the a
+vanishing error of approximation for the worst function in the class of functions F. For references
+on these stronger results see, e.g., chapter 8 in Lorentz (1966). Finally, Assumption 4.5 is a mild
+assumption about the properties of the mapping F . In particular, Lemma A.1 verifies that this
+assumption holds for all possible the formulations of the problem.
+The approximation considered in this section is defined as follows:
+Definition 4.1 (Sieve Value Function Approximation). Assume Assumption 4.3. Then the approximation of {Vt }Tt=1 is {θ̂n,t }Tt=1 constructed in the following iterative manner. For z = 1, . . . , T ,
+let t = T + 1 − z and complete the following steps:
+
+17
+
+∗ : S → R as follows:
+1. Define θ̂t,n
+∗
+θ̂t,n
+(s) = (Γθ̂t+1,n )(s) = max {u(s, a) + βE(F (θ̂t+1,n , s0 )|s, a)}, ∀s ∈ S,
+
+(4.9)
+
+a∈A(s)
+
+where either: t = T and θ̂t+1,n (s) = VT +1 (s) = 0 ∀s ∈ S, or t < T and θ̂t+1,n has been defined
+in a previous iteration of the algorithm.
+2. Define θ̂t,n : S → R to be any θ̂t,n ∈ Θn that satisfies:
+∗
+∗
+) + λ2,n ,
+dn (θ̂t,n , θ̂t,n
+) ≤ inf dn (θ, θ̂t,n
+θ∈Θn
+
+(4.10)
+
+where λ2,n = Op (υ2,n ) and υ2,n = o(1).
+It is evident from the description of the procedure that this method implements the traditional
+backward induction procedure using sieve approximations, i.e., it performs an approximation of
+the value function of the terminal period and uses the approximation of the value function in a
+given period to conduct an approximation for the value function in the immediately preceding
+period. Under Assumption 4.3, this approximation is feasible and is completed by solving T sequential approximation problems. The following theorem establishes the asymptotic properties of
+the approximation.
+Theorem 4.1. Assume Assumptions 4.1-4.5. Then, the approximation satisfies:
+max d(θ̂t,n , Vt ) = Op (max{υ1,n , υ2,n , υ3,n }),
+
+t=1,...,T
+
+(4.11)
+
+where max{υ1,n , υ2,n , υ3,n } = o(1) as n → ∞. This implies that for all t = 1, . . . , T , the sieve value
+function approximation θ̂t,n :
+1. is a consistent approximation of Vt , i.e., d(θ̂t,n , Vt ) = op (1), as n → ∞.
+−1
+−1
+−1
+2. converges to Vt at a rate of min{υ1,n
+, υ2,n
+, υ3,n
+}.
+
+As in Theorem 3.1, Theorem 4.1 indicates that the rate of convergence of the approximation
+depends on the rate at which three errors converge to zero. The slowest of these three rates
+determines the rate of convergence of the approximation.
+
+4.2
+
+Approximation using time as a state variable
+
+The approximation considered in this section entails considering the time dimension as part of the
+state of the problem. In some sense, it may seem counterintuitive to “increase” the state space for a
+problem in which the size of space was already deemed to large to compute directly. However, as we
+demonstrate in this section, the approximation is computationally feasible and can be implemented
+using the exact same computational tools as in the infinite horizon case.
+18
+
+Consider the state space that results from the cartesian product of the (time invariant) state
+space S with the time dimension {1, . . . , T + 1}, i.e., S̃ = S × {1, . . . , T + 1}. Throughout this
+section, we superscript with the symbol ∼ to denote objects in the new state space that includes
+˜ where F̃ denotes a
+the time dimension. For example, the new metric space is denoted by (F̃, d),
+set functions from S̃ onto R and d˜ denotes the corresponding norm in this space. In this enlarged
++1
+state space, the sequence of value functions {Vt }Tt=1
+defined by Equations (4.1) and (4.2) can be
+equivalently re-written as follows:
+V (s, t) ≡ Vt (s).
+(4.12)
+In order to conduct the approximation in the state space S̃, we use a sequence of sieve spaces,
+denoted by {Θ̃n }n≥1 , where each Θ̃n is a space of (simple) functions that map S̃ onto R. We
+consider the following assumptions.
+˜ is a complete metric space of functions that map S̃ onto R, where d˜ is
+Assumption 4.6. (F̃, d)
+the sup-norm metric, i.e.,
+˜ 1 , f2 ) = sup ||f1 (s, t) − f2 (s, t)||, ∀f1 , f2 ∈ F̃.
+d(f
+
+(4.13)
+
+(s,t)∈S̃
+
+˜ such that ∃K1 , K2 > 0,
+Assumption 4.7. For any n ∈ N, d˜n is a pseudo-metric in (F̃, d)
+˜ 1 , f2 ) ≤ K2 d˜n (f1 , f2 ) + λ1,n ,
+K1 d˜n (f1 , f2 ) − λ1,n ≤ d(f
+
+(4.14)
+
+where λ1,n = Op (υ1,n ) and υ1,n = o(1), uniformly in f1 , f2 ∈ F̃.
+Assumption 4.8. For any n ∈ N and some k ∈ N there is enough computational power such that:
+a. (Computation of the CM) For some k ∈ N and any θ ∈ Θn , we can compute Λk θ, where
+Λθ is given by:
+(Λθ)(s, t) = sup
+
+
+u(s, a) + βE(F (θ, (s0 , t + 1)|(s, t), a) × 1[t < T + 1].
+
+(4.15)
+
+a∈A(s)
+
+b. (Approximate minimization) For any f ∈ F̃, we can find θn ∈ Θ̃n that satisfies:
+d˜n (θn , Λθn ) ≤ inf d˜n (θ, Λθ) + λ2,n .
+
+(4.16)
+
+θ∈Θ̃n
+
+where λ2,n = Op (υ2,n ) and υ2,n = o(1).
+Assumption 4.9. For any f ∈ F̃:
+˜ f ) = λ3,n (f ),
+inf d(θ,
+θ∈Θ̃n
+
+where λ3,n (f ) = Op (υ3,n (f )) and υ3,n (f ) = o(1).
+19
+
+(4.17)
+
+Assumption 4.10. For all f1 , f2 ∈ F̃, a ∈ A(s), and (s, t) ∈ S̃:
+E[F (f1 , (s0 , t + 1)) − F (f2 , (s0 , t + 1))|(s, t), a] ≤ d(f1 , f2 ).
+
+(4.18)
+
+With the exception of the fact that the state space has been enriched with the time index,
+Assumptions 4.6-4.10 are analogous to assumptions that have already been discussed in the paper.
+On the one hand, Assumptions 4.6, 4.7, and 4.10 are analogous to Assumptions 4.1, 4.2, and
+4.5 used to consider the sieve approximation to the backward induction solution in finite horizon
+problems. On the other hand, Assumptions 4.8 and 4.9 are analogous to Assumptions 3.3 and 3.4
+used to consider the SVFI approximation in infinite horizon problems.
+In the context of the SVFI approximation in infinite horizon problems, we described an iterative
+procedure for (approximately) minimizing the objective function. A similar iterative procedure can
+be developed for finite horizon problems. In particular, let {λ1,n }n∈N be as in Assumption 4.7 and
+let k ∈ N and {λ2,n }n∈N be as in Assumption 4.8. Furthermore, assume that υ1,n = O(υ2,n ), where
+υ1,n and υ2,n are as in Assumptions 4.7 and 4.8.
+For an arbitrary f ∈ Θ̃n , consider the following iterative procedure:
+1. Choose a function θn ∈ Θ̃n such that:
+d˜n (θn , Λk f ) = inf d˜n (θ, Λk f ).
+
+(4.19)
+
+θ∈Θ̃n
+
+2. If max{d˜n (θn , Λk f ), d˜n (θn , f )} ≤ λ2,n , then stop the algorithm. Otherwise, set f = θn and
+repeat the previous step.
+If the algorithm stops, then it implies that θn ∈ Θ̃n satisfies Equation (4.16). To show this,
+we can repeat the argument used in Section 3.3. In practice, the minimization problem in Equation (4.19) can be relatively easy to solve and, in particular, much easier than the approximate
+minimization problem in Equation (4.16).
+The following result is the key to the asymptotic findings of this section.
+Lemma 4.1. Assume Assumptions 4.6 and 4.10. Let Λ be the mapping in Assumption 4.8 and let
+V ∈ F̃ be the function defined by: V (t, s) ≡ Vt (s) for all S × {1, . . . , T + 1}. Then:
+˜
+1. Λ is a contraction mapping with modulus β on (F̃, d).
+2. V is the unique fixed point of the contraction mapping Λ, i.e., ΛV = V .
+In the context of infinite horizon problems, Assumption 3.1 indicated that the value function
+was the unique fixed point of a certain contraction mapping. This result was the key to proposing
+the SVFI approximation method. Lemma 4.1 indicates that an analogous result holds for in the
+context of finite horizon problem. In fact, if we combine this result with the remaining assumptions,
+the current setup satisfies all of the conditions required for the SVFI approximation. As a consequence, an analogous approximation to the the SVFI approximation will have the same asymptotic
+properties, i.e, consistency and rates of convergence. This analogous approximation is defined next.
+20
+
+Definition 4.2 (Sieve Value Function Approximation). Assume Assumption 4.8. Then the sieve
+approximation of {Vt }Tt=1 is {θ̂t,n }Tt=1 where, for every (s, t) ∈ S × {1, . . . , T }, θ̂t,n (s) ≡ θ̂n (s, t) and
+θ̂n ∈ Θ̃n is any function that satisfies:
+d˜n (θ̂n , Λk θ̂n ) ≤ inf d˜n (θ, Λk θ) + λ2,n .
+
+(4.20)
+
+θ∈Θ̃n
+
+where λ2,n = Op (υ2,n ) and υ2,n = o(1).
+Based on the previous discussion, the following result is a simple corollary of Theorem 3.1 and
+Lemma 4.1.
+Theorem 4.2. Assume Assumptions 4.6-4.10. Then, the function θ̂n ∈ Θ̃n in Definition 4.2
+satisfies:
+˜ θ̂n , V ) = Op (max{υ1,n , υ2,n , υ3,n (V )}),
+d(
+(4.21)
+where max{υ1,n , υ2,n , υ3,n (V )} = o(1) as n → ∞ and V ∈ F̃ is the function defined by: V (t, s) ≡
+Vt (s) for all S × {1, . . . , T + 1}. This implies that for all t = 1, . . . , T , the sieve approximation θ̂t,n :
+1. is a consistent approximation of Vt , i.e., sups∈S |θ̂t,n (s) − Vt (s)| = op (1), as n → ∞.
+−1
+−1
+−1
+2. converges to Vt at a rate of min{υ1,n
+, υ2,n
+, υ3,n
+(V )}.
+
+As in Theorems 3.1 and 4.1, Theorem 4.2 indicates that the rate of convergence of the approximation depends on the rate at which three errors converge to zero. Again, the slowest of these
+three rates determines the rate of convergence of the approximation.
+
+5
+
+Estimation
+
+The results to this point in the paper characterize the (approximate) computation of the value
+function (and associated object of interests) for a known vector parameters π that characterize the
+agent’s dynamic decision problem. In this section, we now consider the problem of estimating π
+in a parameter space Π when the researcher has data on dynamic decisions and, again, the state
+space is too large to permit the direct computation of V for a given value of π.7 As before, the
+associated value function V incorporates all the information that is relevant to the decision problem
+and depends on the parameter π, i.e., V (·|π). In this setup, the approximation problem of previous
+sections entails the approximation of the value function V for a particular value of the parameter
+π ∈ Π. Let π ∗ denote the true parameter value, i.e., V (·) ≡ V (·|π ∗ ).
+For concreteness, consider an agent solving the value function in Equation (3.4) with:
+AS ≡ {(a, s) : a ∈ A(s) and ∀s ∈ S},
+7
+
+(5.1)
+
+Throughout this section, we pretend that the dynamic problem we refer to is the infinite horizon single agent
+decision problem. Nevertheless, by making slight notational changes, the results of this section can also be applied
+to a finite horizon problem.
+
+21
+
+instantaneous utility function given by:
+u(s, a) = u(s, a|π1 ), ∀(a, s) ∈ AS,
+
+(5.2)
+
+transition probabilities given by:
+dP (ε0 , x0 |x, a) = dP (ε0 , x0 |x, a, π2 ), ∀(a, s) ∈ AS,
+
+(5.3)
+
+and a discount factor β = π3 . Set π ≡ (π1 , π2 , π3 ) ∈ Π. For each parameter value π ∈ Π, the
+corresponding value function is denoted V (·|π).
+The SVFI approximation procedure described in Definition 3.3 provides a method for approximating the value function for any given set of primitives (i.e. choice set, utility function, discount
+factor, and transition probabilities). In this setting, these primitives are functions of the unknown
+parameter value π. To be consistent with this interpretation, we denote: θn ≡ θn (·|π).
+If the value function (or some function derived from it) were observed for an arbitrary set of
+values, then the SVFI approximation procedure could be used to approximate it. Furthermore, the
+consistency result in Theorem 3.1 suggests that the parameter π could be estimated as follows:
+π̂n = arg min Q(θn (·|π)),
+
+(5.4)
+
+π∈Π
+
+where Q(θn (·|π)) is an appropriately chosen function that measures the distance between θn (·|π)
+and the value function V . For instance, Q could be the following function:
+Z
+Q(θn (·|π)) = (V (s) − θn (s|π))2 dµ(s),
+(5.5)
+where µ is any arbitrary positive measure over S. In practice, however, the estimator in Equation
+(5.4) is unfeasible because the value function is not observed by the researcher and, consequently,
+Q is unknown.
+In practice, the value function, or some feature derived from it (e.g., CCPs), can be estimated
+from the data. With some abuse of notation, let VI denote the estimated value function using a
+sample of size I (observations are indexed i = 1, . . . , I) and let QI denote the function that measures
+the distance between θn (·|π) and VI . Our previous discussion suggests that the parameter π could
+be estimated according to the following definition.
+Definition 5.1 (Estimator based on the Sieve Value Function Approximation). Let QI : Π → R+
+be the function of the data that measures the distance between VI and θn (·|π) for any π ∈ Π and
+let n = n(I). The estimator of the true parameter value π ∗ , denoted π̂I , satisfies:
+QI (θ̂n (·|π̂I )) ≤ inf QI (θ̂n (·|π)) + op (1), as I → ∞.
+π∈Π
+
+In order to clarify the structure of the problem, we consider an illustrative example.
+22
+
+(5.6)
+
+Example 5.1. In this case, we estimate the CCPs from a sample of I observed choices. In
+particular, if the set S is finite, then the following estimator:
+P̂I = {P̂I (a|s), ∀(a, s) ∈ AS},
+where:
+P̂I (a|s) =
+
+I
+X
+
+1[ai = a, si = s]/
+
+i=1
+
+I
+X
+
+1[si = s],
+
+(5.7)
+
+(5.8)
+
+i=1
+
+√
+
+I-consistent estimator of the CCPs.
+By definition, the CCPs can be derived from the value function. Let J(·|π) : F → [0, 1]#AS be
+the mapping between the value function and the CCPs, i.e.,
+is a
+
+J(V |π) = {P (a|s), ∀(a, s) ∈ AS},
+
+(5.9)
+
+where the conditioning on π indicates that the mapping itself could depend on the parameter value.8
+This discussion suggests the estimation of π with π̂I as in Equation (5.6), where the measure µ is
+set to be the empirical measure, i.e.,
+Z
+QI (θn (·|π)) =
+(P̂I − J(θn (π)|π))2 dP̂I ,
+(5.10)
+= I
+
+−1
+
+I
+X
+
+1[(ai , si ) = (a, s)](P̂I (a|s) − J(a,s) (V |, π))2 .
+
+(5.11)
+
+i=1
+
+In other words, we choose the parameter value that minimizes the integrated squared distance
+between the observed CCPs and the approximated CCPs, where the empirical measure is used as
+the measure of integration.
+The objective of the rest of the section is to provide conditions under which π̂I is consistent.
+To this end, we now provide a list of the assumptions that are exclusively used in this section.
+Assumption 5.1. (F1 , d1 ) and (F2 , d2 ) are metric spaces. The true value function V = V (·|π ∗ ) ∈
+F1 and the true parameter value π ∗ ∈ Π ⊆ F2 .
+Assumption 5.2. The SVFI approximation satisfies:
+sup d1 (θ̂n (·|π), V (·|π)) = op (1), as n → ∞.
+
+(5.12)
+
+π∈Π
+
+Assumption 5.3. There is a function Q(·) : F1 → R such that:
+a. ĉ(n, I) = op (δ(n, I)) where ĉ(n, I) ≡ supf ∈Θn |QI (f ) − Q(f )|.
+8
+
+The function J will depend on the specific formulation of the dynamic decision problem. See Appendix B for a
+description of each of the formulations and the definition of the function J in each case.
+
+23
+
+b. Q is uniformly continuous in F1 under d1 , i.e., for any δ > 0, there exists ε > 0 such that
+f1 , f2 ∈ F1 with d1 (f1 , f2 ) < ε implies Q(f1 ) − Q(f2 ) ≤ δ.
+c. The function Q(V (·|π)) : Π → R is uniquely minimized at π = π ∗ .
+Assumption 5.4. For every I ∈ N, n = n(I) with n(I) → ∞ and δ(n(I), I) → 0 as I → ∞.
+We now briefly comment on each of the assumptions. Assumption 5.1 provides a label to
+relevant spaces, functions, and parameters. Assumption 5.2 is a high level assumption which
+indicates that θ̂n (·|π) is a consistent approximation of V (·|π), uniform over π ∈ Π. By repeating
+the arguments in Theorem 3.1, it is not hard to see that Assumption 5.2 holds as a result of using
+the SVFI approximation procedure described in Definition 3.3 under Assumptions 3.1-3.4, with the
+exception that Assumption 3.4 is strengthened to hold uniformly in f ∈ F (i.e. as in Assumption
+4.4). Assumption 5.3 are similar to assumptions used in the literature on extremum estimators
+(see, e.g., Theorem 3.1 in Chen (2007) for conditions pertaining to sieve estimators, and Theorem
+4.1.1 in Amemiya (1985) or Theorem 2.1 in McFadden and Newey (1994) for finite dimensional
+estimators). Finally, Assumption 5.4 describes conditions that restrict the relationship between the
+data sample size and the complexity of the sieve.
+Theorem 5.1. Assume Assumptions 5.1-5.4. Then, the estimator in Equation (5.4) is consistent,
+i.e.,
+d2 (π̂I , π ∗ ) = op (1), as I → ∞.
+(5.13)
+In this way, under Assumptions 5.1-5.4, it is possible to obtain consistent estimates of the
+parameters of large state space dynamic decision problems by embedding SVFI methods in the
+estimation algorithm.
+
+6
+
+Monte Carlo simulations
+
+In this section we illustrate the small sample properties of the sieve value function approximation
+in a dynamic single agent setting for both finite and infinite horizon problems. We explore multiple
+aspects of the approximation, which will hopefully provide researchers guidance in custom tailoring
+the sieve value function approximation to their individual environment. After discussing the results
+of the Monte Carlo approximation exercises, we turn to the estimation of the structural parameters
+of the model.
+The Monte Carlo experiments are conducted in an adaptation of the Rust bus engine problem.
+The important modification of the problem is that, rather than making the engine replacement
+decision of a single bus, the manager is now endogenizing the purchasing and replacement decision
+over an entire fleet of buses. This alteration substantially increases the state space of the problem,
+making it an ideal application to study the finite sample properties of the approximation method.
+
+24
+
+6.1
+
+The model: bus fleet replacement
+
+A single agent makes purchasing and replacement decisions over a fleet of buses to meet rider
+demand. Buses are assumed to last L periods, after which they are retired. The manager’s problem
+is to decide when to make purchasing decisions of new buses to optimally replace the upcoming
+set of retiring buses. The manager’s discrete decision in each period t is indicated by at ∈ {0, 1},
+where at = 0 represents not buying a bus in period t, and at = 1 represents buying an additional
+bus in period t.
+Since buses survive L periods, the entire age composition of the bus fleet, B, can be described
+by the purchasing decisions of the previous L periods. Formally, we can define the state of the bus
+fleet in period t as:
+Bt = [at−1 , at−2 , . . . , at−L ] .
+This representation reflects the fact that only one bus can be purchased in a single period, and
+thus there can be at most one bus of any particular age in the fleet.
+Buses in the fleet are perfect substitutes across ages and are usable immediately when they are
+purchased. The total number of usable buses in period t is:
+b(Bt , at ) = at +
+
+L
+X
+
+Bt (i),
+
+i=1
+
+where Bt (i) represents the ith element of vector Bt .
+Demand for buses (ridership) is stochastic across time, meaning that when the agent is making
+purchasing decisions today, they take into account current ridership as well as expected future
+ridership. We assume ridership, rt , evolves according to the following normal AR(1) process:
+rt+1 = ψ0 + ψ1 rt + νt ,
+where νt ∼ N (0, σν2 ) and ψ1 ∈ (0, 1).
+The agent’s objective is to possess enough buses in the fleet to accommodate demand in each
+period. Per-period profits, ut ≡ u(Bt , rt , at ), are a function of the current period demand, rt , and
+the number of available buses, b(Bt , at ), defined as: 9
+
+u(Bt , rt , at ) = α1 (b(Bt , at )rt ) − α2 b(Bt , at )2 + rt2 ,
+
+(6.1)
+
+The per-period pay-off function, conditional on choice at , is characterized by: u(xt , at ) + εt (at ),
+where the state variable xt = {Bt , rt } and εt (at ) is an additive pay-off shock, i.i.d. across choices
+and time.
+The agent’s problem is to make an optimal sequence of purchasing decisions to maximize the
+expected discounted flow of future per-period pay-offs. With discount factor, β, we can formulate
+9
+
+In the Monte Carlo’s we set α1 = 0.2 and α2 = 0.1, implying that profits are maximized when the number of
+buses equals the number of riders, and the agent is penalized if they have too many buses or too few buses.
+
+25
+
+the value function using using the recursive Bellman representation:
+V (xt , εt ) = max {u(xt , at ) + εt (at ) + βE[V (xt+1 , εt+1 )|xt , at ]}
+at ∈{0,1}
+
+(6.2)
+
+In this formulation of the dynamic problem, it is convenient to write the choice specific value
+functions (excluding the shocks) for choice a ∈ {0, 1} as follows:
+v(xt , a) = u(xt , a) + βE[V (xt+1 , εt+1 )|xt , a].
+
+(6.3)
+
+The agent’s optimal decision in period t is then to choose a∗t such that:
+a∗t = argmax {v(xt , a) + εt (a)}.
+a∈{0,1}
+
+Given choice at , the bus fleet Bt evolves deterministically to Bt+1 as follows:
+Bt+1 = [at , Bt (1 : L − 1)] ,
+where Bt (1 : L − 1) represents the 1st to (L − 1)th elements of the vector Bt . Since the endogenous
+state variable Bt evolves deterministically, the expectation in Equation (6.2) is taken over next
+periods ridership rt+1 and next periods pay-off shock εt+1 .
+This represents a large state space problem for two reasons. First, ridership, rt , is a continuous
+state variable. Second, although the contemporaneous profit function is invariant to the exact age
+composition of the buses (only the total number of buses matter), the dynamics of the problem
+imply that the fleet composition matters in the decision process. Therefore, the state space contains
+the total number of potential age combinations of the bus fleet. This results in a very large state
+space problem driven by L, the life span of a bus. Since there can be at most one bus of any given
+age, the number of possible bus fleet combinations is given by #{B} = 2L . As a consequence, the
+size of the state space is growing exponentially in L.
+
+6.2
+
+Sieve value function approximation
+
+Letting θn denote the sieve approximation, our approximation is of the ex-ante value function or
+social surplus function θn (xt ) ≈ E[maxa∈{0,1} (v(xt , a) + εt (a))|xt ] where the expectation is over the
+random pay-off shock ε. Assuming these shocks are distributed type-I extreme value, we have a
+known closed form representation of the expectation as:
+E[V (xt , εt )|xt ] = ln
+
+X
+a∈{0,1}
+
+
+exp(v(xt , a)) + γ,
+
+(6.4)
+
+where γ is Euler’s constant. This setup correspond to the social surplus formulation of the dynamic
+decision problem.
+Therefore, for a chosen sieve space Θn , we seek an approximation of the expression in Equation
+26
+
+(6.4), θn ∈ Θn , such that:
+θn (xt ) ≈ ln
+
+X
+a∈{0,1}
+
+
+exp(v(xt , a)) + γ
+
+X
+
+
+= ln
+exp (u(xt , a) + βE [V (xt+1 , εt+1 )|xt , a]) + γ
+a∈{0,1}
+X
+
+≈ ln
+exp (u(xt , a) + βE [θn (xt+1 )|xt , a]) + γ.
+a∈{0,1}
+
+(6.5)
+
+The right hand side of Equation (6.5) represents one contraction on the approximation, θn , defined as Γ1 θn (xt ). Section 3.5 demonstrates that we can actually reduce the upper-bound of the
+approximation error by increasing the number of iterations of the contraction operator on the approximation. Rather than immediately plugging the approximation on the right hand side into
+the expected future value term, we could alternatively write this term using Equation (6.4) as a
+function of next periods contemporaneous profit functions and a two-period away expected future
+value term. If we substitute the approximation into the two-period away expected future value
+function this corresponds to two iterations of the contraction (k = 2). We could continue in this
+way for k > 2, though the computational burden increases exponentially with k.
+We construct the sieve approximation of size n using polynomials of the states and their interactions. The relevant state variables are contained in x and include the complete age composition
+of the bus fleet as well as current period demand:
+xt = [rt , at−1 , at−2 , . . . , at−L ] = [x(1) , x(2) , x(3) , . . . , x(s)].
+To form our n terms, we first take the state variables themselves. We then add in all pair-wise
+interactions, then all three-way interactions, etc. until n is reached. Should n exceed the number of,
+say, three-way interactions, the three-way interactions are randomly drawn such that the number
+of terms is n. Denote wj (x) as the j th term in the polynomial. The sieve approximation is then:
+θn (x) = ρ(1)w1 (x) + · · · + ρ(n)wn (x) = ρn Wn (x).
+For k = 1 the objective function is now given by:
+ρ̂n = argmax
+ρn
+
+X
+x∈X
+
+ρn Wn (x) − ln
+
+X
+
+
+2
+
+exp u(x, a) + βE ρn Wn (x )|x, a
++γ .
+
+
+a∈{0,1}
+
+0
+
+(6.6)
+
+A key convenience of using polynomials to construct the sieve is that the approximation is linear
+in parameters. Consequently, although Equation (6.6) contains an expectation over next periods
+ridership (a continuous state variable), the expectation passes through to the elements of the
+polynomial, i.e., E[ρn Wn (x0 )|x, a] = ρn E[Wn (x0 )|x, a]. Since we know the distribution of the state
+transitions, evaluating this expectation is simply a matter of calculating the relevant moment
+conditions. For discrete variables this is easily done by hand and continuous variables often have
+27
+
+closed forms. We can then replace the expectation by its associated expected value transforming
+the objective function to:
+ρ̂n = argmax
+ρn
+
+X
+x∈X
+
+ρn Wn (x) − ln
+
+X
+a∈{0,1}
+
+
+2
+
+exp u(x, a) + βρn E[Wn (x0 |x, a)] + γ ,
+
+(6.7)
+
+The important insight is that both functions Wn (x) and E[Wn (x0 |x, a)], which may be very complex, are calculated outside of the maximization routine. For k = 1, this implies that the computational burden of solving the objective function is no greater for models with no stochastic variables
+than they are for models with many stochastic variables. To emphasize this point, with full solution methods, researchers are often forced to make undesirable simplifications to the problem (like
+discretizing state variables) for tractability reasons, but sieve value functions can accommodate
+continuous state variables with no additional computational complexity when k = 1.10
+
+6.3
+
+Results: infinite horizon problem
+
+In practice, these approximation methods will be used in situations where a full solution method
+is computationally infeasible. However for the purposes of benchmarking the performance of the
+approximation, we first consider a model that is feasible (although slow) to solve using value
+function iteration over the entire state space. To do so, we discretize the continuous state variable,
+ridership, r, to nine points. We set the maximum bus age of L = 25, which implies a state space of
+9 × 225 = 301, 989, 888. The approximations are based off of a random draw of 20,000 points and
+is held constant for each approximation.
+The objective functions in Equation (6.7) represents a standard non-linear least squares problem
+that could be solved using direct minimization. However, solving the nonlinear minimization may
+not be practical when the number of terms in the sieve is large. We therefore consider an alternative
+iterative approach to solving for θn . Letting θnm be the sieve approximation at the mth iteration,
+we update the approximation at m + 1 by:
+θnm+1 = argmax
+θn ∈Θ
+
+X
+
+[θn (x) − Γk θnm (x)]2 ,
+
+(6.8)
+
+x∈X
+
+and then continually update the parameters until convergence.
+The Monte Carlo results for the infinite horizon bus fleet replacement problem are summarized in
+Table 2. Each column corresponds to a different approach to the sieve value function approximation,
+considering different methods for minimizing the objective function or for different values of k. For
+each approach, we conduct the approximation for different sieve sizes, ranging from 500 points to
+3,000 points. Finally the table is broken into three panels: Panel A reports the mean squared error
+of the approximation against the true values for the points in the sample. In practice, the truth
+10
+
+This is not true for k > 1 because we are required to evaluate all possible evolutions of the state variables in the
+next period.
+
+28
+
+is unknown. Hence, Panel B reports the mean squared error of the approximation. This measure
+is easily computable in practice and will be the main insight researchers use to inform then as to
+how well the approximation is preforming. The key theoretical result is that as we know the values
+of panel B are going to 0, then this implies the values in panel A are going to 0. Finally, Panel C
+reports the computational time.
+Column (i) considers an infeasible estimator for the approximation, which is to regress the state
+variables on the true expected future value terms. Panel A of the table shows that our constructed
+sieve preforms very well at approximating the true social surplus function and does exceedingly
+well as we increase the richness of the sieve space n. Column (ii) displays the results for the sieve
+value function iteration when k = 1 and we use direct minimization for the approximation. The
+table also shows that as the sieve space becomes richer, we achieve a substantial reduction in the
+objective of the minimization (panel B) and, more importantly, in the mean squared distance to
+the true value function (panel A).
+Column (iii) reports the results for the sieve approximation when k = 1 using the iterative
+method. Although this method shares a similar objective function to the direct minimization
+approach, the results in Panel B show it is unable to achieve as small of a within model fit for a
+given n. However, as the sieve size increases to n = 3, 000 the fit is nearly identical. The benefit to
+this method is that the computational times are about four times faster than direct minimization.
+Column (iv) shows the results with k = 2, i.e., applying the contraction operator twice in
+order to construct the approximation. Because we need to evaluate the sieve at a significantly
+larger number of points, the approximation becomes more computationally intensive as k increases.
+However, as outlined by the theory, using k = 2 results in about a 50% better fit of the value function
+compared to using k = 1 for the same level of richness of the sieve space (panel A).
+Finally, column (v) shows the results for the sieve approximation for the continuous state version
+of the problem. Comparing the results for the continuous state variable model with the discrete
+version in column (iii), highlights the approximation method’s ability to accommodate an infinite
+dimensional state variable with an identical model fit and computational time.
+
+6.4
+
+Results: finite horizon problem
+
+We now adapt the approximation method to a finite horizon setting. The bus fleet replacement
+problem now ends at date T , where the conditional value functions are defined by:
+(
+vt (xt , a) =
+
+u(xt , a) + βE [V (xt+1 , εt+1 , t + 1)|xt , at ] , for t = 1, . . . , T − 1,
+u(xT , a), for t = T.
+
+The non-stationarity of the value functions introduced by presence of a finite horizon implies that
+there are T value functions that need to be approximated. The theoretical results of the sieve value
+
+29
+
+Table 2: Ininite horizon approximationa
+Continuous
+stateb
+
+Discrete state
+
+Baselinec
+
+Direct
+minimization
+(k = 1)
+
+Iterative
+minimization
+(k = 1)
+
+Iterative
+minimization
+(k = 2)
+
+Iterative
+minimization
+(k = 1)
+
+(i)
+
+(ii)
+
+(iii)
+
+(iv)
+
+(v)
+
+1.2402
+0.8497
+0.4225
+0.0414
+
+–
+–
+–
+–
+
+0.0641
+0.0556
+0.0583
+0.0018
+
+0.1674
+0.1399
+0.0992
+0.0043
+
+0.0641
+0.0548
+0.0576
+0.0016
+
+4
+10
+27
+50
+
+24
+41
+83
+124
+
+3
+9
+28
+54
+
+Panel A: Mean squared difference between EV and θ̂n
+n = 500
+n = 1, 000
+n = 2, 000
+n = 3, 000
+
+0.3149
+0.2450
+0.1168
+0.0073
+
+9.9359
+5.5071
+1.5910
+0.0714
+
+3.7226
+2.2300
+0.9944
+0.0711
+
+Panel B: Mean squared difference between Γk θ̂n and θ̂n
+n = 500
+n = 1, 000
+n = 2, 000
+n = 3, 000
+
+–
+–
+–
+–
+
+0.0518
+0.0379
+0.0173
+0.0017
+
+Panel C: Computation time (in minutes)
+n = 500
+n = 1, 000
+n = 2, 000
+n = 3, 000
+
+–
+–
+–
+–
+
+16
+50
+125
+194
+
+a
+
+The full model consists of 301,989,888 state points, with L = 25 and 9 ridership points. The full solution
+takes 316 minutes. The approximation is done on a single random draw of 20,000 states.
+b
+Since we cannot solve for the true value functions with continuous state variables, we cannot compare the
+approximation to the truth.
+c
+The baseline is the estimate when we regress the sieve on the truth.
+
+30
+
+Table 3: Finite horizon approximationa
+
+Panel A: Backwards
+
+T = 15
+
+T = 20
+
+T = 25
+
+0.2119
+0.6417
+
+0.3714
+0.9596
+
+0.5025
+1.0485
+
+1.6201
+0.6883
+
+3.4197
+1.1380
+
+5.4476
+1.6291
+
+0.3063
+0.6613
+
+0.6266
+0.8653
+
+0.9886
+0.9762
+
+Recursionb
+
+Mean sq. diff. between EVt and θ̂n,t
+Mean sq. diff. between EV1 and θ̂n,1
+Panel B: Time Interacted (2nd order)c
+Mean sq. diff. between EVt and θ̂n,t
+Mean sq. diff. between EV1 and θ̂n,1
+Panel C: Time Interacted (3rd order)d
+Mean sq. diff. between EVt and θ̂n,t
+Mean sq. diff. between EV1 and θ̂n,1
+a
+
+In these Monte Carlos the size of the sieve over the bus and demand state is fixed to 1,000 parameters.
+Computation times for backwards recursion are small and amount to conducting T least squares
+minimization routines on the n = 1, 000 parameters.
+c
+Second order polynomial of time interacted with original 1,000 parameters, so n = 2, 000. Computation
+times are comparable to those reported in Table 2 with similar total size n.
+d
+Third order polynomial of time interacted with original 1,000 parameters, so n = 3, 000.
+b
+
+function approximation require us to minimize the following objective function:
+{θ̂n,t }Tt=1
+
+= argmax
+
+T
+−1
+X
+
+Xh
+
+θn,j (x) − Γk θn,j+1 (x)
+
+i2
+
+.
+
+(6.9)
+
+{θn,t }T
+t=1 j=1 x∈X
+
+Direct minimization of Equation (6.9) is computationally difficult because there are n × T unknown
+parameters, where the infinite horizon problem only had n unknown parameters. In previous
+sections, we considered two methods to conduct the approximation: (1) backwards recursion and
+(2) including time as part of the state space.
+The first method is backwards recursion, where setting θ̂n,T +1 = θn,T +1 = 0, we work our way
+to t = 1, by recursively approximating the function θn,t using:
+θ̂n,t = argmax
+θn,t
+
+X
+
+[θn,t (x) − Γk θ̂n,t+1 (x)]2 .
+
+(6.10)
+
+x∈X
+
+The benefit of solving it recursively is that it is extremely fast, only requiring the solution to T
+OLS regressions, and it still converges to the true value functions as n → ∞.
+The alternative approach exploits the fact that we can re-write the T individual approximating functions, θn,t as one large non-parametric function θn×T . A third order polynomial of time
+interacted with the ridership and bus states, n, reduces the number of parameters to a potentially
+feasible n × 3. By bringing time into the approximating function, we obtain an objective function
+
+31
+
+which is similar to Equation (6.9),
+{θ̂n,t }Tt=1 = argmax
+{θn,t }T
+t=1
+
+T
+−1
+X
+
+X
+
+[θn,j (x) − Γk θn,j+1 (x)]2 .
+
+(6.11)
+
+j=1 x∈X
+
+Table 3 shows the Monte Carlo results for approximating the finite horizon problem. Throughout the table, we fix the size of the sieve over the bus and demand state to n = 1, 000 and compare
+the results to the different approaches to approximating the value functions. Panel A shows the
+results of backwards recursion for three different models, T = 15, T = 20, and T = 25. The two
+rows correspond to the mean squared error of the true values and the approximation across all time
+periods and the mean squared error at t = 1. As seen in Panel A, for backwards recursion the error
+at t = 1 is two to three times larger than the average approximation error, due to backwards recursion not taking into account the effects of period j’s sieve on periods previous to j when solving
+for θn (j).
+Panels B and C show the time interacted approach by interacting the sieve with a second and
+third order polynomial of time, respectively. Since we keep the sieve for bus composition and
+ridership fixed at 1,000, this approximation corresponds to a search over 2,000 or 3,000 parameters.
+This method is more computationally intensive than backwards recursion but results in similar
+approximation errors in earlier time periods as in later time periods.
+
+6.5
+
+Sieve value function approximation and estimation
+
+We now apply sieve value function approximation to estimate dynamic models, where we simultaneously solve for the structural parameters and the associated sieve value function approximation that
+maximizes the likelihood of some observed choice data. Data is generated by simulating choices
+from the true choice probabilities from 20 markets for 15 periods each. The initial states (fleet
+composition and ridership) are drawn at random. The fact that the data is generated from the optimal policy function will be relevant for our approximation. Rather than randomly drawing from
+the state space for the approximation, we can improve our approximation (and thus our structural
+parameter estimates) by focusing on the state space near the generated data. Although our data
+only has 300 observations, we are free to draw as many state variables as we would like for the
+approximation. For these exercises we will draw 20,000 random points which will be perturbations
+around the data points.11
+Our model contains two unknown structural parameters, α1 and α2 , which are described in
+Equation (6.1). Rather than engage in a massive search over all structural parameters and sieve
+approximation, estimation is easily implemented by modifying the iterative algorithm used for
+approximation described in Section 3.3. The parameter of interest is denoted by π ≡ (α1 , α2 ).
+11
+
+To do this, note the state variables consists of 26 variables, one ridership state and 25 potential bus ages. Our
+method is to randomly draw states from the 300 data points and for each draw, randomly change 3 of the 25 bus
+variables by changing them from 1 to 0 or 0 to 1. We then do this 20,000 times.
+
+32
+
+Table 4: Estimation resultsa
+Computation timeb
+(in minutes)
+n = 500
+n = 1, 000
+n = 2, 000
+n = 3, 000
+
+3
+8
+22
+41
+
+Estimate of α1 c
+(α1 = 0.2)
+
+Estimate of α2 c
+(α2 = −0.1)
+
+0.1745
+0.1894
+0.1922
+0.1992
+
+-0.0848
+-0.0924
+-0.0945
+-0.0993
+
+(0.0397)
+(0.0473)
+(0.0443)
+(0.0416)
+
+(0.0198)
+(0.0237)
+(0.0223)
+(0.0214)
+
+a
+
+Results from 1,800 replications, each with 300 observations. Initial values of
+structural parameters and sieve approximation were set to zero.
+b
+Numbers reported correspond to median computation time.
+c
+Numbers reported correspond to average over simulations (standard errors in
+parenthesis).
+
+Let the observations be indexed by i = 1, . . . , I, where I denotes the sample size, ai denotes the
+observed choice for observation i, and xi denotes the observed state for observation i.
+The estimator of π is denoted by π̂I and is computed according to the following procedure.
+First, we choose arbitrary initial values of (π̂I0 , θ̂n0 ) ∈ Π × Θ̃n . Then, we set m = 1 and use the
+following iterative algorithm:
+1. Choose π̂Im to maximize the (approximate) likelihood:
+π̂Im = arg max
+π∈Π
+
+I
+X
+
+ln(Pr(ai |π, xi , θ̂nm−1 ).
+
+i=1
+
+2. Choose θ̂nm according to a one-step sieve value function approximation, implemented by the
+following least squares minimization:
+θ̂nm
+
+X
+X
+θn (x) − ln
+= argmax
+θn ∈Θ
+
+x∈X
+
+a∈{0,1}
+
+exp
+
+
+
+u(x, a, π̂Im )
+
++
+
+
+
+βE[θ̂nm−1 (x0 |x, a)]
+
+2
++γ
+
+.
+
+3. If ||π̂Im − π̂Im−1 || < 10−6 , then stop the algorithm and set π̂I = π̂Im . Otherwise, set m = m + 1
+and return to the first step.
+This algorithm parallels Aguirregabiria and Mira (2002) in the sense that it swaps the calculation of
+the value function to outside of the maximization of the likelihood over the structural parameters.
+Results of the estimation exercise for different values of size of the sieve space are presented in
+Table 4. The results show that for even a very small sieve space (n = 500) the estimates are within
+one standard deviation of the true parameter values, although they appear to be significantly biased
+downwards. As we increase the size of the sieve to n = 3, 000 this bias virtually disappears. In
+addition, as the sieve size increases we are also able to achieve mild improvements in the standard
+errors of the estimated value, meaning that the efficiency of the approximation brings some stability
+to the parameter estimates.
+33
+
+7
+
+Conclusion
+
+This paper proposes a methodology to approximate the value function in single agent dynamic
+problems where a large state space makes value function iteration unfeasible. Our method is based
+on non-parametric sieve estimation, and we refer to it as Sieve Value Function Iteration (SVFI).
+We provide a formal framework to analyze the approximation error. In particular, we show that
+the SVFI approximation converges to the value function as the complexity of the sieve increases,
+and we characterize the rate of this convergence. Furthermore, we provide a concrete upper bound
+on the error of approximation which can be used to analyze its contributing factors.
+A Monte Carlo analysis reveals that the SVFI approximation is very successful in estimating
+the value function. These results suggest that our approximation can successfully be used to solve
+models that would otherwise be computationally infeasible, implying that these techniques may
+substantially broaden the class of models that can be solved and estimated.
+Given the standard challenges with large state space problems, we expect SVFI to open up a
+wide variety of avenues of theoretical and empirical exploration of complex dynamic single agent and
+equilibrium problems. For example, in Arcidiacono, Bayer, Bugni, and James (2011), we consider
+sequential move dynamic games. Estimation of these games can be done via standard two-step
+procedures. Through the use of sieves, it is possible to calculate the conditional choice probabilities
+of the finite horizon game which has a unique equilibrium, the limit of which is also an equilibrium
+in the infinite horizon game. It is then possible to compare the conditional choice probabilities from
+the finite horizon equilibrium to those observed in the data, testing to see whether this equilibrium
+was played.
+
+References
+Aguirregabiria, V., and P. Mira (2002): “Swapping the Nested Fixed Point Algorithm: A
+Class of Estimators for Discrete Markov Decision Models,” Econometrica, 70(2), 1519–1543.
+Amemiya, T. (1985): Advanced Econometrics. Harvard University Press.
+Arcidiacono, P., P. Bayer, F. Bugni, and J. James (2011): “Sieve Value Function Iteration
+for Large State Space Dynamic Games’,” Mimeo: Duke University.
+Bénitez-Silva, H., G. Hall, G. Hitsch, G. Pauletto, and J. Rust (2000): “A comparison
+of discrete and parametric approximation methods for continuous-state dynamic programming
+problems,” Mimeo: Yale University, S.U.N.Y. Stony Brook and University Geneva.
+Blackwell, D. (1965): “Discounted Dynamic Programming,” The Annals of Mathematical Statistics, 36(1), 226–235.
+Chen, X. (2007): “Large Sample Sieve Estimation of Semi-Nonparametric Models,” vol. 6 of
+Handbook of Econometrics.
+34
+
+Crawford, G., and M. Shum (2005): “Uncertainty and Learning in Pharmaceutical Demand,”
+Econometrica, 73(4), 1137–1173.
+Hendel, I., and A. Nevo (2006): “Measuring the Implications of Sales and Consumer Inventory
+Behavior,” Econometrica, 74(6), 1637–1673.
+Keane, M. P., and K. I. Wolpin (1994): “The Solution and Estimation of Discrete Choice
+Dynamic Programming Models by Simulation and Interpolation: Monte Carlo Evidence,” The
+Review of Economics and Statistics, 76(4), 648–672.
+(1997): “The Career Decisions of Young Men,” Journal of Political Economy, 105(3),
+473–522.
+Lorentz, G. (1966): Approximation of functions. Holt.
+McFadden, D., and W. Newey (1994): “Large sample estimation and hypothesis testing,” vol. 4
+of Handbook of Econometrics, pp. 2111–2245.
+Powell, M. (1981): Approximation theory and methods. Cambridge University Press.
+Powell, W. (2008): Approximate Dynamic Programming: Breaking the Curses of Dimensionality.
+Wiley Series in Probability and Statistics.
+Royden, H. L. (1988): Real Analysis. Prentice-Hall.
+Rust, J. (1987): “Optimal Replacement of GMC Bus Engines: An Empirical Model of Harold
+Zurcher,” Econometrica, 55, 999–1033.
+(1988): “Maximum Likelihood Estimation of Discrete Control Processes,” SIAM J. Control
+and Optimization, 26, 1006–1024.
+Rust, J. (2000): “Parametric Policy Iteration: An Efficient Algorithm for Solving Multidimensional DP problems,” Mimeo: University of Maryland.
+Stokey, N., and R. Lucas (1989): Recursive Methods in Economic Dynamics. Harvard University
+Press.
+Sweeting, A. (2011): “Dynamic Product Positioning in Differentiated Product Markets: The
+Effect of Fees for Musical Performance Rights on the Commercial Radio Industry,” Mimeo:
+Duke University.
+
+35
+
+A
+
+Technical appendix
+
+Proof of Lemma 3.1. We begin by showing that or any θ ∈ F and m ∈ N:
+d(θ, V ) ≤ d(θ, Γm θ)/(1 − β m ),
+
+(A.1)
+
+To see this, consider the following derivation:
+d(θ, V ) ≤ d(θ, Γm θ) + d(Γm θ, Γm V ) + d(Γm V, V ),
+= d(θ, Γm θ) + d(Γm θ, Γm V ),
+m
+
+m
+
+≤ d(θ, Γ θ) + β d(θ, V ),
+
+(A.2)
+(A.3)
+(A.4)
+
+where the first inequality follows from the Triangle Inequality, the next equality follows from the fact that
+V is a fixed point, and the final inequality follows from the fact that Γ is a contraction mapping. Equation
+(A.1) is a straight-forward consequence of this result.
+Let θ̂n ∈ Θn ⊆ F be the SVFI approximation in Definition 3.3. On the one hand, consider the following
+derivation:
+d(θ̂n , V )(1 − β k ) ≤ d(θ̂n , Γk θ̂n ),
+
+(A.5)
+
+≤ K2 dn (θ̂n , Γk θ̂n ) + η1,n ,
+k
+
+(A.6)
+
+≤ K2 inf dn (θ, Γ θ) + η1,n + K2 η2,n ,
+
+(A.7)
+
+≤ K1−1 K2 inf d(θ, Γk θ) + (1 + K2 K1−1 )η1,n + K2 η2,n ,
+
+(A.8)
+
+θ∈Θn
+
+θ∈Θn
+
+where the first inequality follows from Equation (A.1), the second and fourth inequalities follow from Equation
+(3.11), and the third inequality follows from Equation (3.32).
+On the other hand, for any θ ∈ F, consider the following derivation:
+d(θ, Γk θ) ≤ d(θ, V ) + d(V, Γk V ) + d(Γk V, Γk θ),
+k
+
+k
+
+(A.9)
+
+= d(θ, V ) + d(Γ V, Γ θ),
+
+(A.10)
+
+≤ (1 + β k )d(θ, V ),
+
+(A.11)
+
+where the first inequality follows from the triangle inequality, the next equality follows from the fact that V
+is a fixed point, and the final inequality follows from the fact that Γ is a contraction mapping in (d, Γ). If
+we take infimum of θ ∈ Θn ⊆ F on both sides:
+inf d(θ, Γk θ) ≤ (1 + β k ) inf d(θ, V ) = (1 + β k )η3,n (V ).
+
+θ∈Θn
+
+θ∈Θn
+
+(A.12)
+
+The result follows directly from combining the previous results.
+Proof of Theorem 3.1. By combining Lemma 3.1 with Assumption 3.4, it follows that:
+d(θ̂n , V ) ≤
+
+
+
+K1−1 K2 (1 + β k )η3,n (V ) + (1 + K2 K1−1 )η1,n + K2 η2,n (1 − β k )−1 ,
+
+= Op (max{γ1,n , γ2,n , γ3,n (V )}),
+where max{γ1,n , γ2,n , γ3,n (V )} = o(1) as n → ∞.
+
+36
+
+(A.13)
+(A.14)
+
+Using elementary arguments, this result implies
+
+that: (1) d(θ̂n , V ) = op (1) as n → ∞ and (2) d(θ̂n , V ) converges in probability to zero at a rate of
+−1
+−1
+max{γ1,n , γ2,n , γ3,n (V )}−1 = min{γ1,n
+, γ2,n
+, γ3,n (V )−1 }.
+Lemma A.1. Under Assumption 4.1, Assumption 4.5 is satisfied for all the formulations of the dynamic
+decision problem described in Appendix B.
+Proof. We verify the result for each formulation described in Appendix B. We begin with the conditional
+value function formulation. In this case: s = (x, ε) and F (V, s0 ) = V (s0 ). Then:
+E[F (f1 , s0 ) − F (f2 , s0 )|s, a] = E(f1 (s0 ) − f2 (s0 )|s, a) ≤ d(f1 , f2 ),
+
+(A.15)
+
+where the equality holds by definition of F and the inequality holds because d is the sup-norm metric.
+We now consider the social surplus function formulation. In this case: s = (x, a), F (V, s0 ) = G(V (x0 )|x0 ),
+and A(s) = {a}. Then:
+E[F (f1 , s0 ) − F (f2 , s0 )|s, a] = E[G(f1 (s0 )|s0 ) − G(f2 (s0 )|s0 )|s, a],
+0
+
+0
+
+0
+
+0
+
+0
+
+(A.16)
+0
+
+0
+
+= E[E[maxa0 ∈A(x0 ) (f1 (x , a ) + ε(a )) − maxa0 ∈A(x0 ) (f2 (x , a ) + ε(a ))|x ]|x, a],
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+0
+
+(A.17)
+
+≤ E[|E[maxa0 ∈A(x0 ) (f1 (x , a ) + ε(a )) − maxa0 ∈A(x0 ) (f2 (x , a ) + ε(a ))|x ]||x, a],
+
+(A.18)
+
+≤ E[maxa0 ∈A(x0 ) |f1 (x0 , a0 ) − f2 (x0 , a0 )||x, a] ≤ d(f1 , f2 ),
+
+(A.19)
+
+where the first equality holds by definition of F , the second equality holds by definition of G, the first and
+second inequalities hold by elementary arguments, and the final inequality holds because d is the sup-norm
+metric.
+We conclude with the choice-specific value function formulation. In this case: s = (x, a), F (V, s0 ) =
+G(β −1 u(x0 ) + V (x0 )|x0 ), and A(s) = {a}. Using the same arguments as in the social surplus function
+formulation, it is not hard to verify the result.
+Proof of Theorem 4.1. This proof proceeds by induction. Set t = 1. By definition, θ̂T +2−t,n = VT +1
+and, thus, d(VT +2−t , θ̂T +2−t,n ) = 0. We now prove the inductive step. Suppose that for some t ≥ 1,
+d(VT +2−t , θ̂T +2−t,n ) = Op (max{υ1,n , υ2,n , υ3,n }). We now show that: d(VT +1−t , θ̂T +1−t,n ) = op (1), as n →
+∞. By the triangular inequality:
+d(VT +1−t , θ̂T +1−t,n ) = d(VT +1−t , θ̂T∗ +1−t,n ) + d(θ̂T∗ +1−t,n , θ̂T +1−t,n ).
+
+(A.20)
+
+We now analyze each of the terms on the right hand side satisfies the result in Equation (4.11).
+We begin with d(VT +1−t , θ̂T∗ +1−t,n ). Fix s ∈ S arbitrarily. Let a1,n (s) ∈ A(s) be such that:
+θ̂T∗ +1−t,n (s) = u(s, a1,n (s)) + βE(F (θ̂T +2−t,n , s0 )|s, a1,n (s)),
+
+(A.21)
+
+i.e., a1,n (s) is the maximizer, which exists due to the fact that A(s) is a finite set. Then, consider the
+following derivation:
+θ̂T∗ +1−t,n (s)
+
+= u(s, a1,n (s)) + βE(F (θ̂T +2−t,n , s0 )|s, a1,n (s)),
+0
+
+(A.22)
+
+≤ u(s, a1,n (s)) + βE(F (VT +2−t , s )|s, a1,n (s)) + βd(θ̂T +2−t,n , VT +2−t ),
+
+(A.23)
+
+≤ VT +1−t (s) + βd(θ̂T +2−t,n , VT +2−t ),
+
+(A.24)
+
+37
+
+where the first equality holds by Equation (A.21), the next inequality holds by Assumption 4.5, and the final
+inequality holds by Equation (4.1). As a consequence, it follows that: sups∈S (θ̂T∗ +1−t,n (s) − VT +1−t (s)) ≤
+βd(θ̂T +2−t,n , VT +2−t ). By a similar argument, one can show that sups∈S (VT +1−t (s) − θ̂T∗ +1−t,n (s)) ≤
+βd(θ̂T +2−t,n , VT +2−t ). By combining both inequalities with Assumption 4.1, it follows that:
+d(θ̂T∗ +1−t,n , VT +1−t ) = sup |θ̂T∗ +1−t,n (s) − VT +1−t (s)| ≤ βd(θ̂T +2−t,n , VT +2−t ).
+
+(A.25)
+
+s∈S
+
+By the inductive assumption, it follows that: d(θ̂T∗ +1−t,n , VT +1−t ) = Op (max{υ1,n , υ2,n , υ3,n }).
+We continue with d(θ̂T∗ +1−t,n , θ̂T +1−t,n ). Consider the following derivation:
+d(θ̂T∗ +1−t,n , θ̂T +1−t,n ) ≤ K2 dn (θ̂T∗ +1−t,n , θ̂T +1−t,n ) + λ1,n ,
+≤ K2 inf
+
+θ∈Θn
+
+dn (θ, θ̂T∗ +1−t,n )
+
++ λ1,n +
+
+λ2,n (θ̂T∗ +1−t,n ),
+
+(A.26)
+(A.27)
+
+≤ K1−1 K2 inf d(θ, θ̂T∗ +1−t,n ) + λ1,n (1 + K1−1 ) + λ2,n ,
+
+(A.28)
+
+≤ K1−1 K2 sup λ3,n (f ) + λ1,n (1 + K1−1 ) + λ2,n
+
+(A.29)
+
+θ∈Θn
+f ∈F
+
+where the first and third inequalities hold by Assumption 4.2, the second inequality holds by Assumption
+4.3, and the final inequality holds by Assumption 4.4. By the properties of λ1,n , λ2,n , and λ3,n , it follows
+that d(θ̂T∗ +1−t,n , θ̂T +1−t,n ) = Op (max{υ1,n , υ2,n , υ3,n }).
+Proof of Lemma 4.1. Part 1. Consider a pair of functions f1 , f2 ∈ F̃. First, consider t = T +1. By definition,
+Λf1 (s, t) = Λf2 (s, t) = 0 ∀s ∈ S, which implies that: sups∈S |Λf1 (s, T +1)−Λf2 (s, T +1)| = 0. Next, consider
+t = 1, . . . , T . For any arbitrary s ∈ S:
+|Λf1 (s, t) − Λf2 (s, t)|
+)
+(
+supa∈A(s) {u(s, a) + βE(F (f1 , (s0 , t + 1))|(s, t), a)}
+=
+− supa∈A(s) {u(s, a) + βE(F (f2 , (s0 , t + 1))|(s, t), a)}
+≤ β sup E(F (f1 , (s0 , t + 1)) − F (f2 , (s0 , t + 1))|(s, t), a)
+
+(A.30)
+(A.31)
+(A.32)
+
+a∈A(s)
+
+= β sup E(F (f1,t+1 , s0 ) − F (f2,t+1 , s0 )|s, a)
+
+(A.33)
+
+a∈A(s)
+
+≤ β sup E(f1,t+1 (s0 ) − f2,t+1 (s0 )|s, a)
+
+(A.34)
+
+a∈A(s)
+
+≤ β sup |f1,t+1 (s) − f2,t+1 (s)| = β sup |f1 (s, t + 1) − f2 (s, t + 1)|,
+s∈S
+
+(A.35)
+
+s∈S
+
+where for any f ∈ F̃ and (s, t) ∈ S × {1, . . . , T + 1}, we use ft (s) ≡ f (s, t). Notice that we are also using
+the fact that conditional expectations are time invariant, but that is assumed for simplicity of notation, i.e.,
+the assumption can be eliminated by indexing expectations with a time index. By reversing the roles of f1
+and f2 , we deduce that: ∀t = 1, . . . , T :
+sup |Λf1 (s, t) − Λf2 (s, t)| ≤ β sup |f1 (s, t + 1) − f2 (s, t + 1)|.
+s∈S
+
+(A.36)
+
+s∈S
+
+By combining information from all values of t = 1, . . . , T + 1, it follows that:
+˜ 1 , Λf2 ) =
+d(Λf
+
+max
+
+sup |Λf1 (s, t) − Λf2 (s, t)| ≤ β
+
+t=1,...,T +1 s∈S
+
+38
+
+max
+
+˜ 1 , f2 ). (A.37)
+sup |f1 (s, t) − f2 (s, t)| = d(f
+
+t=1,...,T +1 s∈S
+
+Part 2. By the Contraction Mapping Theorem (see, e.g., page 50 in Stokey and Lucas (1989)) the
+˜ ΛV ) = 0.
+mapping Λ has a unique fixed point in F̃. It suffices to show that V is such fixed point, i.e., d(V,
+For t = T +1, the definition of ΛV is: (ΛV )(s, T +1) = 0 = V (T +1, s) ≡ VT +1 (s). For any other t = 1, . . . , T ,
+it follows that:
+(ΛV )(s, t)
+
+=
+
+sup {u(s, a) + βE(F (V, (s0 , t + 1))|(s, t), a)}
+
+(A.38)
+
+a∈A(s)
+
+=
+
+sup {u(s, a) + βE(F (Vt+1 , s0 ))|s, a)} = Vt (s) = V (s, t).
+
+(A.39)
+
+a∈A(s)
+
+This completes the proof.
+Proof of Theorem 4.2. By Lemma 4.1, the analogue of Assumptions 3.2-3.4 hold for the state space S̃. Under
+these assumptions, the result is a corollary of Theorem 3.1.
+Proof of Theorem 5.1. Fix ε > 0 arbitrarily. Then, ∃δ > 0 such that ∀π ∈ Π: d2 (π, π ∗ ) > ε ⇒ Q(V (·|π)) −
+Q(V (·|π ∗ )) > δ. This implies that ∃δ > 0 such that:
+P (d2 (π̂I , π ∗ ) ≤ ε) ≥ P (Q(V (·|π̂I )) − Q(V (·|π ∗ )) ≤ δ).
+
+(A.40)
+
+The strategy of the proof is to show that the RHS converges to one as I → ∞. To this end, for a fixed δ > 0,
+consider the following argument:
+P (Q(V (·|π̂I )) − Q(V (·|π ∗ ) ≤ δ)
+
+(A.41)
+!
+
+=P
+
+Q(V (·|π̂I )) − Q(θ̂n (·|π̂I )) + Q(θ̂n (·|π̂I )) − QI (θ̂n (·|π̂I ))
++QI (θ̂n (·|π̂I )) − Q(V (·|π ∗ )) ≤ δ
+
+≥P
+
+{Q(V (·|π̂I )) − Q(θ̂n (·|π̂I )) ≤ δ/3} ∩ {Q(θ̂n (·|π̂I )) − QI (θ̂n (·|π̂I )) ≤ δ/3}
+∩{QI (θ̂n (·|π̂I )) − Q(V (·|π ∗ )) ≤ δ/3}
+
+(
+≥
+
+,
+
+P (Q(V (·|π̂I )) − Q(θ̂n (·|π̂I )) ≤ δ/3) + P (Q(θ̂n (·|π̂I )) − QI (θ̂n (·|π̂I )) ≤ δ/3)
++P (QI (θ̂n (·|π̂I )) − Q(V (·|π ∗ )) ≤ δ/3) − 2
+
+(A.42)
+!
+,
+
+(A.43)
+
+)
+.
+
+(A.44)
+
+The last expression on the RHS includes three probability expressions. The proof is completed by showing
+that these expressions converge to one as I → ∞.
+Consider the first expression. By the uniform continuity of Q, there is η > 0 such that:
+sup d1 (θ̂n (·|π), V (·|π)) < η ⇒ d1 (θ̂n (·|π̂I ), V (·|π̂I )) < η ⇒ Q(θ̂n (·|π̂I )) − Q(V (·|π̂I )) ≤ δ/3.
+
+(A.45)
+
+π∈Π
+
+It follows then that:
+P (Q(θ̂n (·|π̂I )) − Q(V (·|π̂I )) ≤ δ/3) → 1, as n → ∞,
+
+(A.46)
+
+or, equivalently, as I → ∞ because n(I) → ∞ as I → ∞.
+Consider the second expression. Notice that:
+Q(θ̂n (·|π̂I )) − QI (θ̂n (·|π̂I )) ≤ sup |QI (f ) − Q(f )| = ĉ(n, I),
+f ∈Θn
+
+39
+
+(A.47)
+
+and since ĉ(n, I) = op (δ(n(I), I)) = op (1) as I → ∞, it follows that:
+P (Q(θ̂n (·|π̂I )) − QI (θ̂n (·|π̂I )) ≤ δ/3) → 1, as I → ∞.
+
+(A.48)
+
+Finally, consider the third expression. By definition of the estimation:
+QI (θ̂n (·|π̂I )) ≤ inf QI (θn (·|π)) + op (1) ≤ QI (θn (·|π ∗ )) + op (1),
+π∈Π
+
+(A.49)
+
+as I → ∞. This implies that:
+QI (θ̂n (·|π̂I )) − Q(V (·|π ∗ )) ≤ QI (θ̂n (·|π ∗ )) − Q(V (·|π ∗ )) + op (1),
+∗
+
+∗
+
+∗
+
+∗
+
+= QI (θ̂n (·|π )) − Q(θ̂n (·|π )) + Q(θ̂n (·|π )) − Q(V (·|π )) + op (1),
+∗
+
+∗
+
+≤ sup |QI (f ) − Q(f )| + Q(θ̂n (·|π )) − Q(V (·|π )) + op (1).
+
+(A.50)
+(A.51)
+(A.52)
+
+f ∈Θn
+
+Repeating arguments used in previous expressions, it follows that:
+P (QI (θ̂n (·|π̂I )) − Q(V (·|π ∗ )) ≤ δ/3) → 1, as I → ∞.
+
+(A.53)
+
+This completes the proof.
+
+B
+
+Alternative formulations of dynamic decision problem
+
+As described in the main text of Section 2, there are three possible ways to formulate the dynamic decision
+problem of Equation (2.1) as a recursive problem. The objective of this section is to describe each of these
+formulations and show that each of them is a special case of the unified formulation described in the main
+text.
+
+B.1
+
+Value function formulation
+
+This formulation of the dynamic decision problem is the most obvious one but, as we will argue, the most
+computationally demanding in terms of the size of the state space. It is easy to verify that Equation (2.1)
+can be represented as follows:
+Z
+V (x, ε) = max {u(x, a) + ε(a) + β V (x0 , ε0 )dP (x0 , ε0 |x, ε, a)},
+(B.1)
+a∈A(x)
+
+=
+
+max {u(x, a) + ε(a) + βE[V (x0 , ε0 )|x, ε, a]}.
+
+(B.2)
+
+a∈A(x)
+
+If we let s ≡ (x, ε) and S ≡ X × E, V : S → R is the fixed point of the following mapping:
+(Γ1 m)(x, ε) = max {u(x, a) + ε(a) + βE[m(x0 , ε0 )|x, ε, a]}, ∀(x, ε) ∈ S.
+
+(B.3)
+
+a∈A(x)
+
+This corresponds to the conditional value function formulation of the problem (Equation (4.4) in Rust
+(1987)). Notice that our derivations so far did not require the Conditional Independence (CI) Assumption.
+It is straight-forward to verify that it is a contraction mapping (in the sup-norm) by using the Blackwell
+(1965) sufficient conditions for a contraction (see Stokey and Lucas (1989), Theorem 3.3). This is an obvious
+
+40
+
+object of interest, as it allows us to deduce optimal decision rules in the following way:
+f (x, ε) = arg max{u(x, a) + ε(a) + βE[V (x0 , ε0 )|x, ε, a]},
+
+(B.4)
+
+a∈A(x)
+
+with a related conditional choice probability (CCP):
+!
+
+Z
+
+0
+
+0
+
+arg max{u(x, a) + ε(a) + βE[V (x , ε )|x, ε, a]} = ā dP (ε|x).
+
+P (a = ā|x) =
+ε
+
+(B.5)
+
+a∈A(x)
+
+We now verify that this formulation is a particular case of the unified formulation. This is shown in
+Table 5, which explains how the objects in the unified notation are defined in terms of the primitive objects
+in Equation (2.1). According to the table, F is defined as follows: F (V, s0 ) = V (s0 ). It is straightforward to
+verify that this function satisfies all of the properties required for F .
+Primitive object
+Unified formulation
+
+V
+V
+
+(x, ε)
+s
+
+X ×E
+S
+
+A(x)
+A(s)
+
+a
+a
+
+u(x, a) + ε(a)
+u(s, a)
+
+V (s0 )
+F (V, s0 )
+
+Table 5: Representation of the primitive object of the conditional value function formulation in terms of
+the unified formulation.
+Notice that the state space in this formulation is given by s = (x, ε), which is relatively large as it
+includes ε = {ε(a) : a ∈ A(x)} (i.e. has the cardinality of A(x)). By the nature of the type of problems
+under consideration it is reasonable to consider alternative formulations of the problem, where ε is not part
+of the state space.
+
+B.2
+
+Social surplus function formulation
+
+This formulation of the problem is developed in Rust (1988). In order to explain the formulation, it is
+necessary to define certain objects. Given a vector v(x) = {v(x, a) : a ∈ A(x)}, define the social surplus
+function as follows:
+
+
+Z
+(B.6)
+G(v(x)|x) ≡
+max {v(x, a) + ε(a)}dP (ε|x) = E max {v(x, a) + ε(a)} x .
+ε a∈A(x)
+
+a∈A(x)
+
+If we let s ≡ (x, a) and S ≡ {(x, a) : a ∈ A(x), x ∈ X}, Theorem 3.2 in Rust (1988) indicates that:
+V (x, ε) = max [v(x, a) + ε(a)],
+
+(B.7)
+
+a∈A(x)
+
+where v : S → R is the unique fixed point of the following contraction mapping:
+(Γ2 m)(x, a) = u(x, a) + βE[G(m(x0 )|x0 )|x, a], ∀(x, a) ∈ S.
+
+(B.8)
+
+Notice that, in the formula, m(x0 ) is shorthand for the vector {m(x0 , i0 ) : i0 ∈ A(x0 )}. Our assumptions
+imply that the mapping is a contraction mapping (in the sup-norm) by using the Blackwell (1965) sufficient
+conditions for a contraction (in this case, it is important to establish that G satisfies the properties in
+Theorem 3.2 in Rust (1988)). Notice that the fixed point v is the object of interest because it allows us to
+recover the original value function V (using Equation (B.7)) and, with it, we can then construct the rest of
+the objects of interest such as optimal decision rules and CCPs.
+
+41
+
+The advantage of working with this formulation of the dynamic decision problem is that the state space
+is (x, a), whose dimension is smaller than for the condition value function formulation. Another advantage
+is that the CCPs can be written simply as (see Theorem 3.4 in Rust (1988)):
+P (a = ā|x) = Gā (v(x)|x),
+
+(B.9)
+
+where Gā denotes the derivative of the social surplus function (i.e. Equation (B.6)) with respect to v(x, ā).
+We now verify that this formulation is a particular case of the unified formulation. This is shown in
+Table 6, which explains how the objects in the unified notation are defined in terms of the primitive objects
+in Equation (2.1). According to the table, F is defined as follows: F (V, s0 ) = G(V (x0 )|x0 ), where G is the
+social surplus function (i.e. Equation (B.6)) with its own choice set A(x0 ). Theorem 3.1 in Rust (1988)
+shows that the function G satisfies all of the desired properties.
+Unified formulation
+Primitive object
+
+v
+V
+
+s
+(x, a)
+
+S
+{(x, a) : a ∈ A(x), x ∈ X}
+
+A(s)
+{a}
+
+a
+a
+
+u(s, a)
+u(x, a)
+
+F (V, s0 )
+G(V (x0 )|x0 )
+
+Table 6: Representation of the primitive object of the social surplus function formulation formulation in
+terms of the unified formulation.
+
+B.3
+
+Choice-specific value function formulation
+
+This formulation is related to the social surplus function formulation and is explained in Rust (1988), page
+1014. As in the previous formulation, let s ≡ (x, a) and S ≡ {(x, a) : a ∈ A(x), x ∈ X}. Under our
+assumptions, Rust (1988) indicates that:
+v(x, a) = u(x, a) + βEV (x, a),
+
+(B.10)
+
+where v : S → R is the function in Equation (B.7) and EV : S → R is the fixed point in the following
+contraction mapping:
+(Γ3 m)(x, a) = E[G(u(x0 ) + βm(x0 )|(x0 ))|x, a], ∀(x, a) ∈ S.
+
+(B.11)
+
+This formulation is intimately related to the social surplus function formulation and shares all its advantages
+relative to the conditional value function formulation, i.e., the state space is (x, a), which have a relatively
+smaller dimension, and the CCPs are relatively easy to compute using Equation (B.9).
+We now verify that this formulation is a particular case of the unified formulation. This is shown in
+Table 7, which explains how the objects in the unified notation are defined in terms of the primitive objects
+in Equation (2.1). According to the table, F is defined as follows: F (V, s0 ) = G(β −1 u(x0 ) + V (x0 )|x0 ), where
+G is the social surplus function (i.e. Equation (B.6)) with its own action set A(x0 ). Theorem 3.1 in Rust
+(1988) shows that the function G satisfies all of the desired properties.
+Unified formulation
+Primitive object
+
+V
+EV
+
+s
+(x, a)
+
+S
+{(x, a) : i ∈ A(x), x ∈ X}
+
+A(s)
+{a}
+
+a
+a
+
+u(s, i)
+0
+
+G(β
+
+−1
+
+F (V, s0 )
+u(x0 ) + V (x0 )|x0 )
+
+Table 7: Representation of the primitive object of the choice-specific value function formulation formulation
+in terms of the unified formulation.
+
+42
+
+

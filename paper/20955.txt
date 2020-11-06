@@ -1,0 +1,4046 @@
+NBER WORKING PAPER SERIES
+
+DEMAND ESTIMATION WITH MACHINE LEARNING AND MODEL COMBINATION
+Patrick Bajari
+Denis Nekipelov
+Stephen P. Ryan
+Miaoyu Yang
+Working Paper 20955
+http://www.nber.org/papers/w20955
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+February 2015
+
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2015 by Patrick Bajari, Denis Nekipelov, Stephen P. Ryan, and Miaoyu Yang. All rights reserved.
+Short sections of text, not to exceed two paragraphs, may be quoted without explicit permission provided
+that full credit, including © notice, is given to the source.
+
+Demand Estimation with Machine Learning and Model Combination
+Patrick Bajari, Denis Nekipelov, Stephen P. Ryan, and Miaoyu Yang
+NBER Working Paper No. 20955
+February 2015
+JEL No. C14,C53,C55
+ABSTRACT
+We survey and apply several techniques from the statistical and computer science literature to the
+problem of demand estimation. We derive novel asymptotic properties for several of these models.
+To improve out-of-sample prediction accuracy and obtain parametric rates of convergence, we propose
+a method of combining the underlying models via linear regression. Our method has several appealing
+features: it is robust to a large number of potentially-collinear regressors; it scales easily to very large
+data sets; the machine learning methods combine model selection and estimation; and the method
+can flexibly approximate arbitrary non-linear functions, even when the set of regressors is high dimensional
+and we also allow for fixed effects. We illustrate our method using a standard scanner panel data set
+to estimate promotional lift and find that our estimates are considerably more accurate in out of sample
+predictions of demand than some commonly used alternatives. While demand estimation is our motivating
+application, these methods are likely to be useful in other microeconometric problems.
+Patrick Bajari
+University of Washington
+331 Savery Hall
+UW Economics Box 353330
+Seattle, Washington 98195-3330
+and NBER
+Bajari@uw.edu
+Denis Nekipelov
+Department of Economics
+University of Virginia
+254 Monroe Hall
+Charlottesville, VA 22904-4182
+dn4w@virginia.edu
+
+Stephen P. Ryan
+Department of Economics
+University of Texas at Austin
+BRB 3.134D
+2225 Speedway Stop C3100
+Austin, TX 78712-1690
+and NBER
+sryan@utexas.edu
+Miaoyu Yang
+Department of Economics
+University of Washington
+305 Savery Hall, Box 353330
+Seattle, WA 98195-3330
+yangmiao@uw.edu
+
+1
+
+Introduction
+
+Over the past decade, there has been a high level of interest in modeling consumer behavior
+in the fields of computer science and statistics. These applications are motivated in part
+by the availability of large data sets where the demand for SKU’s or individual consumers
+can be observed. These methods are commonly used in industry in retail, health care or on
+the internet by firms to use data at large scale to make more rational business decisions.
+In this paper, we compare these methods to standard econometric models that are used by
+practitioners to study demand. We are motivated by the problem of finding practical tools
+that would be of use to applied econometricians in estimating demand with large numbers
+of observations and covariates, such as in a scanner panel data set.
+Many economists are unfamiliar with these methods, so we begin by expositing some
+commonly used techniques from the machine learning literature. We consider 8 different
+models that can be used for estimating demand for an SKU. The first two models are well
+known to applied econometricians—the conditional logit and a panel data regression model.
+We then turn to machine learning methods, all of which differ from standard approaches
+by combining an element of model selection into the estimation procedure. Several of these
+models can be seen as variants on regularization schemes, which reduce the number of covariates in a regression which receive non-zero coefficients, such as stepwise regression, forward
+stagewise regression, LASSO, and support vector machines. We also consider two models
+based on regression trees, which are flexible methods for approximating arbitrary functions:
+bagging and random forests. While these models may be unfamiliar to many economists,
+they are surprisingly simple and are based on underlying methods that will be quite familiar.
+Also, all of the methods that we use are supported in statistical packages. We perform our
+computations in the open source software package R. Therefore, application of these methods
+will not require writing complex code from scratch. However, applied econometricians may
+have to familiarize themselves with alternative software.
+We derive novel results for the asymptotic theory for several of the models above. We
+show, somewhat unsurprisingly, that many of these models do not have standard asymptotics
+and converge more slowly than the standard square root rate. Since these models do not have
+standard normal asymptotics, common methods such as the bootstrap cannot be applied
+for inference. We also propose using an idea dating back at least to Bates and Granger
+(1969). We first form prediction for all 8 models in the standard way. We then treat each of
+these 8 independent predictions as regressors and form a combined model by regressing the
+dependent variable on to the prediction of each component model. We use a three-way cross
+2
+
+validation to avoid overfitting the models in practice. We split the sample into three disjoint
+sets; we use the first part to fit all 8 models, we use the second part to fit our regression on
+the 8 independent model predictions, and we use the final third of the data to test the fit
+out of sample.
+To assess the small-sample properties of each of the machine learning methods and the
+model combination procedure we run a Monte Carlo. We show that several of the machine
+learning methods, particularly the random forest, do extremely well in predicting out-ofsample outcomes. In the combined model, the two regression tree-based methods, bagging
+and random forest, receive nearly fifty percent of weight. The model which receives fortythree percent of the weight in the combined model is the stagewise model. We demonstrate
+that the predictive accuracy of the combined model can result in dramatic improvements in
+fit over any of the component models. The Monte Carlo also demonstrates that the method
+is robust to the inclusion of spurious regressors, does just as well on complex, discontinuous
+data-generating processes as the simple linear-index models typically used in empirical work,
+and that the convergence rates of the various component models is typically better than the
+theoretical convergence rates.
+We next apply our method to a canonical demand estimation problem. We use data from
+IRI Marketing Research via an academic license at the University of Chicago. It contains
+scanner panel data from grocery stores within one grocery store chain for six years. We used
+sales data on salty snacks, which is one of the categories provided in the IRI data. The
+number of observations are 1,510,563, which includes 3,149 unique products.
+If we allow for product and store level fixed effects, our model effectively has many thousands of explanatory variables. Therefore, variable selection will be an important problem.
+If we included all of these variables in a standard regression model, the parameters would be
+poorly estimated. Also, many of the regressors will be multi-collinear which will make the
+models predict poorly out of sample.
+In our results, we find that the 6 models we use from the statistics and computer science
+literature predict demand out of sample in standard metrics much more accurately than a
+panel data or logistic model. We do not claim that these models dominate all methods proposed in the voluminous demand estimation literature. Rather, we claim that as compared
+to common methods an applied econometrician might use in off the shelf statistical software,
+these methods are considerably more accurate. Also, the methods that we propose are all
+available in the well documented, open software package R as well as commercially-available
+software.
+
+3
+
+Applied econometricians have sometimes voiced skepticism about Machine Learning models because they do not have a clear interpretation and it is not obvious how to apply them to
+estimate causal effects. In this paper, we use an idea proposed by Varian (2014) to estimate
+the marketing lift attributable to promotions in our scanner panel. The idea is similar to
+the idea of synthetic controls used in Abadie and Gardeazabal (2003). We begin by training
+our model on the data where there is no promotion. We then hold the parameters of our
+model fixed and predict for the observations where there is a promotion. We then take the
+difference between the observed demand and the predicted demand for every observation in
+our data. By averaging over all observations in our sample, we construct an estimate of the
+average treatment effect on the treated.
+We believe that this approach might be preferable to instrumental variable methods.
+In practice, it can be difficult to find instruments that are a prior plausible. When they
+exist, they may be subject to standard critiques such as the instruments may be weak or the
+identification may only be local.
+The logic behind our approach is simply to use lots of data rather than rely on quasirandomness. As mentioned above, in applied econometrics, there are many forms of data
+about products that are simply not exploited in empirical studies such as unstructured text
+or pictures. In some applications, simply using more data and more scalable computations
+may be a superior strategy to reducing bias in causal lift estimates.
+We find quite interesting that a standard panel data model with fixed effects has the
+“wrong sign” on promotional lift, i.e. promotions decrease demand. By contrast, our models
+from the statistics and computer science literature have the anticipated sign. We conjecture
+that this is because they simply use more data and have less bias as suggested by standard
+omitted variable formulas.
+Finally, we can use our model to search for heterogeneity in the treatment effects in an
+unstructured way. Our model generates a residual for each observation that is treated. We
+can regress this residual on covariates of interest such as store indicators, brand dummies,
+hedonic attributes or seasonal factors. Once again, this is a high dimensional regression
+problem and the estimates would be poorly estimated in a regression framework. We instead
+propose a method suggested by Belloni et al. (2012) and use a LASSO to select variable and
+then use standard methods for inference. We believe that this is attractive for applied
+econometricians since it allows us to learn about heterogeneity in the treatment effect. Also,
+it could be useful to applied marketers since these variable could be useful in marketing
+mix models because it allows us to identify a smaller set of variables that predict marketing
+
+4
+
+return.
+The paper is organized as follows: Section 2 introduces the underlying statistical model
+of demand we study; Section 3 discusses the rates of convergence of our estimators and model
+combination; Section 4 demonstrates the useful properties of these estimators in a controlled
+Monte Carlo setting; Section 5 applies the techniques to a scanner data set; and Section 6
+concludes.
+
+2
+
+Model
+
+Our paper explores using machine learning techniques to help approximate the conditional
+expectation, E[Y |X]; to help motivate this more approximation more concretely, we study
+a standard model of discrete choice demand.
+
+2.1
+
+Components of Demand
+
+Let there be J products, each endowed with observable characteristics Xj . Let product j
+have demand in market m at time t equal to:
+ln Qjhmt = f (pmt , amt , Xmt , Dmt , jmt ),
+
+(1)
+
+where a is a matrix of advertising and promotional measures, D is a vector of demographics,
+p is a vector of prices, and  is an idiosyncratic shock.
+The above specification is very general. It allows for nesting through the stratification
+of the error term. Suppose that there are H nests of products; continuing the automobile
+example, two nests might be entry-level sub-compacts (Ford Fiesta, Toyota Yaris, Mazda
+2, Chevrolet Sonic) and luxury performance sedans (BMW M3, Mercedes-Benz AMG C63,
+Cadillac CTS-V). Nests allow the substitution patterns to vary in a reduced-form way across
+those different classes of products. One can also extend the model to allow for non-trivial
+intertemporal shocks, such as seasonality in demand due to environmental conditions or
+holidays. The specification in Equation 1 is also consistent with models of discrete choice.
+For example, if the choice problem is discrete, then one obtains quantities by integrating
+over both the population of consumers and the distribution of errors.
+The goal of our exercise is to estimate the relationships between the right-hand side
+variables and quantities demanded. We explore several approaches to approximating the
+model in Equation 1. We discuss common approaches such as linear regression and logit
+5
+
+models before describing several machine learning approaches which are less known in the
+econometrics literature.
+2.1.1
+
+Linear Regression
+
+A typical approach to estimating demand would be to approximate Equation 1 using a
+flexible functional form of the following type:
+ln Qjhmt = α0 pmt + β10 Xmt + β20 Dmt + γ 0 amt + λ0 I(Xmt , Dmt , pmt , amt ) + ζhm + ηmt + jmt , (2)
+where I is an operator which generates interactions between the observables (e.g. interactions
+of X, p, and D, e.g. high income neighborhoods have higher demand for expensive imported
+beer). Such a model may have thousands of right-hand side variables; for example, an
+online retailer such as eBay may offer hundreds of competing products in a category, such
+as men’s dress shirts. The demand for one particular good, say white Brooks Brothers
+dress shirts, may depend on the prices of the full set of competing products offered. In a
+more extreme example, as offered in Rajaraman and Ullman (2011), Google estimates the
+demand for a given webpage by using a model of the network structure of literally billions
+of other webpages on the right-hand side. Dummy variables on nests are captured by ζhm .
+Seasonality is captured by the term ηmt , which varies by time (say, quarters) across markets.
+In ordinary least squares (OLS), the parameters of Equation 2, jointly denoted by β, are
+typically estimated using the closed-form formula:
+β = (X 0 X)−1 (X 0 Y ),
+
+(3)
+
+where X is the matrix of right-hand side variables and Y is the vector of outcomes.
+We note that the formula requires an inversion of (X 0 X). This imposes a rank and order
+condition on the matrix X. We highlight this because in many settings, the number of
+right-hand side variables can easily exceed the number of observations. Even in the simplest
+univariate model, one can saturate the right-hand side by using a series of basis function of
+X. This restriction requires the econometrician to make choices about which variables to
+include in the regression. We will return to this below, as some of machine learning methods
+we discuss below allow the econometrician to skirt the order condition by combining model
+selection and estimation simultaneously.
+
+6
+
+2.1.2
+
+Logit Models
+
+A large literature on differentiated products has largely focused on logit-type models, where
+the idiosyncratic error term is assumed to be distributed as a Type I Extreme Value. Under
+that restriction, market shares are given by:
+exp(θ0 Xjhmt )
+.
+0
+k∈J exp(θ Xkhmt )
+
+sjhmt = P
+
+(4)
+
+Starting with Berry et al. (1995), many empirical models of differentiated product demand
+concentrate on estimating a distribution of unobserved heterogeneity, F (θ), over a typically
+low-dimensional θ:
+Z
+exp(θ0 Xjhmt )
+P
+sjhmt =
+dF (θ).
+(5)
+0
+k∈J exp(θ Xkhmt )
+Quantities are then computed by multiplying through by market size. An attractive feature
+of the BLP-style approach is that the method is robust to the inclusion of unobserved
+heterogeneity and vertical characteristics that are observed to both the firm and consumers.
+However, this estimator places a significant amount of structure on the demand curve and
+is computationally burdensome.
+2.1.3
+
+Stepwise, Stagewise, and Incremental Stagewise Regression
+
+Stepwise regression starts with the intercept as the base model. The algorithm then searches
+over the set of covariates, selects the one with the highest correlation with the residual,
+and adds that to the next model. The procedure produces a series of nested models. The
+procedure runs until no covariates have any a sufficient high correlation with the error term.
+Forward stagewise regression is a variant of a variable selection model, with the regression
+model being built up one variable at a time. At each stage of the process, the econometrician
+finds the variable with the highest correlation to the residual. This variable is then added to
+the regression model; the crucial detail here is that the variable is only given an additional
+, where  is an arbitrarily small number. Over iterations, the forward stagewise regression
+builds up a model of predictors. This is related to the classic forward selection model if
+ is set to equal the correlation of the variable with the residual (after standardizing the
+covariates and demeaning the response variable).
+
+7
+
+2.1.4
+
+Support Vector Machines
+
+Support vector machines are a penalized method of regression, using the following:
+n
+X
+
+λ
+V (yi − x0i β) + kβk,
+2
+
+(6)
+
+
+
+
+0
+if |r| < ,
+
+
+V (r) = |r| −  otherwise.
+
+
+
+
+
+(7)
+
+min
+β
+
+i=1
+
+where the penalty function is:
+
+The tuning parameter, , controls which errors are included in the regression. Errors of
+sufficiently small size are treated as zeros. Typically only a partial set of the covariates are
+assigned a non-zero value in SVM regression.
+2.1.5
+
+LASSO
+
+Lasso is another penalized regression method. The regression is given by:
+n
+
+p
+
+X
+1X
+min
+y i − β0 −
+xij βj
+β 2
+i=1
+j=1
+
+!2
++ λ(t −
+
+p
+X
+
+|βj |),
+
+(8)
+
+j=1
+
+where t is the tuning parameter governing how strictly additional regressors are penalized.
+LASSO typically results in a number of covariates being given zero weights.
+2.1.6
+
+Regression Trees
+
+A regression tree a collection of rules that determine the value of a function. Tree-based
+methods partition the characteristic space into a series of hyper-cubes, and fits a value to
+each partition. In a sense, they are a generalization of fixed effects, where the fixed effects
+value is allowed to depend on the X. Trees are characterized by a hierarchical series of nodes,
+with a decision rule associated at each node. Following ESL, define a pair of half-planes:
+R1 (j, s) = X|Xj ≤ s and R2 (j, s) = X|Xj > s,
+
+8
+
+(9)
+
+where j indexes the splitting variable and s is the split point. Starting with the base node at
+the top of the tree, the rule for that node is formed by the following optimization problem:
+
+
+
+min min
+j,s
+
+c1
+
+X
+
+(yi − c1 )2 + min
+c2
+
+xi ∈R1 (j,s)
+
+X
+
+(yi − c2 )2  .
+
+(10)
+
+xi ∈R2 (j,s)
+
+The inner minimization is solved by setting c to be equal to the average of the function in
+that partition. The key issue here is finding the right split point, s. Once the split point has
+been found, the same procedure is then performed on each resulting partition, resulting in a
+further partitioning of the space.
+In the limit, each value of x ∈ X is assigned the value Y = f (X = x), which is a
+perfect reconstruction of the underlying function f . In practice, the tree is expanded until
+the reduction in squared prediction error falls under some threshold. Often, the tree is grown
+until a specific number of splits are achieved.
+The literature has proposed several variations on the regression tree estimator. One is
+bagging (Breiman, 1996), which uses resampling and model combination to obtain a predictor. The idea is to sample the data with replacement B times, train a regression tree on each
+resampled set of data, and then predict the outcome at each x through a simple average of
+the prediction under each of the B trees.
+A second approach, which we have found to work exceptionally well in practice, are
+random forests, as in Breiman (2001). Random forests expand on the idea of using collections
+of predictors to make predictions by introducing randomness into the set of variables which
+are considered at node level for splitting. Before each split, only m ≤ p of the explanatory
+variables are included in the split search. Repeating this across B trees results in a forest of
+random trees. The regression predictor for the true function is then:
+B
+1 X
+B
+ˆ
+Tb (x).
+frf (x) =
+B b=1
+
+(11)
+
+Trees of sufficient size can be unbiased but exhibit high variance, and therefore may benefit
+from averaging.
+
+9
+
+3
+
+Model Averaging and Model Selection
+
+The problem under consideration has a flavor of model selection problem with a large set
+of alternative models. The models are defined by the vectors of nonzero coefficients. The
+study of model selection has a long history. The main concepts of model selection contrast
+the selection criteria based on the measures of the (penalized) model fit and the criteria
+based on the model information. Themodel fit criteria include Mallows (1973) for generalized deviation-based goodness of fit, the prediction criterion of Amemiya (1980), and various
+information criteria, such as Akaike (1973), Schwarz (1978), Hannan and Quinn (1979), and
+Chow (1981). However, given that these procedures do not account for model complexity,
+they can lead to a selection of a miss-specified model. Shrinkage techniques have been proposed as a solution to the pre-test problem: see Stein (1956), James and Stein (1961),Yancey
+and Judge (1976) and Judge and Bock (1978), and associated algorithms such as Lasso
+(Tibshirani, 1996). One criticism of shrinkage is that it is not progressive, in the sense of
+knowledge accumulating about the process being modelled, because the decision rule need
+not eliminate variables. Bayesian model averaging (see Hoeting, Madigan, Raftery andVolinsky, 1999, for an overview) is often used to account for model uncertainty, as is the extreme
+bounds literature of Leamer (1978, 1983, 1985). Bayesian model averaging in its classical
+form, however, was heavily criticized by McAleer, Pagan and Volker (1985), Breusch (1990)
+and Hendry and Mizon (1990) among others. Stepwise regression is popular, but is path
+dependent, is susceptible to negative dependence, and does not have a high success rate of
+finding the DGP. Berk (1978) demonstrates that applying both forward and backward selection is no guarantee to finding the correct model. Alternative selection procedures exist, such
+as “optimal regression” in which all subsets of regressors are included (see Coen, Gomme
+and Kendall (1969) and Box and Newbold (1971)), but that approach is anyway intractable
+with a large set of potential regressors.
+The discussed literature is mainly concerned with selecting a correctly specified model.
+However, it is not unfamiliar to choose a miss-specified model with much better predictive
+properties. There could be many other reasons why choosing the model with the correct
+specification is not the focus of the model selection procedure. Using criteria like the outof-sample predictive accuracy and treaded-off goodness of fit and the model size is not
+uncommon. The proposed approach combines the Bayesian model averaging with the resent
+work on the least absolute shrinkage and selection operator and the Dantzig selector as well
+as the data mining literature.
+We consider the model where the outcome variable D is binary and it is driven by a vector
+10
+
+of regressors X. Our goal is to generate an approximation for the conditional expectation
+E[D | X = x].
+Regression tree model The regression tree model is based on the idea that the conditional expectation of interest can be approximated using the “flexible histogram approach”:
+one would select the bins in the support of X using an algorithmic selection rule and then
+the expectation will be approximated in each bin as an average of D for all X that fall into
+the bin. We start with a simple case and consider a situation where X is one-dimensional.
+In most cases the split decision is based on the minimization of the least squares criterion.
+In other words, at each step the decision is made as to where to split the support of X.
+Consider the effect of the decision of the first split. At the first split we select a single point
+in the support of X (we call it x(1) ) and the approximation for the conditional expectation
+takes the form
+ (1)
+(1)
+
+ θ1 , if x < x ,
+(1)
+θb(1) (x) =
+θ2 , if x ≥ x(1) .
+
+
+(1)
+
+(1)
+
+We call θ(1) = (θ1 , θ2 )0 . Provided that the decision is informed by the least squares
+criterion, we can write the sample objective function as
+n
+2
+1 X
+(1) (1) (1)
+b
+di − θb(1) (xi ) .
+Q (x , θ ) =
+n i=1
+
+This objective is minimized with respect to x(1) and θ(1) . Suppose that x
+b(1) is the minimizer
+of this objective function. Then
+Pn
+di 1{xi ≤ x
+b(1) }
+(1)
+b
+θ1 = Pi=1
+n
+b(1) }
+i=1 1{xi ≤ x
+and
+(1)
+θb2
+
+Pn
+b(1) }
+i=1 di 1{xi ≥ x
+P
+=
+.
+n
+b(1) }
+i=1 1{xi ≥ x
+
+Then the objective function can be re-written as
+n
+
+n
+
+2
+2
+X
+1 X
+(1)
+(1)
+b(1) (x(1) , θ(1) ) = 1
+Q
+di − θb1
+1{xi ≤ x
+b(1) } +
+di − θb2
+1{xi ≥ x
+b(1) }.
+n i=1
+n i=1
+
+11
+
+Further transformations yield
+2
+2
+Pn
+Pn
+n
+b(1) }
+b(1) }
+1X
+i=1 di 1{xi ≤ x
+i=1 di 1{xi ≥ x
+P
+P
+−
+.
+Q (b
+x ,θ ) =
+di −
+n i=1
+n ni=1 1{xi ≥ x
+b(1) }
+n ni=1 1{xi ≤ x
+b(1) }
+b(1)
+
+(1)
+
+b(1)
+
+Now we note that the minimization of the criterion function can be replaced with the maximization of the following new objective function
+(1)
+
+b x )=
+G(b
+
+1
+n
+
+2
+Pn
+b(1) }
+i=1 di 1{xi ≥ x
+Pn
++
+1
+(1) }
+1{x
+≥
+x
+b
+i
+i=1
+n
+
+1
+n
+
+2
+Pn
+b(1) }
+i=1 di 1{xi ≤ x
+Pn
+1
+b(1) }
+i=1 1{xi ≤ x
+n
+
+with respect to the single parameter x
+b(1) . The presence of the indicator function leads the
+corresponding maximizer to behave similarly to the parameters in the Manski’s maximum
+score model. To formalize the result we impose the following assumption.
+ASSUMPTION 1 Suppose that
+(i) Random variable X has a continuously differentiable density. Moreover E[|X|4+δ ] < ∞
+for some δ > 0
+(ii) The conditional probability P (D = 1|X = x) is continuous in X
+Denote the cdf of random variable X by F (·). Consider the population version of the
+objective function which can be written as
+G(x(1) ) = P (D = 1|X ≤ x(1) )2 F (x(1) ) + P (D = 1|X > x(1) )2 (1 − F (x(1) )).
+b x) − G(x(1) )| using the fact that F (x(1) )(1 −
+Now we bound the absolute difference |G(b
+P
+F (x(1) )) ≤ 21 , n1 ni=1 di 1{xi ≤ x
+b(1) } ≤ 1 and the properties of empirical and true distribution
+functions:
+n
+
+n
+
+X
+1X
+b x)−G(x(1) )| ≤ 1
+|G(b
+di 1{xi ≤ x(1) } − P (D = 1|X ≤ x(1) )F (x(1) ) +
+1{xi ≥ x(1) } − F (x(1) ) .
+n i=1
+n i=1
+As a result, the difference between the empirical and the true objective function is dominated
+by the sum of the difference between the true and the empirical cdf and the difference between
+the empirical and true correlation between D and the indicator 1{X ≤ x(1) }. The latter
+is precisely the Manski maximum score objective function for estimation of the maximum
+12
+
+score model with normalization of the coefficients of the index (1, X) to (x(1) , 1) which is one
+possible normalization in this model. This allows us to use the results of Kim and Pollard
+(1990) to establish the following result.
+THEOREM 1 Suppose that Assumption 1 holds. Suppose that 0 = argmaxx G(x) (without
+b
+loss of generality). Then if x
+b(1) = argmaxx G(x),
+then
+d
+
+n1/3 x
+b(1) −→ b
+t,
+where random variable b
+t corresponds to b
+t = argmaxt {−t2 G00 (0) + W (t)} , where W (t) is a
+Brownian bridge process.
+This shows that the regression tree leads to the non-standard distribution for the cutoff
+points. At the same time, if we return to the analysis of the consistency of the regression
+function itself, we note that the cutoff point enters into the formula as a plug-in component
+and it is averaged. Newey (1994) and Brown and Newey (1996) demonstrated that in the
+analysis of the plug-in estimators which average over a functional of a non-parametric object,
+the estimation error of the plug-in nonparametric component only affects the quadratic
+second-order term. In other words, we can establish that for some δ1 we can represent
+(1)
+|θ1
+
+−
+
+(1)
+θ1 |
+
+Pn
+di 1{xi ≤ x(1) }
+(1)
+x(1) − x(1) )2 + op ((b
+x(1) − x(1) )2 ).
+− θ1 + δ1 (b
+= Pi=1
+n
+(1)
+1{x
+≤
+x
+}
+i
+i=1
+
+Provided that the standard Lindeberg CLT applies to the first term, we can establish that
+√ (1)
+(1)
+n|θ1 − θ1 | = Op (1) if |b
+x(1) − x(1) | = op (n−1/4 ). In light of Theorem 2, provided that
+√ (1)
+(1)
+|b
+x(1) − x(1) | = Op (n−1/3 ), it immediately follows that n|θ1 − θ1 | = Op (1) and thus the
+estimator for the parameters in the regression tree model converges to the true coefficient at
+the standard parametric convergence rate.
+These results allow a simple extension to a multi-dimensional case. In case of multiple
+regressors X, the tree model allows one to select the dimension of the variable X. Suppose
+that the dimension of X is d and consider the case where all components of X are continuous.
+As it will become clear, the case where some components of X are discrete come as a simple
+extension. By X(r) we denote r-th component of X. The algorithm in the multi-dimensional
+case proceeds as follows: at iteration k we consider each of r dimensions. Suppose that by
+step k, kr splits were performed along dimension k. Then for each dimension r we compute
+the outcome of kr + 1-st split. The actual split will be performed along the dimension for
+which the kr + 1-st split results in the largest decrease in the mean-squared error. Note that
+13
+
+if any component that is already discrete does not need splitting, the decision would only be
+whether including that variable decreases the sum of squared residuals more than splitting
+along other variables.
+As before, without loss of generality we can consider the split decision in the first step.
+At the first split we select the split dimension r and a single point in the support of X (we
+call it x(1) (r)) and the approximation for the conditional expectation takes the form
+ (1)
+
+ θ1 ,
+(1)
+(1)
+b
+θ (x) =
+θ2 ,
+
+
+
+if x(r) < x(1) (r),
+if x(r) ≥ x(1) (r),
+
+if dimension r was chosen for a split. The sum of squared residuals can be again written as
+n
+2
+1 X
+(1)
+(1) (1) (1)
+b
+b
+di − θ (xi ) .
+Q (x , θ ) =
+n i=1
+
+Then the problem of the first step boils down to finding d numbers x
+b(1) (1), . . . , x
+b(1) (d) and
+the dimension r which minimizes
+2
+2
+Pn
+Pn
+n
+b(1) (r)}
+b(1) (r)}
+1X
+i=1 di 1{xi (r) ≤ x
+i=1 di 1{xi (r) ≥ x
+P
+P
+−
+.
+Q (b
+x , θ , r) =
+di −
+b(1) (r)}
+b(1) (r)}
+n i=1
+n ni=1 1{xi (r) ≥ x
+n ni=1 1{xi (r) ≤ x
+b(1)
+
+(1)
+
+b(1)
+
+As in the one-dimensional case, we can reduce the problem to the maximization of the
+objective function
+(1)
+
+b x , r) =
+G(b
+
+1
+n
+
+2
+Pn
+b(1) (r)}
+i=1 di 1{xi (r) ≥ x
+Pn
++
+1
+b(1) (r)}
+i=1 1{xi (r) ≥ x
+n
+
+1
+n
+
+2
+Pn
+b(1) (r)}
+i=1 di 1{xi (r) ≤ x
+Pn
+1
+b(1) (r)}
+i=1 1{xi (r) ≤ x
+n
+
+with respect to d continuous and one discrete variable. Now we note that along each dimension, under our previous normalization we can apply the result of Kim and Pollard (1990)
+to get
+
+
+t
+(1)
+b
+G x + 1/3 , r ⇒ −t2 G00 (0, r) + Wr (t),
+n
+where W (t) = (W1 (t), . . . , Wd (t)) is the d-dimensional Brownian bridge process. This delivers
+n1/3 convergence rate for the split point for each dimension. We note that this rate applies
+to all split dimensions. Previously we have established that this ensures that the estimated
+√
+regression θ1 (x) will converge at parametric n rate for the given number of splits. Now
+
+14
+
+since there are d dimensions, we can majorize the error
+(1)
+|θ1
+
+−
+
+(1)
+θ1 |
+
+Pn
+d
+X
+di 1{xi (r) ≤ x(1) (r)}
+(1)
+Pi=1
+−
+θ
+≤ d sup
++
+δ
+(b
+x(1) (r) − x(1) (r))2
+1
+n
+1
+(1) (r)}
+1{x
+(r)
+≤
+x
+r=1,...,d
+i
+i=1
+r=1
+
+
+
+
+d
+X
+1
+d
+(1)
+(1)
+2
++ op ( (b
+x (r) − x (r)) ) = Op √
++ Op
+.
+n2/3
+n
+r=1
+
+This delivers the same
+
+√
+n convergence rate for the estimated regression.
+
+Stepwise regression model Consider the stepwise regression model based on the choice
+of the subset of regressors X, X 2 , X 3 , etc. by a successive enlargement of the model. For
+simiplicity of the exposition, as in the case of the regression tree we will characterize the
+properties of the one-dimensional regressor. Suppose that we use the AIC-style criterion
+for the choice of the selection of regressors. In this case the selection criterion can be
+characterized by
+!2
+p
+n
+X
+X
+1
+(p)
+b βb(p) , p) =
+Q(
+di −
+βk xpi
+− λ p,
+n i=1
+k=0
+which is minimized with respect to the vector of coefficients at each p and then the decision
+is maed on the basis of whether the criterion function increases in the transition from p to
+p + 1.
+(p)
+Let xi = (1, xi , x2i , . . . , xpi )0 . Then the fitted value of the estimated projection of d on the
+−1 P
+ P
+(p) (p)0
+(p)
+n
+1
+polynomial temrs can be expressed for each p as βb(p) = 1 n x x
+x di .
+n
+
+i=1
+
+i
+
+i
+
+n
+
+i=1
+
+i
+
+Further, we can convert the problem of selection of p into the problem of solving for a
+continuous parameter τ such that p = [n1/3 τ ] where [·] denotes the integer part of a real
+number.
+Now we consider the objective function
+b ) = Q(
+b βb([n1/3 τ ]) , [n1/3 τ ])
+G(τ
+with the population analog G(τ ).
+It turns out that the optimization problem formulated in this form leads to a similar
+cube-root convergence result for the parameter τ .
+THEOREM 2 Suppose that Assumption 1 holds. Suppose that 1 = argmaxt≥0 G(t) (without
+
+15
+
+b
+loss of generality). Then if τb = argmaxt≥0 G(t),
+then
+d
+n1/3 (b
+τ − 1) −→ b
+t,
+
+where random variable b
+t corresponds to b
+t = argmaxt {−t2 G00 (1) + W (t)} , where W (t) is a
+Brownian bridge process.
+
+Random forest model
+The random forest model is based on the the aggregation of the ensamble of B trees. We
+have previously shown that for the distribution of the first split of the regression tree model
+we can evaluate the variance term as
+√
+|θb(1) − θ(1) | = Op (1/ n).
+This result will also apply to any subsequent split. In other words, this means that the
+variance term of the mean-squared error for the tree of length k is
+√
+|θb(k) − θ(k) | = Op (1/ n).
+The bias will be determined by the location of the split points, which we found to have the
+following structure:
+√
+|b
+x(1) − x(1) | = Op (1/ 3 n).
+The same evaluation with also apply to the k-th split. Now looking at the random forest
+with a fixed number of B trees with a fixed number of splits k yields the overall evaluation
+√
+for the mean-squared error of Op (1/ 3 n) dominated by the bias of the split points. Note that
+this is the lower bound for the convergence rate of the random forest. Data-dependent choice
+of the number of trees and the number of splits may further accelerate the convergence rate
+(see Scornet (2014)).
+
+16
+
+Support vector machines
+Note that the SVM estimator for the regression with a fixed margin  (see Vapnik (1998))
+leads to an objective function with the structure
+nQ(β; , λ) =
+
+n
+X
+
+λ
+(yi − x0i β − )1 {yi − x0i β −  ≤ 0} + kβk.
+2
+i=1
+
+Assuming that the model dimension d is finite and fixed and the parameter space is compact,
+then λ2 kβk = O(d). This means that
+n
+
+1X
+Q(β; , λ) =
+(yi − x0i β − )1 {yi − x0i β −  ≤ 0} + O(d/n).
+n i=1
+The first term in this objective function has a structure of the objective function that parallels
+the Manski’s maximum score objective function. This fact was first noticed in Komarova
+(2013). In Kim and Pollard (1990) it was noticed that such a structure of the objective
+function leads to the following evaluation
+1
+|βb − β| = Op ( √
+).
+3
+n
+This means that the predictions from the SVM regression have the mean square error with
+√
+the lower bound Op (1/ 3 n). Making the margin  and the penalty constant λ data-dependent
+may further accelerate the convergence.
+
+LASSO
+The general theory for LASSO regression has been developed in Belloni et al. (2011). They
+impose the restriction on the structure of regressors and consider the case where the dimensionality of the model d can grow along with the number of non-zero coefficients. The
+establish the bound on the mean-squared error of the vector of estimated coefficients of
+p
+Op ( s log d/n). This means that with a moderate growth of sparsity s = O(n1/3 ), we
+√
+obtain the Op (1/ 3 n) mean-squared error for prediction in the model with a fixed dimensionality. With a more stringent set of conditions for the sparsity and the dimensionality,
+the rate can be further improved (as a function of n).
+
+17
+
+Improvement of convergence rates for averaged classifiers
+The object of interest in the “first stage” estimation was to recover the function θ(·). We now
+consider the properties of the second stage estimation whose goal is the weighted average
+value of the classifier which may be described as
+α = E[w(X)θ(X)].
+
+(12)
+
+We consider the case where θ(·) is delivered by some algorithmic model selection rule (from
+the list analyzed in the previous subsection) and w(·) are either directly imputed or estimated.
+Newey (1994) provides an insight that the asymptotic properties of an empirical analog of
+(12) may not depend on the properties of a particular non-parametric estimator which was
+employed to estimate θ(·). This result provides a powerful implication for our estimation
+approach. We proved that an algorithmic model selection rule provides a consistent estimator
+for θ(·) that, however, converges at the subparametric n1/3 rate to a non-standard distribution
+characterized by a Brownian bridge. If the result in Newey (1994) can be applied, this would
+mean that the properties of an averaged classifier will be standard and thus be immune to
+the choice of the algorithmic model selection rule used for estimation of θ(·).
+First of all, consider the empirical analog of α where θ(·) and w(·) are replaced with their
+b and w(·):
+empirical counterparts θ(·)
+b
+n
+
+1X
+b i ).
+w(x
+b i )θ(x
+α
+b=
+n i=1
+
+(13)
+
+We assume (for the purposes of normalization) that E[w(X)]
+b
+= E[w(X)] = 0. Without loss
+of generality, this assumption can be omitted. Now consider the following decomposition
+α
+b−α =
+
+1
+n
+
+=
+
+1
+n
+
++ n1
++ n1
+1
+n
+
+n
+P
+i=1
+n
+P
+i=1
+n
+P
+
+b i ) − E[w(X)θ(X)]
+w(x
+b i )θ(x
+b i ) − θ(xi ) − E[θ(X)]
+b
+(w(x
+b i ) − w(xi ))(θ(x
++ E[θ(X)])
+
+b i ) − θ(xi ) − E[θ(X)]
+b
+w(xi )(θ(x
++ E[θ(X)])
+
+i=1
+n
+P
+
+i=1
+n
+P
+
+i=1
+
+(θ(xi ) − E[θ(X)]) (w(x
+b i ) − w(xi )) +
+
+E[θ(X)](w
+b − w(xi )) +
+
+1
+n
+
+n
+P
+
+1
+n
+
+n
+P
+i=1
+
+(E[θ(X)] − E[θ(X)]) (w(x
+b i ) − w(xi ))
+
+(w(xi )θ(xi ) − E[w(X)θ(X)])
+
+i=1
+
+18
+
+We have established the result that for the algorithmic model selection rule we can provide
+b − θ(x) − E[θ(X)]
+b
+a uniform convergence rate kθ(x)
++ E[θ(X)]k∞ = Op (n−1/3 ). Also, the bias
+b
+condition reduces to |E[θ(X)]
+− E[θ(X)]| = op (n−1/3 ). Now suppose that w(·)
+b is estimated
+at the uniform rate n−r . We now establish the requirement for this rate that guaratees the
+parametric convergence rate for α
+b. First of all note that under the i.i.d. sampling requirement
+ 2+δ
+
+and restriction that E w (X)θ2+δ (xi ) we can apply the Lindeberg CLT to the last term
+of the above decomposition. This means that the last term converges in distribution to
+the normal random variable at parametric rate. Now consider the same decomposition for
+√
+√
+n(b
+α − α). We evaluate each of the terms of decomposition multiplied by n:
+√
+
+n
+
+1 X
+b i ) − θ(xi ) − E[θ(X)]
+b
+n (b
+α − α) = √
+(w(x
+b i ) − w(xi ))(θ(x
++ E[θ(X)])
+n i=1
+n
+
+1 X
+b i ) − θ(xi ) − E[θ(X)]
+b
++√
+w(xi )(θ(x
++ E[θ(X)])
+n i=1
+n
+
+1 X
++√
+(θ(xi ) − E[θ(X)]) (w(x
+b i ) − w(xi ))
+n i=1
+n
+
+1 X
+−√
+(E[θ(X)] − E[θ(X)]) (w(x
+b i ) − w(xi ))
+n i=1
+n
+
+n
+
+1 X
+1 X
+E[θ(X)])(w(x
+b i ) − w(xi )) + √
+(w(xi )θ(xi ) − E[w(X)θ(X)])
++√
+n i=1
+n i=1
+= Op (n1/6−r ) + Op (n−1/3 ) + Op (n−r ) + op (n1/6−r ) + Op (1) + Op (1).
+(14)
+The first evaluation comes from the fact that
+n
+
+1 X
+b i ) − θ(xi ) − E[θ(X)]
+b
+√
+(w(x
+b i ) − w(xi ))(θ(x
++ E[θ(X)])
+n i=1
+√
+b − θ(x) − E[θ(X)]
+b
+b
+− w(x)k∞ kθ(x)
++ E[θ(X)k∞ = Op (n1/6−r ).
+≤ nkw(x)
+The second evaluation comes from the fact that
+√1
+n
+
+n
+P
+
+b i ) − θ(xi ) − E[θ(X)]
+b
+w(xi )(θ(x
++ E[θ(X)])
+
+i=1
+
+b − θ(x) − E[θ(X)]
+b
+≤ kθ(x)
++ E[θ(X)k∞ √1n
+
+19
+
+n
+P
+i=1
+
+w(xi ) = Op (n−1/3 ),
+
+(15)
+
+provided that E[w2+δ (X)] < ∞ and thus CLT can be applied to the mean of w(·). Analogously, we can evaluate the next term, provided that E[θ2+δ (X)] < ∞:
+n
+
+n
+
+1 X
+1 X
+√
+(θ(xi ) − E[θ(X)]) (w(x
+b i ) − w(xi )) ≤ kw(x)
+b
+− w(x)k∞ √
+θ(xi ) = Op (n−r ).
+n i=1
+n i=1
+Then
+√1
+n
+
+n
+P
+i=1
+
+(E[θ(X)] − E[θ(X)]) (w(x
+b i ) − w(xi )) ≤
+
+√
+nkw(x)
+b
+− w(x)k∞ |E[θ(X)] − E[θ(X)]|
+
+= Op (n1/6−r ).
+The last two terms of the expansion will be leading and, thus, deliver the standard parametric
+asymptotics if the first three terms are negligible.
+p
+
+THEOREM 3 Suppose that n1/6 sup kw(x)
+b
+− w(x)k −→ 0. Then for some Vα < ∞:
+x
+
+√
+
+d
+
+n (b
+α − α) −→ N (0, Vα ).
+
+In particular, if the weights are fixed then the convergence of the averaged algorithmic classifier to its expectation at parametric rate is guarateed regardless of the method used to obtain
+the classifier.
+p
+
+Proof: Note that if n1/6 sup kw(x)
+b
+− w(x)k −→ 0, then our previous analysis establishes
+x
+
+that
+
+n
+√
+1 X
+n (b
+α − α) = √
+ψ(xi ) + op (1),
+n i=1
+
+where
+ψ(xi ) = (w(xi )θ(xi ) − E[w(X)θ(X)]) + E[θ(X)](w(x
+b i ) − w(xi )).
+This means that the conditions of Proposition 2 in Newey (1994) are satisfied and, thus, the
+parameter of interest α
+b converges at the parametric rate to the normal asymptotic distribub selected from the class
+tion whose properties are immune to the choice of estimator for θ(·)
+of algorithmic model selection estimators considered in the previous section. Q.E.D.
+Note that even in case the weights w(·)
+b we need a very weak requirement for the convergence of these weights to their population counterparts at the rate n−1/6 which allows one
+
+20
+
+to use a wide range of non-parametric methods for construction of such weights to perform
+the averaging of the prediction from the algorithmic model selection rule.
+
+4
+
+Monte Carlo
+
+To demonstrate the usefulness of our estimation approach, we conduct several Monte Carlo
+exercises. We consider several variations of a discrete choice model: we use both aggregate
+and individual data; compare the logit model to our machine learning methods with and
+without specification error; show the performance of our methods in a model with irrelevant
+regressors; and finally consider the performance of the logit and machine learning methods
+on a model with a highly nonlinear utility function. We also report the convergence rates
+of the individual estimators and demonstrate the superior statistical properties of the linear
+combination model.
+We first consider the classic case of a discrete choice model using aggregate data. In each
+of M markets, there are J = 2 products with K = 2 characteristics each. For each product,
+characteristics are drawn from the following distributions:
+x1 ∼ logN (0, 1), x2 ∼ logN (0, 1.5)
+In each market, we assume there are an infinite number of consumers. Each consumer makes
+a single choice from the set of options which maximizes their utility. Utilities are given by
+uij = u(Xj , β) + ij ,
+
+(16)
+
+where Xj is a matrix of products and their characteristics, β is a vector of utility parameters,
+and ij is an individual- and choice-specific idiosyncratic error with a Type I extreme value
+distribution. This model generates shares (or choice probabilities in the case of individual
+data) of the form:
+exp(u(Xj , β))
+.
+(17)
+sj = P
+k exp(u(Xk , β))
+We consider several variants of Equation 16. In the baseline model, utility is linear in
+the unknown parameters:
+uij = xj β + ij .
+(18)
+We set the marginal utilities to be equal to β = {0.1, −0.02}. This is the standard specification used in most discrete choice applications, and will provide a natural baseline for
+21
+
+comparing the performance of the flexible approximation methods to more traditional approaches.
+To test the performance of our estimators against more complex functional forms, we
+also consider a model with a highly-nonlinear utility function given by:
+10 ∗ sin ((0.03Xj1 + 0.1Xj2 )2 ) − 0.5 ln(Xj2 ) − 1(0.3 < Xj1 < 1.5)6Xj1
++ 1(Xj1 > 2)Xj1 + 1(0.15 < Xj2 < 1)Xj2 + 1(Xj2 > 2.3)Xj2 . (19)
+To test our methods in the presence of irrelevant regressors, we consider a version of
+Equation 16 with five additional “junk” data regressors that receive zero marginal utilities.
+The first two are drawn from a standard log-normal distribution, the third is the sine function
+of a uniform random variable, the fourth is a “time trend” type variable which counts up
+from 1 for each observation. The fifth is similar to the fourth but adds a squared term to
+the count, specifically x = 0.5n + 0.2n2 where n is the observation number.
+We also consider a micro-data version of the model above, with market-level data replaced
+by individual-level observations. This specification introduces sampling error in that there
+are a finite number of consumers in each market, given by N .
+In order to assess the performance of our approach, we consider a three-step process.
+First, using a training sample of size M , we estimate the parameters of the component
+models. Then, using a second out-of-sample training data set, we estimate weights on the
+best linear predictor of 2,500 observed market shares. Third, we then take the combined
+linear model and use it to predict an additional 2,500 out-of-sample market shares. We
+report the results of the in-sample fit from stage one, the weights from stage two, and the
+out-of-sample fits from stage three in our results.
+We now describe the specific algorithms and parameters choices for the various models
+that are used in the Monte Carlo.
+Bagging The steps taken are as follows:
+1. Generate shares and characteristics data as described above for M markets.
+2. Sample with replacement from this data 200 times.
+3. For each subsample, train a regression tree.
+4. Predict the market shares of test data by averaging the prediction across all grown
+trees.
+22
+
+Random Forest The steps taken are the same as described in the bagging section, except
+that when trees are grown, at each node, 2 characteristics are chosen at random to be
+candidate characteristics for splitting into new leaves.
+Linear Regression This model regresses product 1’s market shares on all product characteristics and their 2nd and 3rd powers, including all interactions between polynomials (e.g,
+x21 x2 and x1 x22 ).
+Logit This model conducts a logistic regression of product 1’s market shares on all product
+characteristics. It fits perfectly, so for now is not depicted in the figures below, and does not
+factor into the best linear combination model.
+Lasso This model conducts a Lasso regression, which is OLS (the same model with up to
+3rd order polynomials) with an added constraint that the sum of estimation coefficients is
+less than some threshold parameter. This is equivalently written as a Lagrangian multiplier
+which equally penalizes any positive estimator values. Matlab represents the Lasso penalty
+parameter in this way. To choose a threshold parameter for each market size, we conduct
+the Lasso regression 100 times over a grid of possible parameter values, and then choose the
+penalty parameter (lambda) that minimizes the RMSE in the first out-of-sample test data.
+Stepwise Regression This model implements Matlab’s stepwisefit function. The initial
+feature set is null, and the model successively adds a regressor to the model with the lowest
+coefficient p-values, until the p-values surpass 0.05. The resulting coefficient vector includes
+the coefficients from the selected features, with zeros elsewhere.
+Stagewise Regression We implement a Stagewise Regression algorithm, which works as
+follows. Add a constant to the matrix of X (including the polynomials as above).
+1. Set β = 0.
+2. Fit a constant equal to min(Y ) and compute the residual ().
+3. Step through each column of X and compute corr(Xj ,).
+4. Choose the Xj with the highest correlation and regress Xj on .
+5. Add the resulting coefficient to βj .
+23
+
+Table 1: Monte Carlo: Baseline Model
+Market Size
+MODEL
+Bagging
+Rand Forest
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+400
+
+6400
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.0124
+0.0125
+0.0215
+0.0902
+0.0907
+0.0027
+0.0648
+
+0.0328
+0.0326
+1.5187
+0.2244
+0.2268
+0.019
+1.2199
+0.0171
+
+0.1136
+0
+0
+0
+0.0187
+0.8677
+0
+
+RMSE (IS)
+Aggregate
+0.014
+0.0143
+0.0761
+0.2485
+0.2492
+0.0154
+0.0152
+
+51,200
+
+RMSE
+
+Weight
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.011
+0.0107
+0.3239
+0.1548
+0.1558
+0.0561
+0.0149
+0.0088
+
+0.3655
+0.0676
+0.0056
+0
+0.0178
+0.1365
+0.407
+
+0.0117
+0.0116
+0.1184
+0.3162
+0.3183
+0.0124
+0.0195
+
+0.0025
+0.0025
+0.0259
+0.07
+0.0703
+0.0025
+0.0041
+0.0017
+
+0.2768
+0.2689
+0.018
+0
+0.0047
+0.4317
+0
+
+0.2024
+0.2024
+0.2861
+0.2056
+0.2345
+0.236
+0.202
+0.2022
+0.202
+
+0
+0.1386
+0
+0.1037
+0.0535
+0
+0.6778
+0.0264
+
+0.3998
+0.4019
+0.5623
+0.4176
+0.472
+0.4756
+0.412
+1.2317
+
+0.0903
+0.0903
+0.1155
+0.0913
+0.1034
+0.1048
+0.0903
+2.2218
+0.0903
+
+0
+0.1065
+0.0242
+0.2123
+0
+0
+0.657
+0
+
+Individual
+Bagging
+Rand Forest
+Logit
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+0.116
+0.1171
+0.1665
+0.1139
+0.128
+0.1516
+0.1151
+0.1268
+
+0.2993
+0.2985
+0.3118
+3.2092
+0.683
+0.6201
+0.3167
+39.1139
+0.2984
+
+0
+0.9904
+0
+0
+0.0041
+0.0055
+0
+0
+
+0.3107
+0.3135
+0.446
+0.3304
+0.3741
+0.3736
+0.327
+0.3275
+
+6. Update  = Y − X 0 β.
+7. Looping back to step 3, repeat until either the maximum correlation is less than 0.01
+or 5,000 iterations have passed.
+Incremental Forward Stagewise Regression This model is the same as the Stagewise
+Regression except that in step 5, we update the coefficient by only moving a small distance
+δ towards the estimated coefficient.
+Best Linear Combination In this method, we find an optimal linear combination of
+the models using linear regression (constrained so that weights are within [0,1] and sum
+to 1). The optimum is chosen with respect to the first out-of-sample test data, and then
+reported with respect to the second out-of-sample test data. The thinking here is to prevent
+over-fitting the weights to the training data. This method is similar to choosing weights to
+minimize cross-validation error and then reporting out-of-sample fits. Then the RMSE is
+calculated between the market shares and the weighted predictions of the two models.
+
+24
+
+4.1
+
+Results
+
+We first consider the baseline model with aggregate shares. The top panel of Table 1 reports
+the significant variance within and across sample sizes with respect to in- and out-of-sample
+fit. Bagging and the random forest do well in all sample sizes, and stagewise regression has the
+best fit at the smallest sample size. Linear regression suffers from tremendous overfitting,
+as it has decent in-sample fits and terrible out-of-sample fit. At the higher sample sizes,
+random forest, bagging, and stagewise regression dominate the in-sample and out-of-sample
+fits compared to the rest of the models. This is also reflected in the weights that these
+three estimators receive in the linear combination. The RMSE for the combined model is 32
+percent better than any of the individual components.
+The bottom panel of Table 1 reports the results for the individual-level model. The
+essential difference between the two settings is the idiosyncratic error which is absent in the
+aggregate model but plays a key role in the individual-level data. Broadly speaking, each of
+the individual models, along with the linear combination, have errors which are two orders of
+magnitude larger than the aggregate models. We have included the logit model in the bottom
+panel; interestingly, although it is the most efficient estimator, it does dominate the machine
+learning methods for in- or out-of-sample fit. It also does not receive any weights in the linear
+combination for the smaller samples sizes, and only contributes two percent in the largest
+sample. Stagewise again receives a large share of the weights in the linear combination, while
+bagging and random forest share stagewise regression’s level of prediction performance.
+Table 2 reports the results for the discontinuous utility function, which should be more
+of a challenge for both the econometrician and estimation. The econometrician would likely
+not guess the functional form of the underlying data-generating process. Estimation is going
+to be more difficult given the discontinuous nonlinearity of the underlying utility function.
+
+4.2
+
+Rates of Error Convergence
+
+Tables 5 shows the ratio of standard errors for each doubling of the sample size from n = 100
+to n = 102, 400. This exercise is useful for demonstrating the empirical convergence rates
+of our various component models and also the combination model. Looking at the average
+rates from Table 5, it is useful to compare these ratios against the parametric rate, which is
+√
+√
+2 ' 1.4142, and the cube-root rate, which is 3 2 ' 1.2599. The average rates for bagging
+and the random forest are slightly below the parametric rate, but substantially better than
+the cube-root lower bound provided by theory. The polynomial, stagewise, and incremental
+
+25
+
+Table 2: Monte Carlo: Discontinuous Utility
+Market Size
+MODEL
+Bagging
+Rand Forest
+Logit
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+400
+
+6400
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.0757
+0.0772
+0.1115
+0.0818
+0.1187
+0.1514
+0.0906
+0.1025
+
+0.2031
+0.2082
+0.2884
+54.6065
+1.7018
+40.126
+5.2107
+0.2848
+0.2188
+
+0.8773
+0.1096
+0
+0
+0
+0.0033
+0.0098
+0
+
+RMSE (IS)
+Aggregate
+0.1284
+0.1287
+0.3548
+0.2727
+0.3617
+0.3812
+0.2739
+0.3022
+
+51,200
+
+RMSE
+
+Weight
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.0832
+0.0842
+0.2217
+0.1733
+0.2261
+0.2371
+0.1717
+0.1881
+0.0828
+
+0.4848
+0.5152
+0
+0
+0
+0
+0
+0
+
+0.116
+0.1153
+0.4455
+0.3566
+0.4473
+0.4464
+0.37
+0.3839
+
+0.0262
+0.0261
+0.0981
+0.1716
+0.1967
+0.1972
+0.0854
+0.0865
+0.0257
+
+0.6455
+0.3545
+0
+0
+0
+0
+0
+0
+
+0.1817
+0.1817
+0.2415
+0.2391
+0.2324
+0.2421
+0.1939
+0.2445
+0.1813
+
+0.5016
+0.4386
+0.0429
+0.0009
+0
+0.016
+0
+0
+
+0.3564
+0.359
+0.6125
+0.3968
+0.4576
+0.4598
+0.3965
+0.4029
+
+0.0811
+0.0813
+0.1364
+0.0878
+0.1021
+0.1026
+0.0881
+0.0898
+0.0811
+
+0.9244
+0.0756
+0
+0
+0
+0
+0
+0
+
+Individual
+Bagging
+Rand Forest
+Logit
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+0.1082
+0.1095
+0.1296
+0.1077
+0.1388
+0.1484
+0.113
+0.1195
+
+0.2772
+0.2801
+0.3064
+6.8276
+0.344
+7.9849
+0.3125
+0.4755
+0.2771
+
+0.9209
+0
+0.0485
+0
+0
+0
+0.0306
+0
+
+0.2779
+0.2808
+0.3991
+0.3089
+0.3678
+0.3906
+0.3127
+0.4278
+
+Table 3: Monte Carlo: Irrelevant Regressors
+Market Size
+MODEL
+Bagging
+Rand Forest
+Logit
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+400
+
+6400
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.0116
+0.0125
+0.043
+0.0112
+0.0896
+0.0909
+0.0042
+0.0104
+
+0.0287
+0.0309
+0.1065
+0.4661
+0.2238
+0.2274
+0.0128
+0.0394
+0.011
+
+0.0466
+0
+0
+0.0019
+0
+0.0273
+0.9133
+0.0109
+
+RMSE (IS) RMSE
+Aggregate
+0.0134
+0.0164
+0.1186
+0.0408
+0.2485
+0.2499
+0.01
+0.0129
+
+51,200
+Weight
+
+RMSE (IS)
+
+RMSE
+
+Weight
+
+0.0085
+0.0101
+0.0732
+0.058
+0.1549
+0.1562
+0.0063
+0.0082
+0.0044
+
+0.2328
+0
+0
+0.0137
+0
+0.0286
+0.149
+0.576
+
+0.0116
+0.0153
+0.1516
+0.0614
+0.3163
+0.3168
+0.0135
+0.023
+
+0.002
+0.0029
+0.0332
+0.013
+0.0699
+0.07
+0.0029
+0.0047
+0.0016
+
+0.4452
+0
+0
+0.035
+0
+0.0107
+0.5091
+0
+
+0.2013
+0.2009
+0.2007
+0.203
+0.2292
+0.2497
+0.2007
+0.2009
+0.2006
+
+0.3436
+0
+0.2215
+0.2011
+0.0079
+0
+0.2259
+0
+
+0.3979
+0.4015
+0.4142
+0.412
+0.4707
+0.4902
+0.4118
+0.4119
+
+0.0905
+0.0905
+0.0911
+0.0908
+0.103
+0.107
+0.0904
+0.0904
+0.0905
+
+0
+0.6356
+0.1083
+0.2561
+0
+0
+0
+0
+
+Individual
+Bagging
+Rand Forest
+Logit
+Linear
+Lasso
+Stepwise
+Stagewise
+IF Stagewise
+Best Linear
+
+0.1086
+0.1104
+0.1181
+0.0987
+0.0997
+0.1527
+0.1107
+0.1105
+
+0.3043
+0.303
+0.3059
+0.5509
+0.4604
+0.4436
+0.3179
+0.3137
+0.3026
+
+0
+0.6239
+0.1295
+0
+0
+0
+0
+0.2465
+
+0.3072
+0.312
+0.3281
+0.3238
+0.3752
+0.4077
+0.3251
+0.3256
+
+26
+
+Table 4: Monte Carlo: Out-of-Sample Root Mean Squared Prediction Error
+N
+
+bagging
+
+RF
+
+poly
+
+lasso
+
+step
+
+stage
+
+IFS
+
+best
+
+100
+200
+400
+800
+1600
+3200
+6400
+12800
+25600
+51200
+102400
+
+0.04366
+0.03516
+0.02939
+0.02377
+0.01839
+0.01344
+0.00931
+0.00633
+0.00414
+0.00257
+0.00165
+
+0.04366
+0.03608
+0.02980
+0.02378
+0.01839
+0.01369
+0.00950
+0.00636
+0.00416
+0.00262
+0.00161
+
+83.70950
+27.69800
+10.21270
+3.65680
+2.64430
+1.56610
+0.31950
+0.18308
+0.09440
+0.06922
+0.02730
+
+0.23643
+0.23034
+0.22693
+0.22368
+0.20718
+0.18560
+0.15507
+0.12408
+0.09461
+0.06983
+0.05052
+
+0.25931
+0.25320
+0.24085
+0.22511
+0.21256
+0.18739
+0.15708
+0.12616
+0.10077
+0.07218
+0.05083
+
+1.25375
+0.73421
+0.27002
+0.11785
+0.08971
+0.05324
+0.01397
+0.00935
+0.00995
+0.00520
+0.00153
+
+16.54100
+2.53325
+33.43815
+1.29285
+1.30170
+2.40746
+0.62162
+0.34044
+0.19680
+0.11254
+0.12369
+
+0.11526
+0.18970
+0.05714
+0.02776
+0.02344
+0.01516
+0.00639
+0.00548
+0.00764
+0.00236
+0.00093
+
+Table 5: Monte Carlo: Convergence Rates
+N
+
+bagging
+
+RF
+
+poly
+
+lasso
+
+step
+
+stage
+
+IFS
+
+best
+
+200
+400
+800
+1600
+3200
+6400
+12800
+25600
+51200
+102400
+
+1.2419
+1.1963
+1.2363
+1.2925
+1.3680
+1.4435
+1.4705
+1.5306
+1.6100
+1.5551
+
+1.2102
+1.2106
+1.2532
+1.2931
+1.3434
+1.4415
+1.4936
+1.5286
+1.5874
+1.6256
+
+3.0222
+2.7121
+2.7928
+1.3829
+1.6885
+4.9017
+1.7451
+1.9395
+1.3637
+2.5360
+
+1.0264
+1.0150
+1.0145
+1.0796
+1.1163
+1.1968
+1.2498
+1.3115
+1.3549
+1.3821
+
+1.0241
+1.0513
+1.0699
+1.0590
+1.1343
+1.1930
+1.2451
+1.2520
+1.3961
+1.4202
+
+1.7076
+2.7191
+2.2913
+1.3136
+1.6849
+3.8110
+1.4940
+0.9396
+1.9148
+3.4022
+
+6.5296
+0.0758
+25.8639
+0.9932
+0.5407
+3.8729
+1.8259
+1.7299
+1.7487
+0.9099
+
+0.6076
+3.3200
+2.0581
+1.1846
+1.5456
+2.3720
+1.1656
+0.7178
+3.2438
+2.5333
+
+Average
+
+1.3945
+
+1.3987
+
+2.4085
+
+1.1747
+
+1.1845
+
+2.1278
+
+4.4090
+
+1.8748
+
+27
+
+forward stagewise models all have significantly better than the parametric lower bound rate
+of convergence. The LASSO model and the stepwise models both have empirical rates of
+convergence below the cube-root lower bound, but this is due to those two models having
+additional degrees of complexity which increase with the sample size. In the case of the
+LASSO model, the Matlab implementation changes the penalty parameter, λ, in accordance
+with the sample size. Most importantly, the model combination exhibits a rate of convergence
+that is slightly faster than the parametric lower bound.
+
+5
+
+Empirical Application
+
+This section compares econometric models with machine learning ones using a typical demand estimation scenario – grocery store sales. The machine learning models in general
+produce better out-of-sample fits than linear models without loss of in-sample goodness of
+fit . If we combine all the models linearly with non-negative weights, the resulting combination of models produces better out-of-sample fit than any model in the combination.
+This section also illustrates how machine learning models could work with unstructured
+data or sparse data. Unstructured data is not organized to feed into models directly like
+structured data. For instance, the text description of a bag of chips and the image of the bag
+are unstructured data. Sparse data is a type of data where most of the elements are zeros.
+Both of unstructured and sparse data would be hard to handle in econometric models.
+The last part of this section uses the same data and model structures to estimate the
+promotional lift of sales.
+The data we use is provided by IRI Marketing Research via an academic license at the
+University of Chicago. It contains scanner panel data from grocery stores within one grocery
+store chain for six years. We used sales data on salty snacks, which is one of the categories
+in the IRI data.
+A unit of observation is product j, uniquely defined by a UPC (Universal Product Code),
+in store m at week t. The number of observations are 1510563, which includes 3149 unique
+products. Let qjmt be the number of bags of salty snack j sold in store m at week t. If
+qjmt = 0, we do not know if it is due to no sale or out-of-stock and the observation is not filled
+in. The price pjmt is defined as the quantity weighted average of prices for product j in store
+m at week t. Therefore if qjmt = 0, the weight is also 0. In addition to price and quantity, the
+data contains attributes of the products (such as brand, volume, flavor, cut type, cooking
+method, package size, fat and salt levels) and promotional variables (promotion, display and
+
+28
+
+feature).
+Table 6 shows the summary statistics of quantity, price and volume. Table 7 shows the
+three most common values of product attributes - brand, volume, flavor, cut type, cooking
+method, package size, fat and salt levels.
+Table 6: Summary Statistics
+Variable
+
+Mean
+
+Min
+
+Max
+
+1st Qu.
+
+Median
+
+3rd Qu.
+
+Quantity
+Price
+Volume
+
+20.08
+2.05
+0.52
+
+1.00
+0.10
+0.06
+
+3402.00
+5.69
+1.25
+
+4.00
+1.39
+0.34
+
+9.00
+1.99
+0.41
+
+19.00
+2.87
+0.59
+
+Table 7: Tabulate Category Variables
+Variable
+
+Three Most Frequent Values
+
+Brand
+Product Type
+Packaging
+Flavor
+Fat Content
+Cooking Method
+Salt Content
+Cutting Type
+
+Pringles
+Potato Chip
+Bag
+Original
+Missing
+Missing
+Missing
+Flat
+
+Utz
+Potato Crisp
+Canister
+Sour Cream & Onion
+Low Fat
+Kettle Cooked
+Lightly Salted
+Missing
+
+Lays
+Potato Chip and Dip
+Cardboard Canister
+BBQ
+Fat Free
+Old Fashion Kettle
+Sea Salt
+Ripple
+
+In our application, we compare nine alternative models of demand to predict qjmt . The
+nine models are linear model, stepwise, forward stagewise, LASSO, random forest, support
+vector machine, gradient boosting trees, Logit and Logit with gradient boosting variable
+selection. Linear model and Logit are traditional econometric models where the others are
+popular machine learning algorithms. We also perform a linear combination of all the models
+in the effort to increase prediction accuracy. We use R to compute all the results and a list
+of related R packages is provided in this section.
+
+5.1
+
+Linear Regression Models
+
+The linear regression is a typical approach to estimate demand by approximating the demand
+using a function form of the following:
+log(qjmt ) = β 0 Xjmt + ζmt + ηjm + jmt
+29
+
+where Xjmt is the matrix of attributes including log of own prices, product attributes, advertising and promotion indicators, ζmt is the market specific seasonal factor, ηjm is the product
+specific market effect and jmt is an idiosyncratic shock to each product, market and time.
+Table 8 shows the output of linear model where only the significant coefficients are displayed.
+
+5.2
+
+Logit
+
+We followed Berry et al. (1995) to do a logit-type model of market shares. Assuming market
+sizes are fixed, we estimate the shares in two ways: 1) by using traditional regression; 2)
+by using gradient boosting (R package gbm). Gradient boosting is where tree models are
+utilized as base-learners. Specifically, we are interested in L2(Euclidean distance) loss in the
+boosting tree in regression. Thus it is nothing else than repeated least squares fitting of
+residuals. Both approach 1) and 2) project estimated q̂jmt on product attributes dummies,
+store fixed effects and week fixed effects.
+Then we sum q̂jmt over stores and weeks. Assuming that market sizes are fixed, we
+calculate market share by dividing q̂jmt by market size. The log of market share is taken as
+the dependent variable in our Logit model. Table 9 shows the output of Logit model with
+traditional regression where only the significant coefficients are displayed.
+
+5.3
+
+Stepwise, Forward Stagewise and LASSO
+
+In practice, all three models can be realized in R package lars. We take the default parameter
+t and λ in the package. These three model converge in similar ways where in each step, the
+most important variable is added to the model. We limit the maximum number of steps
+to 100 in our practice for demonstration purposes because it takes significantly longer to
+converge if the number of steps is larger. Table 10 shows how many variables have non-zero
+coefficients and which they are.
+
+5.4
+
+Random Forest
+
+Random forecast is implemented in R package randomForest. The two parameters are the
+number of trees and the number of variables to try at each split.
+Table 11 displays the variable importance of the twelve most important variables in
+determining Log Quantity using two metrics. The percentage increase in mean squared
+error is the increased percentage of mean squared error if a variable is excluded from the
+30
+
+Table 8: Linear Regression
+Estimate
+
+Std. Error
+
+t value
+
+Pr(> |t|)
+
+Log Price
+Promotion
+Feature: None
+Display:
+Minor
+Major
+Brand:
+Herrs
+Jays
+Kettle Chips
+Lays
+Lays Bistro Gourmet
+Lays Natural
+Lays Stax
+Lays Wow
+Michael Seasons
+Pringles
+Pringles Cheezums
+Pringles Fat Free
+Pringles Prints
+Pringles Right Crisps
+Ruffles Natural
+Ruffles Snack Kit
+Utz
+Wise
+Wise Ridgies
+Volume
+Package:
+Canister
+Canister In Box
+Flavor:
+BBQ
+Cheddar
+Cheese
+Ketchup
+Onion
+Original
+Spicy
+Salt: No Salt
+Type of Cut: Flat
+Store Fixed Effects
+Week Fixed Effects
+
+-0.639
+0.466
+-0.630
+
+0.055
+0.039
+0.067
+
+-11.708
+11.926
+-9.334
+
+< 2e-16
+< 2e-16
+< 2e-16
+
+***
+***
+***
+
+0.708
+0.637
+
+0.049
+0.049
+
+14.341
+13.119
+
+< 2e-16
+< 2e-16
+
+***
+***
+
+-0.351
+-1.101
+-0.995
+-0.337
+-0.656
+-1.662
+-1.481
+-0.485
+-1.655
+-0.794
+-0.644
+-0.624
+-1.876
+-0.881
+-1.379
+-1.555
+-0.543
+-0.505
+-0.984
+0.469
+
+0.156
+0.244
+0.236
+0.159
+0.188
+0.327
+0.183
+0.204
+0.239
+0.156
+0.211
+0.189
+0.314
+0.128
+0.389
+0.307
+0.149
+0.165
+0.167
+0.113
+
+-2.253
+-4.516
+-4.217
+-2.124
+-3.480
+-5.079
+-8.104
+-2.379
+-6.921
+-5.090
+-3.055
+-3.308
+-5.982
+-6.892
+-3.549
+-5.061
+-3.635
+-3.062
+-5.888
+4.142
+
+0.024
+0.000
+0.000
+0.034
+0.001
+0.000
+0.000
+0.017
+0.000
+0.000
+0.002
+0.001
+0.000
+0.000
+0.000
+0.000
+0.000
+0.002
+0.000
+0.000
+
+*
+***
+***
+*
+***
+***
+***
+*
+***
+***
+**
+***
+***
+***
+***
+***
+***
+**
+***
+***
+
+0.437
+0.453
+
+0.091
+0.130
+
+4.800
+3.494
+
+0.000
+0.000
+
+***
+***
+
+0.167
+0.241
+-0.443
+-0.680
+0.339
+0.704
+-0.211
+-0.446
+0.308
+Yes
+Yes
+
+0.066
+0.080
+0.205
+0.244
+0.066
+0.061
+0.105
+0.212
+0.070
+
+2.534
+3.026
+-2.164
+-2.787
+5.107
+11.588
+-2.005
+-2.099
+4.411
+
+0.011
+0.002
+0.031
+0.005
+0.000
+< 2e-16
+0.045
+0.036
+0.000
+
+*
+**
+*
+**
+***
+***
+*
+*
+***
+
+Adjusted R-squared
+Significance
+
+0.884
+0 ***
+
+0.001 **
+
+0.01 *
+
+0.05 .
+
+Log Quantity
+
+31
+
+Table 9: Logit with Regression Selection
+Estimate
+
+Std. Error
+
+t value
+
+Pr(> |t|)
+
+Log Price
+Promotion
+Feature: None
+Display:
+Minor
+Major
+Brand:
+Herrs
+Jays
+Kettle Chips
+Lays
+Lays Bistro Gourmet
+Lays Natural
+Lays Stax
+Lays Wow
+Michael Seasons
+Pringles
+Pringles Cheezums
+Pringles Fat Free
+Pringles Prints
+Pringles Right Crisps
+Ruffles Natural
+Ruffles Snack Kit
+Utz
+Wise
+Wise Ridgies
+Volume
+Package:
+Canister
+Canister In Box
+Flavor:
+Bbq
+Cheddar
+Cheese
+Ketchup
+Onion
+Original
+Spicy
+Salt: No Salt
+Type of Cut: Flat
+Store Fixed Effects
+Week Fixed Effects
+
+0.296
+-0.441
+0.263
+
+0.113
+5.192
+0.151
+
+2.624
+-0.085
+1.745
+
+0.009
+0.932
+0.081
+
+**
+
+-0.215
+-0.338
+
+0.104
+0.113
+
+-2.080
+-3.000
+
+0.038
+0.003
+
+*
+**
+
+0.515
+0.743
+0.956
+0.328
+0.145
+0.630
+1.169
+
+1.846
+1.864
+1.942
+1.844
+2.331
+2.627
+3.187
+
+0.279
+0.398
+0.492
+0.178
+0.062
+0.240
+0.367
+
+0.780
+0.690
+0.622
+0.859
+0.951
+0.811
+0.714
+
+0.651
+0.915
+1.607
+0.965
+1.755
+0.863
+-0.116
+-0.294
+0.447
+0.738
+0.737
+-0.024
+
+1.980
+3.178
+3.456
+3.359
+3.251
+3.210
+2.755
+2.660
+1.845
+1.859
+1.854
+0.451
+
+0.329
+0.288
+0.465
+0.287
+0.540
+0.269
+-0.042
+-0.110
+0.242
+0.397
+0.397
+-0.054
+
+0.742
+0.773
+0.642
+0.774
+0.589
+0.788
+0.966
+0.912
+0.809
+0.691
+0.691
+0.957
+
+-0.432
+-0.296
+
+0.514
+0.670
+
+-0.842
+-0.442
+
+0.400
+0.658
+
+-0.976
+-0.984
+-1.608
+-0.753
+-0.951
+-1.158
+-0.608
+0.644
+-0.556
+No
+No
+
+1.367
+1.412
+2.141
+1.986
+1.425
+1.311
+1.381
+1.742
+0.554
+
+-0.714
+-0.697
+-0.751
+-0.379
+-0.668
+-0.883
+-0.440
+0.370
+-1.003
+
+0.475
+0.486
+0.453
+0.705
+0.504
+0.377
+0.660
+0.712
+0.316
+
+AIC
+Significance
+
+6884.4
+0 ***
+
+0.001 **
+
+0.01 *
+
+0.05 .
+
+Log Share
+
+32
+
+.
+
+Table 10: Non-zero Coefficients
+Stepwise
+
+Forward Stagewise
+
+LASSO
+
+# of Covariates
+# Non-zero Covariates
+
+466
+40
+
+466
+39
+
+466
+37
+
+Non-zero Covariates
+
+Promotion
+Volume
+Minor
+Major
+Baked Ruffles
+Herrs
+Jays Krunchers
+Wavy Lays
+Wise
+
+Promotion
+Volume
+Minor
+Major
+Lays
+Ruffles
+Ruffles Wow
+Jays Krunchers
+Wavy Lays
+Wise
+Onion
+Original
+
+Promotion
+Volume
+Minor
+Major
+Lays
+Ruffles
+Ruffles Wow
+Jays Krunchers
+Wavy Lays
+
+Crispy
+Kettle Cooked
+Missing
+
+Kettle Cooked
+
+Display
+Brand
+
+Flavor
+
+BBQ
+Chedder
+Onion
+Original
+Cooking Crispy
+Kettle Cooked
+Salt
+Missing
+
+33
+
+Onion
+Original
+
+Missing
+
+model. Node purity measures how much the additional variable or tree split reduces the
+residual sum of squares. Thus, the increase in node purity measures the size change in node
+purity if a variable is excluded from the model.
+Table 11: Random Forest Variable Importance
+Log Quantity
+
+5.5
+
+%Increase in Mean
+Squared Error
+
+Log Price
+Volume
+Promotion
+Brand: Lays
+Feature: None
+Product Type: Potato Chip
+Display: Major
+Type of Cut: Missing
+Product Type: Potato Crisp
+Brand: Wavy Lays
+Display: Minor
+Flavor: Classic
+
+0.34
+0.18
+0.09
+0.07
+0.06
+0.06
+0.05
+0.05
+0.04
+0.04
+0.04
+0.03
+
+R-Squared
+
+0.40
+
+Increase in Node
+Purity
+580.21
+330.54
+230.10
+125.44
+250.47
+23.52
+181.25
+18.89
+19.78
+77.36
+133.92
+90.09
+
+Support Vector Machine
+
+Support vector machines are a penalized method of regression. The tuning parameter, ,
+controls which errors are included in the regression. Errors of sufficiently small size are
+treated as zeros. Typically only a partial set of the covariates are assigned a non-zero value
+in support vector machine regressions. R package e1071 is used for support vector machine.
+
+5.6
+
+Bagging
+
+Bagging, short for Bootstrap Aggregation, is an early ensemble method that builds multiple
+trees by resampling training data with replacement, and voting the trees for a prediction.
+We use the bagging function and its default parameters in R package ipred.
+
+34
+
+5.7
+
+Combined Model
+
+In order to compare models, we want to split the data into training and testing set, where
+we train the model using the training set and pretend the dependent variable in the test set
+is unknown and predict on the test set. Because we have eight models, we want to assign
+weight to each model when building a linear combination. However, the weight based on the
+training set is biased. Some models like linear model tend to get a good in-sample fit but a
+bad out-of-sample fit, and this grants these model a very large in-sample weight which could
+be misleading.
+Therefore, we randomly split the data into three pieces to do cross validation, where
+the model weights are determined on the validating set. This three way data partitioning
+mitigates the possible large out-of-sample error for some models when over fitting happens.
+25% of the data is used as the test set, 15% is used as the validate set, and the remaining
+60% is used as the training set. Table 12 shows how the data is sliced into three pieces.
+In Table 12, we compare nine models: two of them are traditional econometrics models
+and seven of them are more in the context of machine learning (as introduced in the main
+paper). Our purpose is to run a horse race of models by comparing out-of-sample prediction
+errors. First, all the models are used to fit the data in the train set. Next, make out-ofsample prediction on the validate set and get the weight for each model by combining them
+linearly. Last, use the fitted models to predict in the test set, and use the weights from
+validate set to form the linearly combined prediction.
+The response variable is log of quantity sold per week. The covariates are log of price,
+product attributes variables, promotional variables, store fixed effects, and week fixed effects.
+We provide the same covariate matrix to all of the models expect for the Logit model, where
+all the fixed effects are excluded.
+Table 12 shows the comparison of the models. In the scenario of out-of-sample prediction
+error, the best two models are random forest and support vector machine. The combined
+model, where we regress the actual value of the response variable on a constrained linear
+model of the predictions from eight models, outperforms all the eight models, which follows
+the optimal combination of forecasts in Bates and Granger (1969). Random forest and support vector machine get more weights in the combined model due to their good performance
+out-of-sample.
+Based on Section 3, the combination of models converges to asymptotic normal distri√
+bution at n rate, regardless of the what individual models there are. Therefore, we could
+bootstrap the combined model to get the confidence interval, knowing that it’s asymptotic
+35
+
+Table 12: Model Comparison: Prediction Error
+Validation
+
+Test
+
+RMSE
+
+Std. Err.
+
+RMSE
+
+Std. Err.
+
+Weight
+
+Linear
+Stepwise
+Forward Stagewise
+Lasso
+Random Forest
+SVM
+Bagging
+Logit (Boosting)
+Logit
+
+1.169
+0.983
+0.988
+1.178
+0.943
+1.046
+1.355
+1.190
+1.190
+
+0.022
+0.012
+0.013
+0.017
+0.017
+0.024
+0.030
+0.019
+0.020
+
+1.193
+1.004
+1.003
+1.222
+0.965
+1.068
+1.321
+1.234
+1.234
+
+0.020
+0.011
+0.012
+0.012
+0.015
+0.018
+0.025
+0.017
+0.018
+
+6.62%
+12.13%
+0.00%
+0.00%
+65.56%
+15.69%
+0.00%
+0.00%
+0.00%
+
+Combined
+
+0.924
+
+0.946
+
+# of Obs
+Total Obs
+% of Total
+
+226952
+1510563
+15.0%
+
+376980
+
+100.00%
+
+25.0%
+
+normal.
+Table 13 provides the summary statistics of the residual between predicted and actual
+values of quantity in the testing set. This is meant to be a measure of accuracy of each
+model. It is obvious that the Machine Learning models fit better out of sample and the
+combined model fits better than any of the individual models.
+
+5.8
+5.8.1
+
+Discussion
+Variable Selection
+
+When the number of independent variables is large, it is common to have some degree of
+multicollinearity. The shrinkage models could help us reduce the multicollinearity intelligently. A usual statistics to determine multicollinearity is Variance Inflation Factors(VIF).
+The VIF for covariate Xj is defined as:
+V IFj =
+
+1
+2
+1 − R−j
+
+(20)
+
+2
+where R−j
+is the R-squared by regressing covariate Xj on the rest of covariates. Table 14
+shows some VIFs for the independent variables used in the linear regression model. To
+
+36
+
+Table 13: Summary Statistics of Residual in Test Prediction
+Residuals
+
+Mean
+
+Linear
+Stepwise
+Forward Stagewise
+Lasso
+Random Forest
+SVM
+Bagging
+Logit (Boosting)
+Logit
+
+-1.63
+-5.00
+-6.14
+-7.06
+-5.56
+-3.66
+-5.82
+-7.23
+-7.23
+
+Mean
+Std.Err.
+0.70
+0.66
+0.69
+0.76
+0.68
+0.65
+0.77
+0.76
+0.76
+
+Combined
+
+-5.44
+
+0.67
+
+Std.Dev.
+
+Min
+
+Max
+
+25.32
+24.12
+25.27
+27.70
+24.89
+23.55
+28.23
+27.78
+27.78
+
+-252.27
+-314.02
+-323.43
+-346.19
+-325.79
+-277.56
+-347.98
+-347.22
+-347.29
+
+141.00
+129.16
+26.64
+5.81
+34.13
+66.60
+39.54
+15.00
+15.00
+
+24.40
+
+-316.41
+
+39.79
+
+compare, after LASSO selects variable, we also have the VIFs for the independent variables
+in the linear regression using only selected variables. The VIFs in the non-selecting case
+are much higher than the LASSO selection for many variables. Using 5 as a threshold for
+multicollinearity, LASSO successfully reduces multicollinearity in the independent variables.
+We believe it’s more attractive than ad hoc variable selection procedures commonly used in
+practice.
+5.8.2
+
+Bag of Words
+
+The mere feat of encoding a vector of hedonic attributes commonly used in demand estimation for this data could be cumbersome. In applied econometrics, researchers commonly
+restrict attention to the products with the largest demand and encode regressors for brands
+and a small vector of product attributes. In our application, we propose using unsupervised
+learning to construct product level regressors. In particular, we use the unstructured text
+that describes the product in the raw data and apply the bag of words model. This has
+the advantage of being a simpler computation and allows us to avoid the arduous task of
+encoding attributes for thousands of products. Since it is more scalable, it allows us to
+model the demand for all of the products rather than restricting attention to the products
+with the largest demand. Also, it could be viewed as less ad hoc than hand coding product
+attributes since it imposes fewer a priori restrictions on the hedonic attributes that we should
+include as regressors in our model. We note that there is a large literature on this form of
+unsupervised learning which sometimes goes by the name of feature extraction in computer
+37
+
+Table 14: Variance Inflation Factors
+VIFs after Selection
+Variable
+Product Type - Potato Chip And Dip
+Brand - Ruffles Snack Kit
+Logprice
+Volumn
+Cooking - Missing
+Cooking - Kettle
+Package - Canister
+Fat - Regular
+Brand - Lays
+Promotion
+Feature - None
+Brand - Kettle Chips
+Flavor - Original
+Brand - Ruffles
+Salt - Regular
+Brand - Wavy Lays
+Brand - Lays Stax
+Display - Major
+Brand - Ruffles Wow
+Brand - Baked Ruffles
+Display - Minor
+Brand - Lays Wow
+Flavor - Missing
+Brand - Ruffles Light
+Type Of Cut - Thick
+Brand - Wise Ridgies
+Brand - Wachusett
+Brand - Michael Seasons
+Brand - Tastee
+Brand - Michaels Gold N Good
+Brand - Better Made Special
+Brand - Pringles Prints
+Brand - Laura Scudder
+Brand - Lance Thunder
+...
+
+38
+
+Linear
+
+LASSO
+
++∞
++∞
+4.1750
+3.9775
++∞
++∞
++∞
+76.6610
+104.5904
+1.4806
+2.3398
+27.3608
+2.8610
+50.1427
+3.0660
+36.1675
++∞
+1.1710
+19.3494
++∞
+1.1577
+16.0920
+1.5811
+10.5084
+11.0995
+12.4572
+1.7886
+4.5692
+1.8020
+2.2383
+2.7512
++∞
+3.6605
+3.1482
+
+3.5084
+3.4729
+3.2319
+3.1541
+3.1100
+2.6495
+1.8047
+1.5930
+1.5187
+1.4388
+1.3369
+1.3222
+1.2875
+1.2802
+1.2732
+1.1925
+1.1688
+1.1498
+1.1398
+1.1291
+1.1191
+1.1173
+1.0942
+1.0898
+1.0757
+1.0712
+1.0662
+1.0594
+1.0529
+1.0462
+1.0386
+1.0281
+1.0236
+1.0218
+
+science. With the exception of Gentzkow and Shapiro (2010), there has been relatively little
+use of this method in economics. We believe that this is promising for demand estimation
+because it allows a new source of data to construct covariates such as the raw text in product
+descriptions or product reviews.
+Aside from structured features like package type, cut type of potato chips, the hedonic
+attributes of the product can also be defined by unstructured texts that describe the product.
+A bag of words model could easily turn the unstructured texts into large amounts of features.
+Unsupervised learning (clustering) on these features could be a more scalable approach than
+hand coding them. The procedures following the unsupervised learning are the same as
+the way we deal with structured features. Yet this straightforward approach has better
+prediction power than structured models.
+The bag of words model analyzes a corpus of K documents, comprising a dictionary of
+M words, and finds the relations of words and documents. In our case, the K documents are
+the n unique potato chips descriptions. We cluster the descriptions, via manipulation of the
+document-term matrix. A document-term matrix is a mathematical matrix that describes
+the frequency of terms that occur in a collection of descriptions. In a document-term matrix,
+rows correspond to each unique product in the collection and columns correspond to terms.
+Where it is tedious to encode all the features of a product, bag of words provides a simple
+way to exploit the rich features of products.
+In a high dimensional learning problem, only some parts of an observation are important
+to prediction. For example, the information to correctly categorizing a product may lie in a
+handful of its words. The extraneous words could prove computational burdensome, so word
+regularization may be helpful. Possible methods for regularization include LASSO and other
+shrinkage models. Therefore it’s natural to combine the technique of bag of words with our
+models. Bag of words
+5.8.3
+
+Top/Tail Products
+
+In marketing literature, people usually prune out the tail products (for example Nevo (2001)).
+But, with the new methods, we want to show that a training data set with all possible
+products predicts better than a data set with only the top products. To show that, we take
+only the top twenty products to train the model and predict the sales of the tail products
+and compare the prediction fit to those in Table 12.
+We use the same nine models as modeling examples to demonstrate the difference. We
+rank all the products by total units sold and only mark the top twenty as the training set.
+39
+
+Using exactly the same methodology in our main application, we get the root mean squared
+error as a measure of fit for nine plus combine model. The prediction error and weights is
+presented in Table 15.
+As the table shows, when we only train on top twenty products, the fit out of sample
+is worse than when we train on a randomly split training set for all models. As the top
+twenty products may not necessarily explain all the features of the rest of the products, the
+predicting power is therefore weakened.
+Table 15: Top 20 Products vs. the Other Products
+
+5.8.4
+
+Top 20 Products
+
+Other Products
+
+RMSE
+
+Std. Err.
+
+RMSE
+
+Std. Err.
+
+Weight
+
+Linear
+Stepwise
+Forward Stagewise
+Lasso
+Random Forest
+SVM
+Bagging
+Logit (Boosting)
+Logit
+
+0.2381
+0.7059
+0.8657
+0.8918
+0.8728
+0.4165
+0.5472
+1.0509
+1.2076
+
+0.0068
+0.0104
+0.0156
+0.0175
+0.0160
+0.0128
+0.0162
+0.0185
+0.0278
+
+2.1910
+1.6025
+1.1517
+1.1532
+1.1834
+1.7190
+1.3573
+1.7017
+1.5339
+
+0.0827
+0.0248
+0.0270
+0.0202
+0.0182
+0.0513
+0.0323
+0.0289
+0.0420
+
+9.66%
+0.00%
+53.38%
+0.00%
+21.93%
+0.00%
+15.04%
+0.00%
+0.00%
+
+Combined
+
+0.2381
+
+1.1183
+
+# of Obs
+Total Obs
+% of Total
+
+250149
+1510563
+16.56%
+
+1260414
+
+100.00%
+
+83.44%
+
+Practical Advantages
+
+There are some other practical advantages to the machine learning models or their generic
+approaches.
+In random forest, the missing values could be imputed, for example, as the median of its
+column. This imputation will not effect accuracy much since the randomness of subsampling
+and the trees grown. Another approach for categorical variables is to simply create a new
+category called ”missing”. This new category might capture the behavioral differences in
+observations with missing values and the ones not missing.
+If we have a large dataset and we want to do model selection or model assessment, the
+best approach is to randomly divide the dataset into three parts: a training set, a validation
+40
+
+set, and a test set. The training set is used to fit the models; the validation set is used
+to estimate prediction error for model selection; the test set is used for assessment of the
+generalization error of the final chosen model. The test set should be kept separately and
+be brought out only at the end of the analysis.
+If, however, we do not have enough data to split three ways, we can efficiently re-use the
+sample data by cross-validation or bootstrap.
+In addition to the models we mentioned in our paper, there are some other very popular
+machine learning approaches that could be helpful to readers in economics. For example, EM (Expectation-Maximization) algorithm for simplifying difficult maximum likelihood
+problems; Graphical models for complicated conditional expectations; Neural Networks for
+extracting linear combination of features and modeling response variable as a non-linear
+function of the features, and so on.
+
+5.9
+
+Lift Estimates
+
+The other interesting problem we want to look at is estimating promotional lift. In our
+data, a product is tagged as on promotion if the price reduction is greater than 5%. By
+considering promotion as a randomized treatment, we follow the methodology suggested
+by Varian (2014) to estimate the promotional lift. Our models are trained on the control
+group (no promotion) and then used to predict out of sample on the treated group (on
+promotion). The control/treatment partition is based on whether the product is on price
+reduction promotion, instead of random assignment in the last example.
+The most important variables we want to study are the price promotion as well as how
+the store display the products. A product is tagged as in promotion if the price reduction
+is greater than 5%. There are four levels of feature: large, medium, small and no ad. There
+are three levels of display: major(including lobby and end-aisle), minor and none. Table 16
+ensures that every value of the variables has some level of presentation in each data set.
+If everything else is the same in the control group and the treatment group, we believe the
+difference between predicted and actual in treatment group is our treatment effects. Based
+on model coefficients from the control group, we predict the quantities using the independent
+variables in the treated group. The difference between the predicted and the actual value of
+quantity sold in the treated group is therefore our lift estimates.
+The lift estimates from eight models mentioned before are in Table 17. We also use the
+same weights as in the comparison of prediction error to construct the lift estimate for a
+linearly combined model. All the machine-learning models calculate a positive promotional
+41
+
+lift when only the linear model produces a negative lift for promotion. The big variance in
+the linear model residual indicates that the negative sign of the promotional lift in the linear
+model comes from variance instead of bias.
+After this step, we regress the fitted residual of lift on dummies using LASSO. The
+dummies we use are product attributes, store dummies and week dummies. Chernozhukov
+(2013) suggests that using the selected variables from LASSO can increase the fit of the
+model. We then use the selected variables in an ordinary least square and fit for the lift
+residual.
+Table 16: Promotion Variables
+Frequency
+
+Percent
+
+Promotion
+Price Reduction<5%
+Price Reduction>5%
+
+1143490
+367373
+
+75.7%
+24.3%
+
+Total
+
+1510563
+
+Table 17: Model Comparison:Promotional Lift
+Mean
+Linear
+Stepwise
+Forward Stagewise
+Lasso
+Random Forest
+SVM
+Bagging
+Logit (Boosting)
+Logit
+Combined
+
+5.10
+
+12.79
+10.79
+8.23
+8.24
+9.25
+11.98
+6.30
+7.34
+9.97
+9.49
+
+Mean
+Std.Err.
+0.59
+0.25
+0.09
+0.09
+0.13
+0.27
+0.09
+0.04
+0.19
+0.14
+
+Std.Dev.
+
+Min
+
+Max
+
+27.22 0.23 1007.06
+11.82 0.22 302.28
+4.32 2.42
+33.73
+4.32 2.45
+33.76
+5.96 1.96
+50.93
+12.43 0.48 131.62
+3.95 1.36
+29.00
+1.92 0.00
+17.00
+9.05 1.00 174.00
+6.46 1.63
+59.90
+
+Computation Tools
+
+In this application we face constraints on memory and CPU when processing the data with
+millions of observations with complicated machine learning models. The time it takes to
+compute a Random Forest object with data of such size using a single work station could
+42
+
+be days, even weeks. A solution to solve the computation constraints is to utilize high performance computing tools, such as parallel processing using Revolution R R and MATLAB R
+Parallel Computing ToolboxTM . Both of them are available on Amazon Web Services(AWS)
+Marketplace at low costs.
+Revolution R has two major packages - RevoR and ScaleR. RevoR automatically uses all
+available cores and processors to reduce computation times without modifying a standard
+R script. A real time simulation shows it speeds up computation by three to thirty times
+compared to a single core standard R process. ScaleR scales up data size to 1 to 16 tera-bytes
+easily by dividing data into pieces and accessing the pieces with different processors.
+In these parallel processing frameworks, a common implementation is MapReduce. It
+is useful when the data is too large to be held or processed in memory. There are two
+stages in MapReduce: Map and Reduce. In the Map stage the program (Revolution R R or
+MATLAB R ) pre-processes each distributed data trunk in parallel and performs preliminary
+statistical modeling on each data trunk in parallel. In the Reduce stage, the program gathers
+all the information for each distributed data trunk from Map stage, summarizes the information and returns it to the user. This is much faster and takes less memory than storing
+and accessing data directly from memory.
+
+6
+
+Conclusion
+
+In this paper, we survey a set of models from statistics and computer science. We select a few
+machine learning models to compare with traditional econometric models. The models we
+focus on in this paper include linear regression as the baseline model, logit as the econometric
+model, stepwise, forward stagewise, LASSO, random forest, support vector machine and
+bagging as the machine learning models. We derive novel asymptotic properties for the
+machine learning models.We use Monte Carlo simulation to demonstrate the properties of
+the models and also show that combining all the underlying models with a linear regression
+improves out-of-sample prediction accuracy.
+We illustrate the properties of these models by using a real world data set with scanner panel sales data of potato chips. First, we compare the prediction accuracy of these
+models and the machine learning models consistently give better out-of-sample prediction
+accuracy while holding in-sample prediction error comparable. By combining all the models
+via weighted linear regression, we are able to improve the out-of-sample prediction accuracy
+even more. Second, we compare two scenarios where one, as the traditional marketing litera-
+
+43
+
+ture suggests, prunes the market to only the top sold products, and the other, our approach,
+uses a mix of both top and tail products. Our approach has better prediction accuracy in
+demand. Third, we estimate the promotion lift using the predictions for treatment effects.
+Last, we explored the unstructured text of product description from the raw data and apply
+the bag of words model. This has the advantage of being a simpler computation and allows
+us to avoid the arduous task of encoding attributes for thousands of products.
+Our approach is robust to a large number of potentially collinear regressors; it scales easily
+to large data sets; the linear combination method selects the best model automatically and
+produces the best in-sample and out-of-sample prediction accuracy; and the method can
+flexibly approximate arbitrary non-linear functions, even when the set of regressors is high
+dimensional and we also allow for fixed effects.While demand estimation is our motivating
+application, we believe that the approach we have proposed can be useful in many other
+microeconometric settings.
+
+References
+Abadie, A. and J. Gardeazabal (2003). The economic costs of conflict: A case study of the
+basque country. American economic review , 113–132.
+Bates, J. M. and C. W. Granger (1969). The combination of forecasts. Or , 451–468.
+Belloni, A., D. Chen, V. Chernozhukov, and C. Hansen (2012). Sparse models and methods
+for optimal instruments with an application to eminent domain. Econometrica 80 (6),
+2369–2429.
+Belloni, A., V. Chernozhukov, and L. Wang (2011). Square-root lasso: pivotal recovery of
+sparse signals via conic programming. Biometrika 98 (4), 791–806.
+Berry, S., J. Levinsohn, and A. Pakes (1995). Automobile prices in equilibrium. Econometrica 63 (4), 841–90.
+Breiman, L. (1996). Bagging predictors. Machine learning 24 (2), 123–140.
+Breiman, L. (2001). Random forests. Machine learning 45 (1), 5–32.
+Chernozhukov, V. (2013). Least squares after model selection in high-dimensional sparse
+models. Bernoulli 19, 521–547.
+
+44
+
+Gentzkow, M. and J. M. Shapiro (2010). What drives media slant? evidence from u.s. daily
+newspapers. Econometrica 78 (1).
+Kim, J. and D. Pollard (1990). Cube root asymptotics. The Annals of Statistics, 191–219.
+Komarova, T. (2013). Binary choice models with discrete regressors: Identification and
+misspecification. Journal of Econometrics 177 (1), 14–33.
+Nevo, A. (2001). Measuring market power in the ready-to-eat cereal industry. Econometrica 69 (2), 307–342.
+Rajaraman, A. and J. D. Ullman (2011). Mining of massive datasets. Lecture Notes for
+Stanford CS345A Web Mining 67 (3), 328.
+Scornet, E. (2014). On the asymptotics of random forests. arXiv preprint arXiv:1409.2090 .
+Vapnik, V. N. (1998). Statistical learning theory. Wiley New York.
+Varian, H. R. (2014). Big data: New tricks for econometrics. The Journal of Economic
+Perspectives 28 (2), 3–27.
+
+45
+
+

@@ -1,0 +1,2544 @@
+NBER WORKING PAPER SERIES
+
+OBLIVIOUS EQUILIBRIUM FOR CONCENTRATED INDUSTRIES
+C. Lanier Benkard
+Przemyslaw Jeziorski
+Gabriel Y. Weintraub
+Working Paper 19307
+http://www.nber.org/papers/w19307
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+August 2013
+
+We would like to thank Ben Van Roy for numerous fruitful conversations and valuable insights provided
+at the beginning stages of this project. We are grateful to Allan Collard-Wexler for generously sharing
+his data and for helpful input. This paper has also benefitted from conversations with Ariel Pakes,
+Ali Yurukoglu, and seminar participants at various conferences and institutions. The views expressed
+herein are those of the authors and do not necessarily reflect the views of the National Bureau of Economic
+Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2013 by C. Lanier Benkard, Przemyslaw Jeziorski, and Gabriel Y. Weintraub. All rights reserved.
+Short sections of text, not to exceed two paragraphs, may be quoted without explicit permission provided
+that full credit, including © notice, is given to the source.
+
+Oblivious Equilibrium for Concentrated Industries
+C. Lanier Benkard, Przemyslaw Jeziorski, and Gabriel Y. Weintraub
+NBER Working Paper No. 19307
+August 2013
+JEL No. L0,L1,L13
+ABSTRACT
+This paper explores the application of oblivious equilibrium to concentrated industries. We define
+an extended notion of oblivious equilibrium that we call partially oblivious equilibrium (POE) that
+allows for there to be a set of "dominant firms'', whose firm states are always monitored by every other
+firm in the market. We perform computational experiments that show that POE are often close to
+MPE in concentrated industries with characteristics similar to real world industries even when OE
+are not. We derive error bounds for evaluating the performance of POE when MPE cannot be computed.
+Finally, we demonstrate an important trade-off facing empirical researchers between implementing
+an equilibrium concept that is computationally light in a richer economic model, and implementing
+MPE in a simpler one.
+
+C. Lanier Benkard
+Stanford Graduate School of Business
+655 Knight Way
+Stanford, CA 94305
+and NBER
+lanierb@stanford.edu
+Przemyslaw Jeziorski
+Haas School of Business
+2220 Piedmont Avenue
+University of California at Berkeley
+Berkeley, CA 94720-1900
+przemekj@haas.berkeley.edu
+
+Gabriel Y. Weintraub
+Columbia Business School, Uris 402
+3022 Broadway
+New York, NY 10027, U.S.A.
+gweintraub@columbia.edu
+
+1
+
+Introduction
+
+There has been much recent work in I.O. on empirical applications of dynamic oligopoly models (e.g.,
+Collard-Wexler (2013), Fowlie, Reguant, and Ryan (2012), Goettler and Gordon (2011), Jeziorski (2013),
+Ryan (2012), and Sweeting (2013)). The primary benefit of using a dynamic model is that such models
+allow us to study the effects of a government policy on technological progress and on industry structure,
+i.e., the set of firms in the market and the products that they choose to offer. In many applications, such as
+merger analysis or environmental and energy regulation, these long run effects can dwarf the short run static
+effects, and thus analyzing them is of first order importance. The cost of doing a dynamic analysis is that the
+models are inherently more complex. Indeed, this recent work was only made possible by the advent of new
+methods for estimating dynamic oligopoly models (Bajari, Benkard, and Levin (2007), Pakes, Ostrovsky,
+and Berry (2007), Aguirregabiria and Mira (2007), Pesendorfer and Schmidt-Dengler (2003)) that do not
+require the econometrician to compute Markov perfect equilibria (henceforth, MPE) of the underlying game
+being studied. This is important since MPE computation is subject to the curse of dimensionality.
+Despite this recent progress, there remain substantial hurdles in the empirical application of dynamic
+oligopoly models. Even when it is possible to use these new methods to estimate the model parameters
+without computing an equilibrium, equilibrium computation is still required to analyze the effects of a
+counterfactual policy or environmental change. The result is that in applications many modeling details are
+heavily dictated by computational concerns, typically at some expense to the credibility of the economic
+analysis.
+In a recent paper, Weintraub, Benkard, and Van Roy (2008) propose a method for analyzing Ericson
+and Pakes (1995)-style dynamic models of imperfect competition that is intended to address some of these
+concerns. In that paper, they defined a notion of equilibrium, oblivious equilibrium (henceforth, OE), in
+which each firm is assumed to make decisions based only on its own state and knowledge of the long run
+industry state, but where firms ignore current information about competitors’ states. The great advantage
+of OE is that its computation time is independent of the number of firms in the industry, and thus they are
+much easier to program and compute than MPE, allowing researchers to analyze richer empirical models.
+However, while the OE model has some very appealing properties, it also has some weaknesses. One that
+has often been raised is the appropriateness of the model for highly concentrated industries. Since many
+of the most interesting policy questions in I.O. focus on highly concentrated industries, this is an important
+flaw.
+In this paper we introduce an extension to OE designed to address this important case. We define an
+
+1
+
+extended notion of oblivious equilibrium that we call partially oblivious equilibrium (POE) that allows for
+there to be a set of “dominant firms”, whose firm states are always monitored by every other firm in the
+market. Thus, for example, if there are two “dominant firms”, then in POE each firm’s strategy will be a
+function of its own state and also the states of both dominant firms. Such strategies allow for richer strategic
+interactions than do oblivious strategies (that only depend on a firm’s own state), and our hope is that POE
+will provide a better model of more concentrated industries than OE does. Moreover, if entry and exit are
+modeled identically for dominant and (non-dominant) fringe firms then the POE model nests both OE and
+MPE, where OE is a POE model with no dominant firms, MPE is a POE model with all dominant firms, and
+where all other POE models represent intermediate cases.
+The extension mainly trades off richer strategic interactions against increased computation time and
+memory requirements due to a larger state space. The state space for OE is of the order of a one firm
+problem; the state space for POE with one dominant firm is of the order of a two firm problem; the state
+sapce for POE with two dominant firms is of the order of a three firm problem, and so forth. In all cases,
+for a fixed number of dominant firms compute time and memory requirements for POE (and OE) remain
+independent of the number of firms in the overall industry. As a consequence, while POE take substantially
+more time to compute than OE, it is still dramatically less than MPE.
+POE can also be motivated as a behavioral model in its own right. In many industries there are “leader”
+firms whose actions are followed more closely than the other firms in the industry. Indeed there are older
+literatures (Von Stackelberg (1934), Kydland (1979)) that model the dominant firm in an industry as moving
+first. A second motivation for POE as a behavioral model is the idea that, if information is costly, then
+firms would only pay to learn the information that is most relevant to them. In the models we consider, the
+most valuable information would typically be the states of the leading firms. However, note that we do not
+explicitly model an information acquisition process, and we believe that doing so would be quite complex
+from a game theoretic perspective.
+We perform a large number of computational experiments to evaluate how POE performs in practice
+and to compare POE with OE and MPE. We find that in industries with medium to high concentration, there
+is little difference between MPE and OE or POE with one, two, or three dominant firms. POE is generally
+closer to MPE than OE is but the differences are small. In these cases OE is clearly the best tool since
+it is the simplest to compute and would allow researchers to use the most robust economic model, while
+providing results that are the same as the other equilibrium concepts.
+In very highly concentrated industries (industries with C2>0.90 – corresponding to approximately the
+
+2
+
+top 1% of manufacturing industries in the US) we find that OE is not typically close to MPE. We explore the
+performance of POE in these cases, and find that it depends critically on the rate of turnover among leading
+firms. If turnover among leading firms is within the range of, or even slightly exceeds, levels typically
+observed in real world industries1 , then we find that POE is typically close to MPE in very concentrated
+industries with only one or two dominant firms. On the other hand, if turnover among leading firms is
+extremely high, higher than is realistic, then we find that it requires up to three or four dominant firms to
+obtain results close to MPE.
+Similarly to Weintraub, Benkard, and Van Roy (2010), we are also able to derive computationally
+tractable error bounds that bound the error that a firm would be making by playing a POE strategy rather
+than unilaterally deviating to a fully informed best response strategy. Since in most applications it would
+not be possible to compute MPE for comparison purposes, the error bounds may be used to guide empirical researchers in determining how well the POE model is doing at describing behavior in any particular
+application, and also in determining how many dominant firms are required (if any). In our computational
+experiments we find the bounds computed to be quite loose, but we believe that the bounds may be more
+useful in empirical applications that typically have more firms. Moreover, tighter bounds could potentially
+be derived using application specific details.
+Another finding from our computational experiments is that the information structure of the model can
+be quite important in determining firm behavior. In the POE model, dominant firms’ states are known by
+all firms, while (non-dominant) fringe firms’ states are ignored, and this difference in information leads to
+differences in behavior between the two types of firms. Because dominant firms’ states are tracked by all
+other firms, their actions have a direct impact on other firms’ behavior, and they can more easily deter entry
+or investment by investing and becoming large. As a result, we find that in POE dominant firms generally
+invest more than fringe firms, and this leads to them on average being larger and remaining large for longer.
+In essence, being labeled as “dominant” causes the firm to in fact be dominant most of the time. This
+asymmetry in behavior sets the POE model apart from the OE and MPE models, in which it is typically
+assumed that all firms would behave the same way at the same state of the world. These results also suggest
+using caution when simplifying firms’ information sets in equilibrium calculations. While our information
+structure is somewhat natural, and leads to behavior that is not unrealistic, arbitrary restrictions of firms’
+information sets to facilitate computation could lead to unintended and unnatural firm behavior.
+We also apply POE to the empirical model of Collard-Wexler (2013) (henceforth CW). We find that for
+the basic CW model OE is fairly close to MPE, though it is not exactly the same. Adding dominant firms
+1
+
+See Sutton (2007).
+
+3
+
+improves many statistics, but we find that it takes four dominant firms to obtain results nearly the same as
+MPE. We also explore what happens in the CW model as we make the discretization of the state space finer.
+Coarse discretization of the state space is a common tool used in the empirical literature to make dynamic
+models more tractable (e.g. Benkard (2004), Gowrisankaran and Town (1997)). The CW model is quite
+complex and thus, in order to compute MPE, the model discretizes individual firm size states to just three
+points. Because OE and POE are computationally light we are able to solve the CW model on much finer
+state space grids – for our finest grid the model has 66 billion state points.
+We find that there are some differences in the results as we make the size grid finer. The main differences
+are that on the three point grid there are equal numbers of small and medium firms, but on the finer grids
+there are nearly twice as many medium firms as small ones. Furthermore, transition costs get much larger as
+firms are now changing size more often and thus paying more transition costs. The intuition for this finding
+is that the coarse grid has the same effect as an adjustment cost, so that on a coarse grid firms are unable to
+make fine adjustments to their size. When the grid is made finer, firms adjust size more often and there are
+more medium sized firms and fewer small firms.
+We believe that these results demonstrate an important trade-off facing empirical researchers in this
+area. They can either compute a simple equilibrium concept such as POE in a richer model, or compute
+exact MPE in a simpler one, but cannot compute MPE in the richer model. In either case the results will
+likely not be exactly equal to MPE in the richer model. Sometimes the economics of the model may be
+changed less by using OE or POE in place of MPE than they would by simplifying the model to facilitate
+computation of MPE. In other cases, it may be worth computing MPE even with the additional modeling
+restrictions that requires.
+A weakness of POE is that it is not as theoretically clean a concept as OE in two main respects. In
+an abstraction from reality, our implementation of POE does not allow for firms to transit from fringe to
+dominant or vice-versa. In reality over long horizons the identities of “dominant” firms would change, as
+new firms grow and become dominant while old firms decay and exit. In our model firms have incomplete
+information of the current industry state because they know only their own state and the states of the dominant firms. If the identities of the dominant firms were to change in response to equilibrium behavior then
+in the model firms’ information sets would be endogenous. This would lead to non-Markovian behavior of
+dominant firms and would require a new approach to the problem. Thus, while we do think that this is a
+potentially interesting direction for future research, we opted to start with the more straightforward problem
+of modeling a fixed set of dominant firms. Additionally, we do not think that this assumption is all that
+unrealistic for many empirical problems, which tend to be interested in the effects of a policy over short to
+4
+
+medium length time periods in which the set of dominant firms would be fairly stable.
+Additionally, there is an issue that, since in POE firms have only incomplete knowledge of the current
+industry state, in principle the complete history of industry states becomes relevant for predicting the state
+variables of untracked competitor fringe firms. In our implementation of POE firms use finite, typically
+short, histories in their strategies. We think that this restriction represents a reasonable compromise, and
+we have also explored altering the length of the history and found that it does not have much impact on the
+results (at least for the three models we utilize below), but we do recognize that the restriction is somewhat
+arbitrary.
+We are not the only researchers to recognize the methodological and computational hurdles in the empirical application of dynamic oligopoly models, and there have now been several other solutions proposed to
+this problem. For example, Pakes and McGuire (2001) proposes solving the game with a stochastic approximation algorithm. Their method reduces the size of the state space by solving the model only on a recurrent
+class of states, and reduces the computation time at each state through simulation. Doraszelski and Judd
+(2012) suggests casting the game in continuous time, which similarly has the advantage of greatly reducing
+the computation cost at each state point by reducing the number of future state points that communicate
+with each current state (see also Jeziorski (2013) for an application of this technique). Farias, Saure, and
+Weintraub (2012) introduces a method to approximate MPE based on approximate dynamic programming,
+in which the value function is approximated with a linear combination of basis functions. They show that a
+rich yet tractable set of basis functions works well for important classes of models.
+Additionally, most empirical applications necessarily make some modeling simplifications that help reduce computation time. These simplifications range widely and include reducing the number of firms in the
+market to a workable number and/or coarsely discretizing the state space (Benkard (2004), Gowrisankaran
+and Town (1997), Collard-Wexler (2013)), or using functional approximations (such as polynomials or other
+functions) to the value function (Sweeting (2013), Fowlie, Reguant, and Ryan (2012)). Many papers also
+combine several of these approaches at once. These methods can be applied to greatly reduce computation
+time and memory requirements for exact MPE in a variety of modeling contexts.
+Compared with these papers, our methods take a different approach that is best described as limiting the
+information available to firms (or alternatively restricting strategies of firms), which reduces the effective
+state space of the model. The main cost to our approach relative to those above is that OE and POE are not as
+strategically complex as MPE. Thus, if full information MPE is desired and it is computationally feasible to
+compute it, researchers are likely better served by one of the other methods listed above. On the other hand,
+
+5
+
+because of the informational (or strategy) restrictions, computation time for OE and POE is independent
+of the number of firms in the industry, which facilitates equilibrium computation in rich economic models
+with extremely large state spaces, such as the example above that has 66 billion state points. It would not be
+possible to compute exact MPE in such models with present day computing technology without simplifying
+the model. Moreover, we think that it is reasonably common to encounter situations like this one in empirical
+work on real world industries. Ifrach and Weintraub (2012) and Corbae and D’Erasmo (2012) also build on
+our idea of restricting firms’ strategies in dynamic oligopoly models.
+Another related paper by Fershtman and Pakes (2012) considers dynamic oligopoly models with asymmetric information. While their economic model is fundamentally different from ours due to the presence
+of asymmetric information, their paper tackles many similar issues to ours because OE and POE limit the
+information sets of firms and therefore our model could be cast as one of asymmetric information even if
+our underlying economic model is not. Indeed, we believe that the simulated versions (see below) of OE,
+OE with aggregate shocks (Weintraub, Benkard, and Van Roy (2010)), and POE can all be viewed as special
+cases of their restricted experience based equilibrium.
+The next section introduces the model. Section 3 precisely defines POE. Section 4 provides computational experiments evaluating POE. Section 5 computes POE for an empirical example. Finally, 6 concludes
+the paper.
+
+2
+
+A Dynamic Model of Imperfect Competition
+
+In this section we formulate a model of an industry in which firms compete in a single-good market. Our
+model is based on Weintraub, Benkard, and Van Roy (2008).
+
+2.1
+
+Model and Notation
+
+The industry evolves over discrete time periods and an infinite horizon. We index time periods with nonnegative integers t ∈ N (N = {0, 1, 2, . . .}). All random variables are defined on a probability space
+(Ω, F, P) equipped with a filtration {Ft : t ≥ 0}. We adopt a convention of indexing by t variables that are
+Ft -measurable.
+Each firm that enters the industry is assigned a unique positive integer-valued index. The set of indices
+of incumbent firms at time t is denoted by St . At each time t ∈ N, we denote the number of incumbent firms
+as nt .
+6
+
+Firm heterogeneity is reflected through firm states. To fix an interpretation, we will refer to a firm’s state
+as its quality level. However, firm states might more generally reflect productivity, capacity, the size of its
+consumer network, or any other aspect of the firm that affects its profits. At time t, the quality level of firm
+i ∈ St is denoted by xit ∈ N.
+We define the industry state st to be a vector over quality levels that specifies, for each quality level
+x ∈ N, the number of incumbent firms at quality level x in period t. We define the state space S =
+n
+o
+P∞
+s ∈ N∞
+s(x)
+<
+∞
+. Though in principle there are a countable number of industry states, we will
+x=0
+o
+n
+P∞
+∞
+also consider an extended state space S = s ∈ <+
+x=0 s(x) < ∞ . This notion will be useful, for
+example, when considering the expected value of the industry state. For each i ∈ St , we define s−i,t ∈ S
+to be the state of the competitors of firm i; that is, s−i,t (x) = st (x) − 1 if xit = x, and s−i,t (x) = st (x),
+otherwise. Similarly, n−i,t denotes to the number of competitors of firm i.
+In each period, each incumbent firm earns profits on a spot market. A firm’s single period expected
+profit π(xit , s−i,t ) depends on its quality level xit and its competitors’ state s−i,t .
+The model also allows for entry and exit. In each period, each incumbent firm i ∈ St observes a positive
+real-valued sell-off value φit that is private information to the firm. If the sell-off value exceeds the value of
+continuing in the industry then the firm may choose to exit, in which case it earns the sell-off value and then
+ceases operations permanently.
+If the firm instead decides to remain in the industry, then it can invest to improve its quality level. If a
+firm invests ιit ∈ <+ , then the firm’s state at time t + 1 is given by,
+xi,t+1 = xit + h(xit , ιit , ζi,t+1 ),
+where the function h captures the impact of investment on quality and ζi,t+1 reflects uncertainty in the
+outcome of investment. Uncertainty may arise, for example, due to the risk associated with a research and
+development endeavor or a marketing campaign. This specification is very general as h may take on either
+positive or negative values (e.g., allowing for positive depreciation). We denote the unit cost of investment
+by d.
+Our model can accommodate a variety of different entry processes and we will use several different
+entry models in the remainder of the paper. Here we describe the entry model of Weintraub, Benkard, and
+Van Roy (2008). In that model in each period new firms can enter the industry by paying a setup cost κ.
+Entrants do not earn profits in the period that they enter. They appear in the following period at state xe ∈ N
+and can earn profits thereafter. (It would not change any of the results to assume that the entry state was a
+7
+
+random variable.)
+Each firm aims to maximize expected net present value. The interest rate is assumed to be positive and
+constant over time, resulting in a constant discount factor of β ∈ (0, 1) per time period.
+In each period, events occur in the following order:
+1. Each incumbent firms observes its sell-off value and then makes exit and investment decisions.
+2. The number of entering firms is determined and each entrant pays an entry cost of κ.
+3. Incumbent firms compete in the spot market and receive profits.
+4. Exiting firms exit and receive their sell-off values.
+5. Investment outcomes are determined, new entrants enter, and the industry takes on a new state st+1 .
+
+2.2
+
+Model Primitives
+
+The model as specified is general enough to encompass numerous applied problems in economics. Indeed,
+a blossoming recent literature on EP-type models has applied similar models to advertising, auctions, collusion, consumer learning, environmental policy, international trade policy, learning-by-doing, limit order
+markets, mergers, network externalities, and other applied problems (see (Doraszelski and Pakes 2007)). To
+study any particular applied problem it is necessary to further specify the primitives of the model, including:
+profit function
+
+π
+
+sell-off value distribution
+
+∼ φit
+
+investment impact function
+
+h
+
+investment uncertainty distribution
+
+∼ ζit
+
+unit investment cost
+
+d
+
+entry cost
+
+κ
+
+discount factor
+
+β
+
+In most empirical applications the profit function would not be specified directly, but would instead
+result from a deeper set of primitives that specify a demand function, a cost function, and a static equilibrium
+concept (e.g. Berry, Levinsohn, and Pakes 1995).
+
+2.3
+
+Assumptions
+
+We make several assumptions about the model primitives, beginning with the profit function.
+
+8
+
+Assumption 2.1.
+1. For all s ∈ S, π(x, s) is increasing in x.
+2. For all x ∈ N and s ∈ S, π(x, s) ≥ 0, and supx,s π(x, s) < ∞.
+The assumptions are natural. Assumption 2.1.1 ensures that increases in quality lead to increases in
+profit. Assumption 2.1.2 ensures that profits are positive and bounded. We also make assumptions about
+investment and the distributions of the private shocks:
+Assumption 2.2.
+1. The variables {φit |t ≥ 0, i ≥ 1} are i.i.d. and have finite expectations and well-defined density
+functions with support <+ .
+2. The random variables {ζit |t ≥ 0, i ≥ 1} are i.i.d. and independent of {φit |t ≥ 0, i ≥ 1}.
+3. For all (x, ζ), h(x, ι, ζ) is nondecreasing in ι.
+4. For all ι > 0 and x, P[h(x, ι, ζi,t+1 ) > 0] > 0.
+5. There exists a positive constant h ∈ N such that |h(x, ι, ζ)| ≤ h, for all (x, ι, ζ). There exists a
+positive constant ι such that ιit < ι, ∀i, ∀t.
+6. For all k ∈ {−h, . . . , h} and x, P[h(x, ι, ζi,t+1 ) = k] is continuous in ι.
+7. The transitions generated by h(x, ι, ζ) are unique investment choice admissible .
+Again the assumptions are natural and fairly weak. Assumptions 2.2.1 and 2.2.2 imply that investment
+and exit outcomes are idiosyncratic conditional on the state. Assumption 2.2.3 and 2.2.4 imply that investment is productive. Note that positive depreciation is neither required nor ruled out. Assumption 2.2.5 places
+a finite bound on how much progress can be made or lost in a single period through investment. Assumption
+2.2.6 ensures that the impact of investment on transition probabilities is continuous. Assumption 2.2.7 is an
+assumption introduced by Doraszelski and Satterthwaite (2010) that ensures a unique solution to the firms’
+investment decision problem. It is used to guarantee existence of an equilibrium in pure strategies, and is
+satisfied by many of the commonly used specifications in the literature.
+We assume that there are a large number of potential entrants who play a symmetric mixed entry strategy.
+In that case the number of actual entrants is well approximated by the Poisson distribution (see Weintraub,
+Benkard, and Van Roy (2008) for a derivation of this result). This leads to the following assumptions:
+Assumption 2.3.
+1. The number of firms entering during period t is a Poisson random variable that is conditionally
+independent of {φit , ζit |t ≥ 0, i ≥ 1}, conditioned on st .
+2. κ > β · φ̄, where φ̄ is the expected net present value of entering the market, investing zero and earning
+zero profits each period, and then exiting at an optimal stopping time.
+9
+
+We denote the expected number of firms entering at industry state st , by λ(st ). This state-dependent
+entry rate will be endogenously determined, and our solution concept will require that it satisfies a zero
+expected profit condition. Modeling the number of entrants as a Poisson random variable has the advantage
+that it allows us to realistically model entry for a wide variety of industries with varying numbers of firms.
+However, as noted above our results can accommodate other entry processes as well. Assumption 2.3.2
+ensures that the sell-off value by itself is not sufficient reason to enter the industry.
+
+2.4
+
+Equilibrium
+
+As a model of industry behavior we focus on pure strategy Markov perfect equilibrium (MPE), in the sense
+of Maskin and Tirole (1988). We further assume that equilibrium is symmetric, such that all firms use a
+common stationary investment/exit strategy. In particular, there is a function ι such that at each time t, each
+incumbent firm i ∈ St invests an amount ιit = ι(xit , s−i,t ). Similarly, each firm follows an exit strategy
+that takes the form of a cutoff rule: there is a real-valued function ρ such that an incumbent firm i ∈ St exits
+at time t if and only if φit ≥ ρ(xit , s−i,t ). In Weintraub, Benkard, and Van Roy (2008) we show that there
+always exists an optimal exit strategy of this form even among very general classes of exit strategies. Let
+M denote the set of exit/investment strategies such that an element µ ∈ M is a pair of functions µ = (ι, ρ),
+where ι : N × S → <+ is an investment strategy and ρ : N × S → <+ is an exit strategy. Similarly, we
+denote the set of entry rate functions by Λ, where an element of Λ is a function λ : S → <+ .
+We define the value function V (x, s|µ0 , µ, λ) to be the expected net present value for a firm at state x
+when its competitors’ state is s, given that its competitors each follows a common strategy µ ∈ M, the entry
+rate function is λ ∈ Λ, and the firm itself follows strategy µ0 ∈ M. In particular,
+"
+0
+
+V (x, s|µ , µ, λ) = Eµ0 ,µ,λ
+
+τi
+X
+
+#
+β
+
+k−t
+
+(π(xik , s−i,k ) − dιik ) + β
+
+τi −t
+
+φi,τi xit = x, s−i,t = s ,
+
+k=t
+
+where i is taken to be the index of a firm at quality level x at time t, τi is a random variable representing the
+time at which firm i exits the industry, and the subscripts of the expectation indicate the strategy followed
+by firm i, the strategy followed by its competitors, and the entry rate function. In an abuse of notation, we
+will use the shorthand, V (x, s|µ, λ) ≡ V (x, s|µ, µ, λ), to refer to the expected discounted value of profits
+when firm i follows the same strategy µ as its competitors.
+An equilibrium to our model comprises of an investment/exit strategy µ = (ι, ρ) ∈ M, and an entry rate
+function λ ∈ Λ that satisfy the following conditions:
+
+10
+
+1. Incumbent firm strategies represent a MPE:
+sup V (x, s|µ0 , µ, λ) = V (x, s|µ, λ)
+
+(2.1)
+
+µ0 ∈M
+
+∀x ∈ N, ∀s ∈ S.
+
+2. At each state, either entrants have zero expected profits or the entry rate is zero (or both):
+P
+
+s∈S
+
+λ(s) (βEµ,λ [V (xe , s−i,t+1 |µ, λ)|st = s] − κ) = 0
+βEµ,λ [V (xe , s−i,t+1 |µ, λ)|st = s] − κ ≤ 0
+
+∀s ∈ S
+
+λ(s) ≥ 0
+
+∀s ∈ S.
+
+Doraszelski and Satterthwaite (2010) establish existence of an equilibrium in pure strategies for a closely
+related model. We do not provide an existence proof here because it is long and cumbersome and would
+replicate this previous work. With respect to uniqueness, in general we presume that our model may have
+multiple equilibria.2
+Dynamic programming algorithms can be used to optimize firm strategies, and equilibria to our model
+can be computed via their iterative application. However, these algorithms require compute time and memory that grow proportionately with the number of relevant industry states, which is often intractable in
+contexts of practical interest. This difficulty motivates our alternative approach.
+
+3
+
+Partially Oblivious Equilibrium
+
+In this section we extend the concept of oblivious equilibrium to allow firms to track the states of a few firms
+that we call dominant firms, and have beliefs about the states of all other firms, which we call fringe firms.
+We call this new concept partially oblivious equilibrium, hereafter POE.
+As discussed above, in POE we assume that there are a fixed number n of dominant firms whose identities do not change over time; firms always keep track of the same set of dominant firms and all new entrants
+become part of the fringe. In the basic model, dominant firms also never exit the industry. It is a straightforward extension (that we implement in some of the computational experiments below) to add entry and exit
+of dominant firms to the model, in which case the POE model nests both OE and MPE as special cases in
+which there are no dominant firms and all dominant firms, respectively.
+Let D = {i1 , i2 , ..., in } be the set of indices associated with the dominant firms. We extend the state
+2
+
+Doraszelski and Satterthwaite (2010) also provide an example of multiple equilibria in their closely related model.
+
+11
+
+of firms to include a binary variable that identifies dominant firms. Hence, the state of firm i at time t is
+xit = (xit , 1) if i ∈ D, and xit = (xit , 0) if i 6∈ D. This specification will allow for equilibrium strategies
+to differ between dominant firms and fringe firms.
+
+3.1
+
+Partially Oblivious Strategies
+
+A partially oblivious strategy is a function of the firm’s state (which in this case also indicates whether
+the firm is dominant or not) and the state of firms in D. Let yt be a vector that represents the state of the
+
+dominant firms at time t. Formally, yt = x(i1 )t , x(i2 )t , ..., x(in )t , where x(ik )t is the k−th order statistic
+of (xi1 t , xi2 t , ..., xin t ). Our equilibrium concept will assume anonymous strategies that are a function of the
+order statistics of (xi1 t , xi2 t , ..., xin t ) and will not depend on the identities of the dominant firms.
+While there are typically at most a few dominant firms in a given industry, so that it is computationally
+feasible to optimize over strategies that are a function of the dominant firms’ state, typically the number of
+fringe firms is large, so that it would not typically be computationally feasible to optimize over strategies
+that are a function of the fringe firms’ state. Instead, we will assume that firms make estimates of the fringe
+firms’ state based on averages. If there are many firms, because of averaging effects, firms should be able to
+accurately predict the fringe firms’ state for a given time period. However, since fringe firms’ strategies are
+functions of the dominant firms’ states, in order to make a precise prediction about the fringe, firms would
+require knowledge of the entire history of dominant firms’ states. Computing expectations this way would
+be computationally impractical; instead, we will allow firms to predict the fringe firms’ state based on a
+finite set of statistics that depend on the past history of the dominant firms’ state.3
+Based on this motivation, we will restrict firms’ strategies so that each firm’s decisions depend only on
+the firm’s state, the current state of the dominant firms, and a finite set of statistics that depend on the history
+of realizations of the dominant firms’ state. We call such restricted strategies partially oblivious strategies.
+To convey this dependence, we define the sequence {wt ∈ W = W1 × ... × WK : t ≥ 0} where wt (1) = yt ,
+for all t ≥ 0, and Wj are countable sets.
+We define M̃p and Λ̃p as the set of partially oblivious strategies and the set of partially oblivious entry
+rate functions, respectively. If firm i uses strategy µ ∈ M̃p , then firm i takes action µ(xit , wt ) at time period
+t, where xit is the state of firm i at time t (which indicates the firm’s quality level and whether it is dominant
+or not). Similarly, if the entry rate function is λ ∈ Λ̃p , the entry rate is equal to λ(wt ) at time period t.
+Since wt (1) = yt , firms keep track of the current dominant firms’ state when making decisions with
+3
+
+This idea is similar to OE with aggregate shocks; see Weintraub, Benkard, and Van Roy (2010).
+
+12
+
+partially oblivious strategies. The state variables wt (2), ..., wt (K) allow firms to incorporate additional
+information about the history of realizations of the dominant firms’ state into the strategies. This information
+could be useful to better predict the average fringe firm state conditional on observing wt .
+We make the following assumption over the state statistics wt .
+Assumption 3.1. We assume that, for any partially oblivious strategy, {wt : t ≥ 0} is a finite irreducible
+and aperiodic Markov chain adapted to the filtration generated by {yt : t ≥ 0}. For all t ≥ 0, wt (1) = yt .
+The assumption implies that the Markov chain {wt : t ≥ 0} admits a unique invariant distribution that
+assigns positive mass to all states w ∈ W. The assumption is useful because it implies that firms’ beliefs
+over the distribution of fringe firms are well defined off the equilibrium path. While the above assumption
+imposes a requirement over all strategies, a weaker assumption that only requires that {wt : t ≥ 0} is
+a finite irreducible and aperiodic Markov chain under strategies that could potentially be best responses
+suffices. Moreover, even this weaker assumption is not absolutely necessary since it could be replaced
+with an alternative assumption about how firms form beliefs at states that are not reachable in equilibrium.
+Fershtman and Pakes (2012) discuss this issue in more detail in the context of their model.
+Different partially oblivious strategies can be defined depending on the specification of wt . For example,
+suppose that wt = {yt , yt−1 , ..., yt−K+1 } so that the statistics correspond to the last realizations of the
+dominant firms’ state. In this case W is the set of feasible K-tuples of consecutive dominant firms’ state.
+If, in addition, for any set of partially oblivious strategies that dominant firms use, {yt : t ≥ 0} is a finite
+irreducible and aperiodic Markov chain, then this specification satisfies Assumption 3.1.
+
+3.2
+
+Fringe Firms’ Expected State
+
+In a POE firms make decisions assuming that the fringe firms’ state is the expected fringe firms’ state
+conditional on the current value of the dominant firm state statistics wt . Formally, suppose that firms use
+strategy µ ∈ M̃p and enter according to λ ∈ Λ̃p . Let ft represent the state of the fringe firms. That is,
+ft is a vector over quality levels that specifies, for each quality level x ∈ N, the number of fringe firms
+that are at quality level x in period t. We also define the state space for the fringe firms analogously to S:
+n
+o
+P∞
+F = f ∈ N∞
+f
+(x)
+<
+∞
+. Assumption 3.1 together with Assumptions 2.1, 2.2, and 2.3, imply
+x=0
+that {(ft , wt ) : t ≥ 0} is a Markov chain that admits a unique invariant distribution. We assume that (f0 , w0 )
+is distributed according to the invariant distribution of {(ft , wt ) : t ≥ 0}. Hence, (ft , wt ) is a stationary
+process.
+For given strategies, firms predict the fringe firm state based on the current realization of the dominant
+13
+
+firm statistics, wt . Accordingly, for all w ∈ W, we define f˜(w|µ, λ) = E[ft |wt = w; µ, λ]. In words,
+f˜(w|µ, λ) is the long-run expected fringe firm state when dynamics are governed by partially oblivious
+strategy µ and partially oblivious entry rate function λ, conditional on the current realization of wt being w.
+
+3.3
+
+Partially Oblivious Value Function
+
+Let π(xit , f−i,t , y−i,t ) be the single-period profits for a firm i in state xit , if the fringe firms other than firm
+i are in state f−i,t and dominant firms other than firm i are in state y−i,t . Since vectors f−i,t and y−i,t do
+not contain the firm i, in order to obtain them we need to subtract the firm i from ft if i is in the fringe or
+from yt if i is dominant. Note, however, that in our model formulation period profits depend only on the
+firm states x of all dominant and fringe firms, and not on which firms are dominant.
+Because yt represents the dominant firms’ state, note that if i ∈ D, then xit = x only if yt (k) =
+x, for some k = 1, ..., n. Consequently, for all w ∈ W, we define the set X(w) = {(x, 1) : x =
+w(1, k) for some k = 1, ..., n} ∪ {(x, 0) : x ∈ N}, where w(1, k) is the k−th component of w(1).4
+We define a partially oblivious value function for all (x, w) ∈ {(x, w) : w ∈ W, x ∈ X(w)}:
+"
+Ṽ (x, w|µ0 , µ, λ) = Eµ0 ,µ
+
+τi
+X
+
+
+
+
+
+#
+
+β k−t π(xik , f˜−i (wk |µ, λ), y−i,k ) − dιik + β τi −t φi,τi xit = x, wt = w ,
+
+k=t
+
+where i is the index of a firm in state x at time period t. This value function should be interpreted as the
+expected net present value of firm i at state x when the dominant firms’ statistics have value w, firm i
+follows partially oblivious strategy µ0 , and competitors use strategy µ and enter according to λ. If firm i is
+in the fringe, then it must subtract itself when computing f˜−i (wk |µ, λ). Appendix B shows how to compute
+f˜−i (wk |µ, λ) for fringe firms in several commonly used models. Finally, in an abuse of notation, we define
+Ṽ (x, w|µ, λ) = Ṽ (x, w|µ, µ, λ).
+
+3.4
+
+Partially Oblivious Equilibrium
+
+We now define a new solution concept: a partially oblivious equilibrium consists of a strategy µ ∈ M̃p and
+an entry rate function λ ∈ Λ̃p that satisfy the following conditions:
+1. Firm strategies optimize a partially oblivious value function.
+(3.1)
+
+sup Ṽ (x, w|µ0 , µ, λ) = Ṽ (x, w|µ, λ),
+µ0 ∈M̃
+
+4
+
+p
+
+Recall that for all t ≥ 0, wt (1) = yt .
+
+14
+
+∀(x, w) ∈ {(x, w) : w ∈ W, x ∈ X(w)}.
+
+2. The partially oblivious expected value of entry is zero or the entry rate is zero (or both) .
+
+h
+i
+
+e , 0), w
+λ(w)
+βE
+Ṽ
+((x
+|µ,
+λ)
+w
+=
+w
+−
+κ
+= 0,
+t+1
+t
+w∈W
+i
+h
+βE Ṽ ((xe , 0), wt+1 |µ, λ) wt = w − κ ≤ 0, ∀w ∈ W,
+
+P
+
+λ(w) ≥ 0,
+
+∀w ∈ W.
+
+To derive a POE it is enough to consider one dominant firm and one fringe firm. New entrants become part
+of the fringe. Finally, if n = 0, a POE is an OE.
+In Section 3.6 we provide an algorithm for computing a POE. The state space of the firm’s dynamic
+programming problem scales with the number of firm states and with the size of W, the feasible set for the
+dominant firm statistics. As the set W becomes richer, for example as we add more dominant firms, more
+computation time and memory is needed.
+
+3.5
+
+Error Bounds
+
+Because firms’ strategies are restricted in POE, it is useful to measure the performance of POE strategies
+relative to a full information strategy. For this purpose, we derive error bounds for fringe firms in this model.
+Because dominant firms’ states are tracked by fringe firms, and thus a deviation by a dominant firm may
+lead to a change in the distribution of future industry states, it is not straightforward to derive an error bound
+for dominant firms that is easily computed. Specifically we want to bound the amount by which a fringe
+firm at state x̄ = (x, 0), x ∈ N can improve its expected net present value by unilaterally deviating from the
+POE strategy, and instead following an optimal Markovian best response.
+We define Mp and Λp as the set of extended Markov strategies and entry rate functions for the fringe.
+An extended Markov strategy is a function of the firm’s own state, the full industry state (including the
+dominant firms’ state), and the dominant firms’ state statistics. If a fringe firm i uses strategy µ ∈ Mp
+then at time period t, fringe firm i takes action µ(x̄it , f−i,t , wt ). Because we will only consider unilateral
+deviations for fringe firms, we do not extend the information set of the dominant firm, still restricting it’s
+strategy to depend only on it’s own state, other dominant firms’ state, and the dominant firms’ statistics.
+Similarly, if λ ∈ Λp , then the entry rate at time t is λ(ft , wt ).5
+For extended Markov strategy µ0 , µ ∈ Mp and extended entry rate function λ ∈ Λp , with some abuse
+5
+
+Recall that wt (1) = yt , hence, strategies are a function of yt .
+
+15
+
+of notation, we define for x̄ = (x, 0) the fringe extended value function,
+(3.2) V (x̄, f, w|µ0 , µ, λ)
+" τ
+#
+i
+X
+= Eµ0 ,µ,λ
+β k−t (π(xik , f−i,k , yk ) − dιik ) + β τi −t φi,τi xit = x, f−i,t = f−i , wt = w ,
+k=t
+
+where i is taken to be the index of a firm at quality level x at time t and f−i to be the initial state of fringe
+competitors of i. Since i is a fringe firm, we can write yk instead of y−i,k . The extended value function
+generalizes the value function defined in Section 2.4 allowing for dependence on extended strategies. We
+use this value function to evaluate the actual expected discounted profits garnered by a firm that uses an
+extended Markov strategy. The extension of Markov strategies is useful so that firms can predict the future
+evolution of the industry playing against competitors that use POE strategies.
+Consider a POE strategy and entry rate (µ̃, λ̃) ∈ M̃p × Λ̃p . We assume the initial state (f0 , w0 ) is
+sampled from the invariant distribution of {(ft , wt ) : t ≥ 0}. Hence, (ft , wt ) is a stationary process, it is
+distributed according to its invariant distribution for all t ≥ 0. To abbreviate, let f˜−i (w) ≡ f˜−i (w|µ̃, λ̃).
+
+
+With some abuse of notation, let ∆A (f−i , w) = supx∈A π(x, f−i , w(1)) − π(x, f˜−i (w), w(1)) and let
+∆(x, f−i , w) = π(x, f−i , w(1)) − π(x, f˜−i (w), w(1)). Also, let x(k, t) = [x − (k − t)h]+ . We have the
+following result that we prove in the Appendix.
+Theorem 3.1. Let Assumptions 2.1, 3.1, 2.2, and 2.3 hold. Then, for any POE (µ̃, λ̃), and fringe firm i with
+state x̄ = (x, 0), x ∈ N,
+#
+
+"
+(3.3) E
+
+sup V (x̄, ft , wt |µ0 , µ̃, λ̃) − V (x̄, ft , wt |µ̃, λ̃)
+
+µ0 ∈Mp
+
+≤
+"
++ E Eµ̃,λ̃
+
+∞
+X
+
+k=t
+" τ
+i
+X
+
+β
+
+k−t
+
+β
+
+h
+i+ 
+E ∆{x(k,t),...,x+(k−t)h} (f−i,k , wk )
+
+k−t
+
+
+
+
+π(xik , f˜−i (wk ), yk ) − π(xik , f−i,k , yk ) xit = x, f−i,t , wt
+
+##
+.
+
+k=t
+
+Suppose that, for all f ∈ F and w ∈ W, the function ∆(x, f−i , w)+ is nondecreasing in x. Then, for
+
+16
+
+any POE (µ̃, λ̃), and fringe firm state x̄ = (x, 0), x ∈ N,
+"
+
+#
+
+(3.4) E
+
+sup V (x̄, ft , wt |µ0 , µ̃, λ̃) − V (x̄, ft , wt |µ̃, λ̃)
+
+µ0 ∈Mp
+
+≤
+"
++ E Eµ̃,λ̃
+
+"
+
+∞
+X
+
+k=t
+τ
+i
+X
+
+β
+
+h
+i
+β k−t Eµ̂,µ̃,λ̃ ∆(xi,k , f−i,k , wk )+ xi,t = x
+k−t
+
+
+
+
+π(xik , f˜−i (wk ), yk ) − π(xik , f−i,k , yk ) xit = x, f−i,t , wt
+
+##
+,
+
+k=t
+
+where µ̂ denotes a strategy in which the fringe firm never exits the industry and invests an infinite amount at
+every state.
+The strategy µ̂ in the second bound is used only to generate a stochastic process for the firm state that
+increases at the maximum possible rate. Under the assumption that ∆ is nondecreasing in x, this stochastic
+process generates the largest possible difference in discounted profits. The second bound is tighter than
+the first when ∆ is nondecreasing in x because rather than compute the bound at the maximum difference
+in profits in all periods (as in the first bound), the second bound recognizes that it may be technologically
+infeasible for the firm to achieve the maximum difference in profits until some time in the future, and
+therefore due to discounting the bound may be made smaller after accounting for this delay.
+Recall that (fk , wk ) is distributed according to the invariant distribution for all k ≥ 0, so both bounds
+can be computed using simulation. Both bounds are also quite general and do not take advantage of many
+of the detailed modeling assumptions. In particular, they are valid for various entry processes. Allowing the
+bounds to depend on more details of the model would allow us to achieve tighter expressions (see Weintraub,
+Benkard, and Van Roy 2010 for an example).
+
+3.6
+
+Algorithms and Computations
+
+In this section we introduce an algorithm to compute POE. Throughout this section we only consider states
+(x, w) ∈ {(x, w) : w ∈ W, x ∈ X(w)}.
+The algorithm is an iterative algorithm. It starts by computing the expected fringe firm state conditional
+on the dominant firm statistics, f˜(w|µ, λ) (step 5). It then computes the strategy that maximizes the partially
+oblivious value function (step 6). In our implementation of the algorithm we use Gauss-Seidel value iteration
+for this step. Next the algorithm uses the zero-profit conditions to update the entry rates (step 8). Finally,
+strategies and entry rates are updated “smoothly” (steps 12 and 13). The parameters N1 , N2 , γ1 , and γ2 are
+
+17
+
+set after some experimentation to speed up convergence. If the termination condition of the outer loop is
+satisfied with 1 = 2 = 0, we have a POE. Small values of 1 and 2 allow for small errors associated with
+limitations of numerical precision.
+For initialization, let (µ̃, λ̃) be an OE. Let Ṽ be the respective value function.
+Algorithm 1 Partially Oblivious Equilibrium Solver
+1:
+2:
+3:
+4:
+5:
+6:
+7:
+8:
+9:
+10:
+11:
+12:
+13:
+14:
+
+λ(w) := λ̃, for all w
+µ(x, w) := µ̃(x), for all x, w
+n := 0
+repeat
+Compute f˜(w|µ, λ), for all w
+Choose µ∗ ∈ M̃p to maximize Ṽ (x, w|µ∗ , µ, λ) simultaneously for all x, w
+for all w do
+
+h
+i 
+λ∗ (w) := λ(w) βE Ṽ ((xe , 0), wt+1 |µ∗ , µ, λ) wt = w /κ
+end for
+∆1 :=k µ − µ∗ k∞ , ∆2 := kλ − λ∗ k∞
+n := n + 1
+µ := µ + (µ∗ − µ)/(nγ1 + N1 )
+λ := λ + (λ∗ − λ)/(nγ2 + N2 )
+until ∆1 ≤ 1 and ∆2 ≤ 2
+We finish by suggesting a way of computing f˜(w|µ, λ) (step 5 in the algorithm). Let p(x, w, y, w0 ) =
+
+Pµ,λ [xi,t+1 = y, wt+1 = w0 | xit = x, wt = w], where i ∈
+/ D. The probability that the firm exits from
+a state (x, w) is one minus the sum of the transition probabilities from that state. Let f˜(x, w|µ, λ) be the
+x−th component of f˜(w|µ, λ). Let r(x, w) be the product of f˜(x, w|µ, λ) and the steady state probability
+that the dominant firm statistics process is in state w, q(w). Then, r(x, w) satisfies the balance equations:
+(3.5)
+
+r(x, w) =
+
+X
+
+r(y, w0 )p(y, w0 , x, w) + 1(x = xe )
+
+X
+
+λ(w0 )q(w0 )p(w0 , w),
+
+w0
+
+(y,w0 )
+
+where p(w0 , w) = P [wt+1 = w | wt = w0 ] and 1 is the indicator function. We can obtain r(x, w) by solving
+this set of balance equations. We can also obtain steady state probabilities of the dominant firm process by
+solving another set of balance equations. From these two objects, we obtain f˜(w|µ, λ).
+
+3.7
+
+Simulated OE
+
+In markets with a large number of firms, the actual state of i’s competitors (f−i,t ) will be close to its expected
+state (f˜−i (µ, λ)) with high probability due to a law of large numbers. Hence, in our previous work on OE we
+
+18
+
+found that it was computationally easier and did not impact the results to replace f−i,t with its expectation
+in the firm’s maximization problem. Specifically, in our past work we defined an oblivious value function
+as:
+(3.6)
+
+Ṽ (x|µ0 , µ, λ) = Eµ0
+
+" τ
+i
+X
+
+#
+β k−t (π(xik , f˜−i (µ, λ)) − dιik ) + β τi −t φi,τi xit = x
+
+k=t
+
+where as above f˜−i (µ, λ) represents the expected state of i’s competitors and profits are evaluated at this
+expected state instead of the actual state. POE is defined analogously above.
+If there are only a small number of firms, variation in the industry state over time is greater and may
+matter more in the firm’s optimization problem. This is particularly relevant for single-period profits that
+are not smooth as a function of the competitors’ states. In these cases, bringing the expectation outside the
+profit function may improve the approximation. Thus motivated, it is possible to make a slight modification
+to OE, which we will call “Simulated OE” or OE-SIM, in which firms instead integrate profits over the full
+equilibrium distribution of their competitors. The new OE value function would then be
+"
+(3.7)
+
+Ṽ (x|µ0 , µ, λ) = Eµ0 ,µ,λ
+
+τi
+X
+
+#
+β k−t (π(xik , f−i,k ) − dιik ) + β τi −t φi,τi xit = x
+
+k=t
+
+Note that f−i,k is still distributed according to the invariant distribution of competitors’ states. Hence, this
+is still an “oblivious” value function that does not keep track of the actual industry state. However, the
+expectation over competitors’ states with strategies (µ, λ) has been moved outside of the profit function. In
+small industries the added computational burden of this extra layer of integration (which derives primarily
+from having to recompute π at many states) is low, so for small industries OE-SIM is still easy to compute.
+For larger industries the computational burden could become high, but in those cases it is less helpful.
+As part of the proof of the main theorem in Weintraub, Benkard, and Van Roy (2008) we show that the
+difference between the value functions in (3.6) and (3.7), and hence the difference between OE and OESIM, goes to zero as the number of firms in the industry becomes large, under relatively weak smoothness
+conditions over the single-period profit function.
+We explore these issues further in the computational experiments below. Note that it would also be
+possible to compute a simulated version of POE.
+
+19
+
+4
+
+Computational experiments
+
+In this section we present a set of computational experiments that examine the dynamics generated by the
+POE and OE models in highly concentrated markets. We begin by analyzing two structurally different
+models: a differentiated products logit demand model with price-setting and investment in product quality,
+and a homogeneous products Cournot model with investment that reduces marginal cost.
+P RICE -Q UALITY COMPETITION . Our first model attempts to mimic standard I.O. models commonly used
+in empirical work. We consider an industry with differentiated products where each firm’s state variable
+represents the quality of its product. There are m consumers in the market. In each period t, consumer j
+receives utility uijt from consuming the good produced by firm i given by:
+uijt = θ1 ln(
+
+xit
++ 1) + θ2 ln(Y − pit ) + νijt , i ∈ St , j = 1, . . . , m,
+ψ
+
+where Y is the consumer’s income, pit is the price of the good produced by firm i, and ψ is a scaling
+factor. νijt are i.i.d. random variables distributed Gumbel that represent unobserved characteristics for
+each consumer-good pair. There is also an outside good that provides consumers zero utility. We assume
+consumers buy at most one product each period and that they choose the product that maximizes utility.
+Under these assumptions our demand system is a classic logit model.
+Let N (xit , pit ) = exp(θ1 ln( xψit + 1) + θ2 ln(Y − pit )). Then, the expected market share of each firm is
+given by:
+σ(xit , f−i,t , pt ) =
+
+1+
+
+N (xit , pit )
+P
+, ∀i ∈ St .
+j∈St N (xjt , pjt )
+
+We assume that firms set prices in the spot market. If there is a constant marginal cost c, the Nash equilibrium
+of the pricing game satisfies the first-order conditions,
+(4.1)
+
+Y − pit + θ2 (pit − c)(σ(xit , f−i,t , pt ) − 1) = 0 , ∀i ∈ St .
+
+There is a unique Nash equilibrium in pure strategies, denoted p∗t (Caplin and Nalebuff 1991). Expected
+profits are given by:
+πm (xit , f−i,t ) = mσ(xit , f−i,t , p∗t )(p∗it − c) , ∀i ∈ St .
+Firms can also invest ι ≥ 0 in order to improve their product quality over time. A firm’s investment is
+successful with probability
+
+aι
+1+aι ,
+
+in which case the quality of its product increases by one level. The firm’s
+
+product may also depreciate one quality level at random with probability δ, independently each period. Our
+20
+
+model differs from (Pakes and McGuire 1994) here because the depreciation shocks in our model are idiosyncratic. Combining the investment and depreciation processes, it follows that the transition probabilities
+for a firm in state x that does not exit and invests ι are given by:
+
+h
+i
+P xi,t+1 xit = x, ι =
+
+
+
+(1−δ)aι
+
+
+
+1+aι
+
+
+
+
+
+
+
+
+
+if xi,t+1 = x + 1
+
+(1−δ)+δaι
+1+aι
+δ
+1+aι
+
+if xi,t+1 = x
+
+if xi,t+1 = x − 1 .
+
+While it would be straightforward to implement entry and exit in the model, in order to simplify the model
+we omit them from our computations.
+In our computational experiments we found that the logit model above was not capable of generating
+markets with one-firm concentration ratios above about 0.3. Thus, in order to test the POE model for
+extremely highly concentrated industries we use a second quantity-cost (Cournot) model.
+Q UANTITY-C OST COMPETITION . Our second model is designed to be a “worst case” for OE in that it
+will generate very highly concentrated near monopoly markets with a fringe of smaller firms, and can also
+generate high turnover among the leader firms. We consider an industry with a homogeneous product and
+quantity setting, where the state of each firm represents its marginal cost of production. The industry has a
+linear inverse demand function
+P (qt ) = m1 − σ
+
+X
+
+qit
+
+i
+
+The marginal cost for firm i in state xit is
+MC(xit ) = γ0 exp(−(γ1 xit − γ2 )).
+
+With this specification we are able to generate highly concentrated industries, but the model also has the
+property that in periods of high concentration lagging firms stop producing altogether and exit the market,
+leading to a pure monopoly. This case is not particularly interesting for our purposes.
+In order to ensure that small firms continue to exist when the industry is highly concentrated, we assume
+that there is also a second market that always yields m2 total surplus, that is split equally among the active
+firms. One can think of the first market as the “national” market, in which all firms compete on the basis
+of price, and the second market as a set of “local” markets, where each firm captures their local market
+completely regardless of price.
+
+21
+
+Period profits for firm i in state xit are given by
+Π(q−i,t , xit |f−i,t ) = max {P (qt )qit − MC(xit )qit + m2 /nt }
+qit
+
+where nt is the number of active firms. Firms set quantities simultaneously conditioning on the observed
+state and the spot market is assumed to be in static Nash equilibrium.
+In this model, investment improves the state and reduces marginal cost. The models of transitions is the
+same as in the logit model above. Also, as in the logit model, though allowing for entry and exit would be
+straightforward in this model, in order to simplify the computations we do not model these features of the
+industry.
+
+4.1
+
+Comparison with MPE
+
+We first investigate the relationship between OE, POE and MPE in the two models above. In both models
+we can obtain a wide range of industry structures by moving only two parameters: investment cost and
+depreciation. When investment is cheap all firms invest a lot and the industry is not very concentrated.
+As the investment parameter increases industry concentration increases, up to a point where investment is
+so expensive that firms stop investing altogether. The depreciation rate influences the rate of churn in the
+industry — when depreciation is low leader firms retain their advantage for longer (and vice-versa). The
+rate of turnover of leader firms is one aspect of an industry that we find to be important to the results.
+The remaining parameter values were chosen to reflect reasonable economic fundamentals and then
+fixed for all the experiments. They are listed in Table 2. In each case we model 8 active firms and 8 firm
+states. We use such a small number of firm states because it reduces the burden of computing MPE to a level
+at which we can easily compute equilibria for many different parameter values. Finally, when implementing
+POE we include only the current values of dominant firms’ states. We experimented with using longer
+histories but it made no difference to the results.
+For all three types of equilibria (OE, POE, and MPE) there are potentially multiple equilibria, though
+we would typically expect there to be fewer OE and POE than MPE (among other things, asymptotically
+every OE has an MPE nearby — Weintraub, Benkard, and Van Roy (2008)). We have made no attempt to
+compute all the equilibria for each model, but we have found that our computational algorithms consistently
+select the same equilibrium each time.6 All of the results below apply to this particular equilibrium.
+6
+
+Pakes and McGuire (1994) found the same thing and Besanko, Doraszelski, Kryukov, and Satterthwaite (2005) provide a
+detailed explanation of why this happens.
+
+22
+
+L OGIT MODEL . Figures 2 and 3 provide a comparison of basic industry statistics between OE, POE, and
+MPE under a range of investment cost parameters for low and high depreciation respectively. The top left
+panel in each figure shows that for this model as we move the investment cost parameter we obtain one-firm
+concentration ratios ranging from about 0.1 (representing eight equally sized firms) to as high as 0.3. The
+top right panel shows the probability that a firm at state 1 will end up in the top half of the state space within
+the next 100 periods under the MPE strategies, a measure of the rate of turnover among the leading firms.
+Turnover among leading firms is always fairly high for this model. The next three panels compare long-run
+averages of investment, consumer surplus, and producer surplus under OE and POE with that under MPE.
+We compute POE with one, two, and three dominant firms. The remaining three panels show the error
+bounds for fringe firms, as well as the actual maximal Markov best response improvement in firm values for
+fringe and dominant firms respectively. The bounds are presented in percentage terms relative to the value
+function, where industry states are averaged out according to their invariant distribution.
+Several features of the results stand out. First, in the logit model, despite the fact that these industries
+have no more than eight firms, for almost all parameter values the differences are small between OE, POE
+and MPE. The only exception to this rule is the large percentage difference in investment for the highest
+investment costs. However, this difference is explained by the fact that investment is close to zero for these
+cases so a high percentage difference corresponds to a small absolute difference. Consistently with what we
+have found in previous work (Weintraub, Benkard, and Van Roy (2010)) consumer and producer surplus in
+OE are typically within 1-2% of their values in MPE, and firms can only obtain at most a 1.5% (fringe) or
+0.4% (dominant) improvement by using full Markov strategies.
+The second result is that adding dominant firms in the logit model almost always leads to results closer
+to MPE. In many cases the improvement is dramatic, though again even OE is close to MPE for this model
+so in fact the overall differences between the three models remain small.
+Because there are so few firms in this model, and because there is a difference in profits between fringe
+and leader firms, the error bounds are fairly large, ranging from a few percent to over 15%. However, as
+can be seen in the next two panels, the bounds are very loose since the fully informed Markov best response
+differences are in actuality quite small, typically on the order of less than one percent.
+Finally, we also computed OE-SIM for the δ = 0.7 case. For δ = 0.2 computation of OE-SIM took too
+long to make its computation practical for many different parameter values, so we omitted it from the graphs.
+In general, OE-SIM does provide results closer to MPE than OE does, but typically the improvements are
+small. However, in rare cases it provides results closer to MPE than even POE does. Recall that when we
+
+23
+
+compute POE we are not simulating out the integral over the fringe firms, so POE need not improve upon
+OE-SIM. As a reminder, OE-SIM provides an improvement only for markets with small numbers of firms,
+so what we are seeing is that in these particular markets there is enough variance in the market structure over
+time to make a small but noticeable difference in the equilibrium calculations.
+Summing up our findings for the logit model, all the equilibrium concepts are quite close to MPE, but
+OE-SIM and POE are closer to MPE than OE is. For this simple example MPE took more than 10 minutes
+to compute, while OE took less than one second, and POE with three dominant firms took about 10 seconds,
+demonstrating the trade-off between computational tractability and choice of equilibrium concept.
+C OURNOT- MODEL . Figures 4-6 provide the same set of comparisons for the Cournot model for three
+different depreciation rates respectively (δ = 0.2, 0.5, 0.8). The first thing to note about the results is that
+in using this special modified Cournot model and these parameter values, we are looking at very extreme
+examples of concentration. The top left panel of the figures shows that the industries in this model have one
+firm concentration ranging from 0.3 all the way up to near 1.0 as we increase the investment cost parameter.
+Meanwhile C2 is never less than 0.5 and is typically larger than 0.9. These statistics would place these
+industries in the extreme tail of census industries.7 This extreme concentration results in OE failing to be
+close to MPE in many cases. For example, producer and consumer surplus can be as much as almost 40%
+different in the worst cases.
+We have found that the extent to which adding dominant firms improves these statistics depends critically
+on the rate of turnover among leader firms in the MPE. So long as turnover among the leading firms is not
+too high (δ = 0.2 or δ = 0.5), adding dominant firms generates equilibria that look much closer to MPE
+than OE does. POE3, for example, generates investment, consumer and producer surplus within 5% of MPE
+for all parameter values when δ = 0.2 or δ = 0.5.
+On the other hand, POE is not as close to MPE when δ = 0.8. We have found that this difference is
+caused by the very high rate of turnover among the leading firms when depreciation is high. The top right
+panel of figure 6 shows that when δ = 0.8 the probability that a firm in state 1 will become a “leader” firm
+(defined as operating in the top half of the state space) within 100 periods is between 0.35 and 0.5. What
+this means is that more than one in every three of the very smallest firms in the industry will become a leader
+firm every 100 periods. At the same time leader firms capture virtually all the market (top left panel). What
+we are looking at, then, is an industry where firms bounce around a lot in the size distribution, spending
+a lot of time as fringe firms, but also are frequently near monopolists, though this does not last very long.
+7
+
+For comparison, in the 2007 U.S. Census of Manufacturers 98% of six digit NAICS manufacturing industries have C4 less than
+0.90, and 99% have C4 less than 0.95.
+
+24
+
+We view this case as somewhat unrealistic compared with most real world industries,8 but nevertheless it is
+useful to study because it exhibits the case where POE is furthest from MPE.
+Figure 6 shows that when firm turnover is high adding dominant firms does still typically improve upon
+OE, though not by as much as before. In addition, there is one case (investment cost=20) where consumer
+surplus remains over 20% different from that in MPE even in POE3. Best response improvements for
+dominant firms are always small but can be large for fringe firms in OE. POE, on the other hand, generates
+producer surplus that is nearly identical to MPE, as well as small unilateral deviations from the POE strategy
+for both dominant and fringe firms even in the worst cases.
+We also have an intuition for these results. When there is some stability among leader firms, knowing
+only the leading firms’ states (as is the case in POE) is sufficient for all firms to optimize well. However,
+when leader firms are very unstable it becomes critical for a fringe firm to have more detailed information
+about the industry, for example so it can know exactly the moment when the industry is such that it is poised
+to become a leader firm for a few periods or a new leader competitor will arise. The more stable the leading
+firms are, the closer are the POE industries to MPE, though the results in figures 4-6 suggest that POE is
+close to MPE for a pretty wide range of industries.
+Moreover, when turnover among leaders becomes even higher than this, such that each period all firm’s
+states are close to being an iid random draw from the long run distribution, then the results reverse and even
+OE closely matches MPE. The reason for this reversal is that in that case the current states of competitor
+firms have little bearing on future profits (since competitor states are close to iid), and thus the firm’s optimal
+policy in MPE is a function only of its own state. Thus, the worst case scenario for OE and POE is the one
+exhibited, in which there is enough serial correlation in the state that the current state matters a lot for the
+near future, but the serial correlation is low enough that the industry remains quite unstable over time.
+We also computed OE-SIM for the (δ = 0.8) case. As before, the results for OE-SIM are somewhat
+mixed. For low values of the investment cost, OE-SIM actually makes things worse relative to OE, while
+for medium to high values it somewhat improves things. Oddly, the one case where OE-SIM seems to help
+a lot (investment cost equals 20) corresponds to the one case where POE does not improve things much, but
+we do not know why this is the case.
+Finally, the error bounds are again very high for the basic OE, and substantially lower but still high for
+the OE-SIM and POE models. Also, because there are such a small number of active firms in this model
+8
+
+For comparison, in the data collected by Sutton (2007), in a 23 year period only 18 of 45 industries saw the leader and second
+place firm change places, while in the remaining 27 industries the leader held its place throughout. Our measure of turnover instead
+considers very small fringe firms becoming leader firms, a much rarer event.
+
+25
+
+and firm turnover is so high, the bounds continue to be very loose in this model. Our expectation is that the
+error bounds would be more useful in less extreme examples than the two model used in this section.
+
+4.2
+
+Comparison of fringe and dominant firms’ dynamics
+
+Above we compared the overall industry dynamics in OE and POE to those of MPE. We now look deeper
+into the underlying dynamics of individual firms in POE. For this section we include entry and exit of fringe
+firms in the model in order to show that there is entry deterrence.
+Figure 7 shows the overall distribution of the long-run distribution of firm states for the Cournot model
+for both OE, POE1, POE2, and POE3, as well as the distribution of states broken down by firm type for
+dominant and fringe firms. We only show the results for one parameterization here, but the results are
+qualitatively the same for all parameter values in the Cournot model, and indeed are similar for all models
+that we have tried including the logit model above and the CW model outlined below.
+What we can see in the figure is that even though both dominant firms and fringe firms have identical
+profit and cost parameters, in the POE model dominant and fringe firms follow different dynamics. Dominant firms are in fact almost always dominant, and fringe firms are almost always small. Figure 8 further
+shows that this comes about because dominant firms invest more in every state.
+This behavior is a consequence of the information structure of the POE model. Because dominant firm
+states are tracked by all firms while fringe firm states are not, dominant firms have stronger investment
+incentives than fringe firms. Dominant firms know that, if they invest heavily, all other firms will know this
+and will react to it. This allows them to deter investment and deter entry, and both are a frequent outcome in
+the POE model. Fringe firms cannot deter entry (at least not directly) because if they were to invest more at
+a particular state, no other firm would know about this (except indirectly through the equilibrium expected
+distribution of industry states).
+These results highlight the importance of the information structure used when computing equilibria, not
+just in our context but more generally. Even if it is the case that the true MPE strategies can be closely
+approximated by a simpler strategy such as the one used here, in the sense that if you projected MPE strategies on a simplification you would obtain a close relationship, imposing that simpler structure in equilibria
+computation can have unforeseen implications. When the simpler information structure is enforced in equilibrium, firms know for sure that their competitors must act according to this information structure and their
+equilibrium strategies may exploit this in ways that were not present in the original model.
+In the case of POE, we think that the information structure in the model is somewhat realistic for many
+
+26
+
+concentrated industries, and the behavior of dominant firms in the model may also be realistic. For example,
+if Microsoft were to enter with a new type of software (say, a browser), it makes sense that competing firms
+would pay much more attention than if a new entrant were to enter with an otherwise identical product.
+However, we do want to emphasize that the individual firm dynamics are different from those in MPE, even
+though the aggregate behavior of the industry can be quite similar as we showed above in our numerical
+experiments. Furthermore, these results suggest that one should view arbitrary simplifying assumptions
+with caution in the context of equilibrium computation, as arbitrary simplifying assumptions can generate
+behavior that is different from MPE behavior in unexpected, unknown, and perhaps undesirable ways.
+
+5
+
+An Empirical Model
+
+In this section we investigate the properties of POE in a more complex empirical model due to CollardWexler (2013) (henceforth CW). Collard-Wexler (2013) examines the effect of demand uncertainty on industry structure and sunk costs in the ready-mix concrete industry. A primary feature of his model is an
+aggregate demand shifter that follows a Markov process. Also, many of his markets are highly concentrated. In his counter-factual experiments he computes MPE using the stochastic approximation algorithm
+due to Pakes and McGuire (2001).
+
+5.1
+
+Model overview
+
+In the CW model there are a fixed set of N firms, with each firm having a controlled state variable xit that
+represents whether it is active and, if so, its current and past size. In the paper firm size is discretized to
+three values, {small, medium, large}, and xit can take on seven possible values: {small, small/medium,
+small/large, medium, medium/large, large, ∅}. The notation “small/large” represents a firm that is currently
+small but was large at some point in the past. Similarly, the state “small/medium” represents a firm that is
+currently small but was previously medium but never large, and the state “small” represents a firm that is
+currently small and has never been either medium or large. The reason for tracking past firm size is that the
+sunk costs of changing size are allowed to differ depending on past size, reflecting the fact that it may be
+easier for a firm to grow if it was large previously than if it was not. The state ∅ corresponds to being out of
+the market. In our version of the model we will also experiment with finer levels of discretization, allowing
+for more than three values for current firm size. We discuss that extension further below.
+There is also an aggregate demand state Mt that follows an exogenous Markov process. The level of the
+aggregate state and the firm size states are assumed to be known by all firms. Each firm also has a set of
+27
+
+private information logit state variables that are outlined below.
+In each period, each incumbent firm chooses its next period’s size from the set {small, medium, large,
+∅}. Given past size, this is equivalent to choosing xi,t+1 from the appropriate feasible set. Choosing ∅ is
+choosing to exit the market, where exit is irreversible.
+Payoffs are given by
+R(xi,t+1 , x−i,t+1 , Mt+1 ) − τ (xi,t+1 , xit ) + σtia
+where x−i,t+1 represents the vector of size states of firm i’s competitors, R(·) represents the firm’s current
+revenue function and is defined below, tia is an iid choice specific preference shock that is private information to the firm, and τ represents the sunk adjustment cost of changing from size xit to xi,t+1 . (τ is assumed
+to be zero if xi,t = xi,t+1 .) Note that the different actions/choices a correspond to the next state xi,t+1 .
+Current revenues are zero if the firm exits the market.
+The model also allows for firm entry. Each period, for every inactive firm (there are always N firms
+including incumbents and potential entrants) a potential entrant appears who has the same payoff function
+as incumbent firms above, with sunk costs of entry captured by the τ function. Potential entrants are short
+lived, so that if they choose not to enter they cease to exist and a new potential entrant appears in their place
+the next period.
+In the CW model the revenue function is assumed to take the following form:
+X
+
+(5.1) R(xi,t+1 , x−i,t+1 , Mt+1 ) =
+
+1{xi,t+1
+
+
+α
+= α} θ1α + θ2α Mt+1 + θ31
+{N Comp >= 1}
+
+α∈{sm,med,lg}
+
++
+
+α
+θ32
+
+
+∗ {N Comp > 1} ∗ log(N Comp − 1)
+
+where
+N Comp =
+
+X
+
+(x−i,t+1 (k) 6= ∅)
+
+k
+
+is the number of active competitors. The parameter θ1α is a fixed cost parameter, θ2α is the coefficient on
+α and θ α measure the effect of competition on firm profits. The parameter σ
+aggregate demand, and θ31
+32
+
+scales the variance of the error term.
+There are two main differences in defining POE for this problem relative to those above: private information and aggregate shocks. In section 3 we define a partially oblivious strategy as a function of the firm’s
+own extended state x̄it and a set of statistics about the dominant firms wt . In the CW model we need to
+28
+
+extend this definition to include both private information and the aggregate shocks. We define a partially
+oblivious strategy for the CW model as µ(x̄it , wt , zt , ti ), where zt contains the current state of an aggregate
+shock as well a finite set of statistics that summarize its history. A finite history may be useful in improving
+firms’ beliefs about the current distribution of fringe firms since recent past values of the aggregate state
+may strongly influence this distribution (Weintraub, Benkard, and Van Roy (2010)).
+For all (x̄, w, z) we define a partially oblivious value function as
+Ṽ (x̄, w, z|µ, µ0 ) =
+"
+(5.2)
+
+Eµ,µ0
+
+τi
+X
+
+β k−t [R(xi,k+1 , f˜−i (wk+1 , zk+1 |µ0 ), y−i,k+1 , Mk+1 )
+
+k=t
+
+#
+− τ (xi,k+1 , xik ) + σkia ]|x̄it = x̄, wt = w, zt = z
+Note that this formulation automatically handles entry and exit of both dominant and fringe firms through
+transitioning in and out of the inactive state.
+For any w and z, the expected industry state f˜(w, z|µ) can be obtained by using a modified balance
+equation (3.5) that incorporates the aggregate shocks
+(5.3)
+
+X
+
+r(x, w, z) =
+
+r(y, w0 , z 0 )p(y, w0 , z 0 , x, w, z),
+
+(y,w0 ,z 0 )
+
+There is no λ term here because entry is already incorporated in p through transitioning from the inactive
+state. We can also obtain a steady state for the joint distribution of dominant firms and aggregate shocks
+from another set of balance equations. From these two objects we obtain f˜(w, z|µ).
+In practice it is convenient to work with choice specific partially oblivious value functions defined as:
+
+(5.4)
+
+ṽ(a, x̄, w, z|µ, µ0 ) =
+
+E R(a, f˜−i (wt+1 , zt+1 |µ0 ), y−i,t+1 , Mt+1 ) − τ (a, xit )
+0
+
+
+
++β Ṽ (x̄i,t+1 , wt+1 , zt+1 |µ, µ )|x̄it = x̄, wt = w, zt = z
+In the notation in equation (5.4) the firm takes action a in the first period and then follows strategy µ in all
+later periods. In case of exit, or if the potential entrant decides to stay out, ṽ(aE , x̄, w, z|µ, µ0 ) = 0, where
+aE is the action to go to an inactive state.
+
+29
+
+The POE ex-ante value function and POE strategy µ solve the following fixed point equation:
+n
+o
+Ṽ (x̄, w, z|µ, µ) = Eti max ṽ(a, x̄, w, z|µ, µ) + σti,a , ∀(x̄, w, z).
+a
+
+If private information  is distributed as type-1 extreme value, one can obtain an ex-ante best response value
+function solving the following Bellman equation:
+0
+
+Ṽ (x̄, w, z|µ, µ ) = σ log
+
+(5.5)
+
+"
+X
+
+exp σ
+
+−1
+
+#
+
+ṽ(a, x̄, w, z|µ, µ ) + σγ
+0
+
+a
+
+where γ is Euler’s constant. The transition probabilities of firms take a simple logit form as well
+
+exp σ −1 ṽ(a, x̄it , wt , zt |µ, µ0 )
+P [ait = a|x̄it , wt , zt ; µ, µ ] = P
+−1
+0
+0
+a0 exp (σ ṽ(a , x̄it , wt , zt |µ, µ ))
+0
+
+(5.6)
+
+In this case, the maximization step of the POE algorithm is equivalent to iterating on equations (5.4) and
+(5.5) until convergence for a given f˜(w, z|µ0 ) and µ0 . In the limit the procedure produces choice specific
+optimal partially oblivious value functions as well as optimal partially oblivious strategies µ. The expected
+industry state can be subsequently updated using equation (5.6) and balance conditions (5.3).
+
+5.2
+
+Results
+
+We first consider an exact replica of the CW model used in his paper.9 Parameter values for the revenue
+function are listed in Table 3 and the sunk adjustment costs parameters are listed in Table 4. Collard-Wexler
+(2013) uses four different categories of markets based upon market size. In this exercise we use the estimated
+parameters for market category three, which has an average of 4.65 firms in long run equilibrium. We also
+solved the model for market category two, with qualitatively identical results.
+Table 5 compares OE, POE and MPE for the CW model with three size levels and 10 potential firms. As
+above, in implementing POE we use only the current values of dominant firms’ states and of the aggregate
+shocks. We experimented with using longer histories but it made no difference to the results. It is not
+possible to compute welfare for this model so we instead report long-run average statistics that describe the
+equilibrium industry dynamics, including the firm size distribution, firm turnover and growth rates, and also
+several measures of sunk costs incurred by firms in the equilibrium, including sunk costs of changing size
+9
+Our reported statistics vary from those reported in Collard-Wexler (2013) because we report long run averages while the
+statistics reported in the paper represent the average across many markets (of different sizes) of short run simulations starting from
+a (different) particular observed state for each market. We have verified separately with Allan Collard-Wexler that our MPE policy
+and value functions are identical to the ones that he computed for the paper.
+
+30
+
+and sunk costs of entry.
+We find that, for this model, all statistics for OE are within 6% of those for MPE, so that OE is close to
+MPE but not exactly the same. In general there are about 6% fewer firms and most other statistics reflect
+this same difference. The exceptions are that OE entry and exit rates and rates of size transition are nearly
+identical to those statistics in MPE.
+When we add a single dominant firm, entry costs move closer to MPE levels, but other statistics do not
+change much relative to OE. Adding a second dominant firm has a similar effect. With four dominant firms,
+all statistics move closer to MPE, and entry costs are now nearly identical to MPE. Summarizing the results,
+OE matches MPE fairly closely in general, but is not exactly the same, and POE further improves the match
+for all statistics, but some small differences remain even with four dominant firms.
+The simulated version of OE is substantially different from OE and actually lies on the other side of
+MPE from OE. For example, while OE has fewer firms and fewer transition costs than MPE, OE-SIM has
+more firms and more transition costs than MPE. The net result is that OE-SIM is different from OE, but
+about the same distance away from MPE. To us, the differences do not seem worth the extra computation
+cost associated with OE-SIM.
+Of course the benefit of using POE over MPE in a model like this one is that it is much easier to program
+and compute. Using the specification above, for any number of active firms OE takes a few seconds to
+compute while POE1 and POE2 take a few minutes and POE3 and POE4 take a few hours. At the same
+7-firm MPE takes days, 10-firm MPE takes months, while 12 firm MPE is infeasible to compute.10
+
+5.3
+
+Exploring the level of discretization
+
+Because MPE is so difficult to compute, in implementing MPE it is often necessary to make many simplifications for computational tractability. For example, one simplification that is commonly used, and that
+is used in the CW model, is to coarsely discretize the state space. Since OE and POE are much lighter
+computationally than MPE, it is possible to explore discretizing the model into much finer grids. Such a
+generalization may be particularly interesting in the CW model because a finer grid allows firms to optimize
+their size more closely, and also because in reality firms are not constrained to a three-point grid so a finer
+discretization may potentially be a better match to the observed data.
+There are two complications in making the discretization of the model finer in the CW model. First,
+10
+
+All reported computation times we obtained using 1-core 2.5GHz AMD Opteron machine with 128GB of RAM. The code was
+written in C and C++, and compiled using a highly optimized compiler. We were able to compute a 10-firm MPE in a reasonable
+time using massive parallelization.
+
+31
+
+we require adjustment cost and entry cost parameters for each level of the finer grid, but we do not have
+access to the confidential U.S. Census data used to estimate the CW model so we cannot estimate these new
+parameter values directly. To solve this problem we instead approximate the estimated parameters obtained
+in CW (listed in table 4) using a linear function of the state, and then interpolate the parameter values for
+the finer grid.11 Table 6 lists the implied values of the resulting interpolated parameters for a grid of size
+four (with three firm size states plus out) for comparison. The interpolated parameters are similar to the
+estimated parameters for a grid of size four. We use the interpolated parameters for all grid sizes in this
+section to avoid introducing differences due to different adjustment costs.
+The second complication in making the discretization of the model finer is that, since there is an idiosyncratic shock for each possible size choice in the model, there is no way to make the grid finer without adding
+more logit error terms to the firm’s decision problem. These additional error terms alter the underlying
+economics of the model because, in a finer discretization, incumbent firms have more size choices available
+to them and hence more logit draws to choose from each period. Of course the maximum of a larger set of
+draws is going to be larger, which would imply that the value of being active should go up as we make the
+grid finer. Thus, if we hold all parameters constant and simply make the grid finer, we find that there are
+more and more active firms. For our purposes we would like to hold the firm payoffs approximately constant
+when we change the grid size to keep the economics of the model similar. Thus, in order to counteract the
+effect of the additional error terms, we make a downward adjustment to the revenue function for active firms
+(equally for all sizes) so as to keep the number of active firms the same for all grid sizes.
+Figure 9 and Table 7 show statistics for POE-1 for five grid sizes for the firm size state: {3,6,9,12,15}.
+For these grid sizes there are approximately 350 thousand, 38 million, 890 million, 9.6 billion, and 66 billion
+states, respectively.
+We find that there are some large differences in the results as we make the size grid finer. The main
+differences are that on the three point grid there are equal numbers of small and medium firms, but on
+the finer grids there are nearly twice as many medium firms as small ones. Furthermore, transition costs get
+much larger as firms are now changing size more often and thus paying more transition costs. This last effect
+happens because the coarse grid size is acting like a large adjustment cost that prevents small movements in
+size. On the finer grid, firms make more small changes to their size. Entry and exit rates also increase on
+the finer grids, by a factor of about 50%. The number of firms is being held constant so the higher entry and
+transition costs can be interpreted as higher costs per firm.
+Once the grid size hits about nine points, however, the results begin to stabilize, suggesting that nine size
+11
+
+Appendix C provides the details of this interpolation.
+
+32
+
+points may be a fine enough grid to capture the dynamics of firm size movements in this model. Note that
+the state space for the nine point grid is approximately 2500 times as large as that for the three point grid,
+making computation of MPE around 2500 times more difficult.
+Importantly, our point is not to say whether the finer grid is more or less reflective of the cement industry.
+We could not determine this without re-estimating the model for different grid sizes and evaluating the fit
+of the model, something that we cannot do without access to the original data. Moreover, the effect of the
+additional logit shocks as we make the grid finer makes such a comparison difficult. Our point is instead
+one about the empirical application of dynamic oligopoly models in general. In empirical applications it is
+often necessary to make modeling simplifications that are purely for computational reasons. These results
+demonstrate that such simplifications can have an impact on economics of the model, and that there is
+potentially some benefit to having the ability to explore richer versions of the economic model.
+We believe that empirical researchers are thus faced with a trade-off. They can either compute a simple
+equilibrium concept such as POE in a richer model, or compute exact MPE in a simpler one, but could not
+compute MPE in the richer model. In either case the results will likely not be exactly equal to MPE in the
+richer model. Sometimes the economics of the model may be changed less by using OE or POE in place of
+MPE than they would by simplifying the model to facilitate computation of MPE. In other cases, it may be
+worth computing MPE even with the additional modeling restrictions that requires.
+
+6
+
+Conclusions
+
+In this paper we considered the application of oblivious equilibria to highly concentrated markets. We
+defined an extended notion of oblivious equilibrium that we call partially oblivious equilibrium (POE) that
+allows for there to be a set of “dominant firms”, whose firm states are always monitored by every other firm
+in the market. We then explored the behavior of POE relative to OE and MPE in a wide variety of industries
+through computational experiments.
+Summarizing the results, we found that OE was surprisingly close to MPE even in many highly concentrated industries. In extremely concentrated industries OE was not close to MPE, but POE generally was
+close to MPE as long as turnover among the leading firms was not too high. The results suggest that these
+tools could be useful in a wide variety of empirical applications.
+We also applied POE to the empirical model of Collard-Wexler (2013), and demonstrated a trade-off
+between implementing an equilibrium concept that is computationally light (such as POE) in a richer economic model, and implementing MPE in a simpler model. Empirical work in this area often pushes the
+33
+
+boundaries of what is possible computationally, and thus we think that this is a trade-off that would often be
+faced in empirical work.
+We also caution that we found that the behavior of dominant firms and fringe firms differ in the POE
+model. In some industries this difference may be realistic but in others it may not be. The finding also
+suggests that researchers should use caution in specifying the information structure of their models more
+generally. Reducing the state space of the model through arbitrary informational assumptions could lead to
+unrealistic outcomes in the model.
+
+34
+
+A
+
+Proof of error bound
+
+Proof of Theorem 3.1. Let
+
+
+ µ̃(x̄) if x̄ = (x, 1)
+µ∗ (x̄) =
+ µ∗ (x̄) if x̄ = (x, 0),
+
+be an optimal Markovian (non-oblivious) best response µ∗ to POE (µ̃, λ̃) for fringe firms, keeping the POE
+strategy of the dominant firm unchanged.
+Hence, µ∗ ∈ Mp is such that
+sup V (x̄, f, w|µ0 , µ̃, λ̃) = V (x̄, f, w|µ∗ , µ̃, λ̃), ∀x̄ = (x, 0), x ∈ N, f, w.
+
+µ0 ∈M
+
+p
+
+where Mp was defined in Section 3.5 as the set of extended Markov strategies.
+Take any state of the fringe x̄ = (x, 0), x ∈ N. We have that:
+E[V (x̄, ft , wt |µ∗ , µ̃, λ̃) − V (x̄, ft , wt |µ̃, λ̃)] = E[V (x̄, ft , wt |µ∗ , µ̃, λ̃) − Ṽ (x̄, wt |µ̃, λ̃)]
++ E[Ṽ (x̄, wt |µ̃, λ̃) − V (x̄, ft , wt |µ̃, λ̃)]
+
+(A.1)
+
+First, let us bound the first term in the right hand side of the previous equation.
+Because µ̃ and λ̃ attain a POE, for all x̄ = (x, 0), w,
+Ṽ (x̄, w|µ̃, λ̃) = sup Ṽ (x̄, w|µ0 , µ̃, λ̃) = sup Ṽ (x̄, w|µ0 , µ̃, λ̃),
+µ0 ∈Mp
+
+µ0 ∈M̃p
+
+where the last equation follows because there will always be an optimal POE strategy when optimizing a
+partial oblivious value function even if we consider Markovian strategies that keep track of the full industry
+state. It follows that,
+V (x̄, f, w|µ∗ , µ̃, λ̃) − Ṽ (x̄, w|µ̃, λ̃) ≤
+" τ
+#
+i
+
+
+X
+k−t
+Eµ∗ ,µ̃,λ̃
+β
+π(xik , f−i,k , yk ) − π(xik , f˜−i (wk ), yk ) xit = x, f−i,t = f−i , wt = w
+k=t
+
+=
+
+∞
+X
+k=t
+
+β k−t
+
+X
+
+0
+Pµ∗ ,µ̃,λ̃ [xik = x0 , f−i,k = f−i
+, wk = w0 | xit = x, f−i,t = f−i , wt = w]
+
+x0 ,∈N
+f 0 ∈S,w0 ∈W̃
+−i
+
+×
+
+35
+
+
+
+
+0
+π(x0 , f−i
+, y 0 ) − π(x0 , f˜−i (w0 ), y 0 ) ,
+
+where we abbreviated f˜−i = f˜−i (µ, λ). We can write:
+0
+Pµ∗ ,µ̃,λ̃ [xik = x0 , f−i,k = f−i
+, wk = w0 | xit = x, f−i,t = f−i , wt = w]
+0
+= Pµ∗ ,µ̃,λ̃ [xik = x0 | f−i,k = f−i
+, wk = w0 , xit = x, f−i,t = f−i , wt = w]
+0
+× Pµ∗ ,µ̃,λ̃ [f−i,k = f−i
+, wk = w0 | xit = x, f−i,t = f−i , wt = w]
+
+Additionally,
+0
+Pµ∗ ,µ̃,λ̃ [f−i,k = f−i
+, wk = w0 | xit = x, f−i,t = f−i , wt = w]
+0
+= Pµ̃,λ̃ [f−i,k = f−i
+, wk = w0 | f−i,t = f−i , wt = w],
+
+because under POE strategies, (f−i,k , wk ) is independent of xit , conditional on (f−i,t , wt ). Replacing and
+using Fubini’s theorem we obtain:
+V (x̄, f, w|µ∗ , µ̃, λ̃) − Ṽ (x̄, w|µ̃, λ̃) ≤
+∞
+X
+
+β k−t
+
+X
+
+0
+Pµ̃,λ̃ [f−i,k = f−i
+, wk = w0 | f−i,t = f−i , wt = w]
+
+f 0 ∈S
+−i
+w0 ∈W̃
+
+k=t
+
+"
+×
+
+
+
+max
+z∈{x(k,t),...,x+(k−t)h}
+
+
+0
+π(z, f−i
+, y 0 ) − π(z, f˜−i (w0 ), y 0 )
+
+#+
+.
+
+Finally, multiplying by q(f, w), the invariant distribution of {(ft , wt ) : t ≥ 0}, summing over all (f, w),
+and using Fubini we get:
+
+(A.2)
+
+∗
+
+E[V (x̄, ft , wt |µ , µ̃, λ̃) − Ṽ (x̄, wt |µ̃, λ̃)] ≤
+
+∞
+X
+
+β
+
+k−t
+
+E
+
+h
+
+∆{x(k,t),...,x+(k−t)h} (f−i,k , wk )
+
+i+ 
+
+.
+
+k=t
+
+Now, let us bound the second term in equation (A.1). We have that,
+
+Ṽ (x̄, w|µ̃, λ̃) − V (x̄, f, w|µ̃, λ̃)
+" τ
+#
+i
+
+
+X
+= Eµ̃,λ̃
+β k−t π(xik , f˜−i (wk ), yk ) − π(xik , f−i,k , yk ) xit = x, f−i,t = f−i , wt = w
+k=t
+
+36
+
+Hence,
+
+(A.3) E[Ṽ (x̄, wt |µ̃, λ̃) − V (x̄, ft , wt |µ̃, λ̃)]
+"
+" τ
+##
+i
+
+
+X
+= E Eµ̃,λ̃
+.
+β k−t π(xik , f˜−i (wk ), yk ) − π(xik , f−i,k , yk ) xit = x, f−i,t , wt
+k=t
+
+The result follows by equations (A.1), (A.2), and (A.3). The second bound follows by a similar argument so
+we omit its proof.
+
+37
+
+B
+
+Subtracting Oneself in OE
+
+In this section we derive f˜−i (µ, λ) for two leading cases:
+(i) a fixed maximum number of firms with short lived entrants
+(ii) unbounded number of firms with Poisson entry process
+In case (i) we address a version of the Ericson and Pakes (1995) model in which there is a maximum
+number of firms N , and whenever the actual number of firms n is less than N , there is one potential short
+lived entrant for each open “position”. I.e., each period there are N − n entrants. This version of the model
+has been commonly used in recent empirical work such as Collard-Wexler (2013) and in numerous papers
+by Doraszelski. Case (ii) is the standard version of the OE model that allows for many potential entrants.
+In this section we consider OE with no dominant firms and therefore suppress the conditioning on w. There
+are natural extensions of the two cases we consider to POE that we use on our numerical experiments.
+
+B.1
+
+Case (i)
+
+In case (i) one can imagine numbering each “position” from 1, ..., N . Suppose that all incumbent firms use
+a common oblivious strategy µ and let λ represent the common oblivious entry strategy. (In this model an
+oblivious entry strategy λ simply represents a probability of entry that is played by every potential entrant
+at every state of the world.)
+In the position model these two strategies together generate a Markov chain for the evolution of each
+firm in each position, where in any given period the position contains either an active firm or a potential
+entrant. The probability that the position will move from containing an active firm to containing a potential
+entrant is given by the probability that the active firm exits the market. The probability that it moves back
+to having an active firm is given by the probability of entry. If there is no entry, the position stays in
+the “potential entrant/inactive” state. Recall that under OE strategies this Markov chain will be ergodic
+(Weintraub, Benkard, and Van Roy 2008).
+Denote the invariant distribution under this Markov chain by q. Then, since firm i takes up one slot and
+there are N − 1 slots remaining, we have that
+f˜−i (µ, λ) = (N − 1) ∗ q.
+
+38
+
+B.2
+
+Case (ii)
+
+The Poisson entry model is more complicated but the intuition is similar. In this model there is an infinite
+pool of entrants and entry follows a Poisson process. Exit is binomial at each state and state transitions are
+Markov. Let f˜(x|µ, λ) be the expected number of firms in the industry at state x under oblivious policies µ
+and λ. Weintraub, Benkard, and Van Roy (2008) show that the long run invariant distribution of the industry
+state ft (x) is given by independent Poisson random variables with means equal to f˜(x|µ, λ) for each state
+x.
+We use this result to derive the expected competitors’ state f˜−i (µ, λ) for a firm i that is located at state
+x0 . First consider the expected number of competitors at state x0 (i.e., the number of competitors at the
+same state as the own firm), denoted f˜−i (x0 |µ, λ). In the invariant distribution f (x0 |µ, λ) is Poisson with
+mean f˜(x0 |µ, λ), and is independent of f (y|µ, λ) for all y 6= x0 . Since the own firm i is at state x0 there
+must be at least one firm at state x0 . I.e., we cannot simply subtract one from f˜(x0 |µ, λ) because we have
+to account for the fact that we know that there is at least one firm. Instead we have that
+f˜−i (x0 , µ, λ) = E[(f (x0 |µ, λ) − 1)|f (x0 |µ, λ) ≥ 1],
+where, as above, f (x0 |µ, λ) is a Poisson random variable with mean f˜(x0 |µ, λ). Note that when E(f (x0 |µ, λ))
+is large the probability that there are zero firms at x0 goes to zero and the conditioning makes no difference.
+In that case we would have that f˜−i (x0 |µ, λ) ≈ f˜(x0 |µ, λ) − 1
+By a similar argument, independence implies that for y 6= x0
+f˜−i (y|µ, λ) = E[f (y|µ, λ)] = f˜(y|µ, λ).
+
+39
+
+C
+
+Changing the Grid Size for the ACW Model
+
+The ACW paper categorizes firms into three size groups based on the number of employees. A firm is
+called small, medium or large if its employment falls in the bottom, middle, or top third of the industry
+employment distribution, respectively. We extend this discretization by considering smaller percentile bins.
+First, we calibrate the distribution of employment using 5 moments given in the ACW paper; that is, the
+33rd percentile is 8 employees, the 66th percentile is 18 employees, 95th percentile is 110 employees, the
+mean is 27.24 employees, and the standard deviation is 79.03 employees. We parametrize the distribution
+using a mixture of two log-normal random variables, and choose their parameters to minimize the square of
+the percentage deviation from the above 5 moments. We obtain the following specification of the number of
+employees L,
+
+ exp(2.51 + 1.57X1 ) with prob. 0.4,
+L=
+ exp(2.45 + 0.57X ) with prob. 0.6,
+2
+where X1 and X2 are independent standard normals. The density of L is depicted at figure 1. Using the
+calibrated distribution we obtain B ∈ {3, 6, 9, 12, 15} equal bins of firms by size. Let Lα,B be a number of
+employees at the median of the bin α in the discretization with B bins. Table 1 reports values of Lα,B . Note
+that Lα,3 corresponds to ACW discretization.
+α , and θ α .
+Using the Lα,3 grid we calibrate a linear interpolation of the profit parameters θ1α , θ2α , θ31
+32
+
+Specifically we obtain coefficients by running four least squares regressions
+θzα ≈ A0z + A1z log(Lα,3 ),
+for z ∈ {1, 2, 31, 32}. Calibrated parameters A0z and A1z provide interpolants θ̂zα,B for B ∈ {3, 6, 9, 12, 15}.
+The interpolation of transition cost τ (x0 , x) is more complicated than the profit function because the
+current state x = (α, h) contains the information about the current size α as well as the largest past size h.
+We use the following linear transition cost specification:
+
+ C 1 [log(Lα0 ,3 ) − log(Lα,3 )] + C 2 [log(Lα0 ,3 ) − log(Lh,3 )] if α0 > α
+0
+τ (x , x) ≈
+ C 3 [log(Lα0 ,3 ) − log(Lα,3 )] + C 4 [log(Lα0 ,3 ) − log(Lh,3 )] if α0 < α
+The above equation is calibrated using non-linear least squares. To prevent the state space from exploding we keep track of only Small, Medium and Large largest past size; that is, even for B > 3 we allow only
+h ∈ {Sm, Med, Lg} and categorize intermediate past sizes as Sm, Med, Lg according to Table 1. At the
+
+40
+
+0.05
+
+Density
+
+0.04
+0.03
+0.02
+0.01
+0
+0
+
+20
+
+40
+
+60
+Employees
+
+80
+
+100
+
+120
+
+Figure 1: Distribution of the number of employees
+same time we allow α0 and α to take B values. Formally, the transition cost is obtained using
+
+ C 1 [log(Lα0 ,B ) − log(Lα,B )] + C 2 [log(Lα0 ,B ) − log(Lh,3 )] if α0 > α
+B 0
+τ̂ (x , x) =
+ C 3 [log(Lα0 ,B ) − log(Lα,B )] + C 4 [log(Lα0 ,B ) − log(Lh,3 )] if α0 < α
+Note that we use Lh,3 instead of Lh,B because h takes on only three values.
+Small
+4.3
+2.2
+6.2
+1.5
+4.3
+6.8
+1.2
+3.3
+5.3
+7.0
+1.0 2.7 4.3 5.8 7.2
+
+Medium
+11.8
+9.7
+14.3
+9.1
+11.8
+15.3
+8.8
+10.7 13.0 15.8
+8.6 10.1 11.8 13.7 16.2
+
+Table 1: Size bins
+
+41
+
+Large
+33.4
+22.9
+66.7
+20.8
+33.4
+96.7
+19.9 27.0 44.5 123.3
+19.4 24.3 33.4 55.7 147.1
+
+References
+Aguirregabiria, V. and P. Mira (2007). Sequential estimation of dynamic discrete games. Econometrica 75(1), 1 – 54.
+Bajari, P., C. L. Benkard, and J. Levin (2007). Estimating dynamic models of imperfect competition.
+Econometrica 75(5), 1331 – 1370.
+Benkard, C. L. (2004). A dynamic analysis of the market for wide-bodied commercial aircraft. The Review of Economic Studies 71(3), 581–611.
+Berry, S., J. Levinsohn, and A. Pakes (1995). Automobile prices in market equilibrium. Econometrica 63(4), 841–890.
+Besanko, D., U. Doraszelski, Y. Kryukov, and M. Satterthwaite (2005). Learning-by-doing, organizational forgetting, and industry dynamics. Working Paper Northwestern University.
+Caplin, A. and B. Nalebuff (1991). Aggregation and imperfect competition - on the existence of equilibrium. Econometrica 59(1), 25 – 59.
+Collard-Wexler, A. (2013). Demand fluctuations in the ready-mix concrete industry. Econometrica, forthcoming.
+Corbae, D. and P. D’Erasmo (2012). Capital requirements in a quantitative model of banking industry
+dynamics. Working Paper, Maryland U.
+Doraszelski, U. and K. L. Judd (2012). Avoiding the curse of dimensionality in dynamic stochastic games.
+Quantitative Economics 3(1), 53–93.
+Doraszelski, U. and A. Pakes (2007). A framework for applied dynamic analysis in IO. In Handbook of
+Industrial Organization, Volume 3. North-Holland, Amsterdam.
+Doraszelski, U. and M. Satterthwaite (2010). Computable markov-perfect industry dynamics. RAND
+Journal of Economics 41(2), 215 – 243. Working Paper, Harvard University.
+Ericson, R. and A. Pakes (1995). Markov-perfect industry dynamics: A framework for empirical work.
+Review of Economic Studies 62(1), 53 – 82.
+Farias, V., D. Saure, and G. Weintraub (2012). An approximate dynamic programming approach to solving dynamic oligopoly models. The RAND Journal of Economics 43(2), 253–282.
+Fershtman, C. and A. Pakes (2012). Dynamic games with asymmetric information: A framework for
+empirical work*. The Quarterly Journal of Economics 127(4), 1611–1661.
+42
+
+Fowlie, M., M. Reguant, and S. P. Ryan (2012, December). Market-based emissions regulation and industry dynamics. NBER Working Papers 18645, National Bureau of Economic Research, Inc.
+Goettler, R. L. and B. R. Gordon (2011). Does amd spur intel to innovate more? Journal of Political
+Economy 119(6), 1141–1200.
+Gowrisankaran, G. and R. Town (1997). Dynamic equilibrium in the hospital industry. Journal of Economics and Management Strategy 6(1), 45 – 74.
+Ifrach, B. and G. Y. Weintraub (2012). A framework for dynamic oligopoly in concentrated industries.
+Working Paper, Columbia U.
+Jeziorski, P. (2013). Estimation of cost synergies from mergers: Application to us radio. Working Paper,
+U.C. Berkeley.
+Kydland, F. (1979). A dynamic dominant firm model of industry structure. The Scandinavian Journal of
+Economics, 355–366.
+Maskin, E. and J. Tirole (1988). A theory of dynamic oligopoly, I and II. Econometrica 56(3), 549 – 570.
+Pakes, A. and P. McGuire (1994). Computing Markov-perfect Nash equilibria: Numerical implications
+of a dynamic differentiated product model. RAND Journal of Economics 25(4), 555 – 589.
+Pakes, A. and P. McGuire (2001). Stochastic algorithms, symmetric Markov perfect equilibrium, and the
+‘curse’ of dimensionality. Econometrica 69(5), 1261 – 1281.
+Pakes, A., M. Ostrovsky, and S. Berry (2007). Simple estimators for the parameters of discrete dynamic
+games, with entry/exit examples. RAND Journal of Economics 38(2), 373 – 399.
+Pesendorfer, M. and P. Schmidt-Dengler (2003). Identification and estimation of dynamic games. Mimeo,
+London School of Economics.
+Ryan, S. (2012). The costs of environmental regulation in a concentrated industry. Econometrica 80(3),
+1019–1061.
+Sutton, J. (2007). Market share dynamics and the ”persistence of leadership” debate. American Economic
+Review 97(1), 222–241.
+Sweeting, A. (2013). Dynamic product repositioning in differentiated product markets: The case of format switching in the commercial radio industry. Econometrica, forthcoming.
+Von Stackelberg, H. (1934). Marktform und Gleichgewicht.-Wien & Berlin: Springer 1934. VI, 138 S. 8.
+J. Springer.
+43
+
+Weintraub, G. Y., C. L. Benkard, and B. Van Roy (2008). Markov perfect industry dynamics with many
+firms. Econometrica 76(6), 1375–1411.
+Weintraub, G. Y., C. L. Benkard, and B. Van Roy (2010). Computational methods for oblivious equilibrium. Operations Research 58(4), 1247–1265.
+
+44
+
+D
+
+Tables and Figures
+
+Market size (M)
+Demand slope (σ)
+Marginal cost (γ0 )
+Marginal cost (γ1 )
+Marginal cost (γ2 )
+Fixed cost (F)
+Second demand (m2 )
+Income (Y)
+Quality sensitivity (θ1 )
+Price sensitivity (θ1 )
+State multiplier (ψ)
+Marginal cost
+Investment effectiveness (a)
+Investment cost
+Discount factor
+States per firm
+
+Cournot
+200.0
+10.0
+1.0
+0.50
+5.0
+0.0
+5.0
+0.8
+[5.0-40.0]
+0.9
+8
+
+logit
+100.0
+1.0
+0.8
+0.5
+1.0
+0.5
+0.7
+[0.1-4.3]
+0.9
+8
+
+Table 2: Parameters for numerical simulations
+
+45
+
+Figure 2: Long-run industry statistics for OE and POE versus MPE, logit model δ = 0.2
+
+46
+
+Figure 3: Long-run industry statistics for OE and POE versus MPE, logit model, δ = 0.7
+
+47
+
+Figure 4: Long-run industry statistics for OE and POE versus MPE, Cournot model, δ = 0.2
+
+48
+
+Figure 5: Long-run industry statistics for OE and POE versus MPE, Cournot model, δ = 0.5
+
+49
+
+Figure 6: Long-run industry statistics for OE and POE versus MPE, Cournot model, δ = 0.8
+
+50
+
+OE − 1 dominant firm
+Cournot Profit, Entry/Exit
+
+8.30
+
+Expected number of firms
+
+Expected number of firms
+
+No dominant firms
+Cournot Profit, Entry/Exit
+Fringe
+
+0.35
+
+0
+
+1
+
+2
+
+3
+
+4
+5
+State
+
+6
+
+7
+
+7.47
+
+Fringe
+Dominant
+
+0.35
+
+0
+
+8
+
+1
+
+2
+
+Fringe
+Dominant
+
+1.13
+0.35
+
+0
+
+1
+
+2
+
+3
+
+4
+5
+State
+
+6
+
+4
+5
+State
+
+7
+
+5.55
+2.06
+
+8
+
+7
+
+8
+
+0.35
+
+8
+
+0
+
+1
+
+2
+
+3
+
+4
+5
+State
+
+2 dominant firms
+Cournot Profit, Entry/Exit
+5
+
+Fringe
+Dominant
+
+4
+3
+2
+1
+1
+
+7
+
+Fringe
+Dominant
+
+Figure 7: Long-run dominant/fringe state distribution, Cournot, investment cost=5
+
+0
+
+6
+
+3 dominant firms
+Cournot Profit, Entry/Exit
+Expected number of firms
+
+6.56
+
+Expected investment
+
+Expected number of firms
+
+2 dominant firms
+Cournot Profit, Entry/Exit
+
+3
+
+2
+
+3
+
+4
+5
+State
+
+6
+
+7
+
+8
+
+Figure 8: Long-run dominant/fringe investment, POE2, Cournot, investment cost=5
+
+51
+
+6
+
+(θ1α )
+
+Fixed cost
+Demand shifter (θ2α )
+α )
+First competitor (θ31
+α )
+More competitors (θ32
+
+Small
+-139.00
+20
+-48.00
+-17.00
+
+Current size
+Medium
+-244.00
+35
+-58.00
+-44.00
+
+Large
+-285.00
+45
+-63.00
+-48.00
+
+Table 3: Parameters of the revenue function in the CW model. The standard deviation of the
+preference shock σ is set to 133
+
+Past state
+Small
+Small, past medium
+Small, past large
+Medium
+Medium, past large
+Large
+Inactive
+
+Small
+0.00
+0.00
+0.00
+-107.00
+-314.00
+-254.00
+-1002.00
+
+Target size
+Medium
+-332.00
+-772.00
+-325.00
+0.00
+0.00
+-403.00
+-2000.00
+
+Large
+-1809.00
+-608.00
+-343.00
+101.00
+43.00
+0.00
+-1771.00
+
+Table 4: Parameters of the adjustment cost in the CW model
+
+52
+
+# Active Firms
+# Sm Firms
+# Med Firms
+# Lg Firms
+# Entrants/Exitors
+Entry costs
+Transition costs
+Growth out of Sm
+Growth into Lg
+
+MPE
+4.65
+2.67
+0.74
+1.24
+0.13
+127.26
+187.28
+0.30
+0.31
+
+OE
+4.37
+2.51
+0.69
+1.17
+0.12
+121.49
+175.61
+0.28
+0.29
+
+POE-1
+4.37
+2.52
+0.69
+1.16
+0.12
+124.59
+174.08
+0.28
+0.29
+
+POE-2
+4.37
+2.53
+0.69
+1.15
+0.13
+126.30
+173.69
+0.28
+0.29
+
+POE-3
+4.39
+2.55
+0.69
+1.15
+0.13
+127.18
+176.71
+0.29
+0.30
+
+POE-4
+4.43
+2.57
+0.70
+1.16
+0.13
+127.28
+176.90
+0.29
+0.30
+
+OE-SIM
+4.92
+2.83
+0.77
+1.32
+0.12
+123.36
+200.18
+0.32
+0.33
+
+Table 5: Industry statistics across different equilibria, CW model
+
+Past state
+Small
+Small, past medium
+Small, past large
+Medium
+Medium, past large
+Large
+Inactive
+
+Small
+0.00
+0.00
+0.00
+-107.00
+-200.48
+-408.86
+-1212.9
+
+Target size
+Medium
+-712.58
+-414.1
+-103.85
+0.00
+0.00
+-208.38
+-1586.1
+
+Large
+-1453.2
+-844.51
+-211.79
+-430.42
+-107.94
+0.00
+-1974
+
+Table 6: Parameters of the adjustment cost in the CW model – interpolation
+
+53
+
+Figure 9: Firm size distribution as we change grid size, CW model
+
+# Active
+# Sm Firms
+# Med Firms
+# Lg Firms
+# Entrants/Exitors
+Entry Costs
+Transition Costs
+Avg. Firm Size
+
+3 points
+4.65
+1.87
+1.90
+0.88
+0.022
+31.43
+255.51
+12.44
+
+6 points
+4.64
+1.34
+2.42
+0.88
+0.024
+34.63
+327.95
+12.92
+
+9 points
+4.65
+1.28
+2.48
+0.89
+0.028
+37.00
+340.50
+12.90
+
+12 points
+4.65
+1.26
+2.50
+0.89
+0.031
+38.93
+345.71
+12.86
+
+15 points
+4.65
+1.26
+2.50
+0.89
+0.034
+40.55
+348.21
+12.85
+
+Table 7: Industry statistics as we change grid size, CW model
+
+54
+
+

@@ -1,0 +1,4596 @@
+NBER WORKING PAPER SERIES
+
+A CLUSTER-GRID PROJECTION METHOD:
+SOLVING PROBLEMS WITH HIGH DIMENSIONALITY
+Kenneth L. Judd
+Lilia Maliar
+Serguei Maliar
+Working Paper 15965
+http://www.nber.org/papers/w15965
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+May 2010
+
+Lilia Maliar and Serguei Maliar acknowledge support from the Hoover Institution at Stanford University,
+the Ivie, the Ministerio de Ciencia e Innovación and FEDER funds under the project SEJ-2007-62656
+and the Generalitat Valenciana under the grants BEST/2010/142 and BEST/2010/141, respectively.
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2010 by Kenneth L. Judd, Lilia Maliar, and Serguei Maliar. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+
+A Cluster-Grid Projection Method: Solving Problems with High Dimensionality
+Kenneth L. Judd, Lilia Maliar, and Serguei Maliar
+NBER Working Paper No. 15965
+May 2010
+JEL No. C02,C63
+ABSTRACT
+We develop a projection method that can solve dynamic economic models with a large number of
+state variables. A distinctive feature of our method is that it operates on the ergodic set realized in
+equilibrium: we simulate a model, distinguish clusters on simulated series and use the clusters’ centers
+as a grid for projections. Making the grid endogenous to the model allows us to avoid costs associated
+with finding a solution in areas of state space that are never visited in equilibrium. On a standard desktop
+computer, we calculate linear and quadratic solutions to a multi-country growth model with up to 400
+and 80 state variables, respectively. Our solutions are global, and their accuracy does not rapidly decline
+away from steady state.
+
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+Lilia Maliar
+Department of Economics
+University of Alicante
+Campus San Vicente del Raspeig
+Ap. Correos 99, 03080 Alicante, Spain
+maliarl@merlin.fae.ua.es
+
+Serguei Maliar
+Department of Economics
+University of Alicante
+Campus San Vicente del Raspeig
+Ap. Correos 99, 03080 Alicante, Spain
+maliars@merlin.fae.ua.es
+
+1
+
+Introduction
+
+In this paper, we focus on solving dynamic economic models that have a
+large nite number of heterogeneous agents (consumers, producers, sectors,
+countries, members of a group, etc.). Some of the heterogeneity can be in
+the form of random variables. Models of this kind arise in many elds of economics (macroeconomics, game theory, industrial organization, international
+trade among others). We consider a typical example which is a multi-country
+stochastic growth model with a state space composed of capital stocks and
+technology levels of all heterogeneous countries. Computing a numerical
+solution to such a model can be costly. In particular, the cost grows exponentially (curse of dimensionality) if an algorithm relies on a tensor-product
+rule either in constructing a grid of points used for solution approximation
+or in constructing nodes used for numerical integration; for example, this is
+the case of the Galerkin projection method studied in Judd (1992).
+We present a simple projection method that can deliver suciently accurate solutions to models with hundreds of heterogeneous agents on a standard
+desktop computer. A distinctive feature of our method is that it operates on
+the ergodic set realized in equilibrium. Making the domain endogenous to
+the model allows us to avoid costs associated with nding a solution in areas
+of state space that are never visited in equilibrium. In Figure 1a, we illustrate
+the advantage of this strategy using an example of the standard one-country
+neoclassical growth model with a closed-form solution (see Section 4 for a
+description of this model). Standard projection methods compute a solution
+in a square area, while one typically needs a solution in an ellipsoid area (the
+ergodic set).1 The higher is the dimensionality of the problem, the larger is
+the gain from focusing on the ergodic set.2
+To construct a grid of points representing the ergodic set of the model in
+1
+
+Having a control over the domain on which a problem is solved is particularly useful
+for applications in which o-equilibrium behavior is of interest, e.g., dynamic games or
+developing economies. In such applications, our approach allows us to extend the domain
+to include other, non-ergodic-set areas of state space which are relevant for a given application. For example, if an economy starts with a low initial capital stock, we can compute
+a solution both in the ergodic set and below the steady state (but not above the steady
+state).
+2
+The ratio of the volume of a hypersphere (representing the ergodic set) to that of a
+hypercube (representing standard exogenous grids that contain the ergodic set) declines
+rapidly with dimension. For example, with 2 state variables, this ratio is equal to 0=79,
+whereas with 100 state variables, it is equal to 2 · 1070 .
+
+2
+
+question, we proceed in three steps: (i) guess a decision rule to the model
+and simulate a time series solution; (ii) distinguish clusters on the simulated
+series; (iii) compute the centers of the constructed clusters and use them as a
+grid of points for projections. To distinguish clusters, we use either hierarchal
+or K-means algorithms from the eld of cluster analysis; for a review of the
+literature on data clustering see, e.g., Everitt, Landau and Leese (2001).
+With the help of clustering algorithms, we are able to replace a large number
+of closely-located simulated points with a given (small) number of uniformly
+distributed "representative" points. The clustering algorithms we use are
+relatively inexpensive even in high-dimensional applications. For example, it
+takes us about a minute to construct a grid of 300 clusters using a panel of
+10000 observations for an economy with 200 heterogeneous agents (400 state
+variables).
+We design our cluster-grid projection method to make it feasible for highdimensional applications: First, we parameterize the decision rules using
+additively-separable polynomial functions which enable us to implement the
+approximation step with fast and numerically stable linear regression methods. Second, we evaluate the conditional expectations using low-cost numerical integration formulas that are particularly suitable for high-dimensional
+applications. Third, we solve for the polynomial coecients using a xedpoint iteration procedure whose cost does not considerably increase with the
+dimensionality. Finally, we propose a cheap way of initializing the clustergrid method, which is to apply the cluster-grid method itself to an arbitrary
+set of points and to use the obtained solution for constructing the ergodic
+set.3
+Nevertheless, the above design does not preclude the cost of the clustergrid method from growing with dimension: First, the approximation step
+becomes more expensive (because the number of polynomial terms in the
+approximating polynomial function increases and so does the number of grid
+points necessary for identifying the polynomial coecients), and second, the
+integration step becomes more expensive (because the number of nodes for
+computing the conditional expectations in each grid point increases). To
+make our method cost-ecient, we identify the combinations of the approximation and integration strategies that match each other in terms of the over3
+
+An alternative way of initializing the cluster-grid method is to infer the ergodic set from
+a solution delivered by other methods such as log-linearization and stochastic simulation
+methods.
+
+3
+
+all accuracy of solutions (we consider approximating polynomial functions of
+dierent degrees, and we explore a variety of alternative integration methods such as the Gauss-Hermite quadrature tensor-product rule, non-product
+monomial rules and Monte Carlo simulation).
+We rst analyze the role of the approximation and integration strategies in
+the method’s accuracy in the context of a one-country model. (As a measure
+of accuracy, we use unit-free Euler equation errors in the ergodic set). We
+nd that accurate solutions require both a suciently exible approximating
+function and a suciently accurate integration method. If an integration rule
+is not suciently accurate, the maximum accuracy is achieved under some
+low-degree polynomial, and similarly, if an approximating function is not
+suciently exible, a more accurate integration rule does not help increase
+accuracy. In particular, in our benchmark model, we have the following results: Under an accurate ten-node Gauss-Hermite integration rule, increasing
+a degree of the approximating polynomial from one to ve decreases the errors from a size of 103 to that of 108 ; under a low accurate Monte Carlo
+integration method, the minimum errors of size 104 are achieved under the
+second-degree polynomial; and all the integration methods considered lead to
+virtually the same errors of size 103 under a rigid rst-degree polynomial.
+We next study the version of the model with Q countries. Under Q = 2,
+we approximate the decision rules by polynomials of the rst, second and
+third degrees; under 4  Q  40, we consider polynomials of the rst and
+second degrees; and nally, under Q  40, we use polynomials of the rst
+degree only. We consider ve alternative integration strategies such as the
+Gauss-Hermite product rule with 3Q and 2Q nodes, the monomial formulas
+with 2Q 2 + 1 and 2Q nodes and the Gauss-Hermite rule with one node.4 All
+these integration strategies are feasible for the two-country model with the
+polynomial approximating functions up to degree 3. Under the second-degree
+polynomial, the above mentioned ve integration strategies are feasible for
+models with up to Q = 6, Q = 8, Q = 12, Q = 20 and Q = 40 countries,
+respectively. Under the rst-degree polynomial, monomial formulas with 2Q
+nodes and the Gauss-Hermite rule with one node are feasible for the models
+with up to Q = 100 and Q = 200 countries, respectively. The running time
+ranges from 30 seconds to 24 hours depending on the number of countries, as
+4
+
+We do not consider the Monte Carlo integration approach in the multi-country case
+because it is not competitive in the context of our projection method. Under polynomials
+of degrees higher than one, it typically restricts the overall accuracy of solutions even with
+a long series of 10000 observations.
+
+4
+
+well as on the specic approximation and integration strategies considered.
+The solutions are suciently accurate: under the rst-, second- and thirddegree polynomial approximations and accurate integration methods, the
+maximum Euler equation errors in the ergodic set are typically smaller than
+0=1%, 0=01% and 0=001%, respectively.
+For the multi-country models, we observe the same regularities as for the
+one-country model. Our key nding is that under low-degree polynomials,
+a specic integration method used plays only a minor role in the overall
+accuracy of solutions. Specically, under the rst-degree polynomial approximation, all the integration methods considered lead to virtually the same
+accuracy. Under the second-degree polynomials, the Gauss-Hermite product rule with 3Q and 2Q nodes and the two monomial formulas considered
+lead to Euler equation errors which are identical up to the fourth digit, and
+the one-node Gauss-Hermite rule increases the Euler equations errors only
+by 5  10% relative to more accurate integration formulas (an acceptable
+cost given that this formula allows us to advance from the 20-country to 40country models). These regularities are robust to variations in the model’s
+parameters such as the volatility and persistence of shocks and the degrees
+of agents’ risk-aversion. Finally, we nd that both accuracy and numerical
+stability of the cluster-grid method increase if the number of grid points is
+not exactly equal to the number of terms in the approximating polynomial
+function (this case is referred to as collocation) but is somewhat larger.
+The rest of the paper is as follows: In Section 2, we discuss a relation
+of our numerical method to the literature. In Section 3, we describe the
+construction of our endogenous cluster grid. In Section 4, we formulate
+the model. In Section 5, we design a projection method. In Section 6,
+we discuss a variety of computational strategies that help us reduce cost in
+high-dimensional applications. In Section 7, we describe the methodology
+of our numerical study and present the numerical results. In Section 8, we
+provide nal comments.
+
+2
+
+Relation to the literature
+
+The cluster-grid method, developed in this paper, is similar to stochastic
+simulation methods of Fair and Taylor (1984), Den Haan and Marcet (1990),
+Rust (1996), Pakes and McGuire (2001), and Judd, Maliar and Maliar (2009)
+in that it computes a solution on the ergodic set. However, we dier from the
+5
+
+above literature in two respects: rst, we use a cluster-grid representation of
+the ergodic set, which is more ecient than a set of original closely-located
+simulated points, and second, we use numerical integration methods that are
+unrelated to the estimated density function and are more accurate than the
+Monte Carlo integration method.
+Furthermore, our algorithm is similar to Smolyak’s sparse grid method,
+developed in Krueger and Kubler (2004), in that both methods use nonproduct rules for ameliorating costs in high-dimensional applications. However, we dier from Smolyak’s method in placement of grid points: our grid
+is endogenous while Smolyak’s grid is exogenous. If a polynomial approximation and an integration formula are the same in the two methods, the clustergrid method would typically have an advantage (disadvantage) in accuracy
+over Smolyak’s method inside (outside) the ergodic set. This is because we
+t a polynomial directly in the ergodic set, while Smolyak’s algorithm ts a
+polynomial in a larger hypercube domain and faces a trade-o between the
+t inside and outside the ergodic set.
+Finally, our projection method is comparable to perturbation methods
+in its ability to solve models with a large number of agents.5 However, our
+solutions are aimed to be accurate on the ergodic set, whereas solutions
+produced by perturbation methods are accurate in a neighborhood of steady
+state, which is much smaller than the ergodic set. As a consequence, accuracy
+of our global solutions does not decline rapidly away from steady state as does
+accuracy of local solutions obtained by perturbation methods.6
+Large-scale heterogeneous-agent models are studied, for example, using
+perturbation and projection methods in Gaspar and Judd (1997) and using
+a stochastic simulation version of the parameterized expectations algorithm
+in Den Haan (1996).7 A distinctive feature of the present paper is that we
+focus on much higher dimensions than those considered in the literature,
+namely, we compute global solutions to models with up to 400 state vari5
+
+Perturbation methods are studied in, e.g., Judd and Guu (1993), Gaspar and Judd
+(1997), Collard and Juillard (2001), and Kim, Kim, Schaumburg and Sims (2008). A
+collection of perturbation routines "DYNARE" is publicly available and can be adopted
+to individual applications; see http://www.dynare.org.
+6
+Accuracy of perturbation methods is assessed in, e.g., Judd and Guu (1993).
+7
+There is a variety of numerical methods for solving dynamic economic models; see
+Taylor and Uhlig (1990), Gaspar and Judd (1997), Judd (1998), Marimon and Scott
+(1999), Santos (1999), Christiano and Fisher (2000), Aruoba, Fernandez-Villaverde and
+Rubio-Ramirez (2006). However, most of the existing methods are not feasible for models
+with a large number of state variables due to their high computational expense.
+
+6
+
+ables. Furthermore, we carry out a systematic comparison of alternative
+approximation and integration strategies diering in accuracy and cost. Finally, we investigate the properties of solutions in a wide range of the model’s
+parameters including the volatility and persistence of shocks and the degrees
+of a consumer’s risk aversion.8
+
+3
+
+Cluster grid
+
+Because we want our projection method to operate on the ergodic set, we
+should rst construct a grid of points that covers the ergodic set. The simplest possible grid of this kind can be obtained by simulation. We can use
+either all or some of the simulated points as a grid for the projection method.
+A more ecient approach advocated in this paper is to replace the simulated
+points with a relatively small number of appropriately chosen "representative" points. In this section, we describe how to implement this approach
+using clustering algorithms. Such algorithms assign a set of observations
+into groups called clusters so that observations within each cluster are more
+similar to one another than observations belonging to dierent clusters. We
+then represent observations in each cluster with one point computed as the
+average of all observations in the given cluster. We call the constructed
+representative points a cluster grid.
+
+3.1
+
+Distance measure and data normalization
+
+Any clustering algorithm requires measuring distance between observations.
+As a measure of distance between observations l and m, denoted glm , we use
+the Euclidean (or O2 norm) distance
+#1@2
+" O
+X¡
+¢
+c
+c 2
+>
+(1)
+{l  {m
+glm =
+c=1
+
+where {cl is an l-th observation (object) on a variable c  {1> ===> O}.
+8
+A companion paper by Maliar, Maliar and Judd (2010) implements a further test of
+the cluster-grid method using a collection of 30 multi-country real-business cycle models
+with up to 20 state variables. These models are proposed by Den Haan, Judd and Juillard
+(2010) in the context of a JEDC project. Using a testsuite developed by Juillard and
+Villemot (2010), Kollmann, Maliar, Malin and Pichler (2010) compare the performance of
+six dierent numerical methods contributed to the JEDC project.
+
+7
+
+Before constructing clusters, we need to represent the ergodic set in a form
+which is suitable for clustering under the Euclidean distance. As an example,
+in Figure 1a, we plot the ergodic set of the standard one-country neoclassical
+growth model with a closed-form solution using 10000 simulated points (see
+Section 3 for a description of this model). As is seen from the gure, two
+state variables, which are capital and technology shock, have dierent ranges
+of values, and are highly correlated. Both measurement units of variables
+and correlation between variables aect the distance measures and hence,
+the outcome of a clustering procedure.
+To transform variables into comparable measurement units, it is sucient
+to normalize variables to zero mean and unit variance; the normalized ergodic
+set is shown in Figure 1b. To remove the correlation between variables, we
+components (PCs) transformation. To be specic, let [ =
+¡can1 use aOprincipal
+¢
+x > ===> x  RW ×O be a matrix of O variables which are normalized to zero
+mean and unit variance, where R  (> ) and {c  RW ×1 , c = 1> ===> O.
+Consider the eigenvalue decomposition [ 0 [ = Y Y 0 , where   RO×O is
+a diagonal matrix with diagonal entries 1  2  ===  O  0 being
+eigenvalues, and Y  RO×O is an orthogonal matrix of eigenvectors. Perform
+the following linear transformation of [: ] [Y , where ]  RW ×O .9 The
+variables z1 > ===> z¡O are
+components of [, and are orthogonal
+¢ calledc principal
+c 0 c
+m 0 c
+(uncorrelated), z z =  and (z ) z = 0 for any m 6= c. As is seen from
+Figure 1c, switching to PCs rotates the original ergodic set so that the axes
+of the ellipse become parallel to the coordinate axes (a higher dimensional
+analogue of an ellipse is a hyperellipsoid). Since the obtained PCs have
+dierent ranges of values, we complete the transformation by normalizing
+PCs to unit variance. Figure 1d plots the resulting ergodic set that has the
+shape of a circle (a hypersphere in multi-dimensional space).
+Figures 1a-1d give us an idea of how much we can save on cost in the
+two-dimensional case if we solve the model on the ergodic set instead of the
+standard squared domain containing the ergodic set 10 Our saving increases
+9
+The PCs transformation can be equivalently dened using a singular value decomposition instead of the eigenvalue decomposition considered; see, e.g., Hastie, Tibshirani and
+Friedman (2009).
+10
+In principle, we can solve models on domains, which are smaller than the ergodic
+set, namely, we can consider ranges of values for the individual state variables, which are
+smaller than the ergodic ranges. However, accuracy may decline rapidly when we deviate
+from the domain on which the problem is solved; this happens with the solutions obtained
+by perturbation methods.
+
+8
+
+with the dimensionality of the problem: for a model with s state variables,
+the ratio of a hypershere’s volume vs (with the hypershere representing the
+ergodic set) to a hypercube’s volume fs (with the hypercube representing
+the standard hypercube domain containing the ergodic set) can be estimated
+by:
+
+s31
+(@2) 2
+
+
+for s = 1> 3> 5===
+
+1·3·===·s
+vs
+=
+(2)
+=
+s
+fs 
+
+ (@2) 2 for s = 2> 4> 6===
+2·4·===·s
+
+The ratio (2) declines very rapidly with s. For dimensions two, three, four,
+ve, ten, thirty and one hundred, this ratio is 0=79, 0=52, 0=31, 0=16, 3 · 103 ,
+2 · 1014 and 2 · 1070 , respectively.
+
+3.2
+
+Clustering algorithms
+
+There exists a vast variety of clustering techniques in the eld of cluster analysis; see, for example, Romesburg (1984), Everitt et al. (2001) for reviews. In
+this section, we describe two commonly used clustering algorithms, namely,
+hierarchical and K-means, and we illustrate the construction of clusters by
+way of examples.
+3.2.1
+
+Hierarchical algorithm
+
+A hierarchical algorithm creates a multi-level hierarchy of clusters in the
+form of a tree. The root corresponds to a single cluster that includes all
+observations and the leaves correspond to individual observations. Given a
+hierarchical tree, one can choose the most appropriate level of clustering for
+a given application. We consider an agglomerative type of hierarchical algorithm which begins from individual observations (leaves) and agglomerates
+them into larger clusters. The algorithm proceeds in the following steps: nd
+the pairwise distances between the objects (observations) in the data; merge
+the closest two clusters into a single cluster and continue to group the newly
+created clusters into larger clusters until there is a single cluster that contains all objects; nally, cut o the obtained hierarchical tree at some point
+to obtain clusters.
+In Section 3.1, we described how to measure a distance between individual observations. We shall now discuss how to measure a distance between
+groups of observations (clusters). The inter-cluster distance between clusters
+9
+
+D and E, denoted gDE , can be computed from the set of pairwise distances
+between observations, glm , where one member of the pair l is in D and the
+other m is in E. The hierarchical algorithm can compute gDE using alternative
+linkage algorithms. Single linkage (or the nearest neighbor) clustering uses
+the shortest distance between objects in the two clusters, gDE = min glm .
+lD> mE
+
+Complete linkage (or the furthest neighbor) clustering uses the maximum
+distance between objects in the two clusters: gDE = max glm . Group averlD> mE
+
+age linkage clustering uses the average
+P P distance between all pairs of objects
+1
+glm , where kD and kE is the number of
+in the two clusters: gDE = kD kE
+lDmE
+
+objects in clusters D and E, respectively. Finally, Ward’s linkage clustering
+uses the increase in the sum of squared error, VVH, or variance,
+Ã
+!2
+O
+X
+XX
+1
+{cl 
+{cl >
+VVHD
+k
+D
+lD c=1
+lD
+as a result of merging two clusters into a single cluster, gDE = VVHDE 
+[VVHD + VVHE ], where DE is a cluster obtained after merging D and E.
+The following example illustrates the construction of clusters by the agglomerative hierarchical algorithm under single linkage clustering.
+A numerical example Consider sample data that contains ve observations for two variables, {1l and {2l ,
+Variable
+Observation l {1l {2l
+1
+1 0=5
+2
+2
+3
+3
+0=5 0=5
+4
+3 1=6
+5
+3
+1
+These data, as well as the steps of the clustering construction, are shown
+in Figure 2. The Euclidean distance glm between
+¡ two¢ observations (objects) l and m with variables values ({1l > {2l ) and {1m > {2m is given by glm =
+h¡
+¢2 ¡
+¢2 i1@2
+{1l  {1m + {2l  {2m
+. Let us compute a matrix G1 of the inter-
+
+10
+
+individual distances, in which each entry lm corresponds to the distance glm ,
+1
+2
+G1 =
+3
+4
+5
+
+1
+0
+2=7
+0=5
+2=3
+2=1
+
+2
+2=7
+0
+2=9
+1=7
+2=2
+
+3
+0=5
+2=9
+0
+2=7
+2=5
+
+4
+2=3
+1=7
+2=7
+0
+0=6
+
+5
+2=1
+2=2
+2=5
+0=6
+0
+
+The smallest non-zero distance for the ve observations in G1 is g13 = 0=5, so
+that we merge objects 1 and 3 into one cluster and call the obtained cluster
+"object 6". The distances for the four objects, namely, 6, 2, 4, and 5, are
+shown in a matrix G2 ,
+6
+G2 = 2
+4
+5
+
+6
+2
+4
+5
+0 2=7 2=3 2=1
+2=7 0 1=7 2=2
+2=3 1=7 0 0=6
+2=1 2=2 0=6 0
+
+where, g62 = min {g12 > g32 }, g64 = min {g14 > g34 }, g65 = min {g15 > g35 }. Given
+that g45 is the smallest non-zero entry in G2 , objects 4 and 5 should be
+merged into a new object (cluster) 7. The distances for three objects 6, 7
+and 2 are given in G3 ,
+6
+7
+2
+6 0 2=1 2=7
+G3 =
+7 2=1 0 1=7
+2 2=7 1=7 0
+where g67 = min {g14 > g15 > g34 > g35 }, g62 = min {g12 > g32 }, g72 = min {g42 > g52 }.
+The smallest non-zero distance in G3 is g72 = 1=7. Hence, objects 2 and 7
+should be merged into object 8. The only two objects left unmerged are 6 and
+8, so that the last step is to merge those two to obtain object 9 containing
+all the observations. In sum, after progressive merging of clusters, we obtain
+
+11
+
+the following hierarchical tree:
+Cluster
+created
+6
+7
+8
+9
+
+Clusters Shortest
+merged distance
+1
+3
+0=5
+4
+5
+0=6
+2
+7
+1=7
+6
+8
+2=1
+
+For example, if we want to group the observations into three clusters, we
+obtain the clusters: {1> 3}; {4> 5}; {2}.
+k
+If clusters are well-dened, then all the above linkage clustering algorithms produce similar cluster trees; otherwise, they can produce dierent
+trees. Single linkage tends to suer from a phenomenon called chaining in
+which well separated clusters are joined together if there are outliers in between them. Complete linkage tends to deliver compact clusters with small
+diameters, however, it can nd clusters in which observations are much closer
+to some observations of other clusters than to some observations of their own
+cluster. Group average linkage tends to merge clusters with a small variance
+and is relatively robust, however, its results are not invariant to monotone
+transformations to glm . Finally, Ward’s linkage tends to produce spherical
+clusters of the same size; it has been observed to work well in many applications, however, it can deliver a spherical structure where such a structure
+does not exist. For a detailed discussion of the strengths and weaknesses of
+the above linkage clustering algorithms, see, e.g., Everitt et al. (2001).
+The agglomerative hierarchical algorithm is relatively expensive in terms
+of computational time and memory. Another weakness is that a decision
+about combining two clusters is nal and cannot be undone on a later stage.
+These weaknesses of the hierarchical algorithm are addressed by partitional
+class of algorithms.
+3.2.2
+
+K-means algorithm
+
+A well-known member of the partitional class is a K-means clustering algorithm: it obtains a single partition of data instead of a cluster tree generated
+by a hierarchical algorithm. The algorithm starts with K random clusters,
+and then moves objects between those clusters with the goal to minimize
+variability within clusters and to maximize variability between clusters. The
+12
+
+basic K-means algorithm proceeds as follows: choose the number of clusters,
+K; generate randomly K clusters and determine the centers of the clusters;
+given a current set of centers, assign each observation to the nearest cluster center and re-compute the centers of the new clusters; iterate on the last
+step until convergence.11 A frequently used criterion function in the K-means
+algorithm is the VVH function,
+VVH =
+
+K XX
+O
+X
+¡
+
+{cl  {c>
+
+¢2
+
+>
+
+=1 l c=1
+
+where {cl is the c-th coordinate of a point in the -th cluster, and {c> is the
+c-th coordinate of a center of the -th cluster; see Hastie et al. (2009, p.
+510). The center minimizing VVH
+P c of a cluster is given by the mean of the
+1
+c>
+points in the cluster, {
+{l , with k being the number of objects in
+k
+l
+
+the -th cluster.
+The K-means algorithm is relatively ecient and computationally cheap
+which makes it suitable for large data sets. However, it has an important
+shortcoming, namely, it can give dierent results with each run. This is
+because the K-means algorithm is sensitive to initial random assignments of
+observations into clusters and can converge to a suboptimal local minimum.
+3.2.3
+
+Clusters for the model with a closed-form solution
+
+We use the hierarchical algorithm with Ward’s linkage clustering to construct
+clusters for the ergodic set shown in Figures 1a-1d. The results under the
+K-means algorithm are similar (not reported). In Figures 3a-3d, we plot
+clusters obtained for the normalized ergodic set shown in Figure 1b (the
+circles around clusters’ centers are drawn for expository convenience and
+show approximately a set of points that each cluster represents). When the
+number of clusters is small (see Figures 3a and 3b), all clusters are situated
+along the direction of the largest principle component, while the direction of
+the smallest principle component is not represented. When the number of
+clusters increases (see Figures 3c and 3d), the clusters are distributed over
+the ergodic set more uniformly. In Figures 4a-4d, we construct clusters on
+the normalized PCs of the ergodic set shown in Figure 1d. In this case, both
+11
+Note that for this clustering algorithm, we need not compute a distance between any
+two observations but the one between an observation and a cluster center.
+
+13
+
+PC directions are represented equally well, and the clusters cover the ergodic
+set uniformly even if the number of clusters is small. In Figure 4d, we draw
+attention to a cluster which is considerably separated from the rest of the
+clusters (see the upper right part of the gure). The ability of the clustering
+algorithm to identify clusters outside of high-probability areas of state space
+is especially valuable in applications in which ergodic sets do not have a
+regular ellipsoid form or are possibly composed of disjoined sets. Given that
+we obtain a more uniform coverage of the ergodic set when using PCs than
+when using the original data, in the rest of the paper, we apply the clustering
+algorithm to PCs.
+
+4
+
+The model
+
+In this section, we describe the model that we use for a presentation of our
+projection method. There is a nite number of countries, Q, and each country is populated by a representative consumer. A social planner maximizes
+a weighted sum of expected lifetime utility functions of the countries’ representative consumers,
+Ã
+!
+Q
+X
+X
+yq
+ w xq (fqw )
+(3)
+max r" H0
+q
+Q
+q
+q
+{fw >nw+1 }q=1 w=0 q=1
+w=0
+subject to the aggregate resource constraint,
+Q
+X
+q=1
+
+fqw +
+
+Q
+X
+q=1
+
+q
+nw+1
+=
+
+Q
+X
+
+nwq (1  g) +
+
+q=1
+
+Q
+X
+
+qw Di q (nwq ) >
+
+(4)
+
+q=1
+
+where Hw is the operator of conditional expectation; fqw , nwq , qw and yq are,
+respectively, consumption, capital, technology shock and welfare weight of
+a country q  {1> ===> Q};   (0> 1) is the discount factor; g  (0> 1] is
+the depreciation rate; D¡ is the level
+¡ 1 Initial
+¢ of technology.
+¢ condition (k0 > 0 )
+is given, where k0
+n01 > ===> n0Q and 0
+0 > ===> Q
+0 . The utility and
+q
+q
+production functions, x and i , respectively, are increasing, concave and
+continuously dierentiable. The process for technology shocks of country q
+is given by
+ln qw =  ln qw1 + %qw ,
+(5)
+
+14
+
+where   (1> 1) is the autocorrelation coecient; and %qw
+%w +  qw with
+q
+2
+%w N (0>  ) being identical for all countries and with  w
+N (0>  2 ) being
+country-specic.
+We restrict our attention to the case in which the countries are characterized by identical preferences, xq = x, and identical production technologies,
+i q = i , for all q. The former implies that the planner assigns identical
+weights, yq = 1, and consequently, identical consumption fqw = Fw @Q fw to
+all agents, where Fw denotes aggregate consumption. If an interior solution
+exists, it satises Q Euler equations,
+£
+©
+¡ q ¢¤ª
+>
+(6)
+x0 (fw ) = Hw x0 (fw+1 ) 1  g + qw+1 Di 0 nw+1
+where x0 and i 0 denote the rst-order derivatives of x and i, respectively.
+Thus, the planner’s solution is determined by process for shocks (5), resource
+constraint (4) and the set of Euler equations (6).
+The standard representative-agent neoclassical growth model can be obtained as a one-country version of heterogeneous-agent economy (3)  (5) by
+assuming that Q = 1 and that %w = 0 for all w. Under the assumptions of a
+logarithmic utility function, x (f) = ln (f), full depreciation of capital, g = 1,
+and the Cobb-Douglas production function, i (n) = n  , the representativeagent model admits a closed-form solution nw+1 = w Dnw (here and further
+in the text, we omit a country’s superscript in the one-country case). This
+closed-form solution was used for simulating times series and for constructing
+the ergodic set shown in Figures 1, 3 and 4.
+
+5
+
+A projection method
+
+q
+q
+Our objective
+is¢to nd Q decision
+rules
+¡ 1
+¡ 1
+¢ for capital, nw+1 = N (kw > w ), where
+Q
+Q
+kw
+nw > ===> nw and w
+w > ===> w are w-period vectors of state variables.
+Given that the countries are identical in their fundamentals (preferences and
+technology), the optimal decision rules are identical for all countries. Even
+though we could use this fact to simplify the solution procedure, we will
+not do so and will compute a separate decision rule for each country, thus,
+treating the countries as completely heterogeneous. This strategy allows us
+to evaluate the cost of nding solutions in general multi-dimensional settings
+with heterogeneous preferences and technology.
+A projection method approximates a solution in a nite number of specied points; see Chapters 11 and 17 in Judd (1998) for a detailed review of
+
+15
+
+the projection methods. To solve the model described in Section 3, we paraq
+meterize the capital decision rules of each country, nw+1
+= N q (kw > w ) with a
+q
+exible functional form q (kw > w ;  ) depending on a vector of coecients
+q . We then re-write Euler equation (6) as
+½ 0
+¾
+¡ q ¢¤ q
+x (fw+1 ) £
+q
+q
+0
+1  g + w+1 Di nw+1 nw+1 ' q (kw > w ; q ) > (7)
+nw+1 = Hw  0
+x (fw )
+For each country q  {1> ===> Q}, we need to compute a vector q so that
+q (kw > w ;  q ) is the best possible approximation of N q (kw > w ) on some domain given the functional form q . Note that using Q assumed decision
+q
+= q (kw > w ; q ), resource constraint (4) and process for shock (5),
+rules nw+1
+we can express the variable inside the conditional expectation in (7) as a
+function of the¡current-period
+¢ state variables, kw and w , and the next-period
+errors, %w+1
+%1w+1 > ===> %Q
+w+1 ,
+
+
+¡
+¢
+¡ q ¢¤ q
+x0 (fw+1 ) £
+1  g + (qw ) exp %qw+1 Di 0 nw+1
+nw+1
+0
+x (fw )
+
+q (kw > w > %w+1 ) > (8)
+
+where
+fw
+
+Q
+¤
+1 X£ q
+q
+=
+nw (1  g) + qw Di (nwq )  nw+1
+>
+Q q=1
+
+fw+1 =
+
+Q
+¡
+¢
+¡ q ¢
+¤
+1 X£ q
+q
+nw+1 (1  g) + (qw ) exp %qw+1 Di nw+1
+ nw+2
+>
+Q q=1
+
+¡ ¡
+¢
+¡
+¢¢
+q
+and nw+2
+= q (kw+1 > w+1 ; q ) with kw+1 = 1 kw > w ; 1 > ===> Q kw > w ; Q
+£¡ ¢
+¡
+¡
+¢
+¡ ¢
+¢¤
+and w+1 = 1w exp %1w+1 > ===> Q
+exp %Q
+w+1 .
+w
+We can compute the capital decision rules as follows:
+• Step 1. Choose a grid of points of state variables {kl > l }Ll=1 .
+• Step 2. Consider a country q. Fix some vectors of the coecients
+ q and nd the next period capital stock in all grid points using the
+q (kl > l ; q ) for all l =
+assumed decision rule for capital, i.e., e
+nlq
+1> ===> L.
+
+16
+
+• Step 3. Using some numerical integration method, approximate the
+conditional expectations in each of L grid points and call the resulting
+capital stock b
+nlq , i.e.,
+b
+nlq
+
+H {q (kl > l > %)} =
+
+(9)
+
+Here, the expectation is computed¡with respect
+¢ to a vector of normally
+1
+Q
+distributed random variables %
+% > ===> % .
+• Step 4. Run a least-squares (LS) regression of response variables b
+nlq on
+q
+the functional form q (kl > l ;  ),
+bq
+
+
+arg min
+q
+
+
+L ³
+´2
+X
+b
+nlq  q (kl > l ;  q ) =
+
+(10)
+
+l=1
+
+Repeat Steps 2-4 for all Q countries.
+½ q ¾Q
+b
+b
+• Step 5. Compute the coecients for the next iteration 
+
+as
+
+q=1
+q
+
+b
+b q>
+b = (1  ) q + 
+
+
+(11)
+
+where   (0> 1] is a dampening parameter.
+• Step 6. Check the convergence criterion, which is the average relative dierence between capital values on the grid before and after the
+nlq , respectively, i.e.,
+iteration, e
+nlq and b
+¯
+¯
+Q
+L
+nlq ¯¯
+1 X X ¯¯ e
+nlq  b
+(12)
+¯
+¯ ? 10& >
+L · Q l=1 q=1 ¯ e
+nlq ¯
+where & A 0. If criterion (12) is not satised, go to Step 2.
+The dampening procedure we use in (11) is called xed-point iteration.
+Fixed-point iterations can be unstable; see Judd (1998, p.557) for a discussion. Setting dampening parameter  to a small value stabilizes xed-point
+iteration though it reduces the speed of convergence.
+17
+
+Projection methods are also referred to in the literature as weighted residuals methods because they minimize a weighted sum³of residuals
+´ in specied
+q
+q
+q
+b , l = 1> ===> L,
+points. Consider the residuals on the grid, b
+nl   kl > l ; 
+obtained in a country’s q LS solution to (10). If the number of grid points
+L is the same as the number of coecients in  q (collocation), the system
+in (10) has L equations and L unknowns, and the LS regression leads to zero
+residuals in all grid points l = 1> ===> L (assuming that the LS problem is
+well-conditioned). If the number of grid points L is larger than the number
+of coecients in q , the system in (10) has more equations than unknowns
+(i.e., it is overdetermined), and the LS regression minimizes a squared sum
+of equally weighted residuals on the given grid.
+
+6
+
+Strategies for high-dimensional problems
+
+In the description of our projection method, we have not specied how to
+choose an approximating function for the capital decision rule, a grid of
+points on which the solution is computed and a numerical integration method
+for approximating the conditional expectations. These three choices play a
+determinant role in the accuracy and speed of our method in the context of
+high-dimensional problems, and they are discussed in Sections 5.1, 5.2 and
+5.3, respectively.
+
+6.1
+
+Approximation step
+
+To approximate the decision rules, we use a complete set of ordinary polynomials.12 For a one-country model, the polynomial function of degree two
+is given by
+ (nw > w ; ) =  0 +  1 nw +  2 w +  3 nw2 +  4 nw w +  5 2w =
+
+(13)
+
+The polynomial functions of degrees one, two, three, four and ve have 3, 6,
+10, 15 and 21 coecients, respectively.
+12
+
+In some numerical methods, the choice of a polynomial representation is related to the
+choice of grid points. For example, the Galerkin method relies on Chebyshev polynomials
+and uses zeros of such polynomials as an optimal grid; see Judd (1992). Our grids are
+not related to any specic polynomial family. It is an open question which family of
+approximating functions is the most appropriate for our endogenous grids.
+
+18
+
+For an Q-country model, the number of coecients in the p-th degree
+polynomial, Sp (Q), that approximates the capital decision rule of each country is given by
+S1 (Q) = 1 + 2Q>
+S2 (Q) = 1 + 2Q + Q (2Q + 1) >
+
+Q (2Q  1) (2Q  2)
+=
+3
+We illustrate how the number of polynomial coecients increases with Q in
+Table 1 (panel 1). For example, when Q = 100, the number of terms in
+the rst-, second- and third-degree polynomials is equal to 201, 20301, and
+1373701, respectively. Since the decision rules should be computed for each
+country, the total number of polynomial coecients in the Qcountry case
+is Q · Sp (Q).
+Given that the number of polynomial terms and, hence, the number of
+polynomial coecients grows rapidly with the dimensionality, it is important
+to design a procedure for nding xed-point values of the coecients so that
+its cost does not considerably increase with the number of polynomial terms
+(coecients). We achieve this objective by making two choices. First, we
+employ a linearly additive polynomial representation like the one in (13);
+this allows us to perform the regression in Step 4 using fast and reliable
+linear approximation methods whose cost is low even in high-dimensional
+applications. Second, in Step 5, we use xed-point iteration (11) whose cost
+does not considerably increase with the dimensionality of the problem (even
+though xed-point iteration is generically slow when a small  is required for
+convergence).13
+S3 (Q) = 1 + 2Q + Q (2Q + 1) + 4Q 2 +
+
+6.2
+
+Three alternative grids
+
+We now describe three alternative grids to be evaluated for our projection
+method: the standard tensor-product grid, a grid composed from selected
+13
+
+There are other iterative schemes for nding xed-point coecients such as time iteration and (quasi-)Newton methods; see Judd (1998, p. 553-558) and Judd (1998, p.
+103-119), respectively. Time iteration can be more stable than xed-point iteration, however, it requires solving costly nonlinear equations for nding future values of variables.
+(Quasi-)Newton methods can be faster, especially for low-dimensional problems, but can
+become expensive when the dimensionality increases. Gaspar and Judd (1997) argue that
+xed-point iteration (referred to in their paper as successive approximation) has advantages over time iteration and dominates Newton methods for large-scale models.
+
+19
+
+simulated points and a grid constructed by clustering simulated data.
+6.2.1
+
+Tensor-product grid
+
+In low-dimensional problems, we can construct a grid as a tensor (or Cartesian) product of state variables discretized on a relevant area of state space.
+For example, in a one-country version of our model, a£ tensor-product
+grid
+¤
+£ can
+¤
+be obtained by dividing some intervals for capital, n> n , and shock, >  ,
+£ L¤ points, respectively, and by considering all possible pairs from
+£into ¤Ln and
+n> n × >  (the limits n, n, ,  can be estimated by simulation). A version
+of our projection method that uses a tensor-product grid is referred to in the
+paper as tensor-product-grid algorithm (TPGA). The TPGA is not feasible
+in high-dimensional applications since the number of grid points and, hence,
+computational expense grows exponentially with the dimensionality of state
+space.
+6.2.2
+
+Simulation grid
+
+As is argued in Section 3, we can construct a grid that covers the ergodic set
+using a set of points obtained by simulation. On one hand, simulated series
+should be long enough to accurately approximate the ergodic set. On the
+other hand, long simulated series have many points that are very close to
+each other. The redundancy in grid points increases cost without increasing
+accuracy which makes the projection method cost-inecient.
+A more ecient grid can be constructed by using simulated points which
+are separated by a sucient time interval. To be specic, if we have a simulation of a length W , and we want to select L points to be used as a grid, we can
+take points separated by a time interval WL (rounded to the nearest smaller
+integer if necessary). Our grid points are therefore the simulated points taken
+in periods w = WL > 2W
+> ===> (L1)W
+> W . In expected terms, points separated in
+L
+L
+time are more distant from each other and cover the ergodic set more uniformly than the original subsequently following simulated points. We call a
+version of the projection method using a simulation grid a simulation-grid
+algorithm (SGA).
+6.2.3
+
+Cluster grid
+
+To construct a cluster grid, we use the hierarchical algorithm with Ward’s
+linkage clustering as described in Section 3.2. An important practical ques20
+
+tion is: How costly is the clustering process, namely, how does the cost of
+constructing clusters depend on the dimensionality of the problem, Q, the
+number of observations, W , and the number of clusters to be constructed, K?
+In Table 1 (panel 2), we report time necessary for constructing K = 3, 30,
+300 clusters under three alternative lengths of simulation, W = 1000, 3000,
+10000 with the number of countries ranging from Q = 1 to Q = 200 (we
+use time series solutions of our benchmark model with partial depreciation of
+capital; see Section 7.1 for a description of our benchmark parameterization
+of the models).
+As is seen from the table, time for constructing clusters depends primarily
+on the length of simulated series, W . An increase in W by one order of
+magnitude (from 1000 to 10000) raises the clustering time by about two
+orders of magnitude. In turn, an increase in Q by two orders of magnitude
+from Q = 1 to Q = 100 countries only triplicates the clustering time. The
+largest time for constructing clusters is observed in the model with Q = 200
+and W = 10000 and is around one minute, which is not much time especially
+taking into account that we use a standard desktop computer. Given that
+clusters should be created only once (or sometimes twice, see Section 7.1) on
+the initial step of the projection method, we do not explore possibilities for
+reducing time for constructing clusters.
+
+6.3
+
+Numerical integration
+
+Each iteration of our projection method requires computing the conditional
+expectation (9) for all grid points and all countries. Let us x a country q and
+a grid point kl , l , and let us denote the resulting function inside expectation
+(9) by j (%)
+q (kl > l > %). In our model, % follows a multivariate normal
+distribution, % N (> ), where  is an Q × 1 vector of means and  is an
+Q ×Q variance-covariance
+matrix. To compute H {j (%)}, we should evaluate
+R
+a denite integral RQ j (%) z (%) g% where the weighting function z (%) is a
+density function of the multivariate normal distribution,
+
+¸
+1
+Q@2
+1@2
+0 1
+det ()
+exp  (%  )  (%  ) >
+(14)
+z (%) = (2)
+2
+with det () denoting the determinant of . For the model studied in the
+paper,  = (0> ===> 0)0 , and  has the diagonal terms equal to 22 and the odiagonal terms equal to 2 (the o-diagonal terms of  are non-zero because
+individual and aggregate shocks are correlated by assumption).
+21
+
+Numerical integration consists in approximating integrals by a weighted
+sum of values that the integrand, j, takes in a nite set of nodes, i.e.,
+Z
+RQ
+
+j (%) z (%) g%
+
+M
+X
+$ m j (%m ) >
+
+(15)
+
+m=1
+
+where {%m }Mm=1 and {$ m }Mm=1 are integration nodes and integration weights,
+respectively. Integration formulas dier in their choices of integration nodes
+and weights. Typically, there is a trade o between accuracy and cost: integration formulas with more nodes (and thus, a higher cost) lead to more
+accurate approximations.
+The existing numerical integration formulas are constructed under the assumption of uncorrelated variables with zero mean and unit variance. Therefore, we should re-write the integral in (15) in terms of such uncorrelated
+variables prior to numerical integration. Given that  is symmetric and
+positive-denite, it has a Cholesky decomposition,  = 0 , where  is a
+lower triangular matrix with strictly positive diagonal entries. The Cholesky
+decomposition of  allows us to transform correlated variables in vector %
+into uncorrelated ones in y with the following linear change of variables:
+y=
+
+1 (%  )
+=
+2
+
+(16)
+
+¡ ¢Q
+2 det () gy. Using (16) and taking into account that
+Note that g% =
+1
+1 0 1
+ = ( )  and that det () = [det ()]2 , we obtain
+Z
+³
+´
+Q@2
+j
+2y +  exp (y0 y) gy=
+(17)
+H {j (%)} = 
+RQ
+
+All subsequent numerical integration formulas are derived on the basis of
+(17) under  = (0> ===> 0)0 .
+6.3.1
+
+Gauss-Hermite quadrature
+
+In a one-dimensional case, Q = 1, denite integrals can be accurately approximated with the Gaussian quadrature approach. Under this approach, nodes
+and weights are chosen so that the approximation is exact if the function j
+is a polynomial of a certain degree. For the integral in (17), the Gaussian
+22
+
+quadrature approach leads to the Gauss-Hermite quadrature rule,
+Z  ³
+´
+¡
+¢
+1@2
+H {j (%)} = 
+j
+2| exp | 2 g|
+
+
+ 1@2
+
+M
+³
+´
+X
+$m j
+2|m > (18)
+m=1
+
+where the values of the Gauss-Hermite quadrature nodes {|m }Mm=1 and weights
+{$ m }Mm=1 are provided in tables; see, e.g., Judd (1998, p. 262).
+We can extend one-dimensional Gauss-Hermite quadrature rule to the
+case of multi-dimensional integral in (17) by way of a tensor-product rule:
+Z
+³
+´
+j
+2y exp (y0 y) gy
+H {j (%)} = Q@2
+ Q@2
+
+RQ
+M1
+X
+
+===
+
+m1 =1
+
+MQ
+X
+
+$1m1 $ 2m2 · · · $ Q
+mQ · j
+
+mQ =1
+
+³
+
+¡
+¢0 ´
+> (19)
+2 · |m11 > ===> |mQQ
+
+© ªM
+© ªM
+where $ qmq mqq=1 and |mqq mqq=1 are, respectively, weights and nodes in a
+dimension q obtained from one-dimensional Gauss-Hermite quadrature rule
+(note that in general, the number of nodes in one dimension, Mq , can dier
+across dimensions). The total number of nodes is given by the product
+M1 M2 · · · MQ . Assuming that Mq = M for all dimensions, the total number of
+nodes, M Q , grows exponentially with the dimensionality Q.
+In the paper, we consider three dierent versions of the multi-dimensional
+Gauss-Hermite product rule, denoted T (1), T (2) and T (3), which have 1,
+2 and 3 nodes in each dimension, respectively. The total number of nodes
+under T (1), T (2) and T (3) is equal to 1, 2Q and 3Q , respectively, and is
+reported in Table 1 (panel 3) for Q ranging from 1 to 200. As is seen from the
+table, T (2) and T (3) are not feasible for high dimensions if there are more
+than one node in each dimension. In contrast, T (1) is the cheapest possible
+integration formula as there is one node independently of the dimensionality
+of the problem.
+6.3.2
+
+Monomial rules
+
+The Gauss-Hermite product rule constructs multi-dimensional nodes from
+one-dimensional nodes, which makes the number of nodes grow exponentially with dimension. In contrast, monomial integration rules construct
+23
+
+multi-dimensional nodes directly in a multi-dimensional space. To be specic, monomial rules yield a nite number of Q-dimensional nodes and the
+corresponding weights so that the approximation is exact if the function j
+is an Q-dimensional complete polynomial of a certain degree. Typically, the
+number of nodes under monomial rules grows only polynomially with the
+dimensionality of the problem.
+Below, we describe three monomial formulas for approximating a multidimensional integral (17) which, for the sake of notational convenience, we
+label P1, P2 and P3. These formulas come from Stroud (1971, p. 315-329)
+and Judd (1998, p. 275), and are adopted by us to the case of correlated
+variables.
+The rst formula, P1, has 2Q nodes:
+1 X
+H {j (%)} =
+j (±Ueq ) >
+2Q q=1
+Q
+
+(20)
+
+where U
+Q , and eq is an Q × 1 vector whose q-th element is equal to
+one and the remaining elements are equal to zero, i.e., eq (0> ===> 1> ===> 0)0 .
+The second formula, P2, has 2Q 2 + 1 nodes:
+2
+j (0> ===> 0)
+2+Q
+Q
+Q1
+Q
+X X
+¡
+¢
+4Q X
+1
+q
+q
++
+[j
+(Ue
+)
++
+j
+(Ue
+)]+
+j ±Veq ± Vem >
+2
+2
+2 (2 + Q) q=1
+(Q + 2) q=1 m=q+1
+(21)
+q
+2+Q
+2 + Q and V
+.
+where U
+2
+Q
+The third formula, P3, has 2 nodes:
+H {j (%)} =
+
+H {j (%)} =
+
+¢
+1 X ¡
+j ±e1 > ===> ±eQ =
+Q
+2
+
+(22)
+
+The number of nodes under monomial formulas P1 and P2 grows polynomially, namely, it grows linearly under P1 and it grows quadratically under
+P2. Monomial formula P3 happened to coincide with Gauss-Hermite product formula T (2), so that the number of nodes grows exponentially. In Table
+1 (panel 3), we show how the number of nodes under formulas P1, P2 and
+P3 (equivalently, T (2)) increases in Q .
+24
+
+6.3.3
+
+An example of integration formulas for Q = 2
+
+In this section, we illustrate the integration formulas described in Sections
+6.3.1 and 6.3.2 using an example of two-dimensional case, Q = 2. We assume
+that variables %1 and %2 are uncorrelated, have zero mean and unit variance.
+Integral (17) is then given by
+Z
+³
+´
+h ¡ ¢
+¡ ¢2 i 1 2
+1
+2
+H {j (%)} =
+g| g| =
+j
+2| 1 > 2| 2 exp  | 1  | 2
+ R2
+(a) Gauss-Hermite product rule (19) with 3 nodes in each dimension (i.e.,
+q
+
+T (3)) uses one-dimensional nodes and weights given by |1q = 0, |2q =
+q
+
+
+|3q =  32 and $ q1 = 2 3  , $ q2 = $ q3 = 6 for each q = 1> 2:
+
+3
+,
+2
+
+3
+3
+´
+1 XX 1 2 ³
+1
+2
+$ $ j
+2|m1 > 2|m2 =
+H {j (%)} =
+ m =1m =1 m1 m2
+1
+2
+´ 1 ³
+´
+4
+1 ³
+j (0> 0) + j 0> 3 + j 0>  3 +
+9
+9
+9
+´
+´
+´
+1 ³
+1 ³
+1 ³
+j
+3> 0 + j
+3>  3 + j
+3>  3 +
+9
+36
+36
+´
+´
+´¸
+1 ³
+1 ³
+1 ³
+j  3> 0 + j  3> 3 + j  3>  3 =
+9
+36
+36
+
+(b) Gauss-Hermite product rule (19) with 1 node in each dimension (i.e.,
+T (1)) uses one-dimensional nodes and weights given by |1q = 0 and $ q1 = 
+for each q = 1> 2:
+1
+1
+´
+1 XX 1 2 ³
+1
+2
+$ $ j
+2|m1 > 2|m2 = j (0> 0) =
+H {j (%)} =
+ m =1m =1 m1 m2
+1
+
+2
+
+(c) Monomial formula (20) with 4 nodes (i.e., P1) is
+´
+³
+´
+³
+´
+³
+´i
+1h ³
+j
+H {j (%)} =
+2> 0 + j  2> 0 + j 0> 2 + j 0>  2 =
+4
+(d) Monomial formula (21) with 9 nodes (i.e., P2) is
+1
+1
+[j (2> 0) + j (2> 0) + j (0> 2) + j (0> 2)] +
+H {j (%)} = j (0> 0) +
+2
+16
+´
+³
+´
+³
+´
+³
+´i
+1 h ³
++
+j
+2> 2 + j
+2>  2 + j  2> 2 + j  2> 2 =
+16
+25
+
+(e) Monomial formula (22) with 4 nodes (i.e., P3) coincides with GaussHermite product rule (19) with 2 nodes in each dimension (i.e., T (2)) and
+is given by
+1
+H {j (%)} = [j (1> 1) + j (1> 1) + j (1> 1) + j (1> 1)] =
+4
+
+6.4
+
+Cost-ecient projection method
+
+For a given degree of the approximating polynomial function and a specic
+integration formula, adding an extra dimension (country) makes both the approximation step and integration step more expensive. The approximation
+step becomes more expensive because we have more polynomial coecients,
+and we need more grid points for identifying such coecients. The integration step becomes more expensive because we have more integration nodes
+to evaluate integrad on (except for the one-node Gauss-Hermite rule).14 As
+is evident from Table 1, high-degree polynomials and certain integration formulas are excessively costly in high dimensions. When the number of state
+variables becomes large, we should use either low-degree polynomials or cheap
+integration formulas or both. Moreover, to make the method cost-ecient,
+we need to coordinate properly the approximation and integration strategies,
+specically, we shall identify combinations of approximating polynomial functions and integration methods that match each other in terms of the overall
+accuracy of solutions.
+
+7
+
+Numerical analysis
+
+In this section, we describe the methodology of our numerical study and
+assess the performance of our projection method in the context of the onecountry and multi-country models.
+
+7.1
+
+Methodology
+
+We solve the one-country version of the model (3)  (5) under three dierent grid constructions, described in Sections 6.2.1, 6.2.2 and 6.2.3, that lead
+14
+
+In addition, introducing more countries to the model leads to extra Euler equations to
+solve, and hence, to extra LS regressions to run and extra vectors of coecients to iterate
+on. Furthermore, operating with large data sets can slow down computations or can lead
+to a memory congestion.
+
+26
+
+to three dierent versions of our projection method, the tensor-product-grid
+algorithm (TPGA), simulated-grid algorithm (SGA) and cluster-grid algorithm (CGA), respectively. In the multi-country case, we use only the CGA,
+which is our main algorithm among the three.
+Model parameters We parameterize the model (3)  (5) as is typically
+done in the macroeconomic literature. We assume
+the constant relative risk
+f13 1
+aversion (CRRA) utility function, x (fw ) = w1 with   (0> ), and the
+Cobb-Douglas production function, i (nw ) = nw with   (0> 1). We set
+the share of capital in production and the discount factor at  = 0=36 and
+ = 0=99, respectively. We explore a wide range of the model’s parameters
+including three values of the risk aversion coecient   {0=2> 1> 5}; two
+values of the depreciation rate g  {0=025> 1}, and two values for the autocorrelation coecient and the standard deviation in the process for shocks
+(5),  = {0=95> 0=99} and  = {0=01> 0=03}, respectively. In both the onecountry and multi-country models, our benchmark parameterization is  = 1,
+g = 0=025,  = 0=95 and  = 0=01. We normalize steady state capital to one
+by setting D = 1@(1g)
+.
+
+Clustering algorithm We construct a cluster grid using the hierarchical
+algorithm with Ward’s linkage clustering, as described in Section 3.2.1. We
+prefer the hierarchical algorithm over the K-means algorithm because the results of hierarchical algorithms are reproducible while those of the K-means
+algorithm might depend on a random assignment of observations into clusters
+on the initial step (both algorithms are relatively inexpensive in our applications). Overall, we nd that the appropriate distance measure between
+objects and the appropriate change of variables are far more important for
+the outcome of clustering than a specic clustering algorithm itself.
+Approximation and integration strategies In the one-country model,
+we parameterize the capital decision rule using polynomials of up to the fthdegree and we compute conditional expectation using Gauss-Hermite product
+rule with 1, 2 and 10 nodes (i.e., T (1), T (2) and T (10), respectively), and
+Monte Carlo simulation with 1000 and 10000 observations. In the multicountry case, we consider polynomials of up to the third degree, and we
+perform integration using the Gauss-Hermite product rule with 1, 2Q and 3Q
+
+27
+
+nodes (i.e., T (1), T (2) and T (3), respectively), and the monomial formulas
+P1 and P2 with 2Q and 2Q 2 + 1 nodes, respectively.
+Initial guess Our projection algorithm requires a knowledge of the ergodic
+set, however, the ergodic set is unknown before the model is solved. Therefore, to initialize the algorithm, we rst compute a low-accuracy solution,
+and we then construct the ergodic set by simulation (our simulated panel
+consists of W = 10000 observations). In the one-country case, we compute
+a low-accuracy solution on an equally-spaced grid of 10 points in the interval ±1%£ of steady
+¤ £ state
+¤ (we use this solution for deducing the limits of the
+domain n> n × >  under the TPGA, for selecting a subset of simulated
+points under the SGA and for constructing clusters under the CGA). In the
+multi-country model, we initialize the CGA using the CGA itself as follows:
+we parameterize the capital decision rule using an arbitrary initial guess
+q
+nw+1
+= 0=95nwq + 0=05qw for all q (this guess matches the steady state level of
+capital equal to one), simulate the model, construct the clusters and solve
+the model on the constructed cluster grid; we next use the obtained solution
+for simulating the model again and for constructing the ergodic set (thus, we
+compute clusters twice). As an initial guess for polynomial approximations
+of degrees higher than one, we use solutions obtained under the polynomial
+approximations of the previous degree.
+Approximation step and convergence parameters Under our projection methods, LS problem (10) is typically well-conditioned and the approximation step, Step 4, can be implemented with ordinary least-squares
+(OLS) method. We solve the LS problem using a Matlab’s back-slash operator, which gives the same solution as the OLS method for well-conditioned
+problems.
+We set the dampening parameter in (11) at  = 0=1 for all experiments
+except for the model with high risk aversion in which we use a smaller value
+for  = 0=03 to enhance convergence. In the one-country model, high-degree
+polynomials lead to very accurate solutions, and we use a tight convergence
+criterion & = 11 in (12). In the multi-country models, we consider only lowdegree polynomials which lead to less accurate solutions than polynomials of
+high degrees, and we use a less tight criterion of & = 8.
+
+28
+
+Accuracy test We measure accuracy of the solutions by the size of Euler
+equation errors in the ergodic set. We rewrite FOCs (6) in a unit-free form
+to obtain Euler equation error H q (k >  ) at  ,
+  ³
+¸
+¡ q ¢1 ´
+f +1
+q
+E (k >  ) H  1  g +  +1 n +1
+ 1=
+(23)
+f
+In the true solution, E q (k >  ) = 0 for all (k >  ), so that accuracy can be
+measured by how much E q (k >  ) diers from zero. We draw a new sequence
+of shocks of length W = 10000, and we use the decision rules to simulate the
+time series {k > f }10000
+ =0 . We select 1000 observations separated by 10 periods,
+ = 0> 10> 20> ===. For each selected point (k >  ), we compute E q (k >  ) by
+evaluating the conditional expectation in (23) with a given integration rule.
+We then nd the average absolute and maximum
+absolute Euler equation
+PQ P
+1
+q
+errors across countries and time, Ephdq = Q·W
+ =0>10>20>=== |E (k >   )|,
+q=1
+´
+³
+and Emax = max {|E q (k >  )|} =0>10>20>=== , respectively.
+Running time We report running time, denoted CPU, in seconds. For
+the CGA, it includes the time necessary for clustering. For the one-country
+model, running time for the rst-degree polynomial approximation includes
+time for constructing an initial guess. For the multi-country models, the
+running time for the rst-degree approximation does not include the time
+for nding the initial guess; if the latter time was included, the running time
+would approximately double. (Recall that our initial guess is a rst-degree
+approximation computed by the CGA on an arbitrary grid of points).
+Hardware and software We ran the computational experiments on a
+desktop computer ASUS with Intel(R) Core(TM)2 Quad CPU Q9400 (2.66
+GHz), RAM 4MB. Our programs are written in Matlab, version 7.6.0.324
+(R2008a).
+
+7.2
+
+The one-country model
+
+In this section, we focus on the one-country model. For a wide range of
+the model’s parameters, we explore how accuracy and cost of our projection
+method depend on the degree of the approximating polynomial function, the
+number and placement of grid points and the specic integration procedure
+29
+
+used. To evaluate accuracy of solutions (i.e., to compute the Euler equation
+errors in (23)), we use a very accurate ten-node Gauss-Hermite rule.
+Benchmark model In Table 2, we present the solutions to our benchmark model obtained by the three projection algorithms, the TPGA, SGA
+and CGA, diering in their grid constructions. (Recall that our benchmark
+parameterization is g = 0=025,  = 1,  = 0=95 and  = 0=01). For each
+algorithm, we rst consider the minimum number of grid points necessary
+for identifying the coecients (collocation), Kf (see case K = Kf in Table
+2), and we then increase the number of grid points by 20%, 100% and 400%
+relative to Kf (see cases K = 1=2Kf , K = 2Kf and K = 5Kf , respectively,
+in Table 2). To isolate the eect of a grid choice on accuracy, we use an
+accurate ten-node Gauss-Hermite rule in the solution procedure.
+Three tendencies can be observed from the table. First, a degree of the
+approximating polynomial plays a determinant role in accuracy: the maximum errors decrease with a polynomial degree from errors of size 103 for
+the rst-degree polynomial to those of size 108 for the fth-degree polynomial. Second, accuracy of the three methods can be signicantly lower
+under collocation than under more "generous" grids; even a moderate 20%
+increase in the number of grid points has a sizable eect on accuracy. Third,
+the SGA and CGA visibly dominate in accuracy the TPGA independently
+of the number of grid points. This happens because the SGA and CGA t
+a polynomial only in a relevant part of the state space (the ergodic set),
+whereas the TPGA ts the same polynomial in a larger squared domain and
+thus, faces a trade o between the t inside and outside the ergodic set.
+Finally, the CGA dominates in accuracy the SGA when the number of grid
+points is K = Kf , K = 1=2Kf and K = 2Kf , and both of them have a comparable performance when the number of grid points becomes large K = 5Kf
+(in the last case, many randomly drawn simulated points under the SGA
+cover the ergodic set as eciently as do clusters under the CGA).
+Sensitivity results In our sensitivity experiments, we vary one of the
+model’s parameters holding the rest of the parameters xed to the benchmark values. Specically, we consider the cases of low risk aversion  = 1@5,
+high risk aversion  = 5, high persistence of shocks  = 0=99 and high volatility of shocks  = 0=03. The results for these four sensitivity experiments are
+presented in Table 3. The number of grid points is the same for the TPGA,
+30
+
+SGA and CGA and is equal to K = 36. In some experiments, accuracy is
+lower than in the benchmark model because of either a larger size of the domain or a greater curvature of the decision rules. Nevertheless, the accuracy
+ranking of the three methods is typically the same as in the benchmark case.
+In all the cases (except the one for low risk version  = 1@5), the CGA dominates in accuracy the SGA, which in turn dominates the TPGA. Typically,
+the dierence in accuracy between the CGA and TPGA is around one order
+of magnitude; it is surprising to see such a sharp contrast in the methods’
+performance given that there are only two state variables. In the case of low
+risk aversion  = 1@5, the SGA and CGA dominate in accuracy the TPGA
+for low-degree polynomials but the accuracy ranking is mixed for high-degree
+polynomials (in this case, the capital decision rule is close to linear so that
+focusing on a smaller endogenous domain does not increase accuracy). Based
+on the experiments reported in Tables 2 and 3, we select the CGA as our
+preferred algorithm and concentrate on it in the rest of the paper.
+Role of integration method in accuracy In Table 4, we explore how a
+specic integration method aects the overall accuracy of the CGA by considering ve alternative integration methods such as Gauss-Hermite product rule
+with 1, 2 and 10 nodes (referred to as T (1), T (2) and T (10), respectively)
+and the Monte Carlo integration method with 1000 and 10000 nodes. We
+analyze four dierent cases: the model with a closed-form solution (g = 1),
+the benchmark model (g = 0=025), the model with highly persistent shocks
+( = 0=99), and the model with highly volatile shocks ( = 0=03) holding the
+remaining parameters xed to the benchmark values. In all the experiments
+considered, the grid was constructed using K = 36 clusters.
+We have three ndings in the table. First, formulas T (2) and T (10)
+deliver virtually the same solutions under the polynomial approximations of
+up to degree three; a small dierence in their performance becomes visible
+only when we go to polynomials of degrees higher than three. Second, the
+one-node formula, T (1), delivers suciently accurate solutions under polynomials of up to degree two (even if we have highly volatile or highly persistent
+shocks), however, a low accuracy of integration restricts the overall accuracy
+under high-degree polynomials (the model with a closed-form solution is an
+exception here). Third, the Monte Carlo integration method is less accurate than quadrature integration even if as many as 10000 simulated nodes
+are used, and it restricts the overall accuracy under high-degree polynomi-
+
+31
+
+als (again, the model with a closed-form solution is an exceptional case). A
+comparison of the 1000-node and 10000-node cases shows that accuracy of
+the Monte Carlo integration method increases with the simulation length,
+however, at a relatively low rate. We will not consider the Monte Carlo integration method in the multi-country context since better alternatives are
+available (in our experiments, even the one-node Gauss-Hermite rule, T (1),
+typically delivers more accurate solutions than the Monte Carlo integration
+method with 10000 nodes).15
+
+7.3
+
+The multi-country model
+
+In this section, we present the results for the multi-country version of the
+model obtained under the cluster-grid method.
+Role of integration rule in accuracy of solution and test When we
+approach high dimensions, the accurate Gauss-Hermite product rule becomes
+unfeasible not only in the solution but also in testing procedures. Therefore,
+as a rst step, we need to determine how reliable dierent integration formulas are for the purpose of accuracy testing (it might happen that low accuracy
+of integration in the testing procedure contaminates the results of the test).
+This issue did not arise in the one-country case since a very accurate integration method, T (10), was feasible for testing.
+In Table 5, we report the results for the two-country and six-country models obtained under the benchmark parameterization. We use a grid composed
+of 300 cluster-grid points. In both the solution and testing procedures, we
+use ve alternative integration methods, namely, T (3), T (2), P2, P1, and
+T (1).16 Common sense suggests that an integration method used for testing
+should be as good as or better than the one used for nding a solution. We
+therefore do not consider those cases in which an integration method used
+in the testing procedure is inferior to the one used in the solution procedure
+(these cases are replaced by dashes in the table).
+15
+
+The standard Monte Carlo integration method considered in the context of our clustergrid algorithm requires summing up W observations in each grid point. Stochastic simulation approaches, described in Judd et al. (2009), rely on a more ecient integration
+method combining Monte Carlo simulation and a regression step, namely, W observations
+are used for inferring the conditional expectations in W points simultaneously.
+16
+Compared to the one-country case, we substitute T (10) by T (3) as T (10) is too
+computationally demanding for the multi-country case.
+
+32
+
+The main ndings in the table are as follows. Under the most accurate
+integration method in the testing procedure, T (3), the solutions produced by
+four integration methods, T (3), T (2), P2 and P1, are virtually identical
+in terms of the Euler equation errors (typically, up to the fth digit); the
+solution delivered by T (1) is similar to that of the other methods for the
+rst-degree polynomial approximation but is about 10% less accurate for the
+second-degree polynomial approximation. For any integration method used
+in the solution procedure, the four integration methods T (3), T (2), P2 and
+P1 are adequate for the purpose of testing, as they lead to very similar test
+results (again diering only in the fth digit). An exception is T (1) applied
+for testing the T (1) solution, which under the second-degree polynomial
+approximation understates the errors relative to more accurate integration
+methods.
+Role of the number of clusters in accuracy of solutions We next
+carry out a comparison of accuracy depending on the number of clusters for
+the models with Q = 2, Q = 4 and Q = 6 (see Table 6). We use T (2)
+both in the solutions and testing procedures. As in the one-country model,
+we start from collocation, K = Kf , and then augment the number of clusters
+to K = 1=2Kf , K = 2Kf and K = 5Kf . We nd that collocation performs
+poorly in the context of our cluster-grid method not only in terms of accuracy
+but also in terms of numerical stability (our method failed to compute the
+third-degree polynomial approximations for the models with Q = 2 and the
+second-degree polynomial approximations for the models with Q = 4 and
+Q = 6). However, even a moderate increase in the number of clusters, for
+example, by 20 %, i.e., K = 1=2Kf , is sucient for restoring the numerical
+stability. Overall, we nd that accuracy of solutions typically increases in
+the number of clusters, as was seen in the one-country case.
+Coordinating approximation and integration strategies Table 7 is
+the core of the paper. In this table, we compute solutions to our benchmark model by ranging the number of countries from 2 to 200. To enhance
+accuracy and numerical stability of the cluster-grid method, we keep the
+number of clusters larger than the number of coecients (see the table for
+the number of clusters in each experiment). In the solution procedure, we use
+four alternative integration formulas, T (2), P2, P1 and T (1). Under the
+second-degree polynomial, T (2), P2, P1 and T (1) were feasible for models
+33
+
+with up to Q = 8, Q = 12, Q = 20 and Q = 40 countries, respectively. To
+test accuracy of solutions, we use T (2) for Q up to 12, use P2 for Q from
+12 to 20, and use P1 for Q larger than 20.
+As far as accuracy is concerned, the tendencies are the same as those
+previously seen in Table 5 for the two-country and six-country models. For
+the second- and third-degree polynomial approximation, the Euler equation
+errors obtained under T (2), P2 and P1 are nearly identical, and the errors
+obtained under T (1) are about 10% larger than under more accurate integration formulas (an acceptable reduction in accuracy given that this formula
+allows us to advance from the 20-country to 40-country models). Overall,
+our second-degree polynomial approximations are suciently accurate: the
+maximum error is always less than 0=01% in the ergodic set (even under
+T (1)). Furthermore, if an integration method is suciently accurate, the
+third-degree polynomial approximation in the two-country model produces
+maximum errors which are lower than 0=001%.
+Unlike accuracy, computational cost of our projection method depends
+dramatically on a specic integration formula used. For example, for Q = 8,
+the running time for computing the second-degree approximations under P2
+and T (1) is, respectively, 3774 and 109 seconds, i.e., it diers by up to a
+factor of 35, while for Q = 12, the running time under P2 and T (1) is,
+respectively, 69025 and 226 seconds, i.e., it diers by up to a factor of 300.
+The running time increases rapidly with dimension under T (2) and P2,
+and it increases slower with dimension under P1 and T (1). In particular,
+under P1, we can compute a second-degree approximation to the model with
+Q = 20 for about 4 hours and 40 minutes (16895 seconds), and under T (1),
+we can compute such an approximation with Q = 40 for about 24 hours and
+25 minutes (87748 seconds).
+After we reach Q = 40 countries, the second-degree polynomial approximation becomes expensive even under the cheapest integration formula T (1).
+We thus restrict attention to the rst-degree polynomial: we use P1 and
+T (1) for Q up to 100, and we use T (1) for Q up to 200. As is observed
+from the table, our linear solutions are still suciently accurate: the maximum error never reaches 0=1%. Another class of numerical methods in the
+literature that allows us to solve models with a very large number of state
+variables is perturbation. However, as was pointed out in Section 3, perturbation methods compute solutions only in one point of state space (steady
+state), and accuracy of their local solutions reduces rapidly away from that
+point. In contrast, the cluster-grid method delivers global solutions that are
+34
+
+suciently accurate in the whole ergodic set. As far as the cost is concerned,
+under P1, we compute a linear solution to the model with Q = 100 for
+about 10 hours and 46 minutes (38782 seconds), and under T (1), we can
+compute a linear solution with Q = 200 for about 1 hour and 45 minutes
+(6316 seconds), respectively. The latter running time is small for such a large
+number of countries, which indicates that we can easily go beyond Q = 200.
+Sensitivity experiments We nally explore the robustness of our results obtained for the benchmark multi-country model by varying one of the
+model’s parameters at a time, holding the rest of the parameters xed to the
+benchmark values. We illustrate the observed regularities in Table 8 using
+an example of the model with Q = 6. To evaluate the accuracy of solutions,
+we use Gauss-Hermite product formula T (2). We nd it more dicult to
+enforce convergence in the experiment with high risk aversion,  = 5, than
+in other sensitivity experiments; hence, we reduce the dampening parameter
+ in (11) which leads to an increase in computational time. Overall, our
+sensitivity experiments in the multi-country case show the same regularities
+as those seen in Table 3 for the one-country case. All the integration formulas considered lead to very similar results except for T (1) which yields
+somewhat lower accuracy.
+
+8
+
+Conclusion
+
+An ergodic set is a tiny fraction of a hypercube domain, which is normally
+examined by numerical methods. The cluster-grid method presented in this
+paper provides a simple and inexpensive way of solving a dynamic economic
+model on the ergodic set directly. For a given polynomial degree and a given
+integration method, a parsimonious representation of the ergodic set allows
+us to achieve essentially the same accuracy in high-dimensional models as
+we do in low-dimensional models. Our method can be especially useful for
+applications that require controlling the domain on which the problem is
+solved (development economics, dynamic games, etc).
+Given that accuracy of the cluster-grid method depends primarily on the
+exibility of the approximating function used, we can potentially improve the
+method’s performance using other families of approximating functions. One
+possibility is to extend a complete polynomial of a given degree to include
+some high-degree polynomial terms. If a relatively few terms are added, it
+35
+
+could be that cost does not grow much but accuracy does. Another possibility
+is to explore whether non-polynomial families of approximating functions can
+lead to the same (a higher) accuracy with a smaller (the same) number of
+basis function.
+Our assessment of accuracy and cost shows that a proper coordination between the approximation and integration strategies is needed for constructing
+ecient numerical methods. An example of such a coordination is a combination of a exible second-degree polynomial with a cheap one-node GaussHermite rule (as opposed to a combination of a rigid rst-degree polynomial
+with expensive integration formulas). Overall, in our applications, low-cost
+integration formulas (i.e., the monomial formula with 2Q nodes and the
+one-node Gauss-Hermite rule) have enough accuracy to be compatible with
+accuracy of solutions attainable under low-degree polynomial approximations
+(high-degree polynomials are not feasible with high dimensions anyway). Our
+results are suggestive for other economic applications.
+Finally, we shall reiterate that our solutions are computed using a standard desktop computer. The speed of the cluster-grid method can be considerably increased using more powerful hardware. Furthermore, the clustergrid approach is a natural candidate for parallelizing since we can compute
+integrals in dierent grid points independently of each other using dierent
+machines (processors). This will enable us to solve even more ambitious
+applications than those studied in the paper.
+
+References
+[1] Aruoba, S., J. Fernandez-Villaverde, and J. Rubio-Ramirez, (2006).
+Comparing solution methods for dynamic equilibrium economies. Journal of Economic Dynamics and Control 30, 2477-2508.
+[2] Christiano, L. and D. Fisher, (2000). Algorithms for solving dynamic
+models with occasionally binding constraints. Journal of Economic Dynamics and Control 24, 1179-1232.
+[3] Collard, F., and M. Juillard, (2001). Accuracy of stochastic perturbation methods: the case of asset pricing models, Journal of Economic
+Dynamics and Control, 25, 979-999.
+
+36
+
+[4] Den Haan, W., (1996). Heterogeneity, aggregate uncertainty, and the
+short-term interest rate. Journal of Business and Economic Statistics,
+14, 399-411.
+[5] Den Haan W., K. Judd and M. Juillard, (2010). Computational suite
+of models with heterogeneous agents: multi-country real business cycle
+models, Manuscript.
+[6] Den Haan, W. and A. Marcet, (1990). Solving the stochastic growth
+model by parameterized expectations. Journal of Business and Economic
+Statistics 8, 31-34.
+[7] Everitt, B., S. Landau, and M. Leese, (2001). Cluster Analysis. Arnold:
+London.
+[8] Fair, R. and J. Taylor, (1983). Solution and maximum likelihood estimation of dynamic nonlinear rational expectation models. Econometrica
+51, 1169-1185.
+[9] Gaspar, J. and K. Judd, (1997). Solving large-scale rational-expectations
+models. Macroeconomic Dynamics 1, 45-75.
+[10] Hastie, T., Tibshirani, R. and J. Friedman, (2009). The Elements of
+Statistical Learning: Data Mining, Inference, and Prediction. Springer,
+New York.
+[11] Judd, K., (1992). Projection methods for solving aggregate growth models. Journal of Economic Theory 58, 410-452.
+[12] Judd, K., (1998). Numerical Methods in Economics. Cambridge, MA:
+MIT Press.
+[13] Judd, K. and S. Guu, (1993). Perturbation solution methods for economic growth models, in: H. Varian, (Eds.), Economic and Financial
+Modeling with Mathematica, Springer Verlag, pp. 80-103.
+[14] Judd, K., L. Maliar and S. Maliar, (2009). Numerically stable stochastic simulation approaches for solving dynamic models. NBER Working
+Paper 15296.
+[15] Juillard, M. and S. Villemot, (2010). Multi-country real business cycle
+models: accuracy tests and testing bench. Manuscript.
+37
+
+[16] Kim, J., S. Kim, E. Schaumburg and C. Sims, (2008). Calculating and
+using second-order accurate solutions of discrete time dynamic equilibrium models. Journal of Economic Dynamics and Control 32, 3397-3414.
+[17] Kollmann, R., S. Maliar, B. Malin and P. Pichler, (2010). Comparison
+of solutions to the multi-country real business cycle model. Manuscript.
+[18] Krueger, D. and F. Kubler, (2004). Computing equilibrium in OLG
+models with production. Journal of Economic Dynamics and Control
+28, 1411-1436.
+[19] Maliar, S., L. Maliar, and K. Judd, (2010). Solving the multi-country
+real business cycle model using ergodic set methods. Manuscript.
+[20] Marimon, R. and A. Scott, (1999). Computational Methods for Study
+of Dynamic Economies, Oxford University Press, New York.
+[21] Pakes, A. and P. McGuire, (2001). Stochastic algorithms, symmetric
+Markov perfect equilibria, and the ’curse’ of dimensionality. Econometrica 69, 1261-1281.
+[22] Romesburg, C., (1984). Cluster Analysis for Researchers. Lifetime
+Learning Publications: Belmont, California.
+[23] Rust, J., (1996). Numerical dynamic programming in economics, in: H.
+Amman, D. Kendrick and J. Rust (Eds.), Handbook of Computational
+Economics, Amsterdam: Elsevier Science, pp. 619-722.
+[24] Santos, M., (1999). Numerical solution of dynamic economic models,
+in: J. Taylor and M. Woodford (Eds.), Handbook of Macroeconomics,
+Amsterdam: Elsevier Science, pp. 312-382.
+[25] Stroud A., (1971). Approximate Integration of Multiple Integrals. Prentice Hall: Englewood Clis, New Jersey.
+[26] Taylor, J. and H. Uhlig, (1990). Solving nonlinear stochastic growth
+models: a comparison of alternative solution methods. Journal of Business and Economic Statistics 8, 1-17.
+
+38
+
+xi2
+
+-1
+
+-0.5
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+
+2.5
+
+3
+
+3.5
+
+4
+
+0
+
+0.5
+
+3
+
+1
+
+6
+
+1
+
+8
+
+1.5
+
+2
+xi1
+
+2
+
+2.5
+
+3
+
+Figure 2. Agglomerative hierarchical clustering algorithm: an example.
+
+5
+
+4
+
+7
+
+3.5
+
+9
+
+4
+
+N=2
+
+N=6
+
+P1 ( N )
+P2 ( N )
+P3 ( N )
+10
+
+6
+
+3
+
+5
+35
+
+15
+455
+
+91
+
+13
+1771
+
+231
+12341
+
+861
+
+41
+
+N=20
+
+=3
+=30
+=300
+=3
+=30
+=300
+=3
+=30
+=300
+0.07
+0.08
+0.09
+0.83
+0.80
+0.83
+8.93
+8.99
+9.05
+
+2N
+1
+
+1  2N
+
+3N
+2N
+2
+
+2
+1
+
+3
+
+2
+
+3
+
+y
+
+Remark: Notation x(y) means x· 10 .
+
+Q(2)
+M2
+M1
+Q(1)
+
+Q(3)
+
+Number of nodes in an integration rule
+
+T=10000
+
+T=3000
+
+T=1000
+
+4
+1
+
+9
+
+4
+
+9
+
+0.08
+0.08
+0.10
+0.84
+0.81
+0.86
+8.87
+8.94
+9.33
+
+12
+1
+
+73
+
+64
+
+729
+
+0.09
+0.09
+0.12
+0.83
+0.85
+1.00
+9.18
+9.28
+10.08
+
+20
+1
+
+201
+
+1024
+
+59049
+
+0.11
+0.12
+0.15
+0.84
+0.86
+1.08
+9.51
+9.77
+10.91
+
+40
+1
+
+801
+
+1(+6)
+
+4(+9)
+
+0.12
+0.13
+0.31
+1.04
+1.13
+1.92
+12.05
+12.46
+14.78
+
+Time for constructing  clusters from simulated series of length T (in seconds)
+
+3rd degree
+
+2 degree
+
+nd
+
+1st degree
+21
+
+N=10
+
+Number of coefficients in the m -th degree polynomial, Pm (N )
+
+N=1
+
+80
+1
+
+3201
+
+1(+12)
+
+1(+19)
+
+0.18
+0.24
+0.83
+1.42
+1.54
+3.11
+17.36
+17.81
+22.40
+
+91881
+
+3321
+
+81
+
+N=40
+
+120
+1
+
+7201
+
+1(+18)
+
+4(+28)
+
+0.24
+0.29
+1.15
+1.78
+1.96
+4.40
+21.56
+22.19
+30.04
+
+3(+5)
+
+7381
+
+121
+
+N=60
+
+160
+1
+
+12801
+
+1(+24)
+
+2(+38)
+
+0.29
+0.45
+1.16
+1.98
+2.21
+5.00
+22.11
+23.48
+32.92
+
+7(+5)
+
+13041
+
+161
+
+N=80
+
+200
+1
+
+20001
+
+1(+30)
+
+5(+47)
+
+0.39
+0.54
+1.85
+2.77
+3.08
+7.06
+31.45
+31.87
+43.76
+
+2(+6)
+
+20301
+
+201
+
+N=100
+
+400
+1
+
+80001
+
+2(+60)
+
+2(+95)
+
+1.18
+1.35
+3.23
+4.50
+5.15
+11.73
+42.08
+44.23
+66.37
+
+1(+7)
+
+80601
+
+401
+
+N=200
+
+Table 1. Number of polynomial coefficients, time for constructing clusters and number of integration nodes depending on dimension N.
+
+mean
+
+-3.43
+-5.05
+-6.12
+-5.25
+-8.48
+
+-3.25
+-4.62
+-5.89
+-4.76
+-7.94
+
+-4.21
+-5.98
+-7.26
+-6.89
+-9.00
+
+-3.53
+-5.30
+-6.31
+-5.72
+-7.65
+
+-4.26
+-5.69
+-7.44
+-7.98
+-9.60
+
+-3.60
+-4.83
+-6.40
+-6.88
+-8.83
+
+11.00
+9.17
+9.13
+9.30
+10.86
+
+1.89
+0.12
+0.18
+0.29
+1.62
+
+1.91
+0.17
+0.30
+0.41
+3.55
+
+-4.28
+-6.15
+-7.41
+-8.82
+-9.62
+
+-3.89
+-6.01
+-7.23
+-8.21
+-9.55
+
+-3.60
+-5.40
+-6.63
+-7.62
+-9.01
+
+-3.36
+-5.15
+-6.36
+-6.89
+-8.57
+
+-3.25
+-4.62
+-5.89
+-7.25
+-8.60
+
+11.16
+9.10
+9.23
+9.47
+9.86
+
+1.90
+0.13
+0.22
+0.34
+1.70
+
+1.92
+0.18
+0.30
+0.46
+1.93
+
+CPU
+
+-4.30
+-6.06
+-7.60
+-8.94
+-9.57
+
+-4.19
+-5.91
+-7.40
+-8.41
+-9.42
+
+-3.59
+-5.12
+-6.20
+-7.56
+-8.81
+
+mean
+
+-3.56
+-5.26
+-6.82
+-7.98
+-8.89
+
+-3.50
+-5.02
+-6.68
+-7.28
+-8.00
+
+-3.36
+-4.70
+-5.94
+-7.29
+-8.60
+
+max
+
+=2c
+
+11.17
+9.22
+9.33
+9.58
+11.34
+
+1.93
+0.21
+0.35
+0.55
+2.06
+
+2.00
+0.27
+0.44
+0.66
+2.29
+
+CPU
+
+-4.32
+-6.08
+-7.39
+-8.81
+-9.61
+
+-4.32
+-5.97
+-7.39
+-8.85
+-9.57
+
+-3.67
+-5.19
+-6.33
+-7.62
+-8.85
+
+mean
+
+-3.62
+-5.54
+-6.59
+-8.03
+-8.93
+
+-3.70
+-5.21
+-6.45
+-7.54
+-8.56
+
+-3.40
+-4.78
+-6.03
+-7.37
+-8.60
+
+max
+
+=5c
+
+11.26
+9.58
+9.80
+10.34
+12.45
+
+2.05
+0.49
+0.83
+1.31
+3.34
+
+2.13
+0.59
+1.06
+1.40
+3.68
+
+CPU
+
+Remark:  is the number of grid points; c is the minimum possible number of grid points (collocation); mean and max are, respectively,
+the average and maximum Euler equation errors (in log10 units); and CPU is computational time in seconds.
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Cluster-grid algorithm (CGA)
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Simulation-grid algorithm (SGA)
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+-3.43
+-5.05
+-6.12
+-7.53
+-8.82
+
+max
+
+mean
+
+max
+
+CPU
+
+=1.2c
+
+=c
+
+Tensor-product-grid algorithm (TPGA)
+
+Polynomial
+degree
+
+Table 2. Effect of the number of clusters on accuracy and speed under three projection algorithms: the benchmark one-country model.
+
+mean
+
+-3.76
+-5.74
+-6.82
+-8.36
+-9.89
+
+-3.63
+-5.33
+-6.67
+-8.03
+-9.37
+
+-4.81
+-6.56
+-8.00
+-9.35
+-9.60
+
+-3.99
+-5.59
+-6.91
+-8.25
+-8.57
+
+-4.82
+-6.55
+-8.03
+-9.40
+-9.99
+
+-4.02
+-5.83
+-6.97
+-8.02
+-8.90
+
+14.52
+1.11
+0.57
+0.29
+0.16
+
+5.00
+1.25
+0.82
+0.42
+0.02
+
+5.64
+1.77
+1.04
+0.96
+1.18
+
+-3.37
+-4.89
+-6.06
+-7.10
+-8.29
+
+-3.30
+-4.75
+-5.89
+-6.87
+-7.90
+
+-2.73
+-4.13
+-5.27
+-5.93
+-7.22
+
+-2.63
+-3.83
+-4.75
+-5.62
+-6.61
+
+-2.52
+-3.71
+-4.79
+-5.83
+-6.91
+
+10.36
+0.30
+0.20
+0.13
+0.41
+
+1.35
+0.28
+0.19
+0.14
+0.45
+
+1.42
+0.31
+0.25
+0.24
+0.67
+
+CPU
+
+-3.91
+-5.43
+-6.57
+-7.42
+-8.14
+
+-3.89
+-5.27
+-6.27
+-7.14
+-7.78
+
+-3.15
+-4.45
+-4.92
+-5.86
+-6.83
+
+mean
+
+-3.28
+-4.71
+-5.57
+-6.21
+-6.77
+
+-3.13
+-4.27
+-5.15
+-5.91
+-6.49
+
+-2.90
+-3.96
+-4.68
+-5.56
+-6.50
+
+max
+
+ = 0.99
+
+11.69
+0.55
+0.36
+0.25
+0.53
+
+2.60
+0.57
+0.33
+0.24
+0.51
+
+2.83
+0.75
+0.56
+0.57
+1.31
+
+CPU
+
+-3.39
+-4.68
+-5.74
+-6.54
+-7.26
+
+-3.35
+-4.65
+-5.47
+-6.37
+-6.72
+
+-2.74
+-3.74
+-4.32
+-5.15
+-6.00
+
+mean
+
+-2.74
+-4.01
+-4.92
+-5.51
+-6.02
+
+-2.65
+-3.91
+-4.50
+-4.94
+-5.08
+
+-2.41
+-3.32
+-3.97
+-4.81
+-5.60
+
+max
+
+ = 0.03
+
+11.67
+0.58
+0.43
+0.29
+1.09
+
+2.50
+0.63
+0.51
+0.42
+0.83
+
+2.92
+0.84
+0.52
+0.64
+1.49
+
+CPU
+
+Remark: the number of grid points is equal to  = 36; mean and max are, respectively, the average and maximum Euler equation errors
+(in log10 units); and CPU is computational time in seconds.
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Cluster-grid algorithm (CGA)
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Simulation-grid algorithm (SGA)
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+-2.97
+-4.20
+-5.08
+-6.11
+-7.21
+
+max
+
+mean
+
+max
+
+CPU
+
+=5
+
+ = 1/5
+
+Tensor-product-grid algorithm (TPGA)
+
+Polynomial
+degree
+
+Table 3. Accuracy and speed under three projection algorithms: sensitivity results for the one-country model.
+
+mean
+
+Q(1)
+max
+CPU
+
+mean
+
+-3.45
+-5.43
+-6.89
+-8.17
+-9.41
+
+-2.75
+-4.52
+-5.89
+-7.24
+-8.37
+
+-4.31
+-6.08
+-7.14
+-7.19
+-7.19
+
+-3.67
+-5.42
+-6.63
+-6.76
+-6.75
+
+10.92
+0.42
+0.18
+0.12
+0.07
+
+10.81
+0.23
+0.16
+0.12
+0.06
+
+-4.32
+-6.12
+-7.58
+-8.49
+-8.53
+
+-3.45
+-5.43
+-6.90
+-8.15
+-8.52
+
+-3.91
+-5.19
+-5.23
+-5.23
+-5.23
+
+-3.26
+-4.65
+-5.09
+-5.19
+-5.19
+
+10.95
+0.46
+0.34
+0.18
+0.16
+-3.91
+-5.43
+-6.57
+-7.42
+-8.06
+
+-3.39
+-4.64
+-5.48
+-5.79
+-5.82
+
+-2.68
+-4.12
+-4.91
+-5.28
+-5.35
+
+10.87
+0.46
+0.32
+0.28
+0.24
+-3.39
+-4.68
+-5.74
+-6.58
+-7.26
+
+-2.74
+-4.00
+-4.93
+-5.56
+-6.06
+
+-3.28
+-4.71
+-5.57
+-6.21
+-6.78
+
+-3.68
+-5.46
+-6.92
+-7.97
+-8.37
+
+-2.75
+-4.53
+-5.89
+-7.25
+-8.15
+
+Q(2)
+max
+
+11.05
+0.46
+0.32
+0.17
+0.69
+
+10.96
+0.44
+0.29
+0.20
+0.49
+
+11.24
+0.26
+0.22
+0.12
+0.21
+
+10.92
+0.25
+0.19
+0.13
+0.25
+
+CPU
+
+-3.39
+-4.68
+-5.74
+-6.54
+-7.26
+
+-3.91
+-5.43
+-6.57
+-7.42
+-8.14
+
+-4.32
+-6.12
+-7.58
+-8.91
+-9.99
+
+-3.45
+-5.43
+-6.90
+-8.17
+-9.42
+
+mean
+
+-2.74
+-4.01
+-4.92
+-5.51
+-6.02
+
+-3.28
+-4.71
+-5.57
+-6.21
+-6.77
+
+-3.68
+-5.46
+-6.93
+-7.87
+-8.85
+
+-2.75
+-4.53
+-5.89
+-7.23
+-8.38
+
+Q(10)
+max
+
+11.50
+0.54
+0.42
+0.27
+0.82
+
+11.37
+0.56
+0.35
+0.25
+0.64
+
+11.59
+0.30
+0.26
+0.14
+0.24
+
+11.13
+0.30
+0.22
+0.16
+0.23
+
+CPU
+
+-3.32
+-3.44
+-3.43
+-3.43
+-3.43
+
+-3.65
+-3.68
+-3.68
+-3.68
+-3.68
+
+-3.86
+-3.91
+-3.91
+-3.91
+-3.91
+
+-3.45
+-5.41
+-6.89
+-8.20
+-9.45
+
+-2.70
+-3.37
+-3.40
+-3.41
+-3.41
+
+-3.10
+-3.65
+-3.67
+-3.67
+-3.67
+
+-3.43
+-3.90
+-3.90
+-3.90
+-3.90
+
+-2.76
+-4.44
+-5.92
+-7.27
+-8.35
+
+67.10
+11.62
+8.35
+5.66
+6.02
+
+65.07
+11.53
+7.40
+4.91
+4.18
+
+58.76
+9.91
+4.46
+3.05
+1.77
+
+40.33
+6.17
+4.44
+2.93
+1.48
+
+1000 nodes
+mean max
+CPU
+
+-3.39
+-4.10
+-4.08
+-4.08
+-4.08
+
+-3.92
+-4.33
+-4.33
+-4.33
+-4.33
+
+-4.28
+-4.56
+-4.56
+-4.56
+-4.56
+
+-3.45
+-5.43
+-6.90
+-8.17
+-9.42
+
+-2.69
+-3.87
+-4.02
+-4.05
+-4.06
+
+-3.22
+-4.20
+-4.29
+-4.32
+-4.32
+
+-3.58
+-4.53
+-4.55
+-4.55
+-4.55
+
+-2.75
+-4.53
+-5.89
+-7.23
+-8.38
+
+212.86
+48.83
+41.72
+28.64
+24.48
+
+199.19
+42.37
+30.50
+22.85
+20.06
+
+259.97
+52.24
+24.94
+18.95
+11.54
+
+186.11
+35.99
+27.77
+19.98
+10.45
+
+10000 nodes
+mean
+max
+CPU
+
+Monte Carlo integration
+
+Remark: mean and max are, respectively, the average and maximum Euler equation errors (in log10 units); and CPU is computational time
+in seconds.
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Model with highly volatile shocks,  = 0.03
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Model with highly persistent shocks,  = 0.99
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Benchmark model, d = 0.025
+
+1st degree
+2nd degree
+3rd degree
+4th degree
+5th degree
+
+Model with a closed-form solution, d = 1
+
+Polynomial
+degree
+
+Gauss-Hermite quadrature integration
+
+Table 4. Role of the integration methods in accuracy and speed under the CGA: the one-country model.
+
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+
+Polynomial
+degree
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-4.377885
+
+-
+
+-
+
+-3.212384
+
+-
+
+-
+
+-5.507474
+
+-4.509820
+
+-4.176011
+
+-3.187685
+
+max
+
+-5.448083
+
+Q(3)
+
+-4.089475
+
+mean
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-5.507449
+
+-4.176006
+
+-5.507450
+
+-4.176006
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-5.448005
+
+-4.089467
+
+-5.448012
+
+max
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-4.377703
+
+-3.212397
+
+-4.377705
+
+-3.212397
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-
+
+-4.509738
+
+-3.187689
+
+-4.509746
+
+-3.187689
+
+Q(2)
+
+-4.089467
+
+mean
+
+-
+
+-
+
+-
+
+-5.507413
+
+-4.176001
+
+-5.507412
+
+-4.176001
+
+-5.507413
+
+-4.176001
+
+-
+
+-
+
+-
+
+-
+
+-5.447928
+
+-4.089459
+
+-5.447921
+
+-4.089458
+
+-5.447928
+
+max
+
+-
+
+-
+
+-
+
+-4.377522
+
+-3.212410
+
+-4.377520
+
+-3.212410
+
+-4.377522
+
+-3.212410
+
+-
+
+-
+
+-
+
+-
+
+-4.509657
+
+-3.187693
+
+-4.509649
+
+-3.187693
+
+-4.509657
+
+-3.187693
+
+M2
+
+-4.089459
+
+mean
+
+-
+
+-
+
+-4.176001
+-5.507413
+
+-5.507413
+
+-4.176001
+
+-5.507413
+
+-4.176001
+
+-5.507413
+
+-4.176001
+
+-
+
+-
+
+-5.447928
+
+-4.089459
+
+-5.447934
+
+-4.089459
+
+-5.447927
+
+-4.089459
+
+-5.447934
+
+max
+
+-
+
+-
+
+-3.212410
+-4.377522
+
+-4.377526
+
+-3.212410
+
+-4.377523
+
+-3.212410
+
+-4.377526
+
+-3.212410
+
+-
+
+-
+
+-4.509657
+
+-3.187693
+
+-4.509664
+
+-3.187693
+
+-4.509656
+
+-3.187693
+
+-4.509664
+
+-3.187693
+
+M1
+
+-4.089459
+
+mean
+
+Integration rule in the solution procedure
+
+-5.516762
+
+-4.179199
+
+-4.162795
+-4.927764
+
+-4.927777
+
+-4.162796
+
+-4.927771
+
+-4.162796
+
+-4.927777
+
+-4.162796
+
+-5.448464
+
+-4.091253
+
+-5.057724
+
+-4.068690
+
+-5.057745
+
+-4.068690
+
+-5.057723
+
+-4.068690
+
+-5.057745
+
+max
+
+-4.389750
+
+-3.206127
+
+-3.216565
+-4.286889
+
+-4.286892
+
+-3.216565
+
+-4.286890
+
+-3.216565
+
+-4.286892
+
+-3.216565
+
+-4.510172
+
+-3.186045
+
+-4.414182
+
+-3.194483
+
+-4.414187
+
+-3.194483
+
+-4.414181
+
+-3.194483
+
+-4.414187
+
+-3.194483
+
+Q(1)
+
+-4.068690
+
+mean
+
+Remark: the number of clusters is equal to  = 300; mean and max are, respectively, the average and maximum Euler equation errors
+(in log10 units).
+
+Q(1)
+
+M1
+
+M2
+
+Q(2)
+
+Q(3)
+
+N=6
+
+Q(1)
+
+M1
+
+M2
+
+Q(2)
+
+Q(3)
+
+N=2
+
+Integration
+rule in the
+testing
+procedure
+
+Table 5. Five integration rules in the solution and testing procedures: the benchmark multi-country model.
+
+-3.80
+-2.84
+41.27
+failed to converge
+
+-3.95
+-3.02
+13.33
+failed to converge
+
+-3.87
+-5.19
+
+-4.01
+-5.27
+
+-4.10
+-5.33
+-6.31
+
+mean
+
+-3.10
+-4.28
+
+-3.16
+-4.35
+
+-3.12
+-4.23
+-4.80
+
+max
+
+CPU
+
+max
+
+-4.08
+-3.11
+9.78
+-5.31
+-4.23
+14.32
+failed to converge
+
+mean
+
+=1.2c
+
+=c
+
+38.67
+781.18
+
+13.14
+130.86
+
+10.06
+29.72
+59.40
+
+CPU
+
+-4.05
+-5.47
+
+-4.12
+-5.47
+
+-4.10
+-5.49
+-6.48
+
+mean
+
+-3.24
+-4.49
+
+-3.12
+-4.43
+
+-3.13
+-4.39
+-5.20
+
+max
+
+=2c
+
+46.26
+1150.20
+
+27.91
+254.65
+
+10.30
+34.68
+155.38
+
+CPU
+
+-4.17
+-5.58
+
+-4.14
+-5.52
+
+-4.03
+-5.44
+-6.47
+
+mean
+
+-3.21
+-4.53
+
+-3.19
+-4.43
+
+-3.13
+-4.43
+-5.31
+
+max
+
+=5c
+
+70.15
+2899.11
+
+32.00
+467.36
+
+25.29
+54.22
+171.80
+
+CPU
+
+Remark: c is the minimum possible number of clusters (collocation); mean and max are, respectively, the average and maximum Euler
+equation errors (in log10 units); and CPU is computational time in seconds.
+
+1st degree
+2nd degree
+
+N=10
+
+1st degree
+2nd degree
+
+N=6
+
+1st degree
+2nd degree
+3rd degree
+
+N=2
+
+Polynomial
+degree
+
+Table 6. Effect of the number of clusters on accuracy and speed: the benchmark multi-country model.
+
+1 degree
+2nd degree
+3rd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+2nd degree
+1st degree
+1st degree
+1st degree
+1st degree
+
+5
+15
+35
+9
+45
+13
+91
+17
+153
+21
+231
+25
+325
+33
+561
+41
+861
+61
+1891
+81
+3321
+121
+201
+301
+401
+
+Pm (N)
+
+1000
+1000
+1000
+1000
+
+4000
+
+4000
+
+1000
+
+1000
+
+400
+
+400
+
+300
+
+300
+
+300
+
+300
+
+
+-4.09
+-5.45
+-6.51
+-4.13
+-5.47
+-4.18
+-5.51
+-4.20
+-5.49
+-
+
+mean
+-3.19
+-4.51
+-5.29
+-3.15
+-4.32
+-3.21
+-4.38
+-3.25
+-4.51
+-
+
+Q(2)
+max
+38
+108
+237
+63
+287
+222
+1282
+947
+9511
+-
+
+CPU
+-4.09
+-5.45
+-6.51
+-4.13
+-5.47
+-4.18
+-5.51
+-4.20
+-5.49
+-4.20
+-5.46
+-4.21
+-5.23
+-
+
+mean
+-3.19
+-4.51
+-5.29
+-3.15
+-4.32
+-3.21
+-4.38
+-3.25
+-4.51
+-3.24
+-4.50
+-3.28
+-4.30
+-
+
+M2
+max
+53
+150
+398
+120
+517
+232
+1440
+468
+3774
+1090
+12503
+1403
+69025
+-
+
+CPU
+-4.09
+-5.45
+-6.51
+-4.13
+-5.47
+-4.18
+-5.51
+-4.20
+-5.49
+-4.20
+-5.46
+-4.21
+-5.23
+-4.22
+-5.44
+-4.21
+-5.08
+-4.23
+-4.23
+-4.13
+-4.09
+-
+
+mean
+-3.19
+-4.51
+-5.29
+-3.15
+-4.32
+-3.21
+-4.38
+-3.25
+-4.51
+-3.24
+-4.50
+-3.28
+-4.30
+-3.29
+-4.38
+-3.29
+-4.17
+-3.31
+-3.31
+-3.27
+-3.24
+-
+
+M1
+max
+44
+114
+212
+50
+206
+68
+301
+114
+422
+182
+970
+233
+1307
+843
+6790
+1238
+16895
+13985
+19043
+8836
+38782
+-
+
+CPU
+-4.07
+-5.06
+-5.17
+-4.11
+-4.95
+-4.16
+-4.93
+-4.18
+-4.91
+-4.18
+-4.90
+-4.19
+-4.88
+-4.19
+-4.88
+-4.17
+-4.83
+-4.19
+-4.86
+-4.19
+-4.86
+-4.09
+-4.06
+-4.01
+-3.97
+
+mean
+
+-3.19
+-4.41
+-4.92
+-3.16
+-4.23
+-3.22
+-4.29
+-3.26
+-4.34
+-3.25
+-4.33
+-3.29
+-4.34
+-3.29
+-4.27
+-3.28
+-4.10
+-3.29
+-4.54
+-3.29
+-4.48
+-3.25
+-3.23
+-3.22
+-3.20
+
+Q(1)
+max
+
+45
+85
+121
+39
+90
+42
+97
+44
+109
+59
+191
+63
+226
+175
+1058
+184
+1911
+3529
+36304
+5321
+87748
+805
+2174
+4204
+6316
+
+CPU
+
+respectively, the average and maximum Euler equation errors (in log10 units); and CPU is computational time in seconds.
+
+Remark: Pm(N) is the number of polynomial coefficients in the m -th degree polynomial;  is the number of clusters; mean and max are,
+
+N=60
+N=100
+N=150
+N=200
+
+N=40
+
+N=30
+
+N=20
+
+N=16
+
+N=12
+
+N=10
+
+N=8
+
+N=6
+
+N=4
+
+N=2
+
+st
+
+Polynom.
+degree m
+
+Table 7. Accuracy and speed under four integration rules: the benchmark multi-country model.
+
+Pm (N)
+
+mean
+
+13
+91
+300
+
+-3.55
+-4.89
+
+-6.05
+
+13
+91
+300
+
+-2.35
+-3.35
+
+-3.31
+-4.39
+
+13
+91
+300
+
+-2.37
+-3.43
+
+-3.77
+-4.72
+
+13
+91
+300
+
+-1.84
+-2.58
+
+-3.16
+-3.93
+
+1800
+
+333
+
+1643
+
+305
+
+7707
+
+2024
+
+1193
+
+249
+
+CPU
+
+-3.93
+
+-3.16
+
+-4.72
+
+-3.77
+
+-4.39
+
+-3.31
+
+-6.05
+
+-4.60
+
+mean
+
+M2
+
+-2.58
+
+-1.84
+
+-3.43
+
+-2.37
+
+-3.35
+
+-2.35
+
+-4.89
+
+-3.55
+
+max
+
+2062
+
+362
+
+1937
+
+337
+
+8901
+
+1953
+
+1510
+
+275
+
+CPU
+
+-3.93
+
+-3.16
+
+-4.72
+
+-3.77
+
+-4.39
+
+-3.31
+
+-6.05
+
+-4.60
+
+mean
+
+M1
+
+-2.58
+
+-1.84
+
+-3.43
+
+-2.37
+
+-3.35
+
+-2.35
+
+-4.89
+
+-3.55
+
+max
+
+422
+
+108
+
+401
+
+105
+
+1891
+
+525
+
+279
+
+72
+
+CPU
+
+-3.74
+
+-3.14
+
+-4.55
+
+-3.76
+
+-4.11
+
+-3.31
+
+-5.21
+
+-4.57
+
+mean
+
+-2.60
+
+-1.86
+
+-3.38
+
+-2.37
+
+-3.51
+
+-2.37
+
+-4.72
+
+-3.53
+
+max
+
+Q(1)
+
+160
+
+63
+
+129
+
+60
+
+639
+
+240
+
+87
+
+38
+
+CPU
+
+Remark: Pm(N) is the number of polynomial coefficients in the m -th degree polynomial;  is the number of clusters; mean and max are,
+respectively, the average and maximum Euler equation errors (in log10 units); and CPU is computational time in seconds.
+
+1st degree
+2nd degree
+
+Model with highly volatile shocks,  = 0.03
+
+1st degree
+2nd degree
+
+Model with highly persistent shock,  = 0.99
+
+1st degree
+2nd degree
+
+max
+
+Q(2)
+
+-4.60
+
+Model with high risk aversion,  = 5
+
+1st degree
+2nd degree
+
+Model with low risk aversion,  = 1/5
+
+Polynom.
+degree m
+
+Table 8. Accuracy and speed under four integration rules: sensitivity results for the multi-country model with N = 6.
+
+

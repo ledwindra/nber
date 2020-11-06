@@ -1,0 +1,1644 @@
+NBER WORKING PAPER SERIES
+
+DYNAMIC PROGRAMMING WITH HERMITE APPROXIMATION
+Yongyang Cai
+Kenneth L. Judd
+Working Paper 18540
+http://www.nber.org/papers/w18540
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+November 2012
+
+Cai and Judd gratefully acknowledge NSF support (SES-0951576). The views expressed herein are
+those of the authors and do not necessarily reflect the views of the National Bureau of Economic Research.
+NBER working papers are circulated for discussion and comment purposes. They have not been peerreviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+© 2012 by Yongyang Cai and Kenneth L. Judd. All rights reserved. Short sections of text, not to exceed
+two paragraphs, may be quoted without explicit permission provided that full credit, including © notice,
+is given to the source.
+
+Dynamic Programming with Hermite Approximation
+Yongyang Cai and Kenneth L. Judd
+NBER Working Paper No. 18540
+November 2012
+JEL No. C61,C63
+ABSTRACT
+Numerical dynamic programming algorithms typically use Lagrange data to approximate value functions
+over continuous states. Hermite data is easily obtained from solving the Bellman equation and can
+be used to approximate value functions. We illustrate this method with one-, three-, and six-dimensional
+examples. We find that value function iteration with Hermite approximation improves accuracy by
+one to three digits using little extra computing time. Moreover, Hermite approximation is significantly
+faster than Lagrange for the same accuracy, and this advantage increases with dimension.
+
+Yongyang Cai
+Hoover Institution
+Stanford University
+Stanford, CA 94305
+yycai@stanford.edu
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+
+1. Introduction
+Dynamic optimization problems in economics are numerically challenging
+due to nonlinearities and/or dimensionality. Dynamic programming (DP) is
+the standard approach for dynamic optimization problems. In many economics problems, the state and control variables are continuous, and theory implies that the value function is continuously differentiable. The value
+function must be approximated numerically, but imperfectly since computers cannot represent arbitrary continuous functions. DP problems are often
+solved by value function iteration, where the period t value function is computed from the period t + 1 value function, and the value function is known
+at the terminal time T .
+DP algorithms typically use value function iteration, where each step generates Lagrange data to approximate a value function, where the Lagrange
+data comes from solving the optimization problem in a Bellman equation at
+many points in the state space. For the purposes of this paper, we call that
+approach L-VFI for Lagrange value function iteration. However, the Envelope Theorem tells us that the output of each such optimization problem
+can include the gradient of the value function at each point at essentially no
+cost. This paper proposes using both the Lagrange and slope information
+in Hermite approximation methods for constructing value functions in value
+function iteration; we call this approach H-VFI, Hermite value function iteration. First, we show how to write an optimization problem so that the
+gradient of the value function is the value of the shadow prices of some constraints. Second, we apply Hermite value function iteration to some common
+economics problems. In our one-dimensional examples, H-VFI improves accuracy by almost the same as if we doubled the number of points used in
+L-VFI. This corresponds to the simple intuition that knowing the value and
+slope of a function at a point is equivalent to knowing the value of the function at two points. In our three- and six-dimensional examples, we find
+that Hermite approximation often achieves the same accuracy as Lagrange
+approximation but at significantly less cost.
+This paper’s examples approximate the value function with Chebyshev
+polynomials. For one-dimensional problems, Hermite approximation can also
+be used in combination with spline methods, such as the Schumaker shapepreserving spline method (Schumaker, 1983) or a rational function spline
+method (Cai and Judd, 2012a). For multi-dimensional problems, we use
+complete Chebyshev polynomials to fit our Hermite data, but there are many
+2
+
+alternatives such as multivariate splines and radial basis functions. The key
+idea behind H-VFI does not depend on the specific functional form used for
+approximating the value function.
+The paper is organized as follows. Section 2 outlines the basic numerical
+L-VFI algorithm with Chebyshev polynomials. Section 3 presents the HVFI algorithm. Section 4 gives some numerical examples where we compare
+the efficiency of Lagrange and Hermite value function iteration. Section 5
+concludes.
+2. Review of Numerical Methods for DP
+Numerical solutions to a DP problem are based on the Bellman equation
+(Bellman, 1957):
+
+Vt (x, θ) = max
+ut (x, a) + βE Vt+1 (x+ , θ+ ) | x, θ, a ,
+(1)
+a∈D(x,θ,t)
+
+s.t.
+
+x+ = gt (x, θ, a, ω),
+θ+ = ht (θ, ),
+
+where x is the continuous state vector, θ is the discrete state vector, Vt (x, θ)
+is the value function at time t ≤ T where VT (x, θ) is given, a is the vector
+of action variables and is constrained by a ∈ D(x, θ, t), x+ is the next-stage
+continuous state vector with transition function gt at time t, θ+ is the nextstage discrete state vector with transition function ht at time t, ω and  are
+two vectors of random variables, ut (x, a) is the utility function at time t, β
+is the discount factor, and E{·} is the expectation operator.
+In the simpler case where the discrete state θ does not exist and the
+continuous state vector x is not random, the Bellman equation (1) becomes
+Vt (x) = max
+
+a∈D(x,t)
+
+s.t.
+
+ut (x, a) + βVt+1 (x+ ),
+
+(2)
+
+x+ = gt (x, a).
+
+If state and control variables in a DP problem are continuous, then the
+value function must be approximated in some computationally tractable
+manner. It is common to approximate value functions with a finitely parameterized collection of functions; that is, we use some functional form V̂ (x; b),
+where b is a vector of parameters, and approximate a value function, V (x),
+with V̂ (x; b) for some parameter value b. For example, V̂ could be a linear
+3
+
+combination of polynomials where b would be the weights on polynomials.
+After the functional form is fixed, we focus on finding the vector of parameters, b, such that V̂ (x; b) approximately satisfies the Bellman equation. The
+following algorithm gives the traditional value function iteration to solve the
+deterministic DP problem (2) .
+Algorithm 1. Lagrange Value Function Iteration (L-VFI)
+Initialization. Choose the approximation nodes, Xt = {xit : 1 ≤ i ≤ Nt } ⊂
+Rd , for every t < T , and choose a functional form for V̂ (x; b). Let
+V̂ (x; bT ) ≡ VT (x). Then for t = T − 1, T − 2, . . . , 0, iterate through
+steps 1 and 2.
+Step 1. Maximization Step. Compute
+vi = maxi
+
+a∈D(x ,t)
+
+s.t.
+
+ut (xi , a) + β V̂ (x+ ; bt+1 )
+x+ = gt (xi , a),
+
+for each xi ∈ Xt , 1 ≤ i ≤ Nt .
+Step 2. Fitting Step. Using an appropriate approximation method, compute
+the bt such that V̂ (x; bt ) approximates (xi , vi ) data.
+Algorithm 1 shows that there are two main components in value function
+iteration for deterministic DP problems: optimization, and approximation.
+In this paper we focus on approximation methods. Detailed discussion of
+numerical DP can be found in Cai (2009), Judd (1998) and Rust (2008).
+An approximation scheme consists of two parts: basis functions and approximation nodes. Approximation nodes can be chosen as uniformly spaced
+nodes, Chebyshev nodes, or some other specified nodes. From the viewpoint
+of basis functions, approximation methods can be classified as either spectral methods or finite element methods. A spectral
+P method uses globally
+nonzero basis functions φj (x) such that V̂ (x; b) = nj=0 bj φj (x) is a degree-n
+approximation. Examples of spectral methods include ordinary polynomial
+approximation, Chebyshev polynomial approximation, and shape-preserving
+Chebyshev polynomial approximation (Cai and Judd, 2012b). In contrast,
+a finite element method uses locally basis functions φj (x) that are nonzero
+over sub-domains of the approximation domain. Examples of finite element
+methods include piecewise linear interpolation, cubic splines, and B-splines.
+See Cai (2009), Cai and Judd (2010), and Judd (1998) for more details.
+4
+
+2.1. Chebyshev Polynomial Approximation
+Chebyshev polynomials on [−1, 1] are defined as Tj (x) = cos(j cos−1 (x)),
+while general Chebyshev polynomials on [xmin , xmax ] are defined as Tj ((2x −
+xmin − xmax )/(xmax − xmin )) for j = 0, 1, 2, . . .. These
+polynomials are orthog´ xmax
+onal under the weighted inner product: hf, gi = xmin f (x)g(x)w(x)dx with
+−1/2
+.
+the weighting function w(x) = 1 − ((2x − xmin − xmax )/(xmax − xmin ))2
+A degree n Chebyshev polynomial approximation for V (x) on [xmin , xmax ] is
+
+
+n
+X
+2x − xmin − xmax
+,
+(3)
+V̂ (x; b) =
+bj T j
+x
+−
+x
+max
+min
+j=0
+where b = {bj } are the Chebyshev coefficients.
+If we choose the Chebyshev nodes on [xmin , xmax ]: xi = (zi + 1)(xmax −
+xmin )/2 + xmin with zi = − cos ((2i − 1)π/(2m)) for i = 1, . . . , m, and Lagrange data {(xi , vi ) : i = 1, . . . , m} are given (where vi = V (xi )), then the
+coefficients bj in (3) can be easily computed by the following formula,
+m
+
+b0
+
+1 X
+vi ,
+=
+m i=1
+m
+
+bj =
+
+2 X
+vi Tj (zi ),
+m i=1
+
+j = 1, . . . , n.
+
+(4)
+
+The method is called the Chebyshev regression algorithm in Judd (1998).
+When the number of Chebyshev nodes is equal to the number of Chebyshev coefficients, i.e., m = n + 1, then the approximation (3) with the coefficients given by (4) becomes Chebyshev polynomial interpolation (which is
+a Lagrange interpolation), as V̂ (xi ; b) = vi , for i = 1, . . . , m.
+It is often more stable to use the expanded Chebyshev polynomial interpolation (Cai, 2009), as the above standard Chebyshev polynomial interpolation gives poor approximation in the neighborhood of end points. That is,
+we use the following formula to approximate V (x),
+
+
+n
+X
+2x − x
+emin − x
+emax
+,
+(5)
+V̂ (x; b) =
+bj T j
+x
+emax − x
+emin
+j=0
+where x
+emin = xmin −δ and x
+emax = xmax +δ with δ = (z1 +1)(xmin −xmax )/(2z1 ).
+Moreover, if we choose the expanded Chebyshev nodes on [xmin , xmax ]: xi =
+5
+
+(zi + 1)(x̃max − x̃min )/2 + x̃min , then the coefficients bj can also be calculated
+easily by the expanded Chebyshev regression algorithm (Cai, 2009), which is
+similar to (4).
+2.2. Multidimensional Complete Chebyshev Polynomial Approximation
+In a d-dimensional approximation problem, let the domain of the value
+function be
+
+
+x = (x1 , . . . , xd ) : xmin
+≤ xj ≤ xmax
+, j = 1, . . . d ,
+j
+j
+
+for j = 1, . . . , d.
+> xmin
+with xmax
+and xmax
+for some real numbers xmin
+j
+j
+j
+j
+max
+max
+max
+min
+min
+min
+= (x1 , . . . , xd ). Then we denote
+Let x
+= (x1 , . . . , xd ) and x
+[xmin , xmax ] as the domain. Let α = (α1 , . . . , αd ) be a vector of nonnegative integers. Let Tα (z) denote the product Tα1 (z1 ) · · · Tαd (zd ) for z = (z1 , . . . , zd ) ∈
+[−1, 1]d . Let
+
+
+− xmax
+2x1 − xmin
+2xd − xmin
+− xmax
+1
+1
+d
+d
+Z(x) =
+,...,
+xmax
+− xmin
+xmax
+− xmin
+1
+1
+d
+d
+for any x = (x1 , . . . , xd ) ∈ [xmin , xmax ].
+Using these notations, the degree-n complete Chebyshev approximation
+for V (x) is
+X
+V̂n (x; b) =
+bα Tα (Z(x)) ,
+(6)
+0≤|α|≤n
+
+Pd
+
+where |α| = j=1 αj for the nonnegative integer vector α = (α1 , . . . , αd ). So
+
+P
+for the degree-n
+the number of terms with 0 ≤ |α| = dj=1 αi ≤ n is n+d
+d
+d
+complete Chebyshev approximation in R .
+3. Hermite Value Function Iteration Algorithm
+L-VFI is the traditional approach to value function iteration. In this
+section, we show how to generate more information in each Maximization
+Step that will allow us to construct better value function approximations.
+More specifically, we will first show that each maximization problem in the
+Maximization Step can produce the gradient of the value function at an
+approximation node as well as the value. Then we show how to use that
+information to produce better value function approximations.
+
+6
+
+3.1. H-VFI
+Traditional approximation methods in DP problems use only Lagrange
+data. The Maximization Step in L-VFI is
+vi = Vt (xi ) = maxi
+
+a∈D(x ,t)
+
+ut (xi , a) + βVt+1 (x+ ),
+x+ = gt (xi , a),
+
+s.t.
+
+for each pre-specified approximation node xi , i = 1, . . . , N . Then it uses the
+Lagrange data set {(xi , vi ) : i = 1, . . . , N } in the Fitting Step to construct
+an approximation V̂t (x) of the value function.
+However, the Maximization Step of L-VFI can give not only the value
+function at an approximation node, but also its gradients, and do so at almost
+no cost, for DP problems with continuous and derivable value functions. This
+is accomplished by invoking the Envelope Theorem, which we next state.
+Theorem 1 (Envelope Theorem). Let
+H(x) = max f (x, a)
+a
+
+(7)
+
+s.t. g(x, a) = 0,
+h(x, a) ≥ 0,
+where x ∈ Rd . Suppose that a∗ (x) is the optimizer of (7), and that λ∗ (x)
+is the vector of shadow prices for the equality constraints g(x, a) = 0,
+and µ∗ (x) is the vector of shadow prices of the inequality constraints
+h(x, a) = 0,. Then
+∂f
+∂g
+∂h
+∂H(x)
+=
+(x, a∗ (x)) + λ∗ (x)>
+(x, a∗ (x)) + µ∗ (x)>
+(x, a∗ (x)),
+∂xj
+∂xj
+∂xj
+∂xj
+(8)
+for j = 1, . . . , d.
+Formula (8) expresses the value of ∂H(x)/∂xj in terms of the shadow prices,
+objective gradient, constraints gradients at the optimum. The key simplifying
+feature of (8) is the absence of any term expressing how the choice of a is
+affected by a local change in state.
+We could use Formula (8) to generate Hermite data for a value function,
+but there is a better way to compute those gradients. Corollary 1 shows
+how to rewrite the optimization problem so that solver outputs the value of
+∂H(x)/∂xj .
+7
+
+Corollary 1. The optimization problem,
+H(x) = max f (x, a)
+
+(9)
+
+a
+
+s.t. g(x, a) = 0,
+h(x, a) ≥ 0,
+is equivalent to
+H(x) = max f (y, a)
+
+(10)
+
+a,y
+
+s.t. g(y, a) = 0,
+h(y, a) ≥ 0,
+xj − yj = 0,
+
+j = 1, . . . , d,
+
+implying that
+∂H(x)
+= τj∗ (x),
+∂xj
+where τj∗ (x) is the shadow price of the trivial constraint xj − yj = 0,
+for j = 1, . . . , d.
+Corollary 1 takes the optimization problem (9), adds variables yj , adds constraints xj − yj = 0, and replaces x by y in the objective function and all
+other constraints. The Envelope Theorem tells us that ∂H(x)/∂xj is the
+shadow price of the trivial constraint xj − yj = 0, which can be included
+in the output of a solver. This frees us from computing the more complex
+formula (8) in the Envelope Theorem. The extra cost of the reformulated
+problem is trivial for any modern solver.
+Using Corollary 1, Algorithm 2 shows how to efficiently use Hermite approximation in the numerical DP algorithms.
+Algorithm 2. Hermite Value Function Iteration (H-VFI)
+Initialization. Choose the approximation nodes, Xt = {xit : 1 ≤ i ≤ Nt } ⊂
+Rd , for every t < T , and choose a functional form for V̂ (x; b). Let
+V̂ (x; bT ) ≡ VT (x). Then for t = T − 1, T − 2, . . . , 0, iterate through
+steps 1 and 2.
+
+8
+
+Step 1. Maximization Step. For each xi ∈ Xt , 1 ≤ i ≤ Nt , compute
+vi =
+
+max
+a∈D(y,t),y
+
+s.t.
+
+ut (y, a) + β V̂ (x+ ; bt+1 ),
+x+ = gt (y, a),
+xij − yj = 0, , j = 1, . . . , d,
+
+and
+sij = τj∗ (xi ),
+where τj∗ (xi ) is the shadow price of the constraint xij − yj = 0.
+Step 2. Hermite Fitting Step. Using an appropriate approximation method,
+compute the bt such that V̂ (x; bt ) approximates (xi , vi , si ) data.
+We can easily extend the above algorithm to solve the general stochastic DP
+model (1).
+3.2. Hermite Approximation Approaches
+Many approximation methods can use Hermite information. Our examples will have smooth value functions, as is often the case in economics
+problems. In this section we describe polynomial approximation methods
+that will produce smooth approximations using Hermite information. We
+next introduce Chebyshev-Hermite interpolation for one dimensional cases,
+and Hermite approximation with complete Chebyshev polynomials for multidimensional problems.
+3.2.1. Chebyshev-Hermite Interpolation
+Chebyshev interpolation is often used in L-VFI, and can also be used for
+H-VFI. If we have Hermite data {(xi , vi , si ) : i = 1, . . . , m} on [xmin , xmax ],
+where xi = (zi + 1)(xmax − xmin )/2 + xmin (with zi = − cos ((2i − 1)π/(2m)))
+are the Chebyshev nodes, vi = V (xi ) and si = V 0 (xi ), then the following
+system of 2m linear equations can produce coefficients for degree 2m − 1
+Chebyshev polynomial interpolation on the Hermite data:
+P2m−1
+
+i = 1, . . . , m,
+ j=0 bj Tj (zi ) = vi ,
+(11)
+
+P
+
+2m−1
+2
+0
+i
+j=1 bj Tj (zi ) = s , i = 1, . . . , m,
+xmax −xmin
+where Tj (z) are Chebyshev basis polynomials. After the coefficients are computed from the above linear system, we can use the polynomial (5) to approximate V (x) by choosing the degree n = 2m − 1.
+9
+
+3.2.2. Multidimensional Hermite Approximation with Complete Chebyshev
+Polynomials
+We can generalize the idea of combining Chebyshev polynomials and Hermite data to higher dimensions, but multidimensional interpolation becomes
+difficult because the most natural approaches do not have equality between
+the number of unknown coefficients and the number of items of information. Therefore, we use a least squares approach to fit complete Chebyshev
+polynomials to Hermite data.
+For simplicity, we assume that the approximation range is [−1, 1]d in
+a d-dimensional approximation problem. It can be easily extended to any
+range [xmin , xmax ] ⊂ Rd . Assume that we have Hermite data {(xi , vi , si ) : i =
+1, . . . , N } on [−1, 1]d , where xi ∈ [−1, 1]d are d-dimensional approximation
+nodes, vi = V (xi ), and si = (si1 , . . . , sid ) are the gradient of V at xi , i.e.,
+sij = ∂x∂ j V (xi ). The following least square model can produce coefficients for
+degree n complete Chebyshev polynomial approximation (6) on the Hermite
+data:
+
+
+
+2
+2 
+N
+N X
+d
+X
+X
+X
+X
+
+ 
+∂
+vi −
+sij −
+min
+bα T α x i  +
+Tα xi  .
+bα
+b 
+
+∂xj
+i=1
+i=1 j=1
+0≤|α|≤n
+
+0≤|α|≤n
+
+(12)
+Since this is a simple least squares problem without constraints, this is easy
+and fast to be solved.1 When the approximation nodes are tensor grids with
+m nodes in each dimension, there are N = md approximation nodes {xi },
+so there are (d + 1)md information data {vi , si } used for the computing the
+coefficients of degree n complete Chebyshev polynomial approximation. In
+this case, it is often good to choose the degree n = 2m−1 complete Chebyshev
+polynomial approximation
+for the Hermite approximation, as the number of
+
+coefficients is 2m−1+d
+,
+less
+than (d + 1)md , for any d ≥ 2 and m > 1.2
+d
+3.3. Comparison with Previous Work
+The key idea in H-VFI is generating and using gradient information. Some
+of the ideas we outlined above in this paper have been discussed in the lit1
+
+The objective in (12) is an unweighted sum of squared errors. Weighted versions of
+the least squares may do better but we do not pursue that possibility in this paper.
+2
+This can be proved recursively.
+
+10
+
+erature, but this is the first complete discussion of the issues. Philbrick and
+Kitanidis (2001) described the generation and use of Hermite information
+but did not invoke the Envelope Theorem. Instead they used a formula that
+sometimes required computing how the optimal choice depends locally on
+the state, a much more costly and complex procedure. They also used tensor products of splines for the approximation, whereas the multidimensional
+Hermite approximation approach described in Section 3.2 is more flexible.
+They report at most three-digit accuracy for their examples of dimension
+four or less, but less than two digits for higher dimensions. Our examples
+presented below will achieve higher accuracy. Wang and Judd (2000) combined Hermite approximation with shape preservation, but used a very inefficient approach to multidimensional approximation. Another related method
+is the shape-preserving rational function spline Hermite interpolation (Cai
+and Judd, 2012a), but that was only for one-dimensional problems. More
+important, none of those papers documented the actual performance of HVFI relative to L-VFI in economically relevant problems. We now turn to
+how H-VFI performs on substantive economic problems.
+4. Application
+This section applies H-VFI algorithm to solve multi-stage portfolio optimization problem using Hermite interpolation, and to solve multi-dimensional
+optimal growth problems using Hermite approximation with complete Chebyshev polynomials.
+4.1. Multi-stage Portfolio Optimization
+We next present a numerical example of H-VFI to solve multi-stage portfolio optimization problems, and compare it with L-VFI. The dynamic portfolio optimization problem assumes that there are d stocks and one bond available for investment over the stages t = 0, 1, . . . , T − 1, and that the investor’s
+objective is to maximize expected utility of wealth at stage T . For each period, the bond has a risk-free return Rf = er where r is the interest rate, and
+the stocks have a multivariate random return vector R = (R1 , . . . , Rd ) > .
+In each period t, the investor’s portfolio has market value wealth Wt ; we
+assume no transaction costs, implying that Wt can be used as the state variable. In period t, the investor chooses a new portfolio St = (S1,t , . . . , Sd,t )>
+where Si,t is the market value stock i chosen by the investor in time t. The
+
+11
+
+value of wealth invested in the bond is Bt = Wt − e> St where e is the column
+vector with its i-th element ei = 1 for all i. Thus, the wealth at time t + 1 is
+Wt+1 = Rf Bt + R> St ,
+for t = 0, 1, . . . , T − 1.
+We want to find an optimal portfolio St at each time t such that the
+expected terminal utility is maximized, i.e.,
+V0 (W0 ) = max
+
+St ,0≤t<T
+
+E{u(WT )},
+
+where u(W ) = W 1−γ /(1 − γ) for some constant γ > 0 and γ 6= 1. Moreover,
+we assume that borrowing or shorting is not allowed in this example, i.e.,
+Bt ≥ 0 and St ≥ 0 for all t.
+The DP model of this multi-stage portfolio optimization problem is
+Vt (W ) = max E{Vt+1 (Rf B + R> S)},
+B,S≥0
+
+s.t.
+
+(13)
+
+W − B − e> S = 0,
+
+for t = 0, 1, . . . , T − 1, where W is the state variable, and B and S are the
+control variables, and the terminal value function is VT (W ) = u(W ).
+4.1.1. True Solution
+Since the terminal utility function is u(W ) = W 1−γ /(1 − γ) , we know
+that Vt (W ) = αt W 1−γ , where
+n
+
+1−γ o
+αt = E Rf 1 − e> x∗ + R> x∗
+αt+1 ,
+for any t < T , where αT = 1/(1 − γ), and x∗ is the optimal allocation ratios
+of money invested in the stocks when the current-stage
+ wealth is∗ 1. This
+∗
+> ∗
+tells us that the optimal solutions are Bt = 1 − e x Wt and St = x∗ Wt
+for all time t and any wealth Wt . Moreover, x∗ can be easily obtained from
+computing a single-period optimization problem with the terminal power
+utility function at W0 = 1. Therefore, we will use this as the true solution
+and then do our accuracy tests for H-VFI.
+
+12
+
+4.1.2. Bounded Normal Random Variable
+In a dynamic portfolio optimization problem, a typical assumption about
+the stocks is that they have log-normal returns. This means that the nextstage wealth could be any number in (0, ∞), and then makes it hard to
+approximate the value function well, particularly when the value function
+tends to −∞ when wealth goes to 0 and also tends to 0 when wealth goes
+to infinity, like what we have when the terminal utility function is the power
+utility with γ > 1. In this example, we assume that the stocks have a
+bounded return vector having a distribution close to be log-normal.
+We use the following function to transform a standard normal random
+variable ς ∼ N (0, 1) to a bounded random variable Ψ:
+1 − e−κς
+Υ,
+Ψ=
+1 + e−κς
+
+(14)
+
+where Υ and κ are two parameters. We see that Ψ has zero mean, and it is
+symmetric around the mean and bounded in (−Υ, +Υ). Once we choose a
+number of Υ, we would like to choose a corresponding κ so that Ψ has a unit
+variance. For example, if we set Υ = 4, then we will choose κ = 0.532708.
+Thus, Ψ is close to ς, particularly in the range (−2, 2) if we choose Υ ≥ 4.
+See Cai, Judd and Lontzek (2012c) for more details.
+Therefore, in this example we assume that the stocks have a bounded
+log-normal return R = (R1 , . . . , Rd ) > , i.e.,
+log(Rj ) = µi +
+
+1 − e−κςj
+Υσj ,
+1 + e−κςj
+
+(15)
+
+where ςj is a standard normal random variable for j = 1, . . . , d, and the
+correlation matrix of (ς1 , . . . , ςd ) is Σ.
+4.1.3. Multivariate Numerical Integration
+In the objective function of the Bellman equation (13), we need to compute the expectation of Vt+1 . When we assume that the stocks have a
+bounded log-normal return vector R, this expectation can be computed by
+product Gaussian-Hermite quadrature efficiently. From the formula (15), we
+know that Vt+1 (Rf B + R> S) in the objective function of (13) can be rewritten as g(ς) for some function g where ς is the corresponding standard normal
+random variable vector with a correlation matrix Σ.
+
+13
+
+Since Σ must be a positive semi-definite matrix from the covariance property, we can do the Cholesky factorization, i.e., find a lower triangular matrix
+L such that Σ = LL> . Therefore,
+
+E Vt+1 (Rf B + R> S) = E{g(ς)}
+ˆ
+−1/2
+> −1
+d
+= (2π) det(Σ)
+g(x)e−x Σ x/2 dx
+d
+ˆR
+√
+
+
+>
+−1/2
+g
+2Lx e−x x 2d/2 det(L)dx
+= (2π)d det(L)2
+Rd
+N
+N
+X
+X
+√
+d
+.
+2L1,1 xi1 ,
+···
+ωi 1 · · · ωi d g
+= π− 2
+i1 =1
+
+id =1
+
+!
+d
+√
+√ X
+2(L2,1 xi1 + L2,2 xi2 ), · · · , 2(
+Ld,j xij ) ,
+j=1
+
+where ωi and xi are the Gauss-Hermite quadrature weights and nodes over
+(−∞, ∞), Li,j is the (i, j)-element of L, and det(·) means the matrix determinant operator.
+4.1.4. Nonlinear Change of Variable
+When the relative risk aversion coefficient γ in the power utility function is
+bigger than 1, the value function is steep and has a large magnitude at nearly
+0 and also is very flat at a large wealth. So it will be hard to approximate the
+value function well on the state variable W if W has a small lower bound and
+a large upper bound. Thus, to approximate the value function accurately,
+approximation nodes should be assigned in such a way that they are denser
+when they are closer to the small lower bound, while they are sparser when
+they are closer to the large upper bound.
+To solve this problem, we will use w = log(W ) as our state variable.
+Experience shows that this approach helps construct accurate polynomial
+approximations
+ of the value function. If we want to solve the problem for
+W ∈ W , W , we approximate the value function with
+V̂ (w; b) =
+
+n
+X
+
+
+bj T j
+
+j=0
+
+14
+
+2w − w − w
+w−w
+
+
+,
+
+for any w ∈ (w, w), where w = log(W ) and w = log(W ), and Tj are the
+Chebyshev basis polynomials. Moreover, the Chebyshev nodes are wi =
+(zi + 1)(w − w)/2 + w with zi = − cos ((2i − 1)π/(2m)) for i = 1, . . . , m,
+so we can get the Chebyshev coefficients bj by using Chebyshev regression
+algorithm or by solving the linear system (11) for Hermite interpolation.
+Since shorting or borrowing is not allowed in our example, and the ith stock return is assumed to be a bounded log-normal random variable in
+eµi −Υσi , eµi +Υσi , we can obtain the ranges [W t , W t ] recursively as
+
+W t+1 = min eµj −Υσj W t ,
+j=1,...,d
+
+W t+1 = max eµj +Υσj W t ,
+j=1,...,d
+
+with a given initial wealth bound [W 0 , W 0 ]. We see that the ranges are
+expanding exponentially across the time. However, the bounds of wt is
+wt+1 =
+wt+1 =
+
+min {µj − Υσj } + wt ,
+
+j=1,...,d
+
+max {µj + Υσj } + wt ,
+
+j=1,...,d
+
+
+with w0 = log (W 0 ) and w0 = log W 0 , so the ranges are expanding just
+linearly.
+4.1.5. Numerical Result
+In this numerical example, we choose d = 3 stocks, and they have the
+bounded log-normal return R = (R1 , R2 , R3 ) > , while the mean of log(R) is
+µ = (0.04875, 0.04875, 0.04875)> , the standard deviation of log(R) is σ =
+(0.15, 0.15, 0.15)> , and the correlation matrix of corresponding (ζ1 , ζ2 , ζ3 ) in
+the formula (15) is
+
+
+1 0.8 0.6
+Σ =  0.8 1 0.7  .
+0.6 0.7 1
+The interest rate is r = 0.03, and the relative risk aversion coefficient is
+γ = 2 for the terminal power utility function, and the initial wealth bound
+is [W 0 , W 0 ] = [0.9, 1.1]. We choose Υ = 4 and κ = 0.532708 in the formula
+(15) so that log(Ri ) is bounded in (−0.55125, 0.64875), i.e., Ri is bounded in
+(0.57623, 1.91315), which is an appropriate range in reality.
+The Envelope Theorem implies Vt0 (W ) = λ∗ (W ), where λ∗ (W ) is the
+shadow price for the constraint W − B − e> S = 0, so we can get the slope
+15
+
+Table 1: Relative Errors and Running Times of L-VFI or H-VFI for Dynamic Portfolio
+Optimization
+
+m L-VFI error
+5
+0.8
+10
+0.00328
+20 2.0 × 10−6
+
+H-VFI error
+0.00327
+1.3 × 10−5
+
+L-VFI time
+9 seconds
+12 seconds
+33 seconds
+
+H-VFI time
+10 seconds
+17 seconds
+
+information of the value functions and apply H-VFI without using a dummy
+variable. The computational results of L-VFI or H-VFI are given by our
+GAMS (McCarl, 2011) code, and the optimization solver in the Maximization Step of DP is CONOPT. We use the Chebyshev polynomial interpolation as the approximation method, and use the product Gaussian-Hermite
+quadrature formula with 7 quadrature nodes in each dimension to compute
+the expectation in the Bellman equation.
+Table 1 lists the relative errors of optimal stock allocations and running
+times3 of L-VFI or H-VFI, where the column “L-VFI error” lists the L∞
+relative errors of optimal stock allocations over all stages and all stocks using
+L-VFI, and the column “L-VFI time” lists the running times of L-VFI, for
+different number of approximation nodes, m. Similarly, “H-VFI error” and
+“H-VFI time” list the errors and times of H-VFI. Figure 1 also shows the
+relative errors of optimal stock allocations for each stage using L-VFI or HVFI, where the errors are L∞ relative errors of optimal stock allocations over
+all stocks at stage t. The points labeled with “Lagrange - 5” are the errors
+of L-VFI with 5 approximation nodes, and “Hermite - 5” are for H-VFI with
+the same 5 approximation nodes. Similarly, “Lagrange - 10” and “Hermite 10” are for 10 approximation nodes, and “Lagrange - 20’ is for 20 nodes.
+On the same m Chebyshev nodes, L-VFI uses degree m − 1 Chebyshev
+polynomial interpolation on Lagrange data while the Chebyshev coefficients
+are computed by the regression algorithm; H-VFI uses degree 2m − 1 Chebyshev polynomial interpolation on Hermite data while the Chebyshev coefficients are computed by solving the linear system (11). From Table 1 and
+Figure1, we see that H-VFI obtains higher accuracy than L-VFI using the
+same number of approximation nodes, but only takes a bit more computational time which is caused by the almost double degree polynomial approxi3
+
+All the examples are run on a single core of a Mac laptop with a 2.5 GHz processor.
+
+16
+
+Figure 1: Errors of H-VFI or L-VFI for Dynamic Portfolio Optimization
+0
+
+−1
+
+Lagrange − 5
+Hermite − 5
+Lagrange − 10
+Hermite − 10
+Lagrange − 20
+
+log10 of relative errors
+
+−2
+
+−3
+
+−4
+
+−5
+
+−6
+
+0
+
+0.5
+
+1
+
+1.5
+
+2
+stage
+
+2.5
+
+3
+
+3.5
+
+4
+
+mation. Moreover, if L-VFI wants to achieve the same accuracy with H-VFI,
+it should use around 2m approximation nodes and the same degree polynomial as H-VFI using m nodes, and it takes nearly double time of H-VFI.
+When there one kinks on the value functions, e.g., the terminal utility
+function is −(W − K)−1 for some positive K, H-VFI still has higher accuracy
+than L-VFI using the same approximation nodes. However, a better usage of
+slope information for this kind of problems is the shape-preserving rational
+function spline Hermite interpolation, See Cai and Judd (2012a) for more
+details.
+4.2. Stochastic Optimal Growth Problems
+A deterministic optimal growth problem is to find the optimal consumption function and the optimal labor supply function such that the total utility
+over the T -horizon time is maximal4 , i.e.,
+V0 (k0 ) = max
+
+kt ,ct ,lt
+
+s.t.
+4
+
+T −1
+X
+
+β t u(ct , lt ) + β T VT (kT ),
+
+t=0
+
+kt+1 = F (kt , lt ) − ct ,
+
+See Judd (1998) for a detailed description of this.
+
+17
+
+0 ≤ t < T,
+
+(16)
+
+where kt is the capital stock at time t with k0 given, ct is the consumption, lt is
+the labor supply, β is the discount factor, F (k, l) is the aggregate production
+function, VT (x) is a given terminal value function, and u(ct , lt ) is the utility
+function.
+When the capital stock is dependent on a random economic shock θ, the
+optimal growth problem (16) becomes a stochastic dynamic optimization
+problem,
+(T −1
+)
+X
+V0 (k0 , θ0 ) = max E
+β t u(ct , lt ) + β T VT (kT , θT ) ,
+(17)
+kt ,ct ,lt
+
+s.t.
+
+t=0
+
+kt+1 = F (kt , lt , θt ) − ct , 0 ≤ t < T,
+θt+1 = h(θt , t ), 0 ≤ t < T,
+
+where θt is a discrete time process with its transition function h, t is a serially uncorrelated random process, and F (k, l, θ) is the aggregate production
+function dependent on the economic shock. This objective function is timeseparable, so this can be modeled as a DP problem (2), and then we can use
+DP methods to solve it.
+In the examples, the discount factor is β = 0.95, the aggregate production
+function is F (k, l, θ) = k + θAk ψ l1−ψ with ψ = 0.25 and A = (1 − β)/(ψβ),
+and the utility function is the same with (18). The terminal value function
+is VT (k, θ) = u(F (k, 1, 1) − k, 1)/(1 − β). The range of capital stocks for
+approximation is [0.2, 3]. We assume that θt is a Markov chain, the possible
+values of θt are ϑ1 = 0.9 and ϑ2 = 1.1, and the probability transition matrix
+from θt to θt+1 is
+
+
+0.75 0.25
+,
+0.25 0.75
+for t = 0, . . . , T − 1.
+The utility function is
+u(c, l) =
+
+l1+η − 1
+(c/A)1−γ − 1
+− (1 − ψ)
+.
+1−γ
+1+η
+
+(18)
+
+The functional forms for utility and production imply that the steady state
+of the infinite horizon deterministic optimal growth problems is kss = 1, and
+the optimal consumption and the optimal labor supply at kss are respectively
+css = A and lss = 1.
+18
+
+4.2.1. DP Solution of Stochastic Optimal Growth Problems
+The DP formulation of the stochastic optimal growth problem (17) in
+stochastic extension of Algorithm 2 is:
+
+Vt (k, θ) = max
+u(c, l) + βE Vt+1 (k + , θ+ ) ,
+(19)
++
+k ,c,l,y
+
+s.t.
+
+k + = F (y, l, θ) − c,
+θ+ = h(θ, ),
+k − y = 0,
+
+for t < T , where k is the continuous state, θ is the discrete state, k + and
+θ+ are next-stage continuous and discrete states respectively, (c, l) are the
+control variables,  is a random variable, and the terminal value function
+VT (k, θ) is given. Here the dummy variable y and the trivial constraint
+k − y = 0 are used in order to get the slopes of value functions directly from
+the optimization solver as described in H-VFI.
+4.2.2. Tree Method
+To solve the stochastic model (17) using nonlinear programming, we can
+apply a tree method that is a generalized approach from solving the deterministic model (16) by nonlinear programming. Assume that θt is a Markov
+chain with possible states, ϑ1 , . . . , ϑm , and the probability of going from state
+ϑi to state ϑj in one step is
+P(θt+1 = ϑj | θt = ϑi ) = qi,j .
+Therefore, from a given initial state at time 0 to a state at time t, there are
+mt paths of θt , for 0 ≤ t ≤ T . Since the next-stage capital is only dependent
+on the current-stage state and control, there are only mt−1 paths of optimal
+capital, from a given initial state at time 0 to a state at time t, for 1 ≤ t ≤ T .
+In a mathematical formula, given an initial state (k0 , θ0 ), the capital at path
+n and time t + 1 is
+
+kt+1,n = F kt,[(n−1)/m]+1 , lt,n , ϑmod(n−1,m)+1 − ct,n ,
+for 1 ≤ n ≤ mt , where mod(n − 1, m) is the remainder of division of (n − 1)
+by m, and b(n − 1)/mc is the integer part of (n − 1)/m.
+
+19
+
+In the tree method, the goal is to choose optimal consumption ct,n and
+labor supply lt,n to maximize the expected total utility, i.e.,
+max
+
+ct,n ,lt,n
+
+T −1
+X
+t=0
+
+β
+
+T
+
+t
+
+β
+
+t
+
+m
+X
+
+(Pt,n u(ct,n , lt,n )) +
+
+(20)
+
+n=1
+
+T −1
+m
+X
+
+n=1
+
+PT −1,n
+
+m
+X
+
+qmod(n−1,m)+1,j VT (kT,n , ϑj ),
+
+j=1
+
+where Pt,n is the probability of path n from time 0 to time t with the following
+recursive formula:
+Pt+1,(n−1)m+j = Pt,n · qmod(n−1,m)+1,j ,
+for j = 1, . . . , m, n = 1, . . . , mt and t = 1, . . . , T − 2, where P0,1 = 1 and
+P1,j = P(θ1 = ϑj | θ0 ) for a given θ0 .
+This approach is practical for only small values of m and T . In our
+examples, we set we have m = 2 and T = 5, implying that there are only 32
+possible paths, and nonlinear optimization solvers will produce results with as
+much precision as possible in a double precision environment. We will treat
+those solutions as the “true” solution which can be used for error analysis
+of numerical DP algorithms. One can look at problems with thousands of
+paths, but the tree method becomes infeasible as we increase m and T ; see
+Cai (2009).
+4.2.3. Error Analysis
+We examine the errors for the stochastic model in the same manner we
+did for the deterministic optimal growth problems: We apply nonlinear programming to get the “true” optimal solution on the model (20) for every test
+point of initial capital k0 ∈ [k, k̄] and every possible initial discrete state θ0 ,
+and then use them to check the accuracy of the computed optimal solution
+from L-VFI or H-VFI on the model (19).
+Table 2 lists errors of optimal solutions computed by L-VFI or H-VFI
+when T = 5. The computational results are given by our GAMS code,
+where we use degree 2m − 1 or m − 1, respectively, Chebyshev polynomial
+interpolation on m expanded Chebyshev nodes. And in the Maximization
+Step of DP, we use SNOPT5 (Gill et al., 2005).
+5
+
+The optimality and feasibility tolerances are set to be 10−9 .
+
+20
+
+Table 2: Errors of optimal solutions of L-VFI or H-VFI for stochastic growth problems
+
+γ
+0.5
+
+η
+0.1
+
+0.5
+
+1
+
+2
+
+0.1
+
+2
+
+1
+
+8
+
+0.1
+
+8
+
+1
+
+Note: a(k)
+
+error
+m
+L-VFI
+5
+1.1(−1)
+10
+5.4(−3)
+20
+1.8(−5)
+5
+1.5(−1)
+10
+7.2(−3)
+20
+2.4(−5)
+5
+4.9(−2)
+10
+2.5(−3)
+20
+1.1(−5)
+5
+9.1(−2)
+10
+4.2(−3)
+20
+1.8(−5)
+5
+2.3(−2)
+10
+9.5(−4)
+20
+8.9(−6)
+5
+2.6(−1)
+10
+8.4(−3)
+20
+2.6(−5)
+means a × 10k .
+
+of c∗0
+H-VFI
+1.3(−2)
+2.7(−5)
+4.0(−6)
+1.8(−2)
+3.4(−5)
+4.9(−6)
+5.0(−3)
+1.6(−5)
+3.3(−6)
+9.7(−3)
+2.7(−5)
+3.2(−6)
+2.2(−3)
+1.2(−5)
+2.7(−6)
+1.7(−2)
+3.8(−5)
+2.5(−6)
+
+21
+
+error
+L-VFI
+1.9(−1)
+7.8(−3)
+2.4(−5)
+6.5(−2)
+2.9(−3)
+1.1(−5)
+2.5(−1)
+1.5(−2)
+5.2(−5)
+1.3(−1)
+6.7(−3)
+3.1(−5)
+4.5(−1)
+2.2(−2)
+1.9(−4)
+1.0(−0)
+5.2(−2)
+1.6(−4)
+
+of l0∗
+H-VFI
+1.8(−2)
+3.7(−5)
+4.9(−6)
+7.0(−3)
+1.5(−5)
+5.0(−6)
+2.8(−2)
+8.0(−5)
+4.7(−6)
+1.5(−2)
+4.7(−5)
+5.0(−6)
+4.9(−2)
+2.6(−4)
+3.7(−6)
+1.0(−1)
+2.4(−4)
+4.8(−6)
+
+The errors for optimal consumptions at time 0 are computed by
+|c∗0,DP (k, θ) − c∗0 (k, θ)|
+,
+k∈[0.2,3],θ∈{0.9,1.1}
+|c∗0 (k, θ)|
+max
+
+where c∗0,DP is the optimal consumption at time 0 computed by L-VFI or HVFI on the model (19), and c∗0 is the “true” optimal consumption computed
+by nonlinear programming on the model (20). The similar formula applies
+to compute errors for optimal labor supply at time 0.
+Table 2 shows that H-VFI is more accurate than L-VFI, with about one or
+two digits accuracy improvement. For example, row one in Table 2 assumes
+γ = 0.5, η = 0.1, and m = 5 approximation nodes. For this case, the error
+in consumption is 0.11 for L-VFI, and drops to 0.013 when we use H-VFI.
+Similarly the error in labor supply is 0.19 for L-VFI, and drops to 0.018 when
+we use H-VFI. The rest of Table 2 examines different γ and η, and shows
+the same patterns for the reduction of errors when we switch from L-VFI
+to H-VFI. For both consumption and labor supply, H-VFI is about 10 times
+more accurate than L-VFI using 5 approximation nodes. Row two in Table
+2 chooses m = 10 approximation nodes, and in this case both consumption
+and labor supply errors drop by a factor about 200 when we switch from
+L-VFI to H-VFI. For these examples, both DP algorithms are quite fast, so
+we do not list their running times for comparison. However, we will show
+them in the next multidimensional examples.
+4.3. Three-Country Optimal Growth Problems
+The more important usage of slope information are in multidimensional
+DP problems, as it will take much more time to compute the optimal policy
+for one approximation node. But for a d-dimensional DP problem, H-VFI
+uses not only m values but also d × m slopes which comes almost freely
+at cost, while L-VFI can only use m values. Thus, H-VFI will reduce the
+computational time significantly than L-VFI, if one wants to achieve the
+same accuracy of optimal solution. We show this by solving multi-country
+optimal growth problems.
+We assume that there are d countries, and let kt = (kt,1 , . . . , kt,d ) denote
+the capital stocks of these countries which is a d-dimensional continuous state
+vector at time t. Let lt = (lt,1 , . . . , lt,d ) denote elastic labor supply levels of
+the countries which is a d-dimensional continuous control vector variable at
+time t. Assume that the net production of country j at time t is
+ψ 1−ψ
+f (kt,j , lt,j ) = Akt,j
+lt,j ,
+
+22
+
+with A = (1 − β)/(ψβ), for j = 1, . . . , d. Let ct = (ct,1 , . . . , ct,d ) denote consumption of the countries which is another d-dimensional continuous control
+vector variable at time t. The utility function is
+#
+"
+d
+X
+lj1+η − 1
+(cj /A)1−γ − 1
+− (1 − ψ)
+.
+u(c, l) =
+1
+−
+γ
+1
++
+η
+j=1
+We want to find an optimal consumption and labor supply decisions such
+that expected total utility over a finite-horizon time is maximized. That is,
+V0 (k0 ) =
+
+max
+
+kt ,It ,ct ,lt
+
+s.t.
+
+T −1
+X
+
+β t u(ct , lt ) + β T VT (kT ),
+
+(21)
+
+t=0
+
+kt+1,j = (1 − δ)kt,j + It,j , j = 1, . . . , d,
+2
+
+ζ
+It,j
+Γt,j = kt,j
+− δ , j = 1, . . . , d,
+2
+kt,j
+d
+d
+X
+X
+(ct,j + It,j − δkt,j ) =
+(f (kt,j , lt,j ) − Γt,j ) ,
+j=1
+
+j=1
+
+where δ is the depreciation rate of capital, It,j is the investment of country
+j, Γt,j is the investment adjustment cost of country j, and ζ governs the
+intensity of the friction. The functional forms for utility and production imply that the steady state of the infinite horizon deterministic optimal growth
+problems is kss,j = 1, and the optimal consumption, labor supply and investment at the steady state are respectively css,j = A, lss,j = 1, and Iss,j = δ,
+for j = 1, . . . , d. Detailed discussion of multi-country growth models with
+infinite horizon can be seen in Den Haan et al (2011), Juillard and Villemot
+(2011), and a nonlinear programming method for dynamic programming is
+introduced in Cai et al. (2012d) to solve the multi-country growth model
+with infinite horizon.
+The DP formulation of the multi-country model (21) in H-VFI is
+
+23
+
+Vt (k) =
+
+max
+
+k+ ,I,c,l,y
+
+s.t.
+
+u(c, l) + βVt+1 (k + ),
+
+(22)
+
+kj+ = (1 − δ)yj + Ij , j = 1, . . . , d,
+
+2
+Ij
+ζ
+− δ , j = 1, . . . , d,
+Γj = yj
+2
+yj
+d
+d
+X
+X
+(cj + Ij − δyj ) =
+(f (yj , lj ) − Γj ) ,
+j=1
+
+j=1
+
+kj − yj = 0,
+
+j = 1, . . . , d,
+
+for t < T . The dummy variable yj and the trivial constraint kj − yj = 0 are
+used in order to get the gradient of value functions at k directly from the
+optimization solver as described in Algorithm 2, for j = 1, . . . , d.
+In this subsection, we let d = 3. So this is a DP example with 3dimensional continuous states. Let T = 5, ψ = 0.36, δ = 0.025, ζ = 0.5,
+and let the capitals range be [0.5, 1.5]3 . The terminal value function is
+VT (k) = u(f (k, 1), 1)/(1 − β). We get the true solution of this three-country
+model by solving the model (21) directly using CONOPT in GAMS.
+Figure 2 displays the relative errors of optimal consumption, optimal
+labor supply, and running times6 of L-VFI or H-VFI using tensor grid of
+m = 5, 7, 10 expanded Chebyshev nodes in each dimension, for various β =
+0.9, 0.95, 0.99, γ = 0.5, 2, 5 and η = 0.2, 1, 5. For the Lagrange approximation
+using m nodes in each dimension, we use degree m − 1 complete Chebyshev
+polynomials and apply the regression algorithm to compute the coefficients.
+And for the Hermite approximation using m nodes in each dimension, we use
+degree 2m − 1 complete Chebyshev polynomials and apply the least square
+method (12) to compute the coefficients. All the codes are written in GAMS,
+and we use CONOPT as the optimization solver in the Maximization Step of
+L-VFI and H-VFI. In the figure, the stars, the marks, and the pluses represent
+the log10 of relative errors and the log10 of running times of L-VFI with
+m = 5, 7, 10, respectively, and the circles represent Hermite approximation
+with m = 5, for various β, γ, η.
+From comparing the circles and the stars in Figure 2, we see that, for any
+6
+
+All the examples are run on one core of a single core of a Mac laptop with a 2.5 GHz
+processor.
+
+24
+
+Figure 2: L-VFI vs H-VFI for Three-Country Optimal Growth Problems
+Running Time and Errors of Optimal Consumption
+−0.5
+Lagrange (125 approximation nodes)
+Lagrange (343 approximation nodes)
+Lagrange (1000 approximation nodes)
+Lagrange − regression line
+Hermite (125 approximation nodes)
+
+−1
+−1.5
+
+log10 of relative errors
+
+−2
+−2.5
+−3
+−3.5
+−4
+−4.5
+−5
+−5.5
+
+2
+
+2.2
+
+2.4
+2.6
+log10 of running time (seconds)
+
+2.8
+
+3
+
+Running Time and Errors of Optimal Labor Supply
+0
+Lagrange (125 approximation nodes)
+Lagrange (343 approximation nodes)
+Lagrange (1000 approximation nodes)
+Lagrange − regression line
+Hermite (125 approximation nodes)
+
+−1
+
+log10 of relative errors
+
+−2
+
+−3
+
+−4
+
+−5
+
+−6
+
+−7
+
+2
+
+2.2
+
+2.4
+2.6
+log10 of running time (seconds)
+
+25
+
+2.8
+
+3
+
+combination of β, γ, η, H-VFI achieves higher accuracy than L-VFI using
+the same number of approximation nodes, with about three digits higher
+accuracy when m = 5. Moreover, the running times of H-VFI are only
+around 120 seconds, just a bit more than L-VFI (around 100 seconds).
+From comparing the circles and the marks in Figure 2, we see that, H-VFI
+with m = 5 approximation nodes in each dimension are not only nearly 3
+times faster but also about one more digit higher accuracy than Lagrange
+approximation with m = 7.
+From comparing the circles and the pluses in Figure 2, we see that if LVFI wants to have the same accuracy as Hermite approximation with m = 5,
+it needs nearly 8 times of approximation nodes (m = 10) and also nearly
+8 times of computational time than H-VFI, for the three-country optimal
+growth problems.
+4.4. Six-Country Optimal Stochastic Growth Problems
+Our last example shows that the advantage of H-VFI will be even greater
+for higher dimensional problems. We use the multi-country model (21) with
+d = 6 countries and the similar setting as the previous examples, but we
+assume that the net productions of all countries are dependent on a random
+economic shock θt , which is a Markov chain. That is, the net production of
+country j at time t is
+ψ 1−ψ
+f (kt,j , lt,j , θt ) = θt Akt,j
+lt,j ,
+
+where the possible values of θt are ϑ1 = 0.98 and ϑ2 = 1.02, and the probability transition matrix from θt to θt+1 = g(θt , t ) is
+
+
+0.6 0.4
+,
+0.4 0.6
+
+26
+
+Table 3: H-VFI vs L-VFI for Six-Dimensional Stochastic Problems
+
+m
+3
+5
+6
+Note:
+
+error of c∗0
+L-VFI H-VFI
+3.8(−2) 3.6(−3)
+5.5(−3)
+3.1(−3)
+a(k) means a × 10k .
+
+error of l0∗
+L-VFI H-VFI
+5.4(−2) 5.2(−3)
+8.2(−3)
+4.5(−3)
+
+running times
+L-VFI
+H-VFI
+0.3 hour 0.67 hour
+8.74 hours
+36.6 hours
+
+for t = 0, . . . , T − 1. Therefore, we have the stochastic version of the multicountry model (21):
+)
+(T −1
+X
+β t u(ct , lt ) + β T VT (kT , θT ) ,
+(23)
+V0 (k0 , θ0 ) = max E
+kt ,It ,ct ,lt
+
+s.t.
+
+t=0
+
+kt+1,j = (1 − δ)kt,j + It,j , j = 1, . . . , d,
+
+2
+It,j
+ζ
+Γt,j = kt,j
+− δ , j = 1, . . . , d,
+2
+kt,j
+d
+d
+X
+X
+(ct,j + It,j − δkt,j ) =
+(f (kt,j , lt,j , θt ) − Γt,j ) ,
+j=1
+
+j=1
+
+θt+1 = g(θt , t ).
+Then we can also solve this problem with L-VFI or H-VFI.
+In this example, we choose β = 0.95, γ = 2 and η = 1. The number
+of decision stages is T = 5, and the capitals range is [0.5, 1.5]6 . We apply
+the tree model (20) and use CONOPT in GAMS code to compute the “true”
+solutions at test points of κ0 and each possible value of θ0 .
+Table 3 lists the running times7 , and relative errors of optimal consumption and labor supply of L-VFI and H-VFI using tensor grid of m = 3, 5, 6
+expanded Chebyshev nodes in each dimension on [0.5, 1.5]6 . On the tensor grid of m nodes in each dimension, Lagrange approximation uses degree
+m − 1 complete Chebyshev polynomials, and Hermite approximation uses
+degree 2m − 1 complete Chebyshev polynomials and the least squares model
+(12) is applied to obtain coefficients.
+7
+
+All the examples are run on one core of a single core of a Mac laptop with a 2.5 GHz
+processor.
+
+27
+
+From Table 3, we see that H-VFI using m = 3 approximation nodes in
+each dimension takes only 0.67 hours to achieves the higher accuracy than
+L-VFI using m = 5 approximation nodes in each dimension which takes
+8.74 hours, about 13 times computational time of H-VFI. Moreover, if L-VFI
+wants to use m = 6 approximation nodes in each dimension to achieve a bit
+higher accuracy than H-VFI, the running time is up to 36.6 hours, about 55
+times computational time of H-VFI.8
+5. Conclusion
+We have shown that gradient of the value function can be obtained easily
+and almost freely during value function iteration, and that using it in Hermite
+approximation approximation methods will produce significant improvement
+in the efficiency of numerical dynamic programming. These conclusions are
+supported by examples from dynamic portfolio optimization problems and
+multi-dimensional optimal growth problems. We show that this improvement
+can be used to either improve accuracy for a given amount of computation
+time, or to attain the same accuracy much faster than with L-VFI. These
+examples also indicate that H-VFI will be particularly valuable in solving
+multidimensional dynamic programming problems.
+
+8
+
+All the running times can be dramatically reduced if we use Fortran code and NPSOL
+solver (Gill et al., 1994), but the relative difference between Hermite and Lagrange approximation is still almost the same with GAMS. Moreover, for higher dimensional problems,
+we can solve them using Fortran code in a reasonable time. We conclude that the speed
+advantage of H-VFI over L-VFI will increase with dimension.
+
+28
+
+[1] Bellman, R. (1957). Dynamic Programming. Princeton University Press.
+[2] Cai, Y. (2009). Dynamic Programming and Its Application in
+Economics and Finance. PhD thesis, Stanford University.
+[3] Cai, Y., and K.L. Judd (2010). Stable and efficient computational methods for dynamic programming. Journal of the European Economic Association, Vol. 8, No. 2-3, 626–634.
+[4] Cai, Y., and K.L. Judd (2012a). Dynamic programming with
+shape-preserving rational spline Hermite interpolation. Economics Letters, Vol. 117, No. 1, 161–164.
+[5] Cai, Y., and K.L. Judd (2012b). Shape-preserving dynamic programming. Mathematical Methods of Operations Research, DOI:
+10.1007/s00186-012-0406-5.
+[6] Cai, Y., K.L. Judd and T.S. Lontzek (2012c). DSICE: A Dynamic Stochastic Integrated Model of Climate and Economy.
+RDCEP working paper No. 12-02.
+[7] Cai, Y., K.L. Judd, T.S. Lontzek, V. Michelangeli, and C.-L.
+Su (2012d). Nonlinear Programming method for dynamic programming. Hoover working paper.
+[8] Den Haan, W.J., K.L. Judd and M. Juillard (2011). Computational suite of models with heterogeneous agents II: Multicountry real business cycle models. Journal of Economic Dynamics & Control, 35, 175–177.
+[9] Gill, P., W. Murray, M.A. Saunders and M.H. Wright (1994).
+User’s Guide for NPSOL 5.0: a Fortran Package for Nonlinear
+Programming. Technical report, SOL, Stanford University.
+[10] Gill, P., W. Murray and M.A. Saunders (2005). SNOPT: An
+SQP algorithm for largescale constrained optimization. SIAM
+Review, 47(1), 99–131.
+[11] Judd, K.L. (1998). Numerical Methods in Economics. The MIT
+Press.
+29
+
+[12] Juillard, M., and S. Villemot (2011). Multi-country real business cycle models: Accuracy tests and test bench. Journal of
+Economic Dynamics & Control, 35, 178–185.
+[13] McCarl, B., et al. (2011). McCarl Expanded GAMS user guide
+version 23.6. http://www.gams.com/mccarl/mccarlhtml/. Accessed 06 September 2012.
+[14] Philbrick, C.R., and P.K. Kitanidis (2001). Improved Dynamic
+Programming Methods for Optimal Control of Lumped Parameter Stochastic Systems. Operations Research, 49(3), 398–412.
+[15] Rust, J. (2008). Dynamic Programming. In: New Palgrave Dictionary of Economics, ed. by Steven N. Durlauf and Lawrence
+E. Blume. Palgrave Macmillan, second edition.
+[16] Schumaker, L., (1983). On Shape-Preserving Quadratic Spline
+Interpolation. SIAM Journal of Numerical Analysis, 20, 854–
+864.
+[17] Wang, S.P., and K.L. Judd (2000). Solving a savings allocation problem by numerical dynamic programming with shapepreserving interpolation. Computers and Operations Research,
+Volume 27, Issue 5, 399–408.
+
+30
+
+

@@ -1,0 +1,731 @@
+NBER WORKING PAPER SERIES
+
+ENSEMBLE METHODS FOR CAUSAL EFFECTS IN PANEL DATA SETTINGS
+Susan Athey
+Mohsen Bayati
+Guido Imbens
+Zhaonan Qu
+Working Paper 25675
+http://www.nber.org/papers/w25675
+
+NATIONAL BUREAU OF ECONOMIC RESEARCH
+1050 Massachusetts Avenue
+Cambridge, MA 02138
+March 2019
+
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+At least one co-author has disclosed a financial relationship of potential relevance for this
+research. Further information is available online at http://www.nber.org/papers/w25675.ack
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+© 2019 by Susan Athey, Mohsen Bayati, Guido Imbens, and Zhaonan Qu. All rights reserved.
+Short sections of text, not to exceed two paragraphs, may be quoted without explicit permission
+provided that full credit, including © notice, is given to the source.
+
+Ensemble Methods for Causal Effects in Panel Data Settings
+Susan Athey, Mohsen Bayati, Guido Imbens, and Zhaonan Qu
+NBER Working Paper No. 25675
+March 2019
+JEL No. C01,C14
+ABSTRACT
+In many prediction problems researchers have found that combinations of prediction methods
+(“ensembles”) perform better than individual methods. A simple example is random forests,
+which combines predictions from many regression trees.
+A striking, and substantially more complex, example is the Netflix Prize competition where the
+winning entry combined predictions using a wide variety of conceptually very different models.
+In macro-economic forecasting researchers have often found that averaging predictions from
+different models leads to more accurate forecasts.
+In this paper we apply these ideas to synthetic control type problems in panel data setting. In this
+setting a number of conceptually quite different methods have been developed, with some
+assuming correlations between units that are stable over time, others assuming stable time series
+patterns common to all units, and others using factor models. With data on state level GDP for
+270 quarters, we focus on three basic approaches to predicting missing values, one from each of
+these strands of the literature. Rather than try to test the different models against each other and
+find a true model, we focus on combining predictions based on each of the separate models using
+ensemble methods. For the ensemble predictor we focus on a weighted average of the three
+individual methods, with non-negative weights determined through out-of-sample crossvalidation.
+Susan Athey
+Graduate School of Business
+Stanford University
+655 Knight Way
+Stanford, CA 94305
+and NBER
+athey@stanford.edu
+
+Guido Imbens
+Graduate School of Business
+Stanford University
+655 Knight Way
+Stanford, CA 94305
+and NBER
+Imbens@stanford.edu
+
+Mohsen Bayati
+Graduate School of Business
+Stanford University
+Stanford, CA 94305
+bayati@stanford.edu
+
+Zhaonan Qu
+Stanford University
+Department of Economics
+Stanford, CA 94305
+zhaonanq@stanford.edu
+
+Ensemble Methods for Causal Effects in Panel
+Data Settings
+Susan Athey, Mohsen Bayati, Guido Imbens, and Zhaonan Qu∗
+March 13, 2019
+
+1
+
+Introduction
+
+In many prediction problems researchers have found that combinations of
+prediction methods (“ensembles”) perform better than individual methods
+(Hal Varian, 2014; James Surowiecki, 2005; Zhi-Hua Zhou, 1983). A simple
+example is random forests, which combines predictions from many regression
+trees. A striking, and substantially more complex, example is the Netflix
+Prize competion (e.g., Robert Bell, Yehuda Koren and Chris Volinsky (2010))
+where the winning entry combined predictions using a wide variety of conceptually very different models. In macro-economic forecasting researchers
+have often found that averaging predictions from different models leads to
+more accurate forecasts (e.g., James Stock and Mark Watson, 2006).
+In this paper we apply these ideas to synthetic control type problems in
+panel data settings (Alberto Abadie, Alexis Diamond and Jens Hainmueller,
+2010,2015). In this setting a number of conceptually quite different methods
+have been developed, with some assuming correlations between units that
+are stable over time, others assuming stable time series patterns common
+Athey: Graduate School of Business, Stanford University, and NBER, 655 Knight
+Way, Stanford, CA 94305, athey@stanford.edu. Bayati: Graduate School of Business,
+Stanford University, 655 Knight Way, Stanford, CA 94305, bayati@stanford.edu. Imbens:
+Graduate School of Business, Stanford University, and NBER, 655 Knight Way, Stanford,
+CA 94305, imbens@stanford.edu. Qu: Department of Economics, Stanford University,
+Stanford, CA 94305, zhaonanq@stanford.edu. This research was generously supported by
+ONR grant N00014-17-1-2131 and the Sloan Foundation.
+∗
+
+[1]
+
+to all units, and others using factor models. With data on state level GDP
+for 270 quarters, we focus on three basic approaches to predicting missing
+values, one from each of these strands of the literature. Rather than try to
+test the different models against each other and find a true model (Quang
+Vuong, 1989), we focus on combining predictions based on each of the separate models using ensemble methods. For the ensemble predictor we focus
+on a weighted average of the three individual methods, with non-negative
+weights determined through out-of-sample cross-validation. Alternatives to
+this stacked regression method (Leo Breiman, 1996) include ridge regression
+(Mark van der Laan, Eric Polley, and Alan Hubbard, 2007), and Bayesian
+model averaging (Jennifer Hoeting, David Madigan, Adrian Raftery, and
+Chris Volinsky, 1999).
+Using a range of outcomes, GDP, log GDP, and GDP growth rates, and a
+range of values for the number of time periods, from T = 10 to T = 270, we
+find that no individual method dominates. Using the ensemble method with a
+convex combination of the individual methods we do substantially better, and
+typically as well as or better than the best individual method, in line with the
+general ensemble literature. These results show that ensemble methods are
+a practical and effective method for the type of data configurations typically
+encountered in empirical work in economics, and that these methods deserve
+more use in practice then they have received.
+Many questions remain concerning their use in practice. Instead of linear
+regression to determine the weights of the individual predictors one can use
+more sophisticated methods, e.g., random forests, or neural nets. Choices
+regarding the cross-validation also matter. Finally, there are questions regarding inference for the ensemble methods.
+
+2
+
+A Simple Example
+
+Here we briefly discuss a very simple example to set the stage for the subsequent discussions. Suppose we have N observations on an outcome and two
+covariates, (Yi , Xi1 , Xi2 ), for i = 1, . . . , N. Let us consider two simple models, one that relates Yi to Xi1 through a linear model, and one that relates
+Yi to Xi2 through a linear model. Let the estimated regression functions be
+Ŷ1i = β̂1,0 + β̂1,1Xi1 and Ŷ2i = β̂2,0 + β̂2,2Xi2 .
+We can combine these two models in different ways. One traditional
+approach would be to choose between the two models using statistical tests,
+[2]
+
+as in Vuong (1989). A second possibility would be to build a more general
+model that nests both individual models, e.g., E[Yi |Xi1 , Xi2 ] = β0 + β1Xi1 +
+β2Xi2 . A third approach would be to assume that the true data generating
+process is a mixture of the two models, Yi = Di (β1,0 + β1,1Xi1 + ε1,i ) + (1 −
+Di )(β2,0 + β2,2Xi2 + ε2,i), with Di having a binomial distribution. Such a
+mixture model nests both individual models, but in a different way. As a
+fourth approach, an implementation of an ensemble method is to predict
+future values for the outcome as a linear combination of the two individual
+predictors, Ŷi = θ0 + θ1Ŷ1i + θ2Ŷ2i , with the weights θ0 , θ1 , and θ2 chosen to
+optimize the fit, possibly under the restriction that θ0 = 0 and θ1 + θ2 = 1.
+There are some insights that are present even in this simple case. Choosing between the models, based on statistical tests or out-of-sample fit, is not
+necessarily the optimal thing to do. Suppose that Xi1 and Xi2 are independent, and both contribute to the explanation of Yi . In that case a model that
+uses both will generally outperform one that chooses one model or the other.
+Similarly a mixture model will not necessarily lead to the best predictions
+if the true data generating process is Yi ∼ N (β0 + β1Xi1 + β2Xi2 , σ 2), with
+β1, β2 6= 0. In this simple case either estimating the more general model with
+E[Yi |Xi1 , Xi2 ] = β0 + β1Xi1 + β2Xi2 , or using an ensemble method that looks
+for the optimal linear combination of Ŷi1 and Ŷi2 will find the optimal linear
+combination of the two predictors in large samples.
+Why might ensemble methods be an attractive way to go, compared to,
+say building a more general model that nests those that underly the individual predictorss or to using a mixture model? One important one is computational, with ensemble methods computationally feasible and attractive even
+in settings with many individual predictors and with many observations, possibly on a large number of variables, and mixture methods relying in the EM
+algorithm can be slow. Second, building general models that nest simpler
+ones can be challenging, as will be clear in the setting in this paper. It is
+useful to note that a mixture model would ultimately estimate the individual models only on the data that appear to arise from those models, whereas
+ensemble models are estimated on al the data. From that perspective an important aspect of the choice between mixture models and ensemble models
+is the implicit regularization.
+
+[3]
+
+3
+
+Methods for Synthetic Control Problems
+
+Suppose we are interested in estimating the causal effect of an intervention
+in a setting with panel data. We observe outcomes for N units over T time
+periods. Suppose that only a single unit is ever exposed to the treatment, and
+this unit is only exposed in the last period. (Although the ideas discussed
+in this paper extend to more general settings, e.g., staggered adoption as in
+Susan Athey and Guido Imbens (2018), we focus on this simple setting for
+expository reasons.) So, for unit N in period T we observe YN T = YN T (1),
+and for all other unit/time pairs (i, t) we observe Yit = Yit (0). To estimate
+the causal effect τ = YN T (1) − YN T (0) we wish to impute the missing YN T (0)
+based on the NT − 1 observations on Yit (0). See Equation (3.1) for the data
+configuration.
+ √
+ √
+
+
+Y(0) =  ...
+ √
+
+√
+
+√ √
+...
+√ √
+...
+.. .. . .
+.
+. .
+√ √
+...
+√ √
+...
+
+√ √ 
+√ √ 
+
+.. ..  .
+. . 
+√ √ 
+
+√
+?
+
+(3.1)
+
+Many conceptually quite distinct methods have been proposed in the literature for imputing YN T (0). Leading methods include (i) methods based on
+unconfoundedness, (ii) synthetic control methods (Alberto Abadie, Alexis
+Diamond and Jens Hainmueller, 2010,2015), and (iii) matrix completion
+methods that fit factor models to Y (e.g., Jushan Bai and Serena Ng, 2007;
+Athey, Mohsen Bayati, Nikolay Doudchenko, Imbens, and Khashayar Khosravi, 2018). Choosing between the different approaches is not always straightforward.The relative magnitude of N and T , and the correlation patterns
+matter substantially. In this paper we show that the relative performace of
+the three methods varies substantially by the magnitude of T (for a fixed N),
+and by the nature of the variable. It may therefore be unappealling to choose
+a priori one of the different approaches. However, this is not necessary. One
+alternative is to use ensemble or model averaging methods that combine the
+different approaches. Here we describe concretely how such model averaging would work in settings with conceptually quite different models, and we
+see that the ensemble methods systematically perform well relative to the
+individual methods. Next we briefly describe the three individual methods.
+
+[4]
+
+3.1
+
+Synthetic Control Methods or Vertical Regression
+(VR)
+
+First we describe synthetic control methods or vertical regression, where the
+unit of observation is a column in Y. See Abadie, Diamond and Hainmueller
+(2010, 2015) for more details. Here we focus on the regularized unconstrained
+weights, defined as
+(T −1
+!2
+N
+−1
+X
+X
+arg min
+YN t − ω0 −
+ωi Yit
+ω0 ,ω
+
+t=1
+
+i=1
+
+
+
+1−α
+kωk22
++λ α||ωk1 +
+2
+
+)
+.
+
+PN −1
+The imputed value is then YNvtT = ω0 + i=1
+ωi YiT . The standard SC esPN −1
+timator imposes the additional restriction that ω0 = 0, i=1
+ωi = 1, and
+ωi ≥ 0, and does not use the elastic net penalty term which we include to
+deal with settings where N is large relative to T . The penalty parameters λ
+and α are chosen through crossvalidation using different time periods.
+
+3.2
+
+Unconfoundedness or Horizontal Regression (HZ)
+
+The second method we consider is a regression based on an unconfoundedness assumption (e.g., Imbens and Donald Rubin, 2015), that the treatment
+assignment is independent of the potential outcomes. The estimator we consider is based on a regression of the final period outcome on the lagged
+outcomes:
+(N −1
+!2
+T −1
+X
+X
+arg min
+YiT − β0 −
+βt Yit
+β0 ,β
+
+i=1
+
+
+
+t=1
+
+1−α
++λ α||βk1 +
+kβk22
+2
+
+)
+
+.
+
+The penalty parameters here are again chosen by crossvalidation,
+time
+PTthis
+−1
+using different units. The imputed value is then YNhzT = β0 + t=1 βt YN t.
+Note that this estimator is based on the same algorithm as the vertical regression estimator after we transpose the matrix Y.
+[5]
+
+3.3
+
+Matrix Completion (MC) Methods
+
+The third method we consider is based on matrix completion methods. See
+Athey, Bayati, Doudchenko, Imbens, and Khosravi (2018) for details. We
+solve
+X
+min
+(Yit − αi − βt − Lit )2
+L,α,β
+
+(i,t)6=(N,T )
+
++λkLk∗ ,
+where kLk∗ is the nuclear norm, equal to the sum of the singular values in
+the singular
+PR value decomposition of L. This leads to a factor model where
+Lit = r=1 Air Btr with the rank R determined through the nuclear norm
+penalization. The imputed value is then ŶNmc
+T = LN T + αN + βT . The penalty
+parameter is choosen again through crossvalidation. Note that we include
+time and unit fixed effects in the model. These could be subsumed in the
+matrix L, but in practice including them without penalization leads to superior out of sample fit, the same way the intercept in LASSO is not penalized.
+
+4
+
+Ensemble Methods
+
+Here we discuss two method for combining the three individual methods for
+predicting the counterfactual values for unit N in period T that differ in how
+the weights are chosen. In both cases we focus on stacked regression (Leo
+Breiman, 1996).
+
+4.1
+
+Vertical Crossvalidation (VC)
+
+For the VC method we first go through all the control units i = 1, . . . , N.
+Putting aside their final period outcome YiT as well as the observations on
+the N-th unit, we use the three methods, VR, HZ, and MC to obtain three
+estimates, ŶiTvt , ŶiThz , and ŶiTmc . Next we estimate the weights as
+min
+θ≥0
+
+N
+−1 
+X
+i=1
+
+YiT − θvt ŶiTvt − θhz ŶiThz − θmc ŶiTmc
+
+2
+
+,
+
+with the restriction θvt + θhz + θmc = 1. Then the ensemble estimator for the
+counterfactual value YN T (0) is
+ŶNens,vc
+= θvt ŶNvtT + θhz ŶNhzT + θmc ŶNmc
+T.
+T
+[6]
+
+4.2
+
+Horizontal Crossvalidation (HC)
+
+For the HC method, we first go through the last S pre-treatment periods,
+s = 1, . . . , S. Putting aside outcome YN T −s , we use the three methods, VR,
+HZ, and MC to obtain three estimates, ŶNvtT −s , ŶNhzT −s , and ŶNmc
+T −s . Now we
+estimate the weights as
+S 
+X
+min
+YN T −s − θvt ŶNvtT −s − θhz ŶNhzT −s
+θ≥0
+
+s=1
+
+−θmc ŶNmc
+T −s
+
+2
+
+,
+
+again with the restriction θvt + θhz + θmc = 1. Note that this method is not
+symmetric with the vertical crossvalidation - we only use the last S periods
+for the crossvalidation to avoid predicting the past with the future.
+
+5
+
+An Application
+
+Here we evaluate the three individual methods and the ensemble method
+in a realistic setting where we know the truth so we can obtain a realistic
+assessment of the relative merits.
+
+5.1
+
+Set Up
+
+We take as our outcomes state GDP, log GDP and GDP growth rates. This
+gives us a wide range of correlation patterns across time and states. We then
+carry out the following exercise. Fixing N = 51 (for the fifty states plus DC),
+and for four different values of T , T ∈ {10, 25, 100, 270}, we take the last T
+periods in our sample. The variation in the number of time periods puts
+varying degrees of emphasis on the quality of the penalization methods. For
+example, for the horizontal regression methods we estimate a linear regression
+with 50 observations and 270 regressors. With a large number of time periods
+we also expect that methods that treat all time periods as equally informative
+may perform poorly.
+We then take one state at a time, and pretend state i was first exposed
+to an intervention for in period t ∈ {T0 + 1, . . . , T }. If the first intervention
+was in period t, we estimate Yit (0) using one of the four methods using all
+the observations Yjs for s ≤ t, other than Yit . We then compare the imputed
+[7]
+
+Table I:
+Average Root-Mean-Squared-Error
+Ens-VC Ens-HC
+
+Weight in VC
+Ensemble
+VR HR MC
+
+# Periods VR
+GDP
+10
+0.48
+25
+0.12
+100
+0.16
+270
+0.15
+
+HR
+
+MC
+
+1.37
+0.37
+0.15
+0.11
+
+0.75
+0.13
+0.04
+0.04
+
+0.44
+0.12
+0.04
+0.07
+
+0.48
+0.10
+0.05
+0.04
+
+0.47
+0.19
+0.00
+0.00
+
+0.17
+0.02
+0.00
+0.46
+
+0.36
+0.79
+1.00
+0.54
+
+Log GDP
+10
+25
+100
+270
+
+0.44
+0.09
+0.05
+0.03
+
+1.64
+0.38
+0.07
+0.01
+
+0.37
+0.09
+0.02
+0.01
+
+0.35
+0.09
+0.02
+0.01
+
+0.43
+0.10
+0.03
+0.01
+
+0.05
+0.02
+0.00
+0.00
+
+0.00
+0.00
+0.00
+0.00
+
+0.95
+0.98
+1.00
+1.00
+
+Growth Rate
+10
+0.81
+25
+0.38
+100
+0.48
+270
+0.38
+
+0.64
+0.38
+0.47
+0.40
+
+0.68
+0.37
+0.47
+0.38
+
+0.66
+0.35
+0.46
+0.38
+
+0.68
+0.36
+0.47
+0.37
+
+0.01
+0.00
+0.32
+0.16
+
+0.99
+0.57
+0.18
+0.05
+
+0.00
+0.43
+0.50
+0.78
+
+[8]
+
+Table II: Complexity of Models
+Number of Non-zero coefficients and Ranks
+T = 10
+T = 25
+T = 100
+T = 270
+VT HZ MC VT HZ MC VT HZ MC VT HZ MC
+GDP
+3.8
+Log GDP 16.3
+Growth R 11.8
+
+7.5
+7.5
+3.8
+
+1.0
+1.0
+6.9
+
+3.8 9.2
+14.9 12.0
+20.4 6.4
+
+2.0 4.1
+1.0 13.5
+12.3 21.4
+
+10.1 3.1
+15.5 1.0
+23.3 19.7
+
+3.9 10.6
+19.0 21.2
+23.7 21.8
+
+value for Yit to the actual value, and square the difference. We average this
+over the T − T0 periods where we pretend the intervention first happened.
+We then average this over the N units to get the overall average squared
+error, and report the square root of this, for the four different values for T ,
+and for the three different outcomes, GDP, log GDP, and the GDP growth
+rate, and based on horizontal or vertical cross-validation. For the vertical
+crossvalidation we also report the average weights for the three individual
+methods.
+
+5.2
+
+Discussion
+
+We find that the performance of the three individual methods varies widely
+over the settings considered here, both by the choice of outcome and by
+the number of time periods. Compared to the other methods the vertical
+/ synthetic control regression does well with few periods for GDP and log
+GDP, but with growth rates it does relatively better with many periods.
+The horizontal / unconfoundedness regression does well with many periods
+for GDP and log GDP, but with growth rates does better for fewer periods.
+The factor model does poorly with the highly correlated outcomes GDP and
+log GDP, but does better with growth rates.
+Compare to the individual methods the ensemble methods do well. It
+generally does as well or better than any of the individual methods, performing only slightly worse than the best of the individual methods in a couple
+of cases. If one of the individual methods does very poorly, the ensemble
+method takes that into account and puts little weight on that method. There
+is some variation by the choice of cross-validation for getting the weights, in
+a somewhat predictable way. With many time periods one can use the time
+[9]
+
+3.6
+2.0
+32.7
+
+series observations for a particular unit to choose the weights (the horizontal crossvalidation), but with few time periods one needs the cross-section
+variation and the vertical crossvalidation performs better.
+In Table II we report the average complexity of the individual models.
+For the VT and HZ we report the average number of non-zero coefficients,
+and for the MC we report the average rank. For GDP the vertical regression selects few states, the horizontal regression selects relatively few lags,
+and the factor model selects few factors. The log GDP regression selects a
+substantially larger number of states in the vertical regression and more lags
+in the horizontal regression., and more factors. With the growth rates the
+horizontal model selects few lags, but the vertical model selects a substantial
+number of states, and the factor model is quite rich.
+
+6
+
+General Discussion
+
+The panel settting is an interesting one to assess model averaging and ensemble methods. There is a substantial number of conceptually very distinct
+methods, and no natural model that nests them. We find that the relative
+performance of these individual methods varies widely by the relative magnitude of the number of units and time periods, as well as by the correlation
+patterns in the data. None of the individual methods dominates, although
+the matrix completion methods typically have the advantage relative to the
+other methods. However, we find that a simple linear regression approach
+combining the predictions based on the different methods outperforms the
+individual methods systematically.
+
+7
+
+References
+
+Abadie, Alberto, Alexis Diamond, and Jens Hainmueller. 2010. ”Synthetic
+control methods for comparative case studies: Estimating the effect of
+Californias tobacco control program.” Journal of the American statistical Association 105, no. 490: 493-505.
+Abadie, Alberto, Alexis Diamond, and Jens Hainmueller. 2015. ”Comparative politics and the synthetic control method.” American Journal of
+Political Science 59, no. 2: 495-510.
+
+[10]
+
+Athey, Susan, Mohsen Bayati, Nikolay Doudchenko, Guido Imbens, and
+Khashayar Khosravi. 2018. Matrix completion methods for causal
+panel data models. No. w25132. National Bureau of Economic Research.
+Bai, Jushan, and Serena Ng. 2007. ”Determining the number of primitive
+shocks in factor models.” Journal of Business & Economic Statistics
+25, no. 1: 52-60.
+Bell, Robert M., Yehuda Koren, and Chris Volinsky. 2010. ”All together
+now: A perspective on the netflix prize.” Chance 23.1: 24-29.
+Breiman, Leo. 1996. ”Stacked regressions.” Machine learning 24.1: 49-64.
+Doudchenko, Nikolay, and Guido W. Imbens. Balancing, regression, differencein-differences and synthetic control methods: A synthesis. 2016. No.
+w22791. National Bureau of Economic Research.
+Hoeting, Jennifer A., David Madigan, Adrian E. Raftery, and Chris T.
+Volinsky. 1999. ”Bayesian model averaging: a tutorial.” Statistical
+science: 382-401.
+Imbens, Guido W., and Donald B. Rubin. 2015. Causal inference in statistics, social, and biomedical sciences. Cambridge University Press.
+Van der Laan, Mark J., Eric C. Polley, and Alan E. Hubbard. 2007. ”Super
+learner.” Statistical applications in genetics and molecular biology 6,
+no. 1.
+Stock, James H., and Mark W. Watson. 2006. ”Forecasting with many
+predictors.” Handbook of economic forecasting 1: 515-554.
+Surowiecki, James. 2005. The wisdom of crowds. Anchor.
+Varian, Hal R. 2014. ”Big data: New tricks for econometrics.” Journal of
+Economic Perspectives 28, no. 2: 3-28.
+Vuong, Quang H. (1989) “Likelihood ratio tests for model selection and
+non-nested hypotheses” (1989) Econometrica: 307-333.
+Zhou, Zhi-Hua. 1983. Ensemble methods: foundations and algorithms.
+Chapman and Hall/CRC.
+[11]
+
+

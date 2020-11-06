@@ -8,7 +8,8 @@ from random import randint
 
 class ID:
     def __init__(self):
-        self.nber_id = randint(0, len(os.listdir('paper/')))
+        # len(os.listdir('paper/'))
+        self.nber_id = randint(0, 1000)
 
 class HTML(ID):
     
@@ -23,7 +24,7 @@ class HTML(ID):
             return str(self.nber_id)
     
     def url(self):
-        return f'https://www.nber.org/papers/w{self.nber_id}'
+        return f'https://www.nber.org/papers/w{self.string_id()}'
     
     def request(self):
         return requests.get(self.url())

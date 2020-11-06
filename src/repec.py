@@ -84,45 +84,6 @@ class RePEc:
         else:
             self.create().to_csv(self.file_name, index=False)
 
-def main():
-    file_name = './data/repec.zip'
-    # if file already exists, it will check as follows:
-    if os.path.exists(file_name):
-        existing = pd.read_csv(file_name, sep='|')
-    nber = NBER()
-    headers = {'User-Agent': nber.user_agent}
-    i = 0
-    data = []
-    while i < nber.paper:        
-        nber_id = randint(nber.id, nber.get_latest_paper(headers))
-        # whether current ID already exists in the existing file or not
-        if nber_id not in existing['id'].to_list():
-            url = f'https://www.nber.org/papers/w{nber_id}'
-            print(f'Current paper: {url}')
-            try:
-                response = requests.get(url, timeout=nber.timeout, headers=headers)
-                content = BeautifulSoup(response.content, features='html.parser')
-                paper = nber.get_paper(
-                    paper_id = nber_id,
-                    total_cites = nber.get_total_cites(nber_id, headers),
-                    cited_by = nber.get_cited_by(nber_id, headers),
-                    reference = nber.get_reference(nber_id, headers)
-                )
-                df = pd.DataFrame([paper])
-                data.append(df)
-            except Exception:
-                print(f'Exception happens to get WP {nber_id}. Don\'t worry, we\'ll try again.')
-                sleep(nber.sleep)
-                continue
-        i += 1
-    try:
-        df = pd.concat(data, sort=False)
-        df = pd.concat([df, existing], sort=False)
-        df.drop_duplicates(subset=['id'])
-        df.to_csv(file_name, index=False, header=True, sep='|')
-    except ValueError:
-        pass
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--total', type=int, default=5, help='Total paper(s) that will be downloaded', metavar='')

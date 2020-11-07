@@ -51,13 +51,13 @@ What can be done from this dataset? Well, let's take a look at `index.ipynb`. �
 
 # Permission
 1. NBER
-Check its [<strong>`robots.txt`</strong>](http://data.nber.org/robots.txt). Everybody is not disallowed to get `/papers/` tag.
+Check its [<strong>robots.txt</strong>](http://data.nber.org/robots.txt). Everybody is not disallowed to get `/papers/` tag.
 
 2. RePEc
-Coming from its open API: http://citec.repec.org/api.html
+Coming from its open API: <strong>http://citec.repec.org/api.html</strong>
 
 3. Wikipedia
-Check [robots.txt](https://en.wikipedia.org/robots.txt):
+Check [<strong>robots.txt</strong>](https://en.wikipedia.org/robots.txt):
 
 ```
 User-agent: *
@@ -75,7 +75,7 @@ Disallow: /wiki/Spezial%3A
 Disallow: /wiki/Spesial%3A
 ```
 
-We're using `https://en.wikipedia.org/wiki/` so it's safe.
+We're using <strong>https://en.wikipedia.org/wiki/</strong> so it's safe.
 
 # Closing
 If you have read up to this line, thank you for bearing with me. Hope this is useful for your purpose! 😎 🍻

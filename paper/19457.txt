@@ -1,0 +1,1976 @@
+                               NBER WORKING PAPER SERIES
+
+
+
+
+             SOLVING AND ESTIMATING INDETERMINATE DSGE MODELS
+
+                                        Roger E.A. Farmer
+                                         Vadim Khramov
+                                         Giovanni Nicolò
+
+                                       Working Paper 19457
+                               http://www.nber.org/papers/w19457
+
+
+                      NATIONAL BUREAU OF ECONOMIC RESEARCH
+                               1050 Massachusetts Avenue
+                                 Cambridge, MA 02138
+                                    September 2013
+
+
+
+
+We thank seminar participants at UCLA and at the Dynare workshop in Paris in July of 2010, where
+Farmer presented a preliminary draft of the solution technique discussed in this paper. That technique
+was further developed in Chapter 1 of Khramov’s Ph.D. thesis (Khramov, 2013). We would like to
+thank Thomas Lubik and three referees of this journal who provided comments that have considerably
+improved the final version. The ideas expressed herein do not reflect those of the Bank of England,
+the Monetary Policy Committee, the IMF, IMF policy, or the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2013 by Roger E.A. Farmer, Vadim Khramov, and Giovanni Nicolò. All rights reserved. Short sections
+of text, not to exceed two paragraphs, may be quoted without explicit permission provided that full
+credit, including © notice, is given to the source.
+Solving and Estimating Indeterminate DSGE Models
+Roger E.A. Farmer, Vadim Khramov, and Giovanni Nicolò
+NBER Working Paper No. 19457
+September 2013, Revised February 2014
+JEL No. C11,C13,C54
+
+                                           ABSTRACT
+
+We propose a method for solving and estimating linear rational expectations models that exhibit
+indeterminacy and we provide step-by-step guidelines for implementing this method in the Matlab-
+based packages Dynare and Gensys. Our method redefines a subset of expectational errors as new
+fundamentals. This redefinition allows us to treat indeterminate models as determinate and to apply
+standard solution algorithms. We prove that our method is equivalent to the solution method proposed
+by Lubik and Schorfheide (2003, 2004), and using the New-Keynesian model described in Lubik and
+Schorfheide (2004), we demonstrate how to apply our theoretical results with a practical exercise.
+
+
+Roger E.A. Farmer                                Giovanni Nicolò
+UCLA                                             UCLA
+Department of Economics                          Department of Economics
+Box 951477                                       Los Angeles, CA 90095-1477
+Los Angeles, CA 90095-1477                       gnicolo@ucla.edu
+and NBER
+rfarmer@econ.ucla.edu
+
+Vadim Khramov
+Bank of America Merrill Lynch
+2 King Edward Street
+London, EC1A 1HQ
+United Kingdom
+vadim.khramov@baml.com
+1    Introduction
+It is well known that linear rational expectations (LRE) models can have an
+indeterminate set of equilibria under realistic parameter choices. Lubik and
+Schorfheide (2003) provided an algorithm that computes the complete set of
+indeterminate equilibrium, but their approach has not yet been implemented
+in standard software packages and has not been widely applied in practice.
+In this paper, we propose an alternative methodology based on the idea
+that a model with an indeterminate set of equilibria is an incomplete model.
+We propose to close a model of this kind by treating a subset of the non-
+fundamental errors as newly defined fundamentals.
+    Our method builds on the approach of Sims (2001) who provided a widely
+used computer code, Gensys, implemented in Matlab, to solve for the reduced
+form of a general class of linear rational expectations (LRE) models. Sims’s
+code classifies models into three groups; those with a unique rational expec-
+tations equilibrium, those with an indeterminate set of rational expectations
+equilibria, and those for which no bounded rational expectations equilibrium
+exists. By moving non-fundamental errors to the set of fundamental shocks,
+we select a unique equilibrium, thus allowing the modeler to apply standard
+solution algorithms. We provide step-by-step guidelines for implementing
+our method in the Matlab-based software programs Dynare (Adjemian et al.,
+2011) and Gensys (Sims, 2001).
+    Our paper is organized as follows. In Section 2, we provide a brief liter-
+ature survey and in Section 3 we review solution methods for indeterminate
+models. In Section 4, we discuss the choice of which expectational errors to
+redefine as fundamental and we prove that all possible alternative selections
+have the same likelihood. Section 5 compares our method to the work of Lu-
+bik and Schorfheide (2003) and establishes an equivalence result between the
+two approaches. In Section 6, we apply our method to the New-Keynesian
+model described in Lubik and Schorfheide (2004) and we show how to apply
+our method using Gensys to simulated data. Section 7 provides step-by-step
+
+                                      1
+guidelines for implementing our method in the popular software package,
+Dynare,1 and Section 8 provides a brief conclusion.
+
+
+2       Related Literature
+Blanchard and Kahn (1980) showed that a LRE model can be written as a
+linear combination of backward-looking and forward-looking solutions. Since
+then, a number of alternative approaches for solving linear rational expecta-
+tions models have emerged (King and Watson, 1998; Klein, 2000; Uhlig, 1999;
+Sims, 2001). These methods provide a solution if the equilibrium is unique,
+but there is considerable confusion about how to handle the indeterminate
+case. Some methods fail in the case of a non-unique solution, for example,
+Klein (2000), while others, e.g. Sims (2001), generate one solution with a
+warning message.
+    All of these solution algorithms are based on the idea that, when there is
+a unique determinate rational expectations equilibrium, the model’s forecast
+errors are uniquely defined by the fundamental shocks. These errors must be
+chosen in a way that eliminates potentially explosive dynamics of the state
+variables of the model.
+    McCallum (1983) has argued that a model with an indeterminate set of
+equilibria is incompletely specified and he recommends a procedure, the mini-
+mal state variable solution, for selecting one of the many possible equilibria in
+the indeterminate case. Farmer (1999) has argued instead, that we should ex-
+ploit the properties of indeterminate models to help understand data. Farmer
+and Guo (1995) took up that challenge by studying a model where indeter-
+minacy arises from a technology with increasing returns-to-scale, and Lubik
+and Schorfheide (2004), developed methods for distinguishing determinate
+from indeterminate models which they applied to a New-Keynesian mone-
+    1
+     Dynare is a Matlab-based software platform for handling a wide class of economic mod-
+els, in particular dynamic stochastic general equilibrium (DSGE). Visit www.dynare.org
+for details.
+
+
+                                            2
+tary model. There is a growing body of literature, see, for example, Belay-
+gorod and Dueker (2009); Bhattarai et al. (2012); Fanelli (2012); Castelnuovo
+and Fanelli (2014); Hirose (2011); Zheng and Guo (2013); Bilbiie and Straub
+(2013), that directly tackles the econometric challenges posed by indetermi-
+nacy. This literature oﬀers the possibility for the theoretical work, surveyed
+in Benhabib and Farmer (1999), to be directly compared with conventional
+classical and new-Keynesian approaches in which equilibria are assumed to
+be locally unique.
+    The empirical importance of indeterminacy began with the work of Ben-
+habib and Farmer (1994) who established that a standard one-sector growth
+model with increasing returns displays an indeterminate steady state and
+Farmer and Guo (1994) who exploited that property to generate business
+cycle models driven by self-fulfilling beliefs. More recent New-Keynesian
+models have been shown to exhibit indeterminacy if the monetary authority
+does not increase the nominal interest rate enough in response to higher in-
+flation (see, for example, Clarida et al. (2000); Kerr and King (1996)). Our
+estimation method should be of interest to researchers in both literatures.
+
+
+3       Solving LRE Models
+Consider the following -equation LRE model. We assume that  ∈ 
+is a vector of deviations from means of some underlying economic variables.
+These may include predetermined state variables, for example, the stock of
+capital, non-predetermined control variables, for example, consumption; and
+expectations at date  of both types of variables.
+    We assume that  is an  × 1 vector of exogenous, mean-zero shocks and
+ is a  × 1 vector of endogenous shocks.2 The matrices Γ0 and Γ1 are of
+    2
+     Sims (2001) allows  to be autoregressive with non zero conditional expectation. We
+assume, instead, that  always has zero conditional mean. That assumption is unre-
+strictive since an autoregressive error can be written in our form by defining a new state
+variable, ̃ and letting the innovation of the original variable,  , be the new fundamental
+
+
+                                              3
+dimension  × , possibly singular, Ψ and Π are respectively,  ×  and ×
+ known matrices.
+   Using the above definitions, we will study the class of linear rational
+expectations models described by Equation (1),
+
+                        Γ0  = Γ1 −1 + Ψ + Π                        (1)
+
+Sims (2001) shows that this way of representing a LRE is very general and
+most LRE models that are studied in practice by economists can be written
+in this form. We assume that
+
+                     −1 ( ) = 0 and     −1 (  ) = 0               (2)
+
+We define the  ×  matrix Ω ,
+                                 ³ ´
+                             −1   = Ω                              (3)
+
+which represents the covariance matrix of the exogenous shocks. We refer to
+these shocks as predetermined errors, or equivalently, predetermined shocks.
+The second set of shocks,  , has dimension . Unlike the  , these shocks
+are endogenous and are determined by the solution algorithm in a way that
+eliminates the influence of the unstable roots of the system. In many impor-
+tant examples, the   have the interpretation of expectational errors and, in
+those examples,
+
+                            =  − −1 ( )                      (4)
+shock.
+
+
+
+
+                                        4
+3.1    The QZ Decomposition
+Sims (2001) shows how to write equation (1) in the form
+
+                        ̃                                ̃−1
+        z
+        "      }|   #{z" }| #{   z"    }|   #{"
+                                              z }| #{
+            11 12      ̃1      11 12     ̃1−1
+                               =
+             0 22       ̃2       0 22      ̃2−1
+                                                                 Ψ̃           Π̃
+                                                          z }| #{
+                                                          "            z }| #{
+                                                                       "
+                                                            Ψ̃1          Π̃1
+                                                         +         +         (5)
+                                                            Ψ̃2          Π̃2
+
+where the matrices   , Ψ̃ and Π̃ and the transformed variables ̃ are
+defined as follows. Let
+
+                     Γ0 =    and Γ1 =                                    (6)
+
+be the  decomposition of {Γ0  Γ1 } where  and  are  ×  orthonormal
+matrices and  and  are upper triangular and possibly complex.
+    The  decomposition is not unique. The diagonal elements of  and
+ are called the generalized eigenvalues of {Γ0  Γ1 } and Sims’s algorithm
+chooses one specific decomposition that orders the equations so that the
+absolute values of the ratios of the generalized eigenvalues are placed in
+increasing order that is,
+
+                      | |  | | ≥ | |  | | for                    (7)
+
+Sims proceeds by partitioning ,  ,  and  as
+                        "              #           "                  #
+                            11 12                    11 12
+                   =                        =                                  (8)
+                             0 22                      0 22
+
+
+
+
+                                           5
+                        "             #          "             #
+                            11 12                  11 12
+                  =                       =                              (9)
+                            21 22                  21 22
+where the first block contains all the equations for which | |  | |  1
+and the second block, all those for which | |  | | ≥ 1 The transformed
+variables ̃ are defined as
+                               ̃ =                                  (10)
+
+and the transformed parameters as
+
+                         Ψ̃ =  Ψ, and Π̃ =  Π                          (11)
+
+
+3.2    Using the QZ decomposition to solve the model
+The model is said to be determinate if Equation (5) has a unique bounded
+solution. To establish existence of at least one bounded solution we must
+eliminate the influence of all of the unstable roots; by construction, these are
+contained in the second block,
+                                               ³               ´
+                          −1                −1
+                 ̃2 = 22 22 ̃2−1 + 22  Ψ̃2  + Π̃2             (12)
+
+                          −1
+since the eigenvalues of 22 22 are all greater than or equal to one in absolute
+value. Hence a bounded solution, if it exists, will set
+
+                                   ̃20 = 0                               (13)
+
+and
+                               Ψ̃2  + Π̃2  = 0                         (14)
+
+Since the elements of ̃2 are linear combinations of 2 , a necessary condi-
+tion for the existence of a solution to equation (14) is that there are at least
+as many non-predetermined variables as unstable generalized eigenvalues. A
+
+
+
+
+                                          6
+suﬃcient condition is that the columns of Π̃2 in the matrix,
+                                  h             i
+                                      Ψ̃2 Π̃2                             (15)
+
+are linearly independent so that there is at least one solution to Equation
+(14) for the endogenous shocks,   , as a function of the fundamental shocks,
+ . In the case that Π̃2 is square and non-singular, we can write the solution
+for  as
+                                  = −Π̃−1
+                                         2 Ψ̃2                          (16)
+
+More generally, Sims’ code checks for existence using the singular value de-
+composition of (15).
+    To find a solution for ̃1 we take equation (16) and plug it back into the
+first block of (5) to give the expression,
+                                             ³                  ´
+                        −1                −1
+               ̃1 = 11 11 ̃1−1 + 11  Ψ̃1 − Π̃1 Π̃−1
+                                                          2  Ψ̃2        (17)
+
+Even if there is more than one solution to (14) it is possible that they all
+lead to the same solution for ̃1 . Sims provides a second use of the singular
+value decomposition to check that the   n solution
+                                            o       is unique. Equations (13)
+and (17) determine the evolution of ̃ as functions of the fundamental
+                                           n o
+shocks { } and, using the definition of ̃ from (10), we can recover the
+original sequence { }.
+
+
+3.3    The Indeterminate Case
+There are many examples of sensible economic models where the number of
+expectational variables is larger than the number of unstable roots of the
+system. In that case, Gensys will find a solution but flag the fact that there
+are many others. We propose to deal with that situation by providing a
+statistical model for one or more of the endogenous errors.
+    The rationale for our procedure is based on the notion that agents situated
+
+                                         7
+in an environment with multiple rational expectations equilibria must still
+choose to act. And to act rationally, they must form some forecast of the
+future and, therefore, we can model the process of expectations formation by
+specifying how the forecast errors covary with the other fundamentals.
+    If a model has  unstable generalized eigenvalues and  non-fundamental
+errors then, under some regularity assumptions, there will be  =  − 
+degrees of indeterminacy. In that situation we propose to redefine  non-
+fundamental errors as new fundamental shocks. This transformation allows
+us to treat indeterminate models as determinate and to apply standard so-
+lution and estimation methods.
+    Consider model (1) and suppose that there are  degrees of indetermi-
+nacy. We propose to partition the  into two pieces,  and   and to
+partition Π conformably so that,
+                                                                   ⎡           ⎤
+                                                  ∙            ¸        
+                                                                   ⎢           ⎥
+            Γ0  = Γ1 −1 + Ψ  + Π                      Π    ⎣
+                                                                       ×1
+                                                                               ⎦   (18)
+            × ×1    × ×1         ××1          ×   ×       
+                                                                       ×1
+
+
+Here,  is an  × 1 vector that contains the newly defined fundamental
+errors and  contains the remaining  non-fundamental errors.
+    Next, we re-write the system by moving  from the vector of expecta-
+tional shocks to the vector of fundamental shocks:
+                                   ∙        ¸
+              Γ0  = Γ1 −1 + ×  Ψ   Π     e + Π          (19)
+             × ×1   × ×1                  ×     (+)×1    × ×1
+
+
+where we treat                                ⎡        ⎤
+                                                  
+                                      ⎢ ×1 ⎥
+                                 e =⎣      ⎦                                     (20)
+                             (+)×1    
+                                                ×1
+
+as a new vector of fundamental shocks and  as a new vector of non-
+
+
+
+
+                                          8
+fundamental shocks. To complete this specification, we define Ω̃
+                            ⎛⎡        ⎤⎡        ⎤ ⎞   ⎛                ⎞
+                                                       Ω   Ω
+                            ⎜⎢ ×1 ⎥ ⎢ ×1 ⎥ ⎟ ⎜ ×             ×    ⎟
+              Ω̃     = −1 ⎝⎣      ⎦⎣      ⎦ ⎠≡⎝                       ⎠   (21)
+         (+)×(+)                      Ω            Ω 
+                                ×1    ×1                 ×   ×
+
+
+to be the new covariance matrix of fundamental shocks. This definition
+requires us to specify  ( + 1 + 2) 2 new variance parameters, these are
+the  ( + 1) 2 elements of Ω  , and × new covariance parameters, these
+are the elements of Ω . By choosing these new parameters and applying
+Sims’ solution algorithm, we select a unique bounded rational expectations
+equilibrium. The diagonal elements of Ω̃ that correspond to   have the
+interpretation of a pure ‘sunspot’ component to the shock and the covariance
+of these terms with  represent the response of beliefs to the original set of
+fundamentals.
+    Our approach to indeterminacy is equivalent to defining a new model
+in which the indeterminacy is resolved by assuming that expectations are
+formed consistently using the same forecasting method in every period. For
+example, expectations may be determined by a learning mechanism as in
+Evans and Honkapohja (2001) or using a belief function as in Farmer (2002).
+For our approach to be valid, we require that the belief function is time
+invariant and that shocks to that function can be described by a stationary
+probability distribution. Our newly transformed model can be written in
+the form of Equation (1), but the fundamental shocks in the transformed
+model include the original fundamental shocks  , as well as the vector of
+new fundamental shocks,   .
+
+
+4    Choice of Expectational Errors
+Our approach raises the practical question of which non-fundamentals should
+we choose to redefine as fundamental. Here we show that, given a relatively
+
+                                       9
+mild regularity condition, there is an equivalence between all possible ways
+of redefining the model.
+
+Definition 1 (Regularity) Let  be an indeterminate equilibrium of model
+(1) and use the  decomposition to write the following equation connecting
+fundamental and non-fundamental errors.
+
+                                   Ψ̃2  + Π̃2  = 0                         (22)
+
+Let  be the number of generalized eigenvalues that are greater than or equal
+to 1 and let    be the number of non-fundamental errors. Partition  
+into two mutually exclusive subsets,   and  such that   ∪   =   and
+partition Π̃2 conformably so that
+                                                     ⎡           ⎤
+                                     ∙           ¸        
+                                             ⎢           ×1     ⎥
+                         Π̃2   = Π̃2 Π̃2 ⎣                   ⎦             (23)
+                         × ×1       × ×            
+                                                         ×1
+
+
+The indeterminate equilibrium, , is regular if, for all possible mutually ex-
+clusive partitions of   , Π̃2 has full rank.
+
+   Regularity rules out situations where there is a linear dependence in the
+non-fundamental errors and all of the indeterminate LRE models that we are
+aware of, that have been studied in the literature, satisfy this condition.
+
+Theorem 1 Let  be an indeterminate equilibrium of model (1) and let P
+be an exhaustive set of mutually
+                           ⎧     exclusive partitions ⎫ of   into two non-
+                                        Ã            !
+                           ⎨                            ⎬
+intersecting subsets, where p ∈ P | p =          . Let p1 and p2 be
+                           ⎩              ×1 ×1       ⎭
+elements of P and let Ω̃1 be the covariance matrix of the new set of funda-
+         £         ¤
+mentals,     associated with partition p1 . If  is regular then there is
+a covariance matrix Ω̃2 , associated with partition 2 such that the covariance
+
+
+                                           10
+matrix                        ⎛⎡      ⎤⎡        ⎤ ⎞
+                                          
+                              ⎜⎢  ⎥ ⎢  ⎥ ⎟
+                              ⎜
+                        Ω =  ⎝⎣  ⎦ ⎣  ⎦ ⎟ ⎠                       (24)
+                                       
+
+is the same for both partitions. p1 and p2 , parameterized by Ω̃1 and Ω̃2 , are
+said to be equivalent partitions.
+
+Proof. See Appendix A.
+
+Corollary 1 The joint probability distribution over sequences { } is the
+same for all equivalent partitions.
+
+Proof. The proof follows immediately from the fact that the joint probability
+of sequences { }, is determined by the joint distribution of the shocks.
+    The question of how to choose a partition p is irrelevant since all par-
+titions have the same likelihood. However, the partition will matter, if the
+researcher imposes zero restrictions on the variance covariance matrix of fun-
+damentals.
+    Why does this matter? Suppose that the researcher choose one of two
+possible partitions, call this p1 , by specifying one of two expectational errors
+from the original model as a new fundamental. Under partition p1  the co-
+variance parameters of the second expectational error with the fundamentals
+will be complicated functions of all of the parameters of the model.
+    Suppose instead, that the researcher chooses the second expectational
+error to be fundamental, call this partition p2 . In this case, it is the covari-
+ance parameters of the first expectational error that will depend on model
+parameters. Because the researcher cannot know in advance, which of these
+specifications is the correct one, we recommend that in practice, the VCV
+matrix of the augmented shocks, ̃ should be left unrestricted.
+    Lubik and Schorfheide (2004) refer to ‘belief shocks’ which they think
+of as independent causal disturbances that influence all of the endogenous
+
+                                       11
+variables at each date. Their belief shocks are isomorphic to what Cass and
+Shell (1983) refer to as ‘sunspots’ and what Azariadis (1981) and Farmer and
+Woodford (1984, 1997) call ‘self-fulfilling prophecies’.
+    In Section 5, we prove that Lubik and Schorfheide’s representation of a
+belief shock can be represented as a probability distribution over the forecast
+error of a subset of the variables of the model. Farmer (2002) shows how a
+self-fulfilling belief of this kind can be enforced by a forecasting rule, aug-
+mented by a sunspot shock. If agents use this rule in every period, and if
+their current beliefs about future prices are functions of the current sunspot
+shock, those beliefs will be validated in a rational expectations equilibrium.
+
+
+5    Lubik-Schorfheide and Farmer-Khramov-Nicolò
+     Compared
+The two papers by Lubik and Schorfheide, (Lubik and Schorfheide, 2003,
+2004), are widely cited in the literature (Belaygorod and Dueker, 2009; Zheng
+and Guo, 2013; Lubik and Matthes, 2013) and their approach is the one most
+closely emulated by researchers who wish to estimate models that possess
+an indeterminate equilibrium. This section compares the Lubik-Schorfheide
+method to the Farmer-Khramov-Nicolò technique (which we denote by LS
+and FKN) and proves an equivalence result.
+    We show in Theorem 2 that every LS equilibrium can be implemented as
+a FKN equilibrium, and conversely, every FKN equilibrium can be character-
+ized using the LS technique. Because our method can be implemented using
+standard algorithms, our method provides an easy way for applied researchers
+to simulate and estimate indeterminate models using widely available com-
+puter software. And Theorem 2 shows that the full set of indeterminate
+equilibria can be modeled using our approach.
+
+
+
+
+                                      12
+5.1    The Singular Value Decomposition
+Determinacy boils down to the following question: Does equation (14), which
+we repeat below as equation (25), have a unique solution for the  × 1 vector
+of endogenous errors,    as functions of the  × 1 vector of fundamental
+errors,  ?
+                              Ψ̃2  + Π̃2  = 0                       (25)
+                              ××1        ××1
+
+To answer this question, LS apply the singular value decomposition to the
+matrix Π̃2 . The interesting case is when   , for which Π̃2 has  singular
+values, equal to the positive square roots of the eigenvalues of Π̃2 Π̃2 . The
+singular values are collected into a diagonal matrix 11  The matrices 1
+and  in the decomposition are orthonormal and  =  −  is the degree of
+indeterminacy.
+                                        h                    i
+                        Π̃2 ≡ 1            11      0                 (26)
+                        ×       ×       ×    ×           ×
+
+
+Replacing Π̃2 in (25) with this expression and premultiplying by 1 leads to
+the equation                     h           i
+                    1 Ψ̃2  + 11 ×  0        = 0              (27)
+                    ×××1       ×                  × ×1
+
+Now partition                      ∙                    ¸
+                               =        1        2        
+                                        ×       ×
+
+                         −1
+and premultiply (27) by 11 ,
+
+                          −1 
+                         11 1 Ψ̃2  + 1  = 0                      (28)
+                         × ×××1            ××1
+
+
+Because    this system has fewer equations than unknowns. LS suggest
+that we supplement it with the following new  =  −  equations,
+
+                           +    = 2                          (29)
+                        × ×1     ××1              × ×1
+
+
+
+                                            13
+The  × 1 vector   is a set of sunspot shocks that is assumed to have mean
+zero and covariance matrix Ω and to be uncorrelated with the fundamentals,
+ .
+                                  £    ¤        £      ¤
+                 [  ] = 0     = 0      = Ω           (30)
+
+Correlation of the forecast errors,   , with fundamentals,  , is captured by
+the matrix  . Because the parameters of Ω cannot separately be identified
+from the parameters of  , LS choose the normalization
+
+                                       =  .                            (31)
+
+   Appending equation (29) as additional rows to equation (28), premulti-
+plying by  and rearranging terms leads to the following representation of
+the expectational errors as functions of the fundamentals,  and the sunspot
+shocks,   
+                   µ                      ¶
+                         −1 
+                = −1 11 1 Ψ̃2 + 2   + 2                      (32)
+              ×1         × × ××    × ×      ×1   × ×1
+
+
+This is equation (25) in Lubik and Schorfheide (2003) using our notation for
+dimensions and where our  is what LS call ̃ . More compactly
+
+                        = 1   + 2   + 2                     (33)
+                    ×1     ×××1      × × ×1     × ×1
+
+
+where
+                                      −1 
+                                 ≡ −11 1 Ψ̃2 
+                                ×        × × ×
+
+is a function of the parameters of the model.
+
+
+
+
+                                           14
+5.2    Equivalent characterizations of indeterminate equi-
+       libria
+To define a unique sunspot equilibrium when the model is indeterminate, our
+                                           ©        ª
+method partitions   into two subsets;  =     . We refer to  as new
+fundamentals. A FKN equilibrium is characterized by a parameter vector
+ ∈ Θ  which has two parts. 1 ∈ Θ1
+
+                          1 ≡  (Γ0  Γ1  Ψ Ω ) 
+
+is a vector of parameters of the structural equations, including the variance
+covariance matrix of the original fundamentals. And 2 ∈ Θ2
+
+                            2 ≡  (Ω  Ω  ) 
+
+is a vector of parameters that contains the variance covariance matrix of the
+new fundamentals and the covariances of these new fundamentals,   , with
+the original fundamentals, .
+    A FKN representation of equilibrium is a vector   ∈ Θ  where
+Θ  is defined as,
+                             Θ  ≡ {Θ1  Θ2 } 
+
+    Theorem 1 establishes that there is an equivalence class of models, all
+with the same likelihood function, in which the  × 1 vector   is selected as
+a new set of fundamentals and the VCV matrices Ω  and Ω are additional
+parameters. To complete the model in this way we must add  ( + 1) 2
+new parameters to define the symmetric matrix Ω  and × new parameters
+to define the elements of Ω .
+    In contrast a LS equilibrium is characterized by a parameter vector
+
+                              Θ ≡ {Θ1  Θ3 } 
+
+
+
+                                       15
+where 3 ∈ Θ3 is defined as
+
+                              3 ≡  (Ω   )                      (34)
+
+These parameters characterize the additional equation,
+
+                             +   = 2                           (35)
+                           × ×1    ×1       × ×1
+
+
+where equation (35) adds the normalization (31) to equation (29).
+    The matrix Ω has  × ( + 1) 2 new parameters; these are the vari-
+ance covariances of the sunspot shocks and the matrix  has  ×  new
+parameters, these capture the covariances of  with . To establish the con-
+nection between the two characterizations of equilibrium, we establish the
+following two lemmas.
+
+Lemma 1 Let  be a regular indeterminate equilibrium, characterized by
+                                 ©           ª
+  = {1  2 } and let p =    be an element of the set of par-
+titions, P. Let  = {1  3 } be the parameters of a Lubik-Schorfheide
+representation of equilibrium. There is an  ×  matrix  , and an  × 
+matrix   , where the elements of  and   , are functions of 1 and an ×
+matrix                            µ            ¶
+                                        
+                              =  +                                    (36)
+                              ×      ×      ×
+
+such that the sunspots shocks in the LS representation of equilibrium are
+related to the fundamentals  and the newly defined FKN fundamentals,  
+by the equation,
+                            =   −                       (37)
+                          ×1       ×         × ×1
+                                          ×1
+
+
+Proof. See Appendix B.
+    Lemma 1 connects the LS sunspots to the FKN definition of fundamen-
+tals. Lemma 2, described below, provides a way of mapping between the
+
+
+                                          16
+original fundamental shocks and the newly defined fundamentals under two
+alternative partitions p and p .
+
+Lemma 2 Let  be a regular indeterminate equilibrium, characterized by
+                                      ©         ª          ©         ª
+  = {1  2 } and let p =    and p =     be two ele-
+ments of the set of partitions, P. There exists an  ×  matrix  , an  × 
+matrix   , an  ×  matrix  , and an  ×  matrix   , where the ele-
+ments of  ,   ,  and   are functions of 1  The new FKN fundamentals
+under partition p ,   , are related to the fundamentals  and the new FKN
+fundamentals under partition p ,   by the equation,
+                                 "                µ             ¶     #
+                         ¡ ¢−1
+                   =            −        −               (38)
+                                 ×              ×     ×       ×1
+               ×1        ×          ×1
+
+
+Proof. Follows immediately from Equations (36) and (37) and the fact that
+ is non-singular for all .
+    Equation (38) defines the equivalence between alternative FKN defini-
+tions of the fundamental shocks, without reference to the LS definition. The
+following theorem, proved in Appendix C, uses Lemma 1 to establish an
+equivalence between the LS and FKN definitions.
+
+Theorem 2 Let  and   be two alternative parameterizations of an
+indeterminate equilibrium in model (1). For every FKN equilibrium, para-
+meterized by   , there is a unique matrix  and a unique VCV matrix
+Ω such that 3 =  (Ω   ) and {1  3 } ∈ Θ defines an equivalent
+LS equilibrium. Conversely, for every LS equilibrium, parameterized by  ,
+and every partition p ∈ P, there is a unique VCV matrix Ω  and a unique
+covariance matrix Ω such that 2 = (Ω   Ω ) and {1  2 } ∈ Θ 
+defines an equivalent FKN equilibrium.
+
+Proof. See Appendix C.
+  Next, we turn to an example that shows how to use our results in practice.
+
+                                         17
+6     Applying Our Method in Practice: The
+      Lubik-Schorfheide Example
+In this Section we generate data from the model described in Lubik and
+Schorfheide (2004) and we use our method to recover parameter estimates
+from the simulated data. By using simulated data, rather than actual data,
+we avoid possible complications that might arise from mis-specification. For
+the simulated data, we know the true data generation process.
+   Section 6.1 explains how to implement our method for the case of the
+New-Keynesian model and in Section 6.2 we establish two results. First,
+we take Lubik and Schorfheide’s (2004) parameter estimates for the pre-
+Volcker period, and we treat these parameter estimates as truth. Using the
+LS parameters, we simulate data under two alternative partitions of our
+model, and we verify that, using the same random seed, the simulated data
+are identical for both partitions. Second, we estimate the parameters of the
+model in Dynare, for the two alternative specifications, and we verify that
+the parameter estimates from two diﬀerent partitions are the same.
+
+
+6.1    The LS Model with the FKN Approach
+The model of Lubik and Schorfheide (2004) consists of a dynamic IS curve
+
+                      =  (+1 ) −  ( −  ( +1 )) +         (39)
+
+a New Keynesian Phillips curve
+
+                            =  ( +1 ) +  ( −  )             (40)
+
+and a Taylor rule,
+
+             =  −1 + (1 −  ) [1   + 2 ( −  )] +     (41)
+
+
+
+                                          18
+The variable  represents log deviations of GDP from a trend path and  
+and  are log deviations from the steady state level of inflation and the
+nominal interest rate.
+   The shocks  and  follow univariate AR(1) processes
+
+                                      =  −1 +                                 (42)
+
+
+                                      =  −1 +                                 (43)
+
+where the standard deviations of the fundamental shocks  ,  and 
+are defined as  ,   and  , respectively. We allow the correlation between
+shocks,  ,  and  , to be nonzero. The rational expectation forecast
+errors are defined as
+
+                   1 =  − −1 [ ]            2 =   − −1 [  ]          (44)
+
+   We define the vector of endogenous variables,
+
+                    = [        (+1 )   ( +1 )     ]
+
+the vectors of fundamental shocks and non-fundamental errors,
+
+                                                             £            ¤
+                     z = [     ]       η  = 1  2
+
+and the vector of parameters
+              £                                                                     ¤
+            =  1  2                          
+
+   This leads to the following representation of the model,
+
+                    Γ0 () = Γ1 ()−1 + Ψ()z + Π()η                             (45)
+
+
+
+
+                                                19
+   where Γ0 and Γ1 are represented by
+          ⎡                                              ⎤
+                 1         0      −1 − −1      0
+           ⎢                                             ⎥
+           ⎢             −1     0 0     0     −       ⎥
+           ⎢                                             ⎥
+           ⎢(1 −  ) (1 −  ) −1 0   0  0 −(1 −  )2 ⎥
+           ⎢        2        1                         ⎥
+           ⎢                                             ⎥
+  Γ0 () = ⎢     0         0     0  0  0  1      0       ⎥
+           ⎢                                             ⎥
+           ⎢     0         0     0  0  0  0      1       ⎥
+           ⎢                                             ⎥
+           ⎢                                             ⎥
+           ⎣     1         0     0  0  0  0      0       ⎦
+                 0         1     0  0  0  0      0
+
+and,
+                           ⎡                         ⎤
+                            0   0  0      0   0 0 0
+                           ⎢                         ⎥
+                           ⎢0   0  0      0   0 0 0⎥
+                           ⎢                         ⎥
+                           ⎢0   0 −     0   0 0 0⎥
+                           ⎢                         ⎥
+                           ⎢                         ⎥
+                  Γ1 () = ⎢0   0  0      0   0  0 ⎥ 
+                           ⎢                         ⎥
+                           ⎢0   0  0      0   0 0  ⎥
+                           ⎢                         ⎥
+                           ⎢                         ⎥
+                           ⎣0   0  0      1   0 0 0⎦
+                            0   0  0      0   1 0 0
+and the coeﬃcients of the shock matrices Ψ and Π are given by,
+                        ⎡            ⎤           ⎡     ⎤
+                          0     0   0             0   0
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎢0      0   0⎥           ⎢0   0⎥
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎢−1     0   0⎥           ⎢0   0⎥
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎢            ⎥           ⎢     ⎥
+                 Ψ() = ⎢ 0     1   0⎥    Π() = ⎢0   0⎥ 
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎢0      0   1⎥           ⎢0   0⎥
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎢            ⎥           ⎢     ⎥
+                        ⎣0      0   0⎦           ⎣1   0⎦
+                          0     0   0             0   1
+    The last two rows of this system define the non-fundamental shocks and
+it is these rows that we modify when estimating the model with the FKN
+approach.
+
+
+                                     20
+6.1.1    The Determinate Case
+
+When the monetary policy is active, |1 |  1, the number of expectational
+variables, { (+1 )   ( +1 )}, equals the number of unstable roots. The
+Blanchard-Kahn condition is satisfied and there is a unique sequence of non-
+fundamental shocks such that the state variables are bounded. In this case
+the model can be solved using Gensys which delivers the following system of
+equations
+
+                             = 1 ()−1 + 2 ()z                             (46)
+
+where 1 () represents the coeﬃcients of the policy functions and 2 () is
+the matrix which expresses the impact of fundamental errors on the variables
+of interest,  .
+
+6.1.2    Indeterminate Models
+
+A necessary condition for indeterminacy is that the monetary policy is pas-
+sive, which occurs when
+                               0  |1 |  1                          (47)
+
+A suﬃcient condition is that
+
+                                         (1 − )
+                             0  1 +             2  1                          (48)
+                                            
+
+This condition is stronger than (47) but the two conditions are close, given
+our prior, which sets3
+                             (1 − )
+                                      2 = 0056
+                                
+When (48) holds, the number of expectational variables, { (+1 )   ( +1 )},
+exceeds the number of unstable roots and there is 1 degree of indeterminacy.
+   3
+   We thank one of the referees for pointing that the Taylor principle must be modified,
+when the central bank responds to the output gap as well as to inflation.
+
+
+
+                                          21
+Using our approach, one can specify two equivalent alternative models de-
+pending on choice of the partition p , for  = 1 2.
+
+Fundamental Output Expectations: Model 1 In our first specification,
+we choose 1  the forecast error of output, as a new fundamental. We call
+this partition p1 and we write the new vector of fundamental shocks
+
+                                  £                         ¤
+                           z̃1 =       1 
+
+The model is defined as
+
+                Γ0 () = Γ1 ()−1 + Ψ ()z̃1 + Π ()2          (49)
+
+where                  ⎡                 ⎤                         ⎡ ⎤
+                         0      0   0   0                           0
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢0       0   0   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢−1      0   0   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+              Ψ () = ⎢ 0      1   0   0⎥      and      Π () = ⎢0⎥ 
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢0       0   1   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎣0       0   0   1⎦                         ⎣0⎦
+                         0      0   0   0                           1
+Notice that the matrices Γ0 and Γ1 are unchanged. We have simply redefined
+1 as a fundamental shock by moving one of the columns of Π to Ψ. Because
+the Blanchard-Kahn condition is satisfied under this redefinition, the model
+can be solved using Gensys to generate policy functions as well as the matrix
+which describes the impact of the re-defined vector of fundamental shocks on
+ .
+
+Fundamental Inflation Expectations: Model 2 Following the same
+logic there is an alternative partition p2 where the new vector of fundamentals
+is defined as
+
+
+                                          22
+                                  £                         ¤
+                           z̃2 =       2 
+
+Here, the state equation is described by
+
+                Γ0 () = Γ1 ()−1 + Ψ ()z̃2 + Π () 1         (50)
+
+where now
+                       ⎡                 ⎤                         ⎡ ⎤
+                         0      0   0   0                           0
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢0       0   0   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢−1      0   0   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+              Ψ () = ⎢ 0      1   0   0⎥      and      Π () = ⎢0⎥ 
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢0       0   1   0⎥                         ⎢0⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎢                 ⎥                         ⎢ ⎥
+                       ⎣0       0   0   0⎦                         ⎣1⎦
+                         0      0   0   1                           0
+
+Using Gensys, we can find a unique series of non-fundamental shocks 1
+such that the state variables are bounded and the state variables  are then
+a function of −1 and the new vector of fundamental errors z̃2 .
+
+
+6.2    Simulation and Estimation using the FKN approach
+In this Section, we simulate data from the New-Keynesian model using the
+parameter estimates of Lubik and Schorfheide (2004) for the case when the
+model is indeterminate. In light of Theorem 2 and Lemma 2, data generated
+from the two partitions is identical, a result that we verify computationally.
+In Section 6.2.2, we use our simulated data to estimate the model parameters
+under the two representations and we confirm that the posterior modes from
+each representation are, in most cases, equal to two decimal places and that
+all of the estimates lie well within the 90% probability bounds of the alterna-
+
+
+
+
+                                          23
+tive specification.4 These results demonstrate how to apply our theoretical
+results from sections 4 and 5 in practice.
+
+6.2.1    Simulation
+
+In this section, we generate data for the observables, y = {      },
+in two diﬀerent ways. These variables are defined as,
+
+   1.  the percentage deviations of (log) real GDP per capita from an
+      HP-trend;
+
+   2.   the annualized percentage change in the Consumer Price Index
+      for all Urban Consumers;
+
+   3.  the annualized percentage average Federal Funds Rate.
+
+    As described in Lubik and Schorfheide (2004), the measurement equation
+is given by,
+                         ⎡       ⎤ ⎡             ⎤
+                            0       1 0 0 0 0 0 0
+                       ⎢         ⎥ ⎢             ⎥
+                  y = ⎣  ∗ ⎦ + ⎣0 4 0 0 0 0 0⎦                                    (51)
+                         ∗ + ∗    0 0 4 0 0 0 0
+
+where  ∗ and ∗ are annualized steady-state inflation and real interest rates
+expressed in percentages. The parameter values that we use to run the
+simulation of the New-Keynesian model in Lubik and Schorfheide (2004) are
+the posterior estimates that the authors report for the pre-Volcker period
+and that we reproduce in Table 2. We feed the model with shocks using the
+FKN method for two alternative partitions.
+     We take the LS estimates of the standard deviation of the sunspots shock,
+ , and the  ×  matrix  and we treat these estimates as the truth. By
+   4
+     The estimates are not identical because of sampling error that arises from the use of a
+finite number of draws when we approximate posterior distributions with the Metropolis-
+Hastings algorithm. We did not see an obvious way of setting the same random seed
+within Dynare and hence we used diﬀerent draws for each specification.
+
+                                            24
+applying Lemma 1 to the LS parameters, we obtain corresponding values5
+for the standard deviation of the newly defined fundamental,    under the
+two partitions, p ,  ∈ {1 2} 
+
+                      µ      ¶−1 "                               #Ã            !−1
+                                                        ¡  ¢        ¡   ¢
+            Ω  =                  2 +   Ω                                 (52)
+                        ×                  × ×
+           ×                      ×                 ×           ×
+
+
+and for the covariance of the fundamentals z with the newly defined funda-
+mental   
+                                   ¡ ¢−1 
+                           Ω  =      Ω                        (53)
+                                ×         × × ×
+
+The details on the construction of the matrices  ,   and   are described
+in Appendix D.
+                                                          £                         ¤
+   Having defined the new vector of fundamentals z̃ =        
+we construct the following variance-covariance matrix
+                                                ¡            ¢
+                                   Ω        ≡  z̃ z̃                           (54)
+                              (+)×(+)
+
+
+                                                                                           
+    Next, we perform the Cholesky decomposition of the matrix Ω =  ( ) ,
+where  is a lower triangular ( + ) × ( + ) matrix. After defining a
+( + ) × 1 vector of shocks  such that ( ) = 0(+)×1 and (  ) =
+(+) , we rewrite z̃ as z̃ =   
+    The purpose of the Cholesky decomposition is to simplify the estimation
+procedure in Dynare6 which we use to estimate the ( + ) × [( + ) − 1]
+parameters of the matrix  rather than the variance-covariance terms of the
+   5
+      We derive both equation (52) and (53) from the result in Lemma 1 and by recalling
+that the vector of sunspot shocks   is now a scalar which,
+                                                           h as described
+                                                                   i       in Section 5.1, has
+                                         £ ¤                         2
+the following properties,  [  ] = 0     = 0 and      =   
+    6
+      In particular, the estimation of the ( + ) × [( + ) − 1] elements of the lower
+triangular matrix  substantially reduces issues related to the convergence of the posterior
+estimates relative to the case of performing the estimation exercise by estimating the
+elements of the variance-covariance matrix Ω .
+
+
+
+                                             25
+matrix Ω . Equation (55) reports the matrix Ω for  = 1 2
+        ⎡                                ⎤           ⎡                                   ⎤
+            0.05       -     -      -                     0.05     -         -       -
+    ⎢                                    ⎥      ⎢                                        ⎥
+    ⎢        0      0.07     -      -    ⎥      ⎢          0     0.07        -       -   ⎥
+ Ω =⎢
+   1
+    ⎢
+                                         ⎥ Ω = ⎢
+                                         ⎥
+                                             2
+                                                ⎢
+                                                                                         ⎥  (55)
+                                                                                         ⎥
+    ⎣        0      0.04 1.27       -    ⎦      ⎣          0     0.04      1.27      -   ⎦
+            -0.03 0.10 0.11 0.17                         -0.01 0.13 -2.37 4.60
+
+and equation (56) is the corresponding Cholesky decomposition  for  =
+1 2
+        ⎡                                ⎤           ⎡                                   ⎤
+            0.23       0     0      0                     0.23     0         0       0
+    ⎢                                 ⎥      ⎢                                         ⎥
+    ⎢        0      0.27     0      0 ⎥      ⎢             0     0.27        0       0 ⎥
+  =⎢
+   1
+    ⎢
+                                      ⎥  = ⎢
+                                          2                                            ⎥  (56)
+    ⎣        0      0.15 1.11       0 ⎥
+                                      ⎦
+                                             ⎢
+                                             ⎣             0     0.15      1.11      0 ⎥
+                                                                                       ⎦
+            -0.14 0.37 0.04 0.10                         -0.05 0.04 -2.12 0.26
+
+     Given a draw of  , we obtain the new vector of fundamentals z̃ =  
+for partition p and we construct the corresponding draws of the vector
+        £                        ¤
+z̃ =        . Using Lemma 2, Equation (38), which we re-
+produce below as equation (57), we derive the non-fundamental shock which
+is included as fundamental under partition p for  6= ,
+                                    "                µ                 ¶     #
+                            ¡ ¢−1
+                      =            −        −            z               (57)
+                                        ×              ×     ×       ×1
+                   ×1       ×              ×1
+
+
+    By feeding the two alternative models with the corresponding new vectors
+of fundamentals z̃1 and z̃2 , using the same random seed, we obtain identical
+simulated data7 .
+   7
+    The code is available in the online Appendix and the results are obtained simulating
+the data by using both Gensys and Dynare.
+
+
+
+
+                                               26
+6.2.2     Estimation Results
+
+Next, we estimate the parameters of the model on the simulated data and
+we demonstrate that the posterior estimates of the model parameters are
+equivalent under two alternative model specifications. Table 1 reports the
+prior distributions of the parameters used in our estimation. With the ex-
+ception of priors over the elements of  , the prior distributions for the other
+parameters are the same as in Lubik and Schorfheide (2004)8 .
+    Table 2 compares the posterior estimates of the model parameters. While
+the first column reports the parameter values used to simulate the data,
+columns two and three are the estimates for two alternative partitions p1
+and p2 . Partition p1 treats 1 as fundamental and partition p2 treats
+2 as fundamental. We used a random walk Metropolis-Hastings algorithm
+to obtain 150,000 draws from the posterior mean and we report 90-percent
+probability intervals of the estimated parameters9 .
+    Compare the mean parameter estimates across the three columns. Fifteen
+of these parameters are common to all three specifications; these are the
+parameters  1  2     ∗  ∗    −1      11  22  33  21  31 and 32 . The
+remaining four parameters reported in columns 2 and 3, 41  42  43  and
+44 represent the elements of the  matrix that are not comparable across
+specifications.
+   8
+      The only diﬀerence with respect to Lubik and Schorfheide (2004) is that we use a
+flatter prior for the parameter . While the authors set a gamma distribution with mean
+05 and standard deviation 02, our prior sets the standard deviation to 035, leaving the
+mean unchanged. Choosing a flatter prior avoids facing an issue in the convergence of the
+parameter which arises with a relatively tight prior as in Lubik and Schorfheide (2004).
+Also, Table 1 reports the mean, the standard deviation and the 90-percent probability
+interval for each parameter. Note that we were unable to replicate the probability intervals
+in Lubik and Schorfheide (2004) and we report the 5-th and the 95-th percentiles of each
+distribution. However, the diﬀerences with Lubik and Schorfheide (2004) in the values for
+the probability intervals are small.
+    9
+      To run the estimation exercise, we consider a sample of 1,000 observations from the
+simulated data, run 6 chains of 50,000 draws each and we finally discard half of the draws.
+The acceptance ratio for all the chains are between 25% and 33%.
+
+
+
+
+                                               27
+Table 1: Prior Distribution for DSGE Model Parameters
+Name   Range    Density   Mean   Std. Dev.   90% interval
+          +
+  1    R            1.1      0.50       [0.42,2.03]
+ 2     R+           0.25     0.15       [0.06,0.53]
+     [0 1)         0.50     0.20       [0.17,0.82]
+ ∗     R+           4.00     2.00       [1.36,7.75]
+ ∗     R+           2.00     1.00       [0.68,3.87]
+       R+           0.50     0.35       [0.09,1.17]
+ −1    R+           2.00     0.50       [1.25,2.88]
+     [0 1)         0.70     0.10       [0.54,0.85]
+     [0 1)         0.70     0.10       [0.54,0.85]
+ 11    R+         0.2      0.15       [0.07,0.44]
+                
+22     R+         0.3       0.2       [0.12,0.64]
+                
+33     R+          1        0.3       [0.61,1.55]
+                
+21                  0        0.1      [-0.16,0.16]
+31                  0        0.1      [-0.16,0.16]
+32                 0.15      0.1      [-0.01,0.31]
+141                 0        0.2      [-0.32,0.32]
+142                0.3       0.2      [-0.02,0.62]
+143                 0        0.2      [-0.32,0.32]
+144                0.1       0.2      [-0.22,0.42]
+241                 0        0.2      [-0.32,0.32]
+242                 0        0.2      [-0.32,0.32]
+243                 -2       0.5      [-2.82,-1.18]
+244                0.3       0.2      [-0.02,0.62]
+
+
+
+
+                          28
+       Table 2: Posterior Means and Probability Intervals
+       L&S (prior 1)         FKN - Model 1           FKN - Model 2
+              Mean       Mean    90% interval    Mean    90% interval
+       1     0.77       0.77    [0.73,0.81]     0.77    [0.73,0.81]
+       2     0.17       0.21    [0.08,0.33]     0.22    [0.08,0.35]
+            0.60       0.61    [0.59,0.63]     0.61    [0.59,0.63]
+        ∗
+             4.28       4.44    [4.17,4.71]     4.43    [4.16,4.70]
+       ∗     1.13       1.18    [1.10,1.25]     1.17    [1.10,1.25]
+             0.77       0.67    [0.47,0.89]     0.71    [0.51,0.91]
+        −1   1.45       1.63    [1.41,1.85]     1.61    [1.39,1.82]
+            0.68       0.66    [0.62,0.70]     0.66    [0.62,0.70]
+            0.82       0.83    [0.81,0.84]     0.83    [0.81,0.85]
+       11    0.23       0.23    [0.22,0.24]     0.23    [0.22,0.24]
+       22    0.27       0.25    [0.21,0.29]     0.25    [0.21,0.29]
+       33    1.11       1.14    [0.90,1.37]     1.10    [0.87,1.30]
+       21    0          -0.01   [-0.03,0.009]   -0.01   [-0.03,0.009]
+       31    0          0.02    [-0.09,0.14]    0.003   [-0.09,0.09]
+       32    0.15       0.14    [0.01,0.27]     0.14    [0.04,0.25]
+       141   -0.14      -0.15   [-0.18,-0.13]   -       -
+       142   0.37       0.36    [0.34,0.37]     -       -
+       143   0.04       0.02    [-0.02,0.07]    -       -
+       144   0.10       0.10    [-0.20,0.42]    -       -
+       241   -0.05      -       -               -0.07   [-0.25,0.11]
+       242   0.04       -       -               0.03    [-0.17,0.22]
+       243   -2.12      -       -               -2.09   [-2.16,-2.01]
+       244   0.26       -       -               0.30    [-0.02,0.62]
+
+
+    Our results show not only that under both models the posterior point
+estimates are remarkably close to the parameter values which we use to sim-
+ulate the data, but also that both the posterior point estimates and the
+
+                                     29
+probability intervals are statistically indistinguishable when comparing the
+two alternative models. This correspondence in parameter estimates across
+specifications is a consequence of Theorems 1 and 2 of our paper.
+
+
+7     Implementing our Procedure in Dynare
+This section provides a practical guide to the user who wishes to implement
+our method in Dynare. Consider the New-Keynesian model described in
+Section 6, which we repeat below for completeness,
+
+                     =  [+1 ] −  ( −  [ +1 ]) +             (58)
+
+                            =  [ +1 ] +  +                     (59)
+
+                                =  −1 +                          (60)
+
+                                =  −1 +                          (61)
+
+The model is determinate when monetary policy is active, |1 |  1 In this
+case Dynare finds the unique series of non-fundamental errors that keeps the
+state variables bounded and Table 3 reports the code required to estimate
+the model in this case.
+    In the case of the indeterminate models described in Section 6.1.2, run-
+ning Dynare with the code from Table 3 produces an error with a message
+“Blanchard-Kahn conditions are not satisfied: indeterminacy.” For regions of
+the parameter space where the code produces that message, we provide two
+alternative versions of the model that redefine one of the non-fundamental
+shocks as new fundamental. Following the notation in Section 6.1.2, we refer
+to these cases as Model 1, where  1 =  − −1 [ ] is a fundamental shock,
+and Model 2, where it is  2 =   − −1 [  ] and we present the Dynare code
+to estimate the two indeterminate cases.
+
+
+
+                                         30
+ Table 3: Determinate Model
+ Variable Definitions     var     ;
+                          varexo _ _ _;
+ Parameter Definitions    parameters   _ _ _ 1
+                                       2;
+ Model equations          model(linear);
+                           =  (+1) −  ∗ ( −  (+1)) + ;
+                           = 097 ∗  (+1) +  ∗ ( − );
+                           = _ ∗  (−1) + (1 − _) ∗
+                          (1 ∗  + 2 ∗ ( − )) + _;
+                           = _ ∗ (−1) + _;
+                           = _ ∗ (−1) + _;
+                          end;
+
+    Tables 4 and 5 present the amended code for these cases. In Table 4, we
+show how to change the model by redefining 1 as fundamental and Table
+5 presents an equivalent change to Table 3 in which  2 becomes the new
+fundamental. We have represented the new variables and new equations in
+that table using bold typeface.
+    The following steps explain the changes in more detail. First, we define a
+new variable, xs ≡  [+1 ] and include it as one of the endogenous variables
+in the model. This leads to the declaration:
+
+                                  xs;                           (62)
+
+which appears in the first line of Table 4. Next, we add an expectational
+shock, which we call sunspot, to the set of fundamental shocks, _, _
+and _. This leads to the Dynare statement
+
+                      _ _ _ sunspot;                       (63)
+
+which appears in row 2. Then we replace  (+1) by xs in the consumption-
+
+                                      31
+Euler equation, which becomes,
+
+                         = xs −  ∗ ( −  (+1)) + ;                (64)
+
+and we add a new equation that defines the relationship between xs,  and
+the new fundamental error:
+
+                             − xs (−1) = sunspot;                       (65)
+
+
+ Table 4: Indeterminate Model 1:  1 =  − −1 [ ] is new fundamental
+ Variable Definitions       var      xs;
+                            varexo _ _ _ sunspot;
+ Parameter Definitions      parameters   _ _ _ 1
+                                     2   ;
+ Model equations            model(linear);
+                             = xs −  ∗ ( −  (+1)) + ;
+                             = 097 ∗  (+1) +  ∗ ( − );
+                             = _ ∗  (−1) + (1 − _) ∗
+                            (1 ∗  + 2 ∗ ( − )) + _;
+                             = _ ∗ (−1) + _;
+                             = _ ∗ (−1) + _;
+                             − xs (−1) = sunspot;
+                            end;
+
+    Similar steps apply in the case of Model 2, but with 2 taking the role
+of 1  Note that, by substituting expectations of forward-looking variables
+(+1) in Model 1, and (+1) in Model 2, with xs and pis, respectively,
+we decrease the number of forward-looking variables by one. Since these
+variables are no longer solved forwards, we must add an equation — this
+appears as Equation (65) — to describe the dynamics of the new fundamental
+shock.
+
+                                       32
+ Table 5: Indeterminate Model 2: 2 =  − −1 [ ] is new fundamental
+ Variable Definitions    var      pis;
+                         varexo _ _ _ sunspot;
+ Parameter Definitions   parameters   _ _ _ 1
+                                  2   ;
+ Model equations         model(linear);
+                          = (+1) −  ∗ ( −  (+1)) + ;
+                          = 097 ∗ pis +  ∗ ( − );
+                          = _ ∗  (−1) + (1 − _) ∗
+                         (1 ∗  + 2 ∗ ( − )) + _;
+                          = _ ∗ (−1) + _;
+                          = _ ∗ (−1) + _;
+                          − pis (−1) = sunspot;
+                         end;
+
+
+
+   How can a researcher know, in advance, if his model is determinate. The
+answer provided by Lubik and Schorfheide (2004), is that determinate and
+indeterminate models are alternative representations of data that can be
+compared either by Likelihood ratio tests or by Bayesian model comparison.
+   The Lubik-Schorfheide approach assumes that the researcher can identify,
+a priori, determinate and indeterminate regions of the parameter space. For
+models where that is diﬃcult or impossible, Fanelli (2012) and Castelnuovo
+and Fanelli (2014) propose an alternative method that may be used to test
+the null hypothesis of determinacy.
+
+
+8    Conclusion
+Our paper provides a method to solve and estimate indeterminate linear ra-
+tional expectations models using standard software packages. Our method
+
+                                    33
+transforms indeterminate models by redefining a subset of the non-fundamental
+shocks and classifying them as new fundamentals. Our approach to handling
+indeterminate equilibria is more easily implementable than that of Lubik and
+Schorfheide and, one might argue, is also more intuitive. We illustrated our
+approach using the familiar New-Keynesian monetary model and we showed
+that, when monetary policy is passive, the new-Keynesian model can be
+closed in one of two equivalent ways.
+    Our procedure raises the question of which non-fundamental shocks to re-
+classify as fundamental. Our theoretical results demonstrate that the choice
+of parameterization is irrelevant since all parameterizations have the same
+likelihood function. We demonstrated that result in practice by estimating a
+model due to Lubik and Schorfheide (2004) in two diﬀerent ways and recov-
+ering parameter estimates that are statistically indistinguishable between the
+two. We caution that, in practice, it is important to leave the VCV matrix
+of errors unrestricted for our results to apply. Our work should be of interest
+to economists who are interested in estimating models that do not impose a
+determinacy prior.
+
+
+
+
+                                     34
+A       Appendix A
+Proof of Theorem 1. Let 1 and 2 be two orthonormal row operators
+associated with partitions p1 and p2 ;
+              ⎡      ⎤                ⎡        ⎤
+                          "     #                 "    #
+              ⎢ 1 ⎥                 ⎢        ⎥        
+              ⎣  ⎦ = 1          ⎣  2 ⎦ = 2                        (A1)
+                 1
+                                       2
+                                                        
+                                    
+
+We assume that the operators,  have the form
+                                       ⎡               ⎤
+                                                0
+                                = ⎣      ×         ⎦                     (A2)
+                                            0    ̃
+                                                 ×
+
+
+    where ̃ is a permutation of the columns of an  identity matrix. Pre-
+multiplying the vector [   ] by the operator  permutes the rows of 
+while leaving the rows of  unchanged. Define matrices Ω  and Ω for
+ ∈ {1 2} to be the new terms in the fundamental covariance matrix,
+                    ⎛"      #"        # ⎞ "           #
+                                         Ω  Ω
+                   ⎝                   ⎠=              
+                                    Ω  Ω 
+
+Next, use (22) and (23) to write the non-fundamentals as linear functions of
+the fundamentals,
+                             = Θ  + Θ                 (A3)
+
+where                ³     ´−1                            ³     ´−1
+            Θ         
+                  ≡ − Π̃2     Ψ̃2        and   Θ         
+                                                       ≡ − Π̃2     Π̃2    (A4)
+
+
+
+
+                                           35
+and define the matrix  
+                                     ⎡                                  ⎤
+                                                              0
+                           ⎢                 ×               ×      ⎥
+                           ⎢                                            ⎥
+                         =⎢
+                                                0                     ⎥                  (A5)
+                           ⎢               ×                ×       ⎥
+                           ⎣                                            ⎦
+                                           Θ                 Θ
+                                         (−)×            (−)×
+
+
+Using this definition, the covariance matrix of all shocks, fundamental and
+non-fundamental, has the following representation,
+              ⎛⎡        ⎤⎡       ⎤ ⎞
+                                      "          #
+              ⎜⎢  ⎥ ⎢  ⎥ ⎟              Ω   Ω
+             ⎜                     ⎟        
+                            
+              ⎝⎣  ⎦ ⎣  ⎦ ⎠ =  Ω                                                (A6)
+                                            Ω
+                      
+
+We can also combine the last two row blocks                        of  and write  as follows
+                                ⎡                                  ⎤
+                                        0
+                               ⎢ × ×                          ⎥
+                           =⎣                                   ⎦                       (A7)
+                                  21 22
+                                                     ×    ×
+
+
+where,                 ⎡                     ⎤                     ⎡             ⎤
+                                 0                                          
+                    ⎢       ×             ⎥                 ⎢        ×     ⎥
+                21 =⎣                       ⎦            22 =⎣                ⎦         (A8)
+                             Θ                                          Θ
+                           (−)×                                     (−)×
+
+Using (A1) and the fact that  is orthonormal, we can write the following
+expression for the complete set of shocks
+                                                           ⎡
+                                                           ⎤
+                             "           #            
+                                                 ⎢       ⎥
+                                             =  ⎣  ⎦                               (A9)
+                                 
+                                                     
+
+
+
+
+                                                     36
+Using equations (A6) and (A9), it follows that
+              ⎛"    #"    # ⎞
+                     
+             ⎝              ⎠ =        for all p ∈ P                         (A10)
+                     
+
+where                                     "               #
+                                              Ω Ω
+                                 ≡                                                   (A11)
+                                              Ω  Ω 
+and
+                         "           #"               #           "             #
+                              0              0                          0
+          ≡   =                                    =                            (A12)
+                             0 ̃             
+                                          21 22                          
+                                                                      21 22
+
+Using this expression, we can write out equation (A10) in full to give,
+   ⎛"    #"    # ⎞ "         #"           #"        #
+                                                  
+                      0     Ω  Ω      
+  ⎝              ⎠=
+                           
+                                                 21
+                                                  
+                                                                                       (A13)
+                  21 22    Ω  Ω     0 22
+
+We seek to establish that for any partition p , parameterized by matrices
+Ω   and Ω that there exist matrices Ω  and Ω for all partitions p ∈
+P  6= , such that
+                ⎛"    #"    # ⎞
+                       
+             Ω=⎝              ⎠ =       =                               (A14)
+                       
+
+To establish this proposition, we write out the elements of (A13) explicitly.
+Since   and   are symmetric we need consider only the upper-triangular
+
+
+
+
+                                              37
+elements which give three equations in the matrices of Ω and Ω  
+
+              Ω11 = Ω 
+              Ω12 = Ω 21
+                                  
+                             + Ω 22                                                      (A15)
+                     
+              Ω22 = 21 Ω 21
+                                   
+                                 + 221      
+                                        Ω 22    
+                                                + 22       
+                                                      Ω  22 
+
+The first of these equations defines the covariance of the fundamental shocks
+and it holds for all  . Now define
+
+               =  (Ω )               =  (Ω )         =  (Ω  )         (A16)
+
+Using the fact that
+                                     ¡       ¢
+                           () =   ⊗   ()                                       (A17)
+
+we can pass the  operator through equation (A15) and write the following
+system of linear equations in the unknowns  and   
+                              "        #                 "        #
+                                                           
+                                         +   =                 +                  (A18)
+                                                           
+     " ¡         ¢               #       " ¡         ¢ #
+                                              
+            ⊗           0                     ⊗ 
+  = ¡  22    
+                   ¢ ¡      
+                                ¢    = ¡  21    
+                                                      ¢                                 ∈ { } 
+       22 ⊗ 21      22 ⊗ 22            21 ⊗ 21
+                                                                           (A19)
+It follows from the assumption that the equilibrium is regular that   has full
+rank for all  hence for any permutation p  parameterized by {    }we can
+find an alternative permutation p with associated parameterization {    } 
+                "        #             Ã "    #            !
+                             ¡  ¢−1         £       ¤
+                              =              +  −                                   (A20)
+                                         
+
+that gives the same covariance matrix Ω̃ for the fundamental and non-
+
+
+                                                  38
+fundamental shocks.
+
+
+B     Appendix B
+Proof of Lemma 1.         We seek to characterize the full set of solutions to
+the equation,
+                               Ψ̃2    + Π̃2  = 0                           (B1)
+                               ××1        ××1
+
+Let 1   and 11 characterize the singular value decomposition of Π̃2 
+                                         h                       i
+                         Π̃2 ≡ 1            11         0                   (B2)
+                         ×      ×         ×    ×             ×
+
+
+where we partition the matrix  as
+                                     ∙                       ¸
+                                =           1     2           
+                                         ×        ×
+
+
+Let   characterize a regular indeterminate equilibrium for some partition
+p and we partition   into two mutually exclusive subsets,   and  such
+that  ∪  =  . From Appendix A, equation A3, we write the non-
+fundamentals   as functions of the fundamentals and where Θ and Θ are
+functions of 1 
+                             = Θ  + Θ                        (B3)
+                           ×1        ××1         ××1
+
+Equation (B3) connects the non-fundamental shocks   to the fundamental
+       £         ¤
+shocks    in the FKN equilibrium. Equation (33) reproduced below as
+(B4), characterizes the additional equations that define an LS equilibrium,
+
+                      = 1   + 2   + 2                            (B4)
+                  ×1     ×××1          × × ×1              × ×1
+
+
+
+
+                                             39
+                −1 
+where  ≡ −11    1 Ψ̃2 . To establish the connection between the LS and
+FKN representations we split the equations of (B4) into two blocks
+
+                         = 1
+                                             
+                                       + 2           
+                                                   + 2                                   (B5)
+                                        ××1
+                        ×1       ×                  ×××1          ××1
+
+
+                          = 1
+                                              
+                                        + 2           
+                                                    + 2                                  (B6)
+                                     ××1
+                        ×1       ×               ×××1             ××1
+
+                                             
+where for  = 1 2, the matrices    and  are composed of the row vectors
+of  which, according to partition p , correspond to the non-fundamental
+shocks included as fundamental,   , and those that are still non-fundamental,
+ .
+      Using (B3) to replacing  in (B5) and combining with (B6)
+    ⎡         ⎤                               ⎡         ⎤
+        Θ                                       Θ
+    ⎣   ×   ⎦  = 1   − ⎣              ×   ⎦  + 2   + 2                 (B7)
+                ×1         ×××1            0        ×1        ×××1   ××1
+                                                  ×
+
+
+where                                               ⎡             ⎤
+                                                          
+                                                        
+                                              ⎢         ×       ⎥
+                                         ≡ ⎣           
+                                                                  ⎦
+                                        ×             
+                                                        ×
+
+                                          
+   Premultiplying (B7) by (2 ) and exploiting the fact that  is orthonor-
+mal, leads to the equation
+
+                                =    +   +                                      (B8)
+                          ×                 ××1        ××1         ×1
+                                  ×1
+
+
+where
+                ⎡    ⎤                                                       ⎡  ⎤
+                   
+          ¡  ¢ Θ                                       ¡  ¢      ¡  ¢ Θ
+      ≡ 2 ⎣ × ⎦                   and           ≡ 2 1  − 2 ⎣ × ⎦
+  ×                                             ×
+           ×                                           × × ×  ×    0
+                                                                                            ×
+                          ×                                                               ×
+                                                                                                  (B9)
+
+                                                   40
+Rearranging (B8) and defining
+
+                                        ≡   +                                     (B10)
+                                    ×        ×      ×
+
+
+gives
+                                =   −                                     (B11)
+                              ×1        ×            × ×1
+                                               ×1
+
+which is the expression we seek.
+
+
+C       Appendix C
+Proof of Theorem 2. Let   = {1  2 } characterize an FKN equilib-
+rium. From (B8), which we repeat below omitting the superscript  to reduce
+notation,
+                      =   +   +                         (C1)
+                     ×                  ××1      ××1      ×1
+                              ×1
+
+Post-multiplying this equation by  and taking expectations gives
+
+                    Ω      =  Ω +  Ω =  Ω                                 (C2)
+                  × ×           × ×         × ×       × ×
+
+
+which represents  ×  linear equations in the  ×  elements of  ( )
+as functions of the elements of ,  and Ω , (these are functions of 1 ),
+and Ω  (these are elements of 2 ). Applying the  operator to (C2), using
+the algebra of Kronecker products, and rearranging terms gives the following
+solution for the parameters  ( ),
+
+   ( ) =
+    (×)×1
+                          "                                                         #
+                     −1
+           (Ω ⊗  )      ( ⊗ )  (Ω  )         − ( ⊗ ) (Ω )          (C3)
+         (×)×(×)       (×)×(×) (×)×1                (×)×2      2 ×1
+
+
+
+
+                                               41
+Using equation (C3) we can construct an expression for the elements of  as
+functions of 1 and 2 . Post-multiplying equation (B11) by itself transposed,
+and taking expectations, we have
+
+    Ω =     Ω       −  Ω    −  Ω  +  Ω             (C4)
+    ×     × ××      × × ×     × × ×   × × ×
+
+
+                       =     Ω       −  Ω  
+                           × ××      × × ×
+
+where the last equality is obtained using (C2). The terms on the RHS of
+(C4) are all functions of the known elements of 1 and 2 . Since the matrix
+Ω is symmetric, this gives  × ( + 1) 2 equations that determine the
+parameters of  (Ω ). This establishes that every   ∈ Θ  defines a
+unique parameter vector  ∈ Θ . To prove the converse, solve equation
+(C3) for  (Ω  ) as a function of 1 and the elements of  and apply the
+ operator to (C4) to solve for  (Ω  ) in terms of 1 and  (Ω ).
+
+
+
+
+D     Appendix D
+To run the simulation of the New-Keynesian model in Lubik and Schorfheide
+(2004) under indeterminacy, we need to compute the matrices  ,   and
+  . We proceed as follows. First, we apply the QZ decomposition to the
+representation of the model
+
+                  Γ0 () = Γ1 ()−1 + Ψ()z + Π()η               (D1)
+
+where Γ0 (), Γ1 (),Ψ() and Π() are described in Section 3. Let
+
+                      Γ0 =    and Γ1 =                         (D2)
+
+
+
+
+                                     42
+be the  decomposition of {Γ0  Γ1 } where  and  are  ×  orthonor-
+mal matrices and  and  are upper triangular and possibly complex. The
+resulting transformed parameters are
+
+                        Ψ̃ =  Ψ, and Π̃ =  Π                          (D3)
+
+
+
+which then allow us to define the equation connecting fundamental and non-
+fundamental errors
+                             Ψ̃2  + Π̃2  = 0                     (D4)
+                              ××1          ××1
+
+where Ψ̃2 and Π̃2 are described in Section 3. For the New-Keynesian model
+in Lubik and Schorfheide (2004) the degree of indeterminacy  = ( − )
+equals 1 since the number of non-fundamental shocks is  = 2, while the
+number of generalized eigenvalues that are greater than or equal to 1 is  = 1.
+
+   Second, we follow Lubik and Schorfheide (2004) and apply the singular
+value decomposition as described in Section 5
+                                          h                   i
+                        Π̃2 ≡ 1              11       0               (D5)
+                        ×         ×       ×   ×           ×
+
+
+
+
+and we compute
+                                    −1 
+                               ≡ −11 1 Ψ̃2                             (D6)
+                              ×             × × ×
+
+
+
+Third, we partition  into two mutually exclusive subsets,   and  such
+that   ∪  =  and partition Π̃2 conformably so that
+                                                        ⎡            ⎤
+                                    "               #       
+                                             ⎢                       ⎥
+                       Π̃2   = Π̃2 Π̃2 ⎣              ×1
+                                                                     ⎦    (D7)
+                       × ×1       × ×                 
+                                                            ×1
+
+
+
+                                              43
+For the New-Keynesian model we are considering there are two possible par-
+titions  = {1 2} for which we include the non-fundamental shock  1 =
+ − −1 [ ] or  2 =   − −1 [  ] respectively as fundamental shock. We
+then compute the matrices Θ and Θ as defined in (A4) and which we report
+here                     ³     ´−1                         ³    ´−1
+               Θ ≡ − Π̃2       Ψ̃2  and Θ ≡ − Π̃2          Π̃2     (D8)
+
+Fourth, we partition                 ∙                    ¸
+                               =          1     2                         (D9)
+                                          ×     ×
+
+
+
+and define the matrices                    ⎡           ⎤
+                                                  
+                                                
+                                      ⎢         ×    ⎥
+                                 ≡ ⎣           
+                                                       ⎦                  (D10)
+                                ×             
+                                                ×
+
+                                
+where the matrices     and  are composed of the row vectors of  which,
+according to partition p , correspond to the non-fundamental shocks included
+as fundamental,   , and those that are still non-fundamental,  .
+    Finally, we use the definitions of  and  
+                ⎡    ⎤                                               ⎡  ⎤
+                   
+          ¡  ¢ Θ                               ¡  ¢      ¡  ¢ Θ
+      ≡ 2 ⎣ × ⎦         and             ≡ 2 1  − 2 ⎣ × ⎦
+  ×                                     ×
+           ×                                   × × ×  ×    0
+                                                                        ×
+                     ×                                                ×
+                                                                           (D11)
+for each partition  = {1 2}. Therefore, we obtain the matrix
+
+                                  =   +                             (D12)
+                               ×         ×         ×
+
+
+where the × matrix  captures the correlation of the forecast errors with
+the fundamentals in Lubik and Schorfheide (2004) as explained in Section 5.1.
+
+
+
+
+                                           44
+References
+Adjemian, S., H. Bastani, M. Juillard, J. Maih, F. Karamé, F. Mihoubi,
+ G. Perendia, J. Pfeifer, M. Ratto, and S. Villemot (2011). Dynare: Refer-
+ ence manual version 4. Dynare Working Papers, CEPREMAP 1.
+
+Azariadis, C. (1981). Self-fulfilling prophecies. Journal of Economic The-
+  ory 25 (3), 380—396.
+
+Belaygorod, A. and M. Dueker (2009). Indeterminacy change points and the
+  price puzzle in an estimated dsge model. Journal of Economic Dynamics
+  and Control 33 (3), 624—648.
+
+Benhabib, J. and R. E. A. Farmer (1994). Indeterminacy and increasing
+  returns. Journal of Economic Theory 63, 19—46.
+
+Benhabib, J. and R. E. A. Farmer (1999). Indeterminacy and sunspots in
+  macroeconomics. In J. B. Taylor and M. Woodford (Eds.), Handbook of
+  Macroeconomics. North-Holland.
+
+Bhattarai, S., J. W. Lee, and W. Y. Park (2012). Policy regimes, policy shifts,
+  and u.s. business cycle. American Economic Review 102 (3), 173—178.
+
+Bilbiie, F. O. and R. Straub (2013). Asset market participation, monetary
+  policy rules, and the great inflation. Review of Economics and Statis-
+  tics. 95 (2), 377—392.
+
+Blanchard, O. J. and C. M. Kahn (1980). The solution of linear diﬀerence
+  models under rational expectations. Econometrica 48, 1305—1313.
+
+Cass, D. and K. Shell (1983). Do sunspots matter?         Journal of Political
+  Economy 91, 193—227.
+
+Castelnuovo, E. and L. Fanelli (2014). Monetary policy indeterminacy and
+  identification failures in the u.s.: Results from a robust test. Journal of
+  Applied Econometrics. forthcoming.
+
+                                      45
+Clarida, R., J. Galí, and M. Gertler (2000). Monetary policy rules and
+  macroeconomic stability: Evidence and some theory. Quarterly Journal of
+  Economics 115 (1), 147—180.
+
+Evans, G. W. and S. Honkapohja (2001). Learning and Expectations in
+  Macroeconomics. Princeton: Princeton University Press.
+
+Fanelli, L. (2012). Determinacy, indeterminacy and dynamic misspecification
+  in linear rational expectations models. Journal of Econometrics 170, 153—
+  163.
+
+Farmer, R. E. A. (1999). The Macroeconomics of Self-Fulfilling Prophecies
+  (Second ed.). Cambridge, MA: MIT Press.
+
+Farmer, R. E. A. (2002). Why does the data reject the lucas critique? An-
+  nales d’Economie et de Statistiques 67/68, 111—129.
+
+Farmer, R. E. A. and J. T. Guo (1994). Real business cycles and the animal
+  spirits hypothesis. Journal of Economic Theory 63, 42—73.
+
+Farmer, R. E. A. and J.-T. Guo (1995). The econometrics of indeterminacy.
+  Carnegie Rochester Series on Public Policy 43, 225—273.
+
+Farmer, R. E. A. and M. Woodford (1984). Self-fulfilling prophecies and the
+  business cycle. Caress Working Paper 84-12 .
+
+Farmer, R. E. A. and M. Woodford (1997). Self-fulfilling prophecies and the
+  business cycle. Macroeconomic Dynamics 1 (4), 740—769.
+
+Hirose, Y. (2011, September). Monetary policy and sunspot fluctuation in
+  the us and euro area. Munich Personal RePEc Archive No. 33693 .
+
+Kerr, W. R. and R. G. King (1996). Limits on interest rate rules in is-lm
+  models. Federal Reserve Bank of Richmond Economic Quarterly 82 (2),
+  47—75.
+
+                                    46
+Khramov, V. (2013). Essays in Macroeconomics and Finance. Ph. D. thesis,
+ UCLA.
+
+King, R. G. and M. Watson (1998). The solution of singular linear dif-
+  ference systems under rational expectations. International Economic Re-
+  view 39 (4), 1015—1026.
+
+Klein, P. (2000). Using the generalized schur form to solve a mutivariate
+  linear rational expectations model. Journal of Economic Dynamics and
+  Control 24 (10), 1405—1423.
+
+Lubik, T. A. and C. Matthes (2013). Indeterminacy and learning: An analysis
+  of monetary policy during the geat inflation. Federal Reserve Bank of
+  Richmond, mimeo.
+
+Lubik, T. A. and F. Schorfheide (2003). Computing sunspot equilibria in
+  linear rational expectations models. Journal of Economic Dynamics and
+  Control 28 (2), 273—285.
+
+Lubik, T. A. and F. Schorfheide (2004). Testing for indeterminacy: An
+  application to u.s. monetary policy. American Economic Review 94, 190—
+  219.
+
+McCallum, B. T. (1983). On non-uniqueness in rational expectations models:
+ An attempt at perspective. Journal of Monetary Economics 11, 139—168.
+
+Sims, C. A. (2001). Solving linear rational expectations models. Journal of
+  Computational Economics 20 (1-2), 1—20.
+
+Uhlig, H. (1999). A toolkit for analyzing nonlinear dynamic stochastic models
+ easily. In R. Marimon and A. Scott (Eds.), Computational Methods for
+ the Study of Dynamic Economies, pp. 30—61. Oxford, England: Oxford
+ University Press.
+
+
+
+                                     47
+Zheng, T. and H. Guo (2013). Estimating a small open economy with inde-
+  terminacy: Evidence from china. Economic Modelling 31, 642—652.
+
+
+
+
+                                  48
+

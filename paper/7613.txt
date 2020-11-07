@@ -1,0 +1,2310 @@
+                                  NBER WORKING PAPER SERIES
+
+
+
+
+                         FOUNDATIONS OF TECHNICAL ANALYSIS:
+                       COMPUTATIONAL ALGORITHMS, STATISTICAL
+                      INFERENCE, AND EMPIRICAL IMPLEMENTATION
+
+
+                                             Andrew W. Lo
+                                            Harry Mamaysky
+                                              Jiang Wang
+
+
+                                          Working Paper 7613
+                                  http://www.nber.org/papers/w7613
+
+                       NATIONAL BUREAU OF ECONOMIC RESEARCH
+                                1050 Massachusetts Avenue
+                                  Cambridge, MA 02138
+                                      March 2000
+
+
+
+This research was partially supported by the MIT laboratory for Financial Engineering, Merrill Lynch, and
+the National Science Foundation (Grant No. SBR-9709976). We thank Ralph Acampora, Franklin Allen,
+Susan Berger, Mike Epstein, Narasimhan Jegadeesh, Ed Kao, Doug Sanzone, Jeff Simonoff, Tom Stoker, and
+seminar participants at the Federal Reserve Bank of New York, NYU, and conference participants at the
+Columbia-JAFEE conference, the 1999 Joint Statistical Meetings, RISK 99, the 1999 Annual Meeting of the
+Society forComputational Economics, and the 2000 Annual Meeting of the American Finance Association for
+valuable comments and discussion. The views expressed herein are those of the authors and are notnecessarily
+those of the National Bureau of Economic Research.
+
+  2000 by Andrew W. Lo, Harry Mamaysky, and Jiang Wang. All rights reserved. Short sections of text,
+not to exceed two paragraphs, may be quoted without explicit permission provided that full credit, including
+  notice, is given to the source.
+Foundations of Technical Analysis: Computational Algorithms, Statistical Inference,
+and Empirical Implementation
+Andrew W. Lo, Harry Mamaysky, and Jiang Wang
+NBER Working Paper No. 7613
+March 2000
+
+                                            ABSTRACT
+
+       Technical analysis, also known as "charting," has been part of financial practice for many
+decades, but this discipline has not received the same level of academic scrutiny and acceptance as
+more traditional approaches such as fundamental analysis. One of the main obstacles is the highly
+subjective nature of technical analysis—the presence of geometric shapes in historical !price charts is
+often in the eyes of the beholder. In this paper, we propose a systematic and automatic approach to
+technical pattern recognition using nonparametric kernel regression, and apply this method to a large
+number of U.S. stocks from 1962 to 1996 to evaluate the effectiveness to technical analysis. By
+comparing the unconditional empirical distribution of daily stock returns to the conditional
+distribution—conditioned on specific technical indicators such as head-and-shoulders or double-
+bottoms—we find that over the 31-year sample period, several technical indicators do provide
+incremental information and may have some practical value.
+
+
+       Andrew W. Lo                                            Harry Mamaysky
+       Sloan School of Management                              Sloan School of Management
+       MIT                                                    Mn'
+       50 Memorial Drive, E52-432                              50 Memorial Drive, E52-458
+       Cambridge, MA 02142                                     Cambridge, MA 02142
+       and NBER                                                harrym@mit.edu
+       alo@mit.edu
+
+       Jiang Wang
+       Sloan School of Management
+       MIT
+       50 Memorial Drive, E52-435
+       Cambridge, MA 02142
+       and NBER
+       wangj @mit.edu
+   One of the greatest gulfs between academic finance and industry practice is the separation
+that exists between technical analysts and their academic critics. In contrast to fundamental
+analysis, which was quick to be adopted by the scholars of modern quantitative finance, tech-
+nical analysis has been an orphan from the very start. It has been argued that the difference
+between fundamental analysis and technical analysis is not unlike the difference between
+astronomy and astrology. Among some circles, technical analysis is known as "voodoo fi-
+nance." And in his influential book A Random Walk Down Wall Street, Burton Maildel
+(1996) concludes that "[ujnder scientific scrutiny, chart-reading must share a pedestal with
+alchemy."
+   However, several academic studies suggest that despite its jargon and methods, technical
+analysis may well be an effective means for extracting useful information from market prices.
+For example, in rejecting the Random Walk Hypothesis for weekly US stock indexes, Lo and
+MacKinlay (1988, 1999) have shown that past prices may be used to forecast future returns to
+some degree, a fact that all technical analysts take for granted. Studies by Tabell and Tabell
+(1964), Treynor and Ferguson (1985), Brown and Jennings (1989), Jegadeesh and Titman
+(1993), Blume, Easley, and O'Hara (1994), Chan, Jegadeesh, and Lakonishok (1996), Lo and
+MacKinlay (1997), Grundy and Martin (1998), and Rouwenhorst (1998) have also provided
+indirect support for technical analysis, and more direct support has been given by Pruitt
+and White (1988), Neftci (1991), Broth, Lakonishok, and LeBaron (1992), Neely, Weber,
+and Dittmar (1997), Neely and Weller (1998), Chang and Osler (1994), Osler and Chang
+(1995), and Allen and Karjalainen (1999).
+   One explanation for this state of controversy and confusion is the unique and sometimes
+impenetrable jargon used by technical analysts, some of which has developed into a standard
+lexicon that can be translated. But there are many "homegrown" variations, each with its
+own patois, which can often frustrate the uninitiated. Campbell, Lo, and MacKinlay (1997,
+pp. 43—44) provide a striking example of the linguistic barriers between technical analysts
+and academic finance by contrasting this statement:
+
+     The presence of clearly identified support and resistance levels, coupled with
+     a one-third retracement parameter when prices lie between them, suggests the
+
+
+                                             1
+     presence of strong buying and selling opportunities in the near-term.
+
+with this one:
+
+     The magnitudes and decay pattern of the first twelve autocorrelations and the
+     statistical significance of the Box-Pierce Q-statistic suggest the presence of a
+     high-frequency predictable component in stock returns.
+
+Despite the fact that both statements have the same meaning—that past prices contain
+information for predicting future returns-—-most readers find one statement plausible and
+the other puzzling, or worse, offensive.
+   These linguistic barriers underscore an important difference between technical analysis
+and quantitative finance: technical analysis is primarily visual, while quantitative finance is
+primarily algebraic and numerical. Therefore, technical analysis employs the tools of geom-
+etry and pattern recognition, while quantitative finance employs the tools of mathematical
+analysis and probability and statistics. In the wake of recent breakthroughs in financial en-
+gineering, computer technology, and numerical algorithms, it is no wonder that quantitative
+finance has overtaken technical analysis in popularity—the principles of portfolio optimiza-
+tion are far easier to program into a computer than the basic tenets of technical analysis.
+Nevertheless, technical analysis has survived through the years, perhaps because its visual
+mode of analysis is more conducive to human cognition, and because pattern recognition is
+one of the few repetitive activities for which computers do not have an absolute advantage
+(yet).
+    Indeed, it is difficult to dispute the potential value of price/volume charts when confronted
+with the visual evidence. For example, compare the two hypothetical price charts given in
+Figure 1. Despite the fact that the two price series are identical over the first half of the
+sample, the volume patterns differ, and this seems to be informative. In particular, the lower
+chart, which shows high volume accompanying a positive price trend, suggests that there
+may be more information content in the trend, e.g., broader participation among investors.
+The fact that the joint distribution of prices and volume contains important information is
+hardly controversial among academics. Why, then, is the value of a visual depiction of that
+joint distribution so hotly contested?
+
+                                                2
+   In this paper, we hope to bridge this gulf between technical analysis and quantitative
+finance by developing a systematic aiid scientific approach to the practice of technical anal-
+ysis, and by employing the now-standard methods of empirical analysis to gauge the efficacy
+of technical indicators over time and across securities. In doing so, our goal is not only to
+develop a lingua franca with which disciples of both disciplines can engage in productive
+dialogue, but also to extend the reach of technical analysis by augmenting its tool kit with
+some modem techniques in pattern recognition.
+   The general goal of technical analysis is to identify regularities in the time series of prices
+by extracting nonlinear patterns from noisy data. Implicit in this goal is the recognition
+that some price movements are significant—they contribute to the formation of a specific
+pattern—and others are merely random fluctuations to be ignored. In many cases, the
+human eye can perform this "signal extraction" quickly and accurately, and until recently,
+computer algorithms could not. However, a class of statistical estimators, called smoothing
+estimators, is ideally suited to this task because they extract nonlinear relations the) by
+"averaging out" the noise. Therefore, we propose using these estimators to mimic, and in
+some cases, sharpen the skills of a trained tec]mical analyst in identifying certain patterns
+in historical price series.
+   In Section I, we provide a brief review of smoothing estimators and describe in detail the
+specific smoothing estimator we use in our analysis: kernel regression. Our algorithm for
+automating technical analysis is described in Section II. We apply this algorithm to the daily
+returns of several hundred U.S. stocks from 1962 to 1996 and report the results in Section
+III. To check the accuracy of our statistical inferences, we perform several Monte Carlo
+simulation experiments and the results are given in Section IV. We conclude in Section V.
+
+
+I. Smoothing Estimators and Kernel Regression
+The starting point for any study of technical analysis is the recognition that prices evolve
+in a nonlinear fashion over time and that the nonlinearities contain certain regularities or
+patterns. To capture such regularities quantitatively, we begin by asserting that prices {P}
+
+
+
+                                               3
+satisfy the following expression:
+
+
+                            Pt =    m(Xt)   + c , t=1,...,T                               (1)
+
+
+where m(X) is an arbitrary fixed but unknown nonlinear function of a state variable X,
+and {e} is white noise.
+   For the purposes of pattern recognition in which our goal is to construct a smooth function
+
+nze) to approximate the time series of prices {pt}, we set the state variable equal to time,
+X = t. However, to keep our notation consistent with that of the kernel regression literature,
+we will continue to use X, in our exposition.
+   When prices are expressed as (1), it is apparent that geometric patterns can emerge from
+a visual inspection of historical prices series—prices are the sum of the nonlinear pattern
+im(Xt) and white noise—and that such patterns may provide useful information about the
+unknown function me) to be estimated. But just how useful is this information?
+   To answer this question empirically and systematically, we must first develop a method
+for automating the identification of technical indicators, i.e., we require a pattern recogni
+tion algorithm. Once such an algorithm is developed, it can be applied to a large number of
+securities over many time periods to determine the efficacy of various technical indicators.
+Moreover, quantitative comparisons of the performance of several indicators can be con-
+ducted, and the statistical significance of such performance can be assessed through Monte
+Carlo simulation and bootstrap techniques.'
+   In Section A, we provide a brief review of a general class of pattern-recognition tech-
+niques known as smoothing, and in Section B we describe in some detail a particular method
+called nonparametric kernel regression on which our algorithm is based. Kernel regression
+estimators are calibrated by a bandwidth parameter and we discuss how the bandwidth is
+selected in C.
+
+A. Smoothing Estimators
+One of the most common methods for estimating nonlinear relations such as (1) is smoothing,
+in which observational errors are reduced by averaging the data in sophisticated ways. Ker-
+
+                                                4
+nel regression, orthogonal series expansion, projection pursuit, nearest-neighbor estimators,
+average derivative estimators, splines, and neural networks are all examples of smoothing
+estimators. In addition to possessing certain statistical optirnality properties, smoothing
+estimators are motivated by their close correspondence to the way human cognition extracts
+regularities from noisy data.2 Therefore, they are ideal for our purposes.
+   To provide some intuition for how averaging can recover nonlinear relations such as
+the function me) in (1), suppose we wish to estimate mC) at a particWar date to when
+X0=x0. Now suppose that for this one observation, X0, we can obtain repeated independent
+observations of the price P,0, say       = Pi,-• . ,          = p, (note that these are ii independent
+realizations of the price at the same date to, clearly an impossibility in practice, but let us
+continue with this thought experiment for a few more steps). Then a natural estimator of
+the function mC) at the point zo is
+
+
+                         ñt(xo) =       1pi
+                                        ni=1
+                                                  = 1[m(xo)+efl                                    (2)
+
+
+                                 =     m(xo)    + —Ed,                                             (3)
+
+
+and by the Law of Large Numbers, the second term in (3) becomes negligible for large ii.
+   Of course, if {P} is a time series, we do not have the luxury of repeated observations
+for a given X,. However, if we assume that the function mC) is sufficiently smooth, then
+for time-series observations X near the value x0, the corresponding values of P should be
+close to m(xo). In other words, if mC) is sufficiently smooth, then in a small neighborhood
+around x0, m(xo) will be nearly constant and may be estimated by taking an average of the
+Pr's that correspond to those Xe's near x0. The closer the Xi's are to the value x0, the closer
+an average of corresponding Pt's will be to m(xo). This argues for a weighted average of the
+Pt's, where the weights decline as the X,'s get farther away from x0. This weighted-average
+or "local averaging" procedure of estimating m(x) is the essence of smoothing.
+   More formally, for any arbitrary x, a smoothing estimator of m(x) may be expressed as
+
+                                                  lT
+                                     rui(x)
+                                                  w(z)Pt
+                                                       t= 1
+                                                                                                   (4)
+
+
+                                                  5
+where the weights {wt(x)} are large for those Ps's paired with Xe's near x, and small for those
+Pr's with Xe's far from x. To implement such a procedure, we must define what we mean by
+"near" and "far." If we choose too large a neighborhood around x to compute the average,
+the weighted average will be too smooth and will not exhibit the genuine nonlinearities of
+mC). If we choose too small a neighborhood around x, the weighted average will be too
+variable, reflecting noise as well as the variations in mC). Therefore, the weights {wt(x)}
+must be chosen carefully to balance these two considerations.
+
+B. Kernel Regression
+For the kernel regression estimator, the weight function Wt(x) is constructed from a proba-
+bility density function K(x), also called a kernel:3
+
+
+                                  K(x) 0    ,
+                                                fK(n)d'u=
+                                                             1.                             (5)
+
+
+By rescaling the kernel with respect to a parameter h>0, we can change its spread, i.e., let:
+
+
+                          Kh(u)      K(u/h) ,                     =   1                     (6)
+                                                       fKh(u)du
+
+and define the weight function to be used in the weighted average (4) as
+
+
+                               wt,h(x)              — Xt)/gh(x)                             (7)
+
+                                  gh(x)     fLKh(x—Xt).                                     (8)
+
+
+If h is very small, the averaging will be done with respect to a rather small neighborhood
+around each of the Xe's. If h is very large, the averaging will be over larger neighborhoods of
+the Xe's. Therefore, controlling the degree of averaging amounts to adjusting the smoothing
+parameter Ii, also known as the bandwidth. Choosing the appropriate bandwidth is an
+important aspect of any local-averaging technique and is discussed more fully in Section C.
+
+
+
+
+                                                6
+    Substituting (8) into (4) yields the Nadaraya- Watson kernel estimator 'thh(x) of m(x):
+
+                                1 '"                Kh(x — X)Y
+                       mnh(x) = —EWt,h(X)Yt = >i::1
+                                                  T                                        (9)
+                                T              E=1 Khfr — X)
+
+Under certain regularity conditions on the shape of the kernel K and the magnitudes and
+behavior of the weights as the sample size grows, it may be shown, that ñth(x) converges to
+ni(x) asymptotically in several ways (see Hãrdlle (1990) for further details). This convergence
+property holds for a wide class of kernels, but for the remainder of this paper we shall use
+the most popular choice of kernel, the Gaussian kernel:
+
+
+                                   Kh(x) =                                                (10)
+
+
+C. Selecting the Bandwidth
+Selecting the appropriate bandwidth h in (9) is clearly central to the success of ñzhC) in
+approximating mO—too little averaging yields a function that is too choppy, and too much
+averaging yields a function that is too smooth. To illustrate these two extremes, Figure II
+displays the Nadaraya-Watson kernel estimator applied to 500 datapoints generated from
+the relation:
+
+                               = Sin(Xt) + 0.5 c , c 'S-' N(0, 1)                         (11)
+
+
+where X is evenly spaced in the interval [0, 2ir]. Panel 11(a) plots the raw data and the
+function to be approximated.
+   Kernel estimators for three different bandwidths are plotted as solid lines in Panels 11(b)—
+(c). The bandwidth in 11(b) is clearly too small; the function is too variable, fitting the
+"noise" 0.5 t as well as the "signal" Sin(S). Increasing the bandwidth slightly yields a much
+more accurate approximation to Sine) as Panel 11(c) illustrates. However, Panel 11(d) shows
+that if the bandwidth is increased beyond some point, there is too much averaging and
+information is lost.
+   There are several methods for automating the choice of bandwidth h in (9), but the most
+
+
+                                              7
+popular is the cross-validation method in which h is chosen to minimize the cross-validation
+function:
+
+
+                               CV(h) =             (P   - rnh,t)2                         (12)
+
+
+where
+
+
+                                   Tflh,t   = >W,hYr                                      (13)
+
+
+The estimator iuih,t is the kernel regression estimator applied to the price history {P,-} with
+the t-th observation omitted, and the summands in (12) are the squared errors of the ihh,t's,
+each evaluated at the omitted observation. For a given bandwidth parameter It, the cross-
+validation function is a measure of the ability of the kernel regression estimator to fit each
+observation P when that observation is not used to construct the kernel estimator. By
+selecting the bandwidth that minimizes this function, we obtain a kernel estimator that
+satisfies certain optimality properties, e.g., minimum asymptotic mean-squared error.4
+   Interestingly, the bandwidths obtained from minimizing the cross-validation function are
+generally too large for our application to technical analysis—when we presented several
+professional technical analysts with plots of cross-validation-fitted functions ni4e), they all
+concluded that the fitted functions were too smooth. In other words, the cross-validation-
+determined bandwidth places too much weight on prices far away from any given time t,
+inducing too much averaging and discarding valuable information in local price movements.
+Through trial and error, and by polling professional technical analysts, we have found that
+an acceptable solutioft to this problem is to use a bandwidth of 0.3 x h*, where h minimizes
+CV(h).5 Admittedly, this is an ad hoc approach, and it remains an important challenge for
+future research to develop a more rigorous procedure.
+    Another promising direction for future research is to consider alternatives to kernel re-
+gression. Although useful for its simplicity and intuitive appeal, kernel estimators suffer
+from a number of well-known deficiencies, e.g., boundary bias, lack of local variability in
+the degree of smoothing, etc. A popular alternative that overcomes these particular defi-
+
+
+                                               8
+ciencies is local polynomial regression in which local averaging of polynomials is performed
+to obtain an estimator of tm(x) 6 Such alternatives may yield important improvements the
+pattern-recognition algorithm described in Section II.
+
+
+TI. Automating Technical Analysis
+Armed with a mathematical representation the) of {P} with which geometric properties can
+be characterized in an objective manner, we can now construct an algorithm for automating
+the detection of technical patterns. Specifically, our algorithm contains three steps:
+
+   1. Define each technical pattern in terms of its geometric properties, e.g., local extrema
+      (maxima and minima).
+
+   2. Construct a kernel estimator thC) of a given time series of prices so that its extrema
+     can be determined numerically.
+
+   3. Analyze the) for occurrences of each technical pattern.
+
+The last two steps are rather straightforward applications of kernel regression. The. first step
+is likely to be the most controversial because it is here that the skills and judgment of a
+professional technical analyst come into play. Although we will argue in Section A that most
+technical indicators can be characterized by specific sequences of local extrema, technical
+analysts may argue that these are poor approximations to the kinds of patterns that trained
+human analysts can identify.
+   While pattern-recognition techniques have been successful in automating a number of
+tasks previously considered to be uniquely human endeavors—fingerprint identification,
+handwriting analysis, face recognition, and so on—nevertheless it is possible that no algo-
+rithm can completely capture the skills of an experienced technical analyst. We acknowledge
+that any automated procedure for pattern recognition may miss some of the more subtle nu-
+ances that human cognition is capable of discerning, but whether an algorithm is a poor
+approximation to human judgment can only be determined by investigating the approxima-
+tion errors empirically. As long as an algorithm can provide a reasonable approximation to
+
+
+                                               9
+some of the cognitive abilities of a human analyst, we can use such an algorithm to investi-
+gate the empirical performance of those aspects of technical analysis for which the algorithm
+is a good approximation. Moreover, if technical analysis is an art form that can be taught,
+then surely its basic precepts can be quantified and automated to some degree. And as
+increasingly sophisticated pattern-recognition techniques are developed, a larger fraction of
+the art will become a science.
+   More importantly, from a practical perspective, there may be significant benefits to devel-
+oping an algorithmic approach to technical analysis because of the leverage that technology
+can provide. As with many other successful technologies, the automation of technical pat-
+tern recognition may not replace the skills of a technical analyst, but can amplify them
+considerably.
+   In Section A, we propose definitions of ten technical patterns based on their extrema. In
+Section B, we describe a specific algorithm to identify technical patterns based on the local
+extrema of kernel regression estimators, and provide specific examples of the algorithm at
+work in Section C.
+
+A. Definitions of Technical Patterns
+We focus on five pairs of technical patterns that are among the most popular patterns of
+traditional technical analysis (see, for example, Edwards and Magee (1966, Chapters VII—
+X)): head-and-shoulders (HS) and inverse head-and-shoulders (IRS), broadening tops (BT)
+and bottoms (BB), triangle tops (TT) and bottoms (TB), rectangle tops (RT) and bottoms
+(RB), and double tops (DT) and bottoms (DB). There are many other technical indicators
+that may be easier to detect algorithmically—moving averages, support and resistance levels,
+and oscillators, for example—but because we wish to illustrate the power of smoothing
+techniques in automating technical analysis, we focus on precisely those patterns that are
+most difficult to quantify analytically.
+   Consider the systematic component me) of a price history {P} and suppose we have iden-
+tified ii local extrema, i.e., the local maxima and minima, of tm{';). Denote by E1, E2,. . . ,
+the ii extrema   and t, t,. . . , t the dates on which these extrema occur. Then we have the
+following definitions:
+
+                                               10
+Definition 1 (Head-and-Shoulders)         Head-and-shoulders (HS) and inverted head-and-
+shoulders (IHS) patterns are characterized by a sequence of five consecutive local extrema
+E1,. . , P25 such that:
+                                a maximum
+                 IfS =—
+                            E1 and P25 within 1.5percent of their average
+                            P22 and P24 within 1.5percent of their average
+
+                            P21 a minimum
+                IHS =
+                    —
+                            F1 and F5 within 1.5percent of their average
+                            F2 and F4 within l.5percent of their average
+
+Observe that only five consecutive extrema are required to identify a head-and-shoulders
+pattern. This follows from the formalization of the geometry of a head-and-shoulders pattern:
+three peaks, with the midifie peak higher than the other two. Because consecutive extrema
+must alternate between maxima and minima for smooth functions,7 the three-peaks pattern
+corresponds to a sequence of five local extrema: maximum, minimum, highest maximum,
+minimum, and maximum. The inverse head-and-shoulders is simply the mirror image of the
+head-and-shoulders, with the initial local extrema a minimum.
+   Because broadening, rectangle, and triangle patterns can begin on either a local maximum
+or minimum, we aUow for both of these possibilities in our definitions by distinguishing
+between broadening tops and bottoms:
+Definition 2 (Broadening) Broadening tops (BTOP) and bottoms (EBOT) are charac-
+terized by a sequence of five consecutive local extrema F1,.. . , F5 such that:
+
+                          a maximum                             I F1 a minimum
+       BTOP P21<E3<E5                        ,        BBOT
+                                                                1E2<P24
+
+Definitions for triangle and rectangle patterns follow naturally:
+Definition 3 (Triangle) Triangle tops (TTOF) and bottoms (TBOT) are characterized by
+a sequence of five consecutive local extrema Er,.. . ,E5 such that:
+
+                    I E1 a maximum                              (F1 a minimum
+       TTOP=—                                ,        TBOT=
+                    L.E2<P24                                    IE2>E4
+
+                                                 11
+    Definitign 4 (Rectangle) Rectangle tops (RTOP) and bottoms (RBOT) are characterized
+    by a sequence of five consecutive local extrema E1,. . . , E5 such that:
+
+                                          a maximum
+                   RTOP —
+                        =             tops within 0. 75 percent of their average
+                                      bottoms within 0.75 percent of their average
+                                      lowest top> highest bottom
+
+                                          a minimum
+                   RBOT —
+                        =             tops within 0.75 percent of their average
+                                      bottoms within 0.75 percent of their average
+                                      lowest top > highest bottom
+
+    The definition for double tops and bottoms is slightly more involved. Consider first the
+    double top. Starting at a local maximum E1, we locate the highest local maximum Ea
+    occurring after E1 in the set of all local extrema in the sample. We require that the two
+    tops, E1 and E,   be   within 1.5 percent of their average. Finally, following Edwards and
+    Magee (1966), we require that the two tops occur at least a month, or 22 trading days,
+    apart. Therefore, we have:
+    Definition 5 (Double Top and Bottom) Double tops (DTOP) and bottoms (DBO T) are
+    characterized by an initial local extremum E1 and a subsequent local extrema E and Eb such
+    that:
+
+                                           sup{Pç : t>t, k=2,...,n}
+                                           inf{Pt : t>t ,        k=2,;..,n}
+    and
+
+                                     P21 a maximum
+    •
+                  DTOP               Ej and E within 1.5 percent of their average
+                                 1t—t>22
+                                     E a minimum
+                  DBOT           .   P11   and Eb within 1.5 percent of their average
+•
+                                 1t—t>22
+    B. The Identification Algorithm
+    Our algorithm begins with a sample of prices {P1,.      ..   Pr} for which we fit kernel regressions,
+    one for each subsample or    window      from t to t+l+d—1, where t varies from 1 to T—l—d+1,
+
+                                                       12
+and I and d are fixed parameters whose purpose is explained below. In the empirical analysis
+of Section III, we set I = 35 and d = 3, hence each window consists of 38 trading days.
+   The motivation for fitting kernel regressions to rolling windows of data is to narrow our
+focus to patterns that are completed within the span of the window—i + d trading days in
+our case. If we fit a single kernel regression to the entire dataset, many patterns of various
+durations may emerge, and without imposing some additional structure on the nature of the
+patterns, it is virtually impossible to distinguish signal from noise in this case. Therefore,
+our algorithm fixes the length of the window at I+d, but kernel regressions are estimated on
+a rolling basis and we search for patterns in each window.
+   Of course, for any fixed window, we can only find patterns that are completed within l+d
+trading days. Without further structure on the systematic component of prices me), this is
+a restriction that any empirical analysis must contend with.8 We choose a shorter window
+length of 1 = 35 trading days to focus on short-horizon patterns that may be more relevant
+for active equity traders, and leave the analysis of longer-horizon patterns to future research.
+   The parameter d controls for the fact that in practice we do not observe a realization of
+a given pattern as soon as it has completed. Instead, we assume that there may be a lag
+between the pattern completion and the time of pattern detection. To account for this lag,
+we require that the final extremum that completes a pattern occurs on day t+l—1; hence d is
+the number of days following the completion of a pattern that must pass before the pattern
+is detected. This will become more important in Section III when we compute conditional
+returns, conditioned on the realization of each pattern. In particular, we compute post-
+pattern returns starting from the end of trading day t+l+d, i.e., one day after the pattern
+has completed. For example, if we determine that a head-and-shoulder pattern has completed
+on day t + 1— 1 (having used prices from time t through time t + 1 + d —1), we compute the
+conditional one-day gross return as        Yt+l+d+1/Yt÷l+d. Hence we do not use any forward
+information in computing returns conditional on pattern completion. In other words, the
+lag d ensures that we are computing our conditional returns completely out-of-sample and
+without any "look-ahead" bias.
+   Within each window, we estimate a kernel regression using the prices in that window,
+
+
+                                               13
+hence:
+
+                     \—
+                     I        Et+l+d—1
+                                 s=t
+                                        it I      \ fl
+                                         flhkr—S).I—,     .         ——
+                 mhkr) —       'c-'t+t+d—liy I        '
+                               L.5=t       IhkT — 8)
+
+where Kh(z) is given in (10) and h is the bandwidth parameter (see Section C). It is clear
+that ñih(r) is a differentiable function of r.
+   Once the function ñ'ih(r) has been computed, its local extrema can be readily identified
+by finding times r such that Sgn(ñz(r)) = —Sgn(n4(r+1)), where ñz denotes the derivative
+of flih with respect to r and Sgn(.) is the signum function. If the signs of ñ%(r) ñt(r+1) are
++1 and —1, respectively, then we have found a local maximum, and if they are —1 and +1,
+respectively, then we have found a local minimum. Once such a time r has been identified,
+we proceed to identify a maximum or minimum in the original price series {P} in the range
+[t—i, t+iJ, and the extrema in the original price series are used to determine whether or not
+a pattern has occurred according to the definitions of Section A.
+   If th(r) =    0   for a given i-, which occurs if closing prices stay the same for several
+consecutive days, we need to check whether the price we have found is a local minimum or
+maximum. We look for the date s such that s = inf { s >        r : ñz(s) $ 0 }.      We then
+apply the same method as discussed above, except here we compare Sgn(i%(r — 1)) and
+Sgn(u14(s)).
+   One useful consequence of this algorithm is that the series of extrema which it identifies
+contains alternating minima and maxima. That is, if the kth extremum is a maximum, then
+it is always the case that the (k+l)th extremum is a minimum, and vice versa.
+   An important advantage of using this kernel regression approach to identify patterns is
+the fact that it ignores extrema that are "too local." For example, a simpler alternative is
+to identify local extrema from the raw price data directly, i.e., identify a price P as a local
+maximum if P,1 C Pt and P, > P+1, and vice versa for a local minimum. The problem
+with this approach is that it identifies too many extrema, and also yields patterns that are
+not visually consistent with the kind of patterns that technical analysts find compelling.
+   Once we have identified all of the local extrema in the window [t, t + I + d — 1], we can
+proceed to check for the presence of the various technical patterns using the definitions of
+
+                                                 14
+Section A. This procedure is then repeated for the next window [t+i, t+l+d] , and continues
+until the end of the sample is reached at the window [T —i —d+ 1, T].
+
+C. Empirical Examples
+To see how our algorithm performs in practice, we apply it to the daily returns of a single
+security, CTX, during the five-year period from 1992 to 1996. Figures 111—Vu plot occur-
+rences of the five pairs of patterns defined in Section A that were identified by our algorithm.
+Note that there were no rectangle bottoms detected for CTX during this period, so for com-
+pleteness we substituted a rectangle bottom for CDO stock which occurred during the same
+period.
+   In each of these graphs, the solid lines are the raw prices, the dashed lines are the kernel
+estimators mh(•), the circles indicate the local extrema, and the vertical line marks date
+t+l —1, the day that the final extremum occurs to complete the pattern.
+   Casual inspection by several professional technical analysts seems to confirm the ability of
+our automated procedure to match human judgment in identifying the five pairs of patterns
+in Section A. Of course, this is merely anecdotal evidence and not meant to be conclusive—
+we provide these• figures simply to illustrate the output of a technical pattern recognition
+algorithm based on kernel regression.
+
+
+III. Is Technical Analysis Informative?
+Although there have been many tests of technical analysis over the years, most of these tests
+have focused on the profitability of technical trading rules.9 While some of these studies do
+find that technical indicators can generate statistically significant trading profits, they beg
+the question of whether or not such profits are merely the equilibrium rents that accrue to
+investors willing to bear the risks associated with such strategies. Without specifying a fully
+articulated dynamic general equilibrium asset-pricing model, it is impossible to determine
+the economic source of trading profits.
+   Instead, we propose a more fundamental test in this section, one that attempts to gauge
+the information content in the technical patterns of Section A by comparing the unconditional
+
+
+                                              15
+empirical distribution of returns with the coriesponding conditional empirical distribution,
+conditioned on the occurrence of a technical pattern. If technical patterns are informative,
+conditioning on them should alter the empirical distribution of returns; if the information
+contained in such patterns has already been incorporated into returns, the conditional and
+unconditional distribution of returns should be close. Although this is a weaker test of the
+effectiveness of technical analysis—informativeness does not guarantee a profitable trading
+strategy—it is, nevertheless, a natural first step in a quantitative assessment of technical
+analysis.
+   To measure the distance between the two distributions, we propose two goodness-of-fit
+measures in Section A. We apply these diagnostics to the daily returns of individual stocks
+from 1962 to 1996 using a procedure described in Sections B to D, and the results are
+reported in Sections E and F.
+
+A. Goodness-of-Fit Tests
+A simple diagnostic to test the informativeness of the ten technical patterns is to compare the
+quantiles of the conditional returns with their unconditional counterparts. If conditioning on
+these technical patterns provides no incremental information, the quantiles of the conditional
+returns should be similar to those of unconditional returns. In particular, we compute the
+deciles of unconditional returns and tabulate the relative frequency 5 of conditional returns
+falling into decile j of the unconditional returns,=j 1,. . ., 10:
+
+                              number of conditional returns in decile
+                                                                                           15
+                                total number of conditional returns
+
+Under the null hypothesis that the returns are independently and identically distributed and
+the conditional and unconditional distributions are identical, the asymptotic distributions of
+S and the corresponding goodness-of-fit test statistic Q are given by:
+
+                                       —0.10) Qi Af(0, 0.10(1—0.10))                      (16)
+
+                    Q        (nj_0J0n)2                                                   (17)
+
+
+
+                                              16
+where nj is the number of observations that fall in decile j and n is the total number of
+observations (see, for example, DeGroot (1986)).
+   Another comparison of the conditional and unconditional distributions of returns is pro-
+vided by the Kolmogorov-Smirnov test. Denote by {Z1}1 and {Z2}1 two samples that
+are each independently and identically distributed with cumulative distribution functions
+Fi(z) and F2(z), respectively. The Kolmogorov-Smirnov statistic is designed to test the null
+hypothesis that F1 = F2, and is based on the empirical cumulative distribution functions N
+of both samples:
+
+
+                                                                        i=1,2               (18)
+                                                    k=i
+
+where   1(.) is the indicator function. The statistic is given by the expression:
+
+
+
+                                  =        n1n2
+                                                               sup           —fr2(z)I       (19)
+                         7m1,n2
+                                      (   Ti1   + n2 )1/2
+                                                                     Ei(z)              .
+
+
+
+
+Under the null hypothesis F1 = F2, the statistic 'y,,22 should be small. Moreover, Smirnov
+(1939a, 1939b) derives the limiting distribution of the statistic to be:
+
+                 lim
+            mm(ni ,fl2)—*oC
+                                                E (_1)k exp(—2k2x2) , x> 0
+                              Prob( 'y1,2 x) =k=—oo                                         (20)
+
+
+An approximate a-level test of the null hypothesis can be performed by computing the
+statistic and rejecting the null if it exceeds the upper lOOa-th percentile for the null distri-
+bution given by (20) (see Hollander and Wolfe (1973, Table A.23), Csáki (1984), and Press
+et al. (1986, Chapter 13.5)).
+   Note that the sampling distributions of both the goodness-of-fit and Kolmogorov-Smirnov
+statistics are derived under the assumption that returns are independently and identically
+distributed, which is not plausible for financial data. We attempt to address this prob-
+lem by normalizing the returns of each security, i.e., by subtracting its mean and dividing
+by its standard deviation (see Section C), but this does not eliminate the dependence or
+heterogeneity. We hope to extend our analysis to the more general non-lID case in future
+
+
+                                                          17
+research.
+
+B. The Data and Sampling Procedure
+We apply the goodness-of-fit and Kolmogorov-Smirnov tests to the daily returns of indi-
+vidual NYSE/AMEX and Nasdaq stocks from 1962 to 1996 using data from the Center for
+Research in Securities Prices (CRSP). To ameliorate the effects of nonstationarities induced
+by changing market structure and institutions, we split the data into NYSE/AMEX stocks
+and Nasdaq stocks and into seven five-year periods: 1962 to 1966, 1967 to 1971, and so on.
+To obtain a broad cross-section of securities, in each five-year subperiod, we randomly select
+ten stocks from each of five market-capitalization quintiles (using mean market-capitalization
+over the subperiod), with the further restriction that at least 75 percent of the price obser-
+vations must be non-missing during the subperiod.'° This procedure yields a sample of 50
+stocks for each subperiod across seven subperiods (note that we sample wjth replacement,
+hence there may be names in common across subp eriods).
+   As a check on the robustness of our inferences, we perform this sampling procedure twice
+to construct two samples, and apply our empirical analysis to both. Although we report
+results only from the first sample to conserve space, the results of the second sample are
+qualitatively consistent with the first and are available upon request.
+
+C. Computing Conditional Returns
+For each stock in each subperiod, we apply the procedure outlined in Section II to identify
+all occurrences of the ten patterns deBited in Section A. For each pattern detected, we com-
+pute the one-day continuously compounded return d days after the pattern has completed.
+Specifically, consider a window of prices {P} from t to t+l +d— 1, and suppose that the
+identified pattern p is completed at t + I — 1. Then we take the conditional return R' as
+log(1 + R+1÷i). Therefore, for each stock, we have ten sets of such conditional returns,
+each conditioned on one of the ten patterns of Section A.
+   For each stock, we construct a sample of unconditional continuously compounded returns
+using non-overlapping intervals of length r, and we compare the empirical distribution func-
+tion of these returns with those of the conditional returns. To facilitate such comparisons,
+
+                                             18
+we standardize all returns—both conditional and unconditional—by subtracting means and
+dividing by standard deviations, hence:
+
+                                          —     — Mean[Rt]
+                                     it   —                                               ' 21
+                                                 SD[Rj]
+
+where the means and standard deviations are computed for each individual stock within each
+
+subperiod. Therefore, by construction, each normalized return series has zero mean and unit
+variance.
+   Finally, to increase the power of our goodness-of-fit tests, we combine the normalized re-
+turns of all 50 stocks within each subperiod; hence for each subperiod we have two samples—
+unconditional and conditional returns—and from these we compute two empirical distribu-
+tion functions that we compare using our diagnostic test statistics.
+
+D. Conditioning on Volume
+Given the prominent role that volume plays in technical analysis, we also construct returns
+conditioned on increasing or decreasing volume. Specifically, for each stock in each subperiod,
+we compute its average share-turnover during the first and second halves of each subperiod,
+r1 and r2, respectively." If i-, > 1.2 x r2, we categorize this as a "decreasing volume" event;
+if r2 >   1.2   x r1, we categorize this as an "increasing volume" event. If neither of these
+conditions holds, then neither event is considered to have occurred.
+   Using these events, we can construct conditional returns conditioned on two pieces of
+information: the occurrence of a technical pattern and the occurrence of increasing or de-
+creasing volume. Therefore, we shall compare the empirical distribution of unconditional
+returns with three conditional-return distributions: the distribution of returns conditioned
+on technical patterns, the distribution conditioned on technical patterns and increasing vol-
+ume, and the distribution conditioned on technical patterns and decreasing volume.
+   Of course, other conditioning variables can easily be incorporated into this procedure,
+though the "curse of dimensionality" imposes certain practical limits on the ability to esti-
+mate multivariate conditional distributions nonparametrically.
+
+
+
+                                               19
+E. Summary Statistics
+In Tables I and II, we report frequency counts for the number of patterns detected over the
+entire 1962 to 1996 sample, and within each subperiod and each market-capitalization quin-
+tile, for the ten patterns defined in Section A. Table I contains results for the NYSE/AMEX
+stocks, and Table II contains corresponding results for Nasdaq stocks.
+   Table I shows that the most common patterns across all stocks and over the entire sam-
+ple period are double tops and bottoms (see the row labelled "Entire"), with over 2,000
+occurrences of each. The second most common patterns are the head-and-shoulders and
+inverted head-and-shoulders, with over 1,600 occurrences of each. These total counts corre-
+spond roughly to four to six occurrences of each of these patterns for each stock during each
+five-year subperiod (divide the total number of occurrences by 7 x 50), not an unreasonable
+frequency from the point of view of professional technical analysts. Table I shows that most
+of the ten patterns are more frequent for larger stocks than for smaller ones, and that they
+are relatively evenly distributed over the five-year subperiods. When volume trend is con-
+sidered jointly with the occurrences of the ten patterns, Table I shows that the frequency
+of patterns is not evenly distributed between increasing (the row labelled "r(,)") and de-
+creasing (the row labelled "r(N)") volume-trend cases. For example, for the entire sample
+of stocks over the 1962 to 1996 sample period, there are 143 occurrences of a broadening
+top with decreasing volume trend, but 409 occurrences of a broadening top with increasing
+volume trend.
+   For purposes of comparison, Table I also reports frequency counts for the number of pat-
+terns detected in a sample of simulated geometric Brownian motion, calibrated to match the
+mean and standard deviation of each stock in each five-year subperiod.12 The entries in the
+row labelled "Sim. GBM" show that the random walk model yields very different implications
+for the frequency counts of several technical patterns. For example, the simulated sample
+has only 577 head-and-shoulders and 578 inverted-head-and-shoulders patterns, whereas the
+actual data have considerably more, 1,611 and 1,654, respectively. On the other hand, for
+broadening tops and bottoms, the simulated sample contains many more occurrences than
+the actual data, 1,227 and 1,028 as compared to 725 and 748, respectively. The number of
+
+
+                                             20
+triangles is roughly comparable across the two samples, but for rectangles and double tops
+and bottoms, the differences are dramatic. Of course, the simulated sample is only one real-
+ization of geometric Brownian motion, so it is difficult to draw general conclusions about the
+relative frequencies. Nevertheless, these simulations point to important differences between
+the data and independently and identically distributed lognormal returns.
+   To develop further intuition for these patterns, Figures VIII and IX display the cross-
+sectional and time-series distribution of each of the ten patterns for the NYSE/AMEX and
+Nasdaq samples, respectively. Each symbol represents a pattern detected by our algorithm,
+the vertical axis is divided into five quintiles, the horizontal axis is calendar time, and
+alternating symbols (diamonds and asterisks) represent distinct subperiods. These graphs
+show that the distribution of patterns is not clustered in time or among a subset of securities.
+   Table II provides the same frequency counts for Nasdaq stocks, and despite the fact that
+we have the same number of stocks in this sample (50 per subperiod over seven subperiods),
+there are considerably fewer patterns detected than in the NYSE/AMEX case. For example,
+the Nasdaq sample yields only 919 head-and-shoulders patterns, whereas the NYSE/AMEX
+sample contains 1,611. Not surprisingly, the frequency counts for the sample of simulated
+geometric Brownian motion are similar to those in Table I.
+   Tables III and IV report suumiary statistics—means, standard deviations, skewness, and
+excess kurtosis—of unconditional and conditional normalized returns of NYSE/AMEX and
+Nasdaq stocks, respectively. These statistics show considerable variation in the different re-
+turn populations. For example, the first four moments of normalized raw returns are 0.000,
+1.000,   0.345, and 8.122, respectively. The same four moments of post-BTOP returns are
+—0.005, 1.035, —1.151, and 16.701, respectively, and those of post-DTOP returns are 0.017,
+0.910, 0.206, and 3.386, respectively. The differences in these statistics among the ten con-
+ditional return populations, and the differences between the conditional and unconditional
+return populations, suggest that conditioning on the ten technical indicators does have some
+effect on the distribution of returns.
+
+
+
+
+                                              21
+F. Empirical Results
+Tables V and Vi reports the results of the goodness-of-fit test (16)—(l7) for our sample of
+NYSE and AMEX (Table V) and Nasdaq (Table VI) stocks, respectively, from 1962 to 1996
+for each of the ten technical patterns. Table V shows that in the NYSE/AMEX sample,
+the relative frequencies of the conditional returns are significantly different from those of the
+unconditional returns for seven of the ten patterns considered. The three exceptions are the
+conditional returns from the BBOT, TTOP, and DBOT patterns, for which the p-values of
+the test statistics Qare 5.1 percent, 21.2 percent, and 16.6 percent respectively. These results
+yield mixed support for the overall efficacy of technical indicators. However, the results of
+Table VI tell a different story: there is overwhelming significance for all ten indicators in the
+Nasdaq sample, with p-values that are zero to three significant digits, and test statistics Q
+that range from 34.12 to 92.09. In contrast, the test statistics inTable V range from 12.03
+to 50.97.
+   One possible explanation for the difference between the NYSE/AMEX and Nasdaq
+samples is a difference in the power of the test because of different sample sizes. If the
+NYSE/AMEX sample contained fewer conditional returns, i.e., fewer patterns, the corre-
+sponding test statistics might be subject to greater sampling variation and lower power.
+However, this explanation can be ruled out from the frequency counts of Tables I and II—
+the number of patterns in the NYSE/AMEX sample is considerably larger than those of the
+Nasdaq sample for all ten patterns. Tables V and VI seem to suggest important differences
+in the informativeness of technical indicators for NYSE/AMEX and Nasdaq stocks.
+   Table VII and VIII report the results of the Kolmogorov-Smirnov test (19) of the equality
+of the conditional and unconditional return distributions for NYSE/AMEX (Table VII) and
+Nasdaq (Table VIII) stocks, respectively, from 1962 to 1996, in five-year subperiods, and
+in market-capitalization quintiles. Recall that conditional returns are defined as the one-
+day return starting three days following the conclusion of an occurrence of a pattern. The
+p-values are with respect to the asymptotic distribution of the Kolmogorov-Smirnov test
+statistic given in (20).
+   Table VII shows that for NYSE/AMEX stocks, five of the ten patterns—HS, BBOT,
+
+
+                                               22
+RTOP, RBOT, and DTOP—yield statistically significant test statistics, with p-values rang-
+ing from 0.000 for RBOT to 0.021 for DTOP patterns. However, for the other five patterns,
+the p-values range from 0.104 for IRS to 0.393 for DBOT, which implies an inability to
+distinguish between the conditional and unconditional distributions of normalized returns.
+    When we condition on declining volume trend as well, the statistical significance declines
+for most patterns, but increases the statistical significance of TBOT patterns. In contrast,
+conditioning on increasing volume trend yields an increase in the statistical significance of
+BTOP patterns. This difference may suggest an important role for volume trend in TBOT
+and BTOP patterns. The difference between the increasing and decreasing volume-trend
+conditional distributions is statistically insignificant for almost all the patterns (the sole
+exception is the TBOT pattern). This drop in statistical significance may be due to a lack
+of power of the K-S test given the relatively small sample sizes of these conditional returns
+(see Table I for frequency counts).
+    Table VIII reports corresponding results for the Nasdaq sample and as in Table VI, in
+contrast to the NYSE/AMEX results, here all the patterns are statistically significant at
+the 5 percent level. This is especially significant because the the Nasdaq. sample exhibits far
+fewer patterns than the NYSE/AMEX sample (see Tables I and II), hence the K-S test is
+likely to have lower power in this case.
+    As with the NYSE/AMEX sample, volume trend seems to provide little incremental
+information for the Nasdaq sample except in one case: increasing volume and BTOP. And
+except for the TTOP pattern, the K-S test still cannot distinguish between the decreasing
+and increasing volume-trend conditional distributions, as the last pair of rows of Table Viii's
+first panel indicates.
+
+
+IV. Monte Carlo Analysis
+Tables IX and X contain bootstrap percentiles for the Kolmogorov-Smirnov test of the equal-
+ity of conditional and unconditional one-day return distributions for NYSE/AMEX and Nas-
+daq stocks, respectively, from 1962 to 1996, and for market-capitalization quintiles, under
+the null hypothesis of equality, For each of the two sets of market data, two sample sizes,
+
+
+                                             23
+in1 and in2, have been chosen to span the range of frequency counts of patterns reported
+in Tables I and II. For each sample size m, we resample one-day normalized returns (with
+replacement) to obtain a bootstrap sample of in1 observations, compute the Kolmogorov-
+Smirnov test statistic (against the entire sample of one-day normalized returns), and repeat
+this procedure 1,000 times. The percentiles of the asymptotic distribution are also reported
+for comparison under the column "-y".
+    Tables IX and X show that for a broad range of sample sizes and across size quintiles,
+subperiod, and exchanges, the bootstrap distribution of the Kohnogorov-Smirnov statistic
+is well approximated by its asymptotic distribution (20).
+
+
+V. Conclusion
+In this paper, we have proposed a new approach to evaluating the efficacy of technical anal-
+ysis. Based on smoothing techniques such as nonparametric kernel regression, our approach
+incorporates the essehce of technical analysis: to identify regularities in the time series of
+prices by extracting nonlinear patterns from noisy data. While human judgment is still
+superior to most computational algorithms in the area of visual pattern recognition, recent
+advances in statistical learning theory have had successful applications in fingerprint identi-
+fication, handwriting analysis, and face recognition. Technical analysis may well be the next
+frontier for such methods.
+   When applied to many stocks over many time periods, we find that certain technical
+patterns do provide incremental information, especially for Nasdaq stocks. While this does
+not necessarily imply that technical analysis can be used to generate "excess" trading profits,
+it does raise the possibility that technical analysis can add value to the investment process.
+   Moreover, our methods suggest that technical analysis can be improved by using auto-
+mated algorithms such as ours, and that traditional patterns such as head-and-shoulders and
+rectangles, while sometimes effective, need not be optimal. In particular, it may be possible
+to determine "optimal patterns" for detecting certain types of phenomena in financial time
+series, e.g., an optimal shape for detecting stochastic volatility or changes in regime. More-
+over, patterns that are optimal for detecting statistical anomalies need not be optimal for
+
+
+                                              24
+trading profits, and vice versa. Such considerations may lead to an entirely new branch of
+technical analysis, one based on selecting pattern recognition algorithms to optimize specific
+objective functions. We hope to explore these issues more fully in future research.
+
+
+
+
+                                              25
+                                       Footnotes
+   1A similar approach has been proposed by Chang and Osler (1994) and Osler and Chang
+(1995) for the case of foreign-currency trading rules based on a head-and-shouiders pat-
+tern. They develop an algorithm for automatically detecting geometric patterns in price or
+exchange data by looking at properly defined local extrema.
+   2See, for example, Beymer and Poggio (1996), Poggio and Beymer (1996), and Riesenhu-
+ber and Poggio (1997).
+   3flespite the fact that K(x) is a probability density function, it plays no probabilistic
+role in the subsequent analysis—it is merely a convenient method for computing a weighted
+average, and does not imply, for example, that X is distributed according to K(x) (which
+would be a parametric assumption).
+   4However, there are other bandwidth-selection methods that yield the same asymptotic
+optimality properties but which have different implications for the finite-sample properties
+of kernel estimators. See Hãrdle (1990) for further discussion.
+   5Specifically, we produced fitted curves for various bandwidths and compared their ex-
+trema to the original price series visually to see if we were fitting more "noise" than "signal,"
+and asked several professional technical analysts to do the same. Through this informal pro-
+cess, we settled on the bandwidth of 0.3 x h and used it for the remainder of our analysis.
+This procedure was followed before we performed the statistical analysis of Section III, and
+we made no revision to the choice of bandwidth afterwards.
+   6See Simonoff (1996) for a discussion of the problems with kernel estimators and alter-
+natives such as local polynomial regression.
+   TAfter all, for two consecutive maxima to be local maxima, there must be a local minimum
+in between, and vice versa for two consecutive minima.
+   81f we are willing to place additional restrictions on me),. e.g., linearity, we can obtain
+considerably more accurate inferences even for partially completed patterns in any fixed
+window.
+    9For example, Chang and Osler (1994) and Osler and Chang (1995) propose an algorithm
+for automatically detecting head-and-shoulders patterns in foreign exchange data by looking
+at properly defined local extrema. To assess the efficacy of a head-and-shoulders trading rule,
+they take a stand on a class of trading strategies and compute the profitability of these across
+a sample of exchange rates against the U.S. dollar. The null return distribution is computed
+by a bootstrap that samples returns randomly from the original data so as to induce temporal
+independence in the bootstrapped time series. By comparing the actual returns from trading
+strategies to the bootstrapped distribution, the authors find that for two of the six currencies
+in their sample (the yen and the Deutsche mark), trading strategies based on a head and
+shoulders pattern can lead to statistically significant profits. See, also, Neftci and Policano
+(1984), Pruitt and White (1988), and Brock, Lakonishok, and LeBaron (1992).
+  '°If the first price observation of a stock is missing, we set it equal to the first non-missing
+price in the series. If the t-th price observation is missing, we set it equal to the first
+non-missing price prior to t.
+   11For the Nasdaq stocks, r1 is the average turnover over the first third of the sample, and
+r2. is the average turnover over the final third of the sample.
+
+                                               26
+  12[u particular, let the price process satisfy
+                            dP(t) =      jzP(t) dt   + cP(t) dW(t)                     (22)
+where W(t) is a standard Brownian motion. To generate simulated prices for a single security
+in a given period, we estimate the security's drift and diffusion coefficients by maximum
+likelihood and then simulate prices using the estimated parameter values. An independent
+price series is simulated for each of the 350 securities in both the NYSE/AMEX and the
+Nasdaq samples. Finally, we use our pattern recognition algorithm to detect the occurrence
+of each of the ten patterns in the simulated price series.
+
+
+
+
+                                              27
+                                    References
+
+Allen, Franklin and Risto Karjalainen, 1999, Using genetic algorithms to find technical
+    trading rules, Journal of Financial Economics 51, 245—271.
+Beymer, David and Tomaso Poggio, 1996, Image representation for visual learning, Science
+    272, 1905—1909.
+Blume, Lawrence, Easley, David and Maureen O'Hara, 1994, Market statistics and technical
+   analysis: The role of volume, Journal of Finance 49, 153—181.
+Brock, William, Lakonishok, Joseph and Blake LeBaron, 1992, Simple technical trading
+    rules and the stochastic properties of stock returns, Journal of Finance 47, 1731—1764.
+Brown, David and Robert Jennings, 1989, On technical analysis, Review of Financial Stud-
+    ies 2, 527—551.
+Campbell, John, Lo, Andrew W. and A. Craig MacKinlay, 1997, The Econometrics of
+   Financial Markets. Princeton, NJ: Princeton University Press.
+Chan, Louis, Jegadeesh, Narasimhan and Joseph Lakonishok, 1996, Momentum strategies,
+   Journal of Finance 51, 1681—1713.
+Chang, Kevin and Carol Osler, 1994, Evaluating chart-based technical analysis: The head-
+   and-shoulders pattern in foreign exchange markets, working paper, Federal Reserve
+   Bank of New York.
+Csáki, E., 1984, Empirical distribution function, in P. Krislmaiah and P. Sen, eds., Handbook
+    of Statistics, Volume.4 (Elsevier Science Publishers, Amsterdam, The Netherlands).
+DeGroot, Morris, 1986, Probability and Statistics (Addison Wesley Publishing Company,
+   Reading, MA).
+Edwards, Robert and John Magee, 1966, Technical Analysis of Stock Trends, 5th Edition
+    (John Magee Inc., Boston, MA).
+Grundy, Bruce and S. Martin, 1998, Understanding the nature of the risks and the source
+   of the rewards to momentum investing, unpublished working paper, Wharton School,
+    University of Pennsylvania.
+Hãrdle, Wolfgang, 1990, Applied Nonparametric Regression (Cambridge University Press,
+    Cambridge, UK).
+Hollander, Myles and Douglas Wolfe, 1973, Nonparametric Statistical Methods (John Wiley
+    & Sons, New York, NY).
+Jegadeesh, Narasimhan and Sheridan Titman, 1993, Returns to buying winners and selling
+    losers: Implications for stock market efficiency, Journal of Finance 48, 65—91.
+Lo, Andrew W. and A. Craig MacKinlay, 1988, Stock market prices do not follow random
+    walks: Evidence from a simple specification test, Review of Financial Studies 1, 41—66.
+Lo, Andrew W. and A. Craig MacKinlay, 1997, Maximizing predictability in the stock and
+    bond markets, Macroeconomic Dynamics 1(1997), 102—134.
+
+
+                                            28
+Lo, Andrew W. and A. Craig MacKinlay, 1999, A Non-Random Walk Down Wall Street
+    (Princeton University Press, Princeton, NJ).
+Malkiel, Burton, 1996, A Random Walk Down Wall Street: Including a Life-Cycle Guide
+   to Personal Investing (W.W. Norton, New York, NY).
+Neely, Christopher, Weller, Peter and Robert Dittmar, 1997, Is technical analysis in the
+    foreign exchange market profitable? A genetic programming approach, Journal of
+    Financial and Quantitative Analysis 32, 405—426.
+Neely, Christopher and Peter Weller, 1998, Technical trading rules in the european mone-
+    tary system, working paper, Federal Bank of St. Louis.
+Neftci, Salih, 1991, Naive trading rules in financial markets and wiener-kolmogorov predic-
+    tion theory: K study of technical analysis, Journal of Business 64, 549—571.
+Neftci, Salih and Andrew Policano, 1984, Can chartists outperform the market? Market
+    efficiency tests for 'technical analyst' , Journal of Future Markets 4, 465—478.
+Osler, Carol and Kevin Chang, 1995, Head and shoulders: Not just a flaky pattern, Staff
+    ReportNo. 4, Federal Reserve Bank of New York.
+Poggio, Tomaso and David Beymer, 1996, Regularization networks for visual learning, in
+   Shree Nayar and Tomaso Poggio, eds., Early Visual Learning (Oxford University Press,
+   Oxford, UK).
+Press, William, Flannery, Brian, Teukolsky, Saul and William Vetterling, 1986, Numerical
+    Recipes: The Art of Scientific Computing (Cambridge University Press, Cambridge,
+    UK).
+Pruitt, Stephen and Robert White, 1988, The CRISMA trading system: Who says technical
+    analysis can't beat the market?. Journal of Portfolio Management 14, 55—58.
+Riesenhuber, Maximilian and Tomaso Poggio, 1997, Common computational strategies in
+    machine and biological vision, in Proceedings of International Symposium on System
+    Life. Tokyo, Japan, 67—75.
+Rouwenhorst, Geert, 1998, International momentum strategies, Journal of Finance 53,
+    26 7—284.
+
+Simonoff, Jeffrey, 1996, Smoothing Methods in Statistics (Springer-Verlag, New York, NY):
+Smirnov, N., 1939a, Sur les écarts de la courbe de distribution empirique, Eec. Math.
+    (Mat. Sborn.) 6, 3—26.
+Smirnov, N., 1939b, On the estimation of the discrepancy between empirical curves of
+    distribution for two independent samples, Bulletin. Math. Univ. Moscow 2, 3—14.
+Tabell, Anthony and Edward Tabell, 1964, The case for technical analysis, Financial Ana-
+    lyst Journal 20, 67—76.
+Treynor, Jack and Robert Ferguson, 1985, In defense of technical analysis, Journal of
+    Finance 40, 757—773.
+
+
+
+
+                                           29
+     Price
+
+
+
+                                                      ''
+                   liii II' 11111 I
+                              I       iiii
+              liii                           HI''''        liiiliiiiIiiil         liii'
+                                                                            1111111
+
+
+
+
+Volume
+
+
+         11M.J .IIId,ItI.IIIiIJS IJ,li.iiiiLIi idL1iii1l                                  I    Date
+
+
+     Price
+
+
+
+
+                     ' 'II'I'III
+               I
+
+
+                                                                                      ''Ill'
+
+Volume
+
+
+                                         '.IIIIiIiII.I,IHiI,II iIII,11ii111 iiI I Date
+
+
+
+   Figure I. Two hypothetical price/volume charts.
+
+
+
+
+                                              30
+             Simulated DaIs V — Sin(K) + .5Z                                    Kernel [eLimut. Car 1—01,7110* .5Z. 4—. In
+
+
+
+
+                                                                                           —
+                                                                             -' tcuc3.—.f.          -
+                                                                                       :-x.-•                  &
+
+
+
+
+                                                                                                          -
+n.no        1.57           3,14
+                                          -
+                                                                                                                              ITE   - 4,24
+                                                                                    .37            7.14                4.71
+
+
+
+
+                         (,)                                                                     (b)
+
+
+
+         Kernel E.limntn lnrY—SntK3+,5Z. I, —                            -      Kanral F.ti.nutn nrVSir(3)+ ,SZ. h2.nn              -
+
+
+
+
+                                                                                                          -                     -
+
+
+
+
+                                                H-
+             .57           7.53          4.71                     0.00               .57           3.14                4.71             1,20
+                            S                                                                                      -
+                                                                                                    0
+
+
+
+
+                         (c)                                                                     (a)
+
+   Figure II. Illustration of bandwidth selection for kernel regression.
+
+
+
+
+                                                          Sr.-:
+
+                                                          551 .                        —                      .I
+
+
+       () HeaSand-Shonuldern                                                          (b) Inverse Head-and-Shouldern
+
+       Figure III. Head-and-shoulders and inverse head-and-shoulders.
+
+
+                                                     31
+                                                                                                                 I;
+
+
+
+                                                                           .1
+                                                                               j\j
+                                                                                /   !.—                      II
+                                                                                                             I
+
+
+
+
+                                                                           •
+
+                                                                                                                      t
+                                                                                                 \,    r\J
+
+
+
+                                                                               TTt#4 ..?C.
+                     La) Broadening Top                                                   tIi) Hro&den,ng Bottom
+
+                                      Figure IV. Broadening tops and bottoms.
+
+
+
+
+      _____________                                     :..._..
+
+flM     j.       f   ¼
+
+
+
+
+             V
+
+
+
+
+ 3)                                              ,,•,
+                                        I        p
+
+
+
+
+                                            .•               •
+ 0
+         *                       on
+                                                        i.        a
+                         La' TTiangl. Ti p                                                 (II) triangle Rotton'
+
+                                             Figure V. Triangle tops and bottoms.
+
+
+
+
+                                                                      32
+                             (a) Rectangle Top                                           (I,) Rectangle Bottom
+
+                                                      Figure VI. Rectaig1e tops and bottoms.
+
+
+
+
+                   Ir       O..si, crc fQ%Glfl -344
+
+
+
+
+      klr
+               -
+                        I
+                                                                            I-
+                                                                            I
+
+
+
+           I                              -
+                                                  I-                    I
+
+0-
+     no
+      *9                     I                                      I
+                                                       I
+     an-                         I                          /
+                                                                I
+
+
+
+
+      20                                                   I;
+                                              -   -                 .
+                   44                14
+                                          49
+
+                                 I a I Dot. hic Toj                                       I Lj Don I I. 13. Ittfln
+
+
+                                                       Figure VII. Double tops and bottoms.
+
+
+
+
+                                                                                 33
+                    (a)                    (b)
+
+
+
+  oo
+
+
+       :°
+
+                                 00
+
+
+
+
+            v;            —%04
+                  000*     0
+
+            000              0
+
+
+                     0
+                    (c)                    (a)
+
+
+
+
+                    (0)
+
+
+Figure VIII. Distribution of patterns in NYSE/AMEX sample.
+
+
+
+
+                                      34
+(g)                               (h)
+
+
+
+
+ 0
+(i)                               (j)
+
+      Figure VIII. (continued).
+
+
+
+
+                 35
+4
+
+
+
+
+                              C,)                               (b)
+
+
+                         _gr —
+         00
+
+     0%             oco             4o   o
+                                                      00
+
+    • o.°4t                    .0        •°_ — 0%
+                                             0
+                     0
+         00000 •t         0                      00
+
+
+    08
+
+     0oc:
+
+
+
+
+                              (c)                               (dY
+
+
+
+
+                              (0)                               (I)
+
+    Figure IX. Distribution of patterns in NASDAQ sample.
+
+
+
+
+                                                           36
+m' —
+
+
+
+
+Cs)                              (h)
+
+
+
+
+(i)                              ci)
+
+       Figure IX. (continued).
+
+
+
+
+                 37
+                                                           Table I
+Frequency counts for 10 technical indicators detected among NYSE/AMEX stocks from 1962 to
+1996, in 5-year subperiods, in size quintiles, and in a sample of simulated geometric Brownian
+motion. In each 5-year subperiod, 10 stocks per quintile are selected at random among stocks with
+at least 80% non-missing prices, and each stock's price history is scanned for any occurrence of the
+following 10 technical indicators within the subperiod: head-and-shoulders (HS), inverted head-
+and-shoulders (IRS), broadening top (BTOP), broadening bottom (BBOT), triangle top (TTOP),
+triangle bottom (TBOT), rectangle top (RTOP), rectangle bottom (RBOT), double top (DTOP),
+and double bottom (DBOT). The 'Sample' column indicates whether the frequency counts are
+conditioned on decreasing volume trend ('r(\)'), increasing volume trend ("r(4'), unconditional
+('Entire'), or for a sample of simulated geometric Brownian motion with parameters calibrated to
+match the data ('Sim. GBM').
+
+
+
+     Sample              Raw   US         IHS    BTOP BBOT TTOP TBOT                    RTOP   RUOT   DTOP       DBOT
+
+                                                    All Stocks, 1962 to 1996
+  Entire            423,556    1611       1654    725      748      1294        1193    1482   1616   2076       2075
+  Sim. GEM          423,556     577        578   1227     1028      1049        1176     122    113    535        574
+  r(N)                   —      655        593    143      220       666          710    582    637    691        974
+  r(,')                  —      553        614    409      337       300          222    523    552    776        533
+                     .
+                                                 Smallest Quintile, 1962 to 1996                             .
+
+
+  Entire             84,363     182       181     78        97        203       159      265    320    261        271
+  Sim. GBM           84,363      82        99     279      256       269          295     18     16    129        127
+  ,-(.,.)                —       90        Si      13       42       122          119    113    131     78        161
+  r(i')                  —       58        76      51       37        41           22     99    120    124         64
+                                      .
+            .                                      2nd Quintile, 1962 to 1996
+  Entire             83,986    309        321     146      150       255          228    299    322    372        420
+  Sim. GEM           83,986    108        105     291      251       261          278     20     17    106        126
+  T(N)                   —     133        126      25       48       135          147    130    149    113        211
+  ,-(,)                  —     112        126      90       63        55           39    104    110    153        107
+                                                   3rd Quiotile, 1962 to 1996
+  Entire            84,420     361        388     145      161       291          247    334    399    458        443
+  Sim. GEM          84,420     122        120     268      222       212          249     24     31    115        125
+  r(N)               —         152        131      20       49       151          149    130    160    154        215
+  ,-(,')             —         125        146      83       66        67          44     121    142    179        106
+                                                   4th Quintile, 1962 to 1996
+  Entire            84,780     332        317     176      173       262          255    259    264    424        420
+  Sim. GBM          84,780     143        127     249      210       183          210     35     24    116        122
+  ,.('.,)            —         131        115      36       42       138          145     85     97    144        184
+  r(,)               —         110        126     103       89        56          55     102     96    147        118
+                                                 Largest Quintile, 1962 to 1996
+  Entire            86,007     427        447     180      167       283          304    325    311    561        521
+  Sim. GEM          86,007     122        127     140       89       124          144     25     25     69         74
+ t(N)                    —     149        140      49       39       120          150    124    100    202        203
+                .
+                         —     148        140      82       82        81          62      97     84    173        138
+                                   Table I (continued)
+
+
+   Sample    Raw     US    IllS ETOP BBOT flOP TBOT aTOP RBOT DTOP DBOT
+                                       All Stocks, 1962 to 1966
+• Entire    55,254   276   278    85       103       179          165   316     354   356   352
+ Sim. GBM 55,254      56    58   144       126       129          139     9      16    60    68
+ 7(N)        — 104          88    26        29        93          109   130     141   113   188
+                      96   112    44        39        37           25   130     122   137    88
+                                       All Stocks, 1967 to 1971
+ Entire     60,299   179   175   112       134        227       172     115     117   239   258
+ Sim. GEM 60,299      92    70   167       148       150          180    19      16    84    77
+ 7(N)         —       68    64    16        45       126          111    42      39    80   143
+ r(,)         —       71    69    68        57        47           29    41      41    87    53
+                                       All Stocks, 1972 to 1976
+ Entire     59,915   152   162    82        93       165          136   171     182   218   223
+ Sim. GEM 59,915      75    85   183       154       156          178    16      10    70    71
+ 7(N)         —       64    55    16        23        88           78    60      64    53    97
+ r(,)         —       54    62    42      :50         32           21    61      67    80    59
+                                       All Stocks, 1977 to 1981
+ Entire     62,133   223   206   134       110       188          167   146     182   274   290
+ Sun. GUM 62,133      83    88   245       200       188          210    18      12    90   115
+              —      114    61    24        39       100           97    54      60    82   140
+              —       56    93    78        44        35           36    53      71   113    76
+                                       All Stocks, 1982 to 1986
+ Entire     61,984   242   256   106       108       182          190   182     207   313   299
+ Sim. GUM 61,984     115   120   188       144       152          169    31      23    99    87
+              —      101   104    28        30        93          104    70      95   109   124
+              —       89    94    51        62        46           40    73      68   116    85
+                                       All Stocks, 1987 to 1991
+ Entire     61,780   240   241   104         98       180       169     260     259   287   285
+ Sim. GEM 61,780      68    79   168        132       131       150      11      10    76    68
+ 7(N)        —        95    89    16         30        86       101     103 •   102   105   137
+ r(,)        —        81    79    68         43        53        36      73      87   100    68
+                                       All Stocks, 1992 to 1996
+ Entire     62,191   299   336   102       102       173          194   292     315   389   368
+ Sim. GEM 62,191      88    78   132       124       143          150    18      26    56    88
+ r(N)        —       109   132    17        24        80          110   123     136   149   145
+             —       106   105    58        42        50           35    92      96   143   104
+                                                   Table II
+Frequency counts for 10 technical indicators detected among NASDAQ stocks from 1962 to 1996,
+in 5-year subperiods, in size quintiles, and in a sample of simulated geometric Brownian motion.
+In each 5-year subperiod, 10 stocks per quintile are selected at random among stocks with at
+least 80% non-missing prices, and each stock's price history is scanned for any occurrence of the
+following 10 technical indicators within the subperiod: head-and-shoulders (HS), inverted head-
+and-shoulders (IRS), broadening top (BTOP), broadening bottom (BBOT), triangle top (TTOP),
+triangle bottom (TBOT), rectangle top (RTOP), rectangle bottom (RBOT), double top (DTOP),
+and double bottom (DBOT). The 'Sample' column indicates whether the frequency counts are
+conditioned on decreasing volume trend ('r(N)'), increasing volume trend ('r(4'), unconditional
+('Entire'), or for a sample of simulated geometric Brownian motion with parameters calibrated to
+match the data ('Sim. GBM').
+
+
+
+     Sample    Raw      115   1115   ETOP BBOT flop TBOT                           ETOP   RBOT   DTOP   DBOT
+
+                                         All Stocks, 1962 to 1996
+   Entire     411,010   919   817     414     508       850       789              1134   1320   1208   1147
+   Sun. GBM   411,010   434   447    1297    1139      1169      1309                96     91    567    579
+   r(N)
+                —       408   268     69      133       429       460              488     550    339    580
+   r(.,)        —       284   325    234      209       185       125              391     461    474    229
+                                       Smallest Quintie, 1962 to 1996
+   Entire      81,754    84    64     41           73         111         93        165    218    113    125
+   Shn. GEM    81,754    85    84    341          289         334        367         11     12    140    125
+   t(N)         —        36    25      6           20          56            59      77    102     31     81
+   r(,)         —        31    23     31           30          24             15     59     85     46     17
+                                            2nd Quintile, 1962 to 1996
+   Entire      81,336   191   138     68          88        161       148          242     305    219    176
+   Sim. GBM    81,336    67    84    243          225         219        229         24     12     99    124
+   7(N)         —        94    51      11          28          86            109    111    131     69    101
+   r(,')
+                —        66    57     46           38          45            22      85    120     90     42
+
+                                            3rd Quintile,   1962 to   1996
+   Entire      81,772   224   186    105          121         183        155       235     244    279    267
+   Sim. GEM    81,772    69    86    227          210         214        239         15     14    105    100
+   r(..)
+                —       108    66      23          35          87            91      90     84     78    145
+   r(i')
+                —        71    79     56           49          39            29      84     86    122     58
+
+                                            4th Quintile, 1962 to     1996
+   Entire      82,727   212   214     92          116         187        179       296     303    289    297
+   Sim. GBM    82,727   104    92    242          219         209        255         23     26    115     97
+   r(,.)
+                —        88    68      12          26         101        101       127     141     77    143
+   r(,')
+                —        62    83     57           56          34         22       104      93    118     66
+
+                                       Largest Quintile, 1962 to 1996
+   Entire      83,421   208   215    108          110         208        214       196     250    308    282
+   Sim. GEM    83,421   109   101    244          196         193        219         23     27    108    133
+   7(N)         —       82     58     17           24          99        100        83      92     84    110
+   i-(,)                 54    83     44           36          43         37         59     77     98     46
+                                  Table II (continued)
+
+  Sample    Raw      ES IHS BTOP BBOT flop TBOT RTOP RBOT DTOP DBOT
+                                       All Stocks, 1962 to 1966
+Entire     55,969    274   268    72        99       182          144   288   329   326   342
+Slim. GBM 55,969      69    63   163       123       137          149    24    22    77    90
+             —       129    99    10        23       104           98   115   136    96   210
+             —        83   103    48        51        37           23   101   116   144   64
+                                       All Stocks, 1967 to 1971
+Entire     60,563    115   120   104       123        227       171      65    83   196   200
+Slut GBM 60,563       58    61   194       184        181       188       9     8    90    83
+'-(N)        —        61    29    15         40       127       123      26    39    49   137
+T(/)         —        24    57    71        51        45           19    25    16    86    17
+                                       All Stocks, 1972 to 1976
+Entire     51,446     34    30    14        30         29        28      51    55    55    58
+Sim. GBM 51,446       32    37   115       113        107       110       5     6    46    46
+'-(N)        —         5     4     0         4         5            7    12     8     3     8
+'-(A)        —         8     7     1         2         2            0     5    12     8     3
+                                     All Stocks, 1977 to 1981
+Entire     61,972     56    53    41       36        52        73        57    65    89    96
+Sim. GBM 61,972       90    84   236     165        176       212        19    19   110    98
+             —         7     7     1         2         4            8    12    12     7     9
+             —         6     6     5         1         4            0     5     8     7     6
+                                       All Stocks, 1982 to 1986
+Entire     61,110     71    64
+Sim. GEM 61,110 ..    86    90   162       168       147          174    23    21    97    98
+T(N)
+             —        37    19     8        14      .46            58    45    52    40    48
+             —        21    25    24.       18        26           22    42    42    38    24
+                                       All Stocks, 1987 to 1991
+Entire     60,862    158   120    50         61       120       109     265   312   177   155
+Sim. GEM 60,862       59    57   229       187        205       244       7     7    79    88
+            —         79    46    11         19        73        69     130   140    50    69
+r(,)        —         58    56    33        30        26           28   100   122    89    55
+                                       All Stocks, 1992 to 1996
+Entire     59,088    211   162    87       115       143          157   299   361   245   199
+Sim. GEM 59,088       40    55   198       199       216          232     9     8    68    76
+'-(N)       —        90     64    24        31        70           97   148   163    94    99
+            —        84     71    52        56        45           33   113   145   102    60
+                                                  Table III
+Summary statistics (mean, standard deviation, skewness, and excess kurtosis) of raw and condi-
+tional 1-day normalized returns of NYSE/AMEX stocks from 1962 to 1996, in 5-year subperiods,
+and in size quintiles. Conditional returns are defined as the daily return three days following
+the conclusion of an occurrence of one of 10 technical indicators: head-and-shoulders (HS), in-
+verted head-and-shoulders (IllS), broadening top (BTOP), broadening bottom (BBOT), triangle
+top (TTOP), triangle bottom (TROT), rectangle top (RTOP), rectangle bottom (RBOT), double
+top (DTOP), and double bottom (DBOT). All returns have been normalized by subtraction of
+their means and division by theft standard deviations.
+
+
+
+ Moment    Raw        115      IRS     BTOP BBOT flop TBOT                        RTOP          RBOT DTOP          DEOT
+
+                                              An Stocks, 1962 to 1996
+ Mean     —0.000    —0.038     0.040   —0.005 —0.062        0.021     —0.009       0.009         0.014    0.017     0.0O1
+ S.D.       1.000     0.867    0.937     1.035    0.979     0.955      0.959       0.865         0.883    0.910     0.999
+ Skew      0.345      0.135    0.660   —1.151     0.090      0.137       0.643    —.0.420        0.110    0.206     0.460
+ Kurt      8.122      2.428    4.527   16.701     3.169      3.293       7.061     7.360         4.194    3.386     7.374
+                                         Smallest Quintile, 1962 to 1996
+ Mean     —0.000
+                    -—0.014    0.036   —0.093   —0.188       0.036 —0.020          0.037        —0.093    0.043    —0.055
+ S.D.      1.000      0.854    1.002    0.940     0.850      0.937     1.157       0.833         0.986    0.950     0.962
+ Skew      0697       0.802    1.337   —1.771    —0.367      0.861       2.592    —0.187         0.445    0.511     0.002
+ Kurt     10.873      3.870    7.143    6,701     0.575      4.185       12.532    1.793         4.384    2.581     3.989
+                                            2nd Qthntile, 1962 to 1996                                              .
+ Mean     —0.000    —0.069     0.144    0.061 —0.113         0.003     0.035       0.018         0.019    0.067    —0.011
+ S.D.      1.000     0.772     1.031    1.278     1.004      0.913     0.965       0.979         0.868    0.776     L069
+ Skew      0.392     0.223     1.128   —3.296     0.485    —0.529      0.166      —1.375         0.452    0.392     1.728
+ Kurt      7.836      0.657    6.734   32.750     3.779      3.024     4.987      17.040         3.914    2.151    15.544
+                                            3rd QuintiIe, 1962 to 1996
+ Mean     —0.000    —0.048    —0.043   —0.076 —0.056         0.036       0.012     0.075         0.028   —0.039    —0.034
+ S.D.      1.000      0.888    0.856    0.894     0.925      0.973       0.796     0.798         0.892     0.956    1.026
+ Skew      0.246    —0.465     0.107   —0.023     0.233      0.538       0.166     0.678        —0.618     0.013   —0.242
+ Kurt      7.466      3.239    1.612    1.024     0.611      2.995       0.586     3.010         4.769    .4.517    3.663
+                                            4th Quintile, 1962 to 1996
+ Mean     —0.000    —0.012     0.022    0.115     0.028      0.022    —0.014      —0.113         0.065    0.015    —0.006
+ S.D.      1.000      0.964    0.903    0.990     1.093     0.986        0.959     0.854         0.821    0.858     0.992
+ Skew      0.222      0.055    0.592    0.458     0.537    —0.217    —0.456       —0.415         0.820    0.550    —0.062
+ Kurt      6.452      1.444    1.745    1.251     2.168     4.237        8.324     4.311    .    3.632    1.719     4.691
+                                          Largest Quintile, 1962 to 1996
+ Mean     —0.000    —0.038     0.054   —0.081    —0.042     0.010    —0.049        0.009         0.060    0.018     0.067
+ S.D.      1.000     0.843     0.927    0.997    0.951      0.964     0.965        0.850         0.820    0.971     0.941
+ Skew      0.174     0.438     0.182    0.470   —1.099      0.089     0.357       —0.167        —0.140    0.011     0.511
+ Kurt      7.992     2.621     3.465    3.275     6.603     2.107        2.509     0.816         3.179    3.498     5.035
+                                     Table III (continued)
+
+Moment    Raw      H5       IHS     ETOP BBOT flOP TBOT RTOP IthOT DTOP DBOT
+                                          All Stocks, 1962 to 1966
+Mean     —0.000    0.070    0.090    0.159      0.079   —0.033     —0.039        —0.041    0.019   —0.071   —0.100
+S.D.      1.000    0.797    0.925    0.825      1.085     1.068     1.011         0.961    0.814    0.859    0.962
+Skew      0.563    0.159    0.462    0.363      1.151   —0.158      1.264        —1.337   —0.341   —0.427   —0.876
+Kurt      9.161    0.612    1.728    0.657      5.063     2.674     4.826        17.161    1.400    3.416    5.622
+                                         All Stocks, 1967 to 1971
+Mean     —0.000   —0.044    0.079   —0.035      —0.056      0.025        0.057   —0.101    0.110    0.093    0.079
+S.D.      1.000    0.809    0.944    0.793        0.850     0.885        0.886    0.831    0.863    1.083    0.835
+Skew      0.342    0.754    0.666    0.304        0.085     0.650        0.697   —1.393    0.395    1.360    0.701
+Kurt      5.810    3.684    2.725    0.706        0.141     3.099        1.659    8.596    3.254    4.487    1.853
+                                             All Stocks, 1972 to 1976
+Mean     —0.000   —0.035    0.043    0.101      —0.138     —0.045       —0.010   —0.025   —0.003   —0.051   —0.108
+S.D.      1.000    1.015    0.810    0.985        0.918     0.945        0.922    0.870    0.754    0.914    0.903
+Skew      0.316   —0.334    0.717   —0.699        0.272    —1.014        0.676    0.234    0.199    0.056   —0.366
+Kurt      6.520    2.286    1.565    6.562        1.453     5.261        4.912    3.627    2.337    3.520    5.047
+                                          All Stocks, 1977 to 1981
+Mean     —0.000   —0.138   —0.040    0.076    —0.114      0.135    —0.050        —0.004    0.026    0.042    0.178
+S.D.      1.000    0.786    0.863    1.015      0.989     1.041     1.011         0.755    0.956    0.827    1.095
+Skew      0.466   —0.304    0.052    1.599    —0.033      0.776     0.110        —0.084    0.534    0.761    2.214
+Kurt      6.419    1.132    1.048    4.961    —0.125      2.964     0.989         1.870    2.184    2.369   15.290
+                                             All Stocks, 1982 to 1986
+Mean     —0.000   —0.099   —0.007    0.011        0.095    —0.114       —0.067    0.050    0.005    0.011   —0.013
+S.D.      1.000    0.883    1.002    1.109        0,956     0.924        0.801    0.826    0.934    0.850    1.026
+Skew      0.460    0.464    0.441    0.372      —0.165      0.473       —1.249    0.231    0.467    0.528    0.867
+Kurt      6.799    2.280    6.128    2.566        2.735     3.208        5.278    1.108    4.234    1.515    7.400
+                                             All Stocks, 1987 to 1991
+Mean     —0.000   —0.037    0.033   —0.091      —0.040      0.053        0.003    0.040   —0.020   —0.022 —0017
+S.D.      1.000    0.848    0.895    0.955        0.818     0.857        0.981    0.894    0.833    0.873    1.052
+Skew     —0.018   —0.526    0.272    0.108        0.231     0.165       —1.216    0.293    0.124   —1.184   —0.368
+Kurt     13.478    3.835    4.395    2.247        1.469     4.422        9.586    1.646    3.973    4.808    4.297
+                                             All Stocks, 1992 to 1996
+Mean     —0.000   —0.014    0.069   —0.231      —0.272      0.122        0.041    0.082    0.011    0.102   —0.016
+S.D.      1.000    0.935    1.021    1.406        1.187     0.953        1.078    0.814    0.996    0.960    1.035
+Skew      0.308    0.545    1.305   —3.988      —0.502     —0.190        2.460   —0.167   —0.129   —0.091    0.379
+Kurt      8.683    2.249    6.684   27.022        3.947     1.235       12.883    0.506    6.399    1.507    3.358
+                                                      Table IV
+Summary statistics (mean, standard deviation, skewness, and excess kurtosis) of raw and condi-
+tional 1-day normalized returns of NASDAQ stocks from 1962 to 1996, in 5-year subperiods, and
+in size quintiles. Conditional returns are defined as the daily return three days following the con-
+clusion of an occurrence of one of 10 technical indicators: head-and-shoulders (HS), inverted head-
+and-shoulders (IHS), broadening top (BTOP), broadening bottom (BBOT), triangle top (TTOP),
+triangle bottom (TBOT), rectangle top (RTOP), rectangle bottom (RBOT), double top (DTOP),
+and double bottom (DBOT). All returns have been normalized by subtraction of their means and
+division by their standard deviations.
+
+
+
+ Moment    Raw       115        IllS    BTOP BBOT flOP TBOT                          ICOP      REOT     DTOP     DROT
+
+                                                 All Stocks, 1962 to 1996
+ Mean      0.000   —0.016       0.042   —0.009        0.009   —0.020         0.017    0.052     0.043    0.003   —0.035
+ S.D.      1.000    0.907       0.994    0.960        0.995     0.984        0.932    0.948     0.929    0.933    0.880
+ Skew      0.608   —0.017       1.290    0.397        0.586     0.895        0.716    0.710     0.755    0.405   —0.104
+ Kurt     12.728    3.039       8.774    3.246        2.783     6.692        3.844    5.173     4.368    4.150    2.052
+                                           Smallest Quintile, 1962 to 1996
+ Mean     —0.000    0.018      —0.032    0.087 —0.153          0.059     0.108        0.136     0.013    0.040    0.043
+ S.D.      1.000    0.845       1.319    0.874      0.894      1.113     1.044        1.187     0.982    0.773    0.906
+ Skew      0.754    0.325       1.756   —0.239 —0.109          2.727     2.300        1.741     0.199    0.126   —0.358
+ Kurt     15.859    1.096       4.221    1.490      0.571     14.270    10.594        8.670     1.918    0.127    0.730
+                                             2nd Quintile, 1962 to 1996
+ Mean     —0.000   —0.064       0.076   —0.109      —0.093    —0.085        —0.038   —0.066    —0.015    0.039   —0.034
+ S.D.      1.000    0.848       0.991    1.106        1.026     0.805        0.997    0.898     0.897    1.119    0.821
+ Skew      0.844    0.406       1.892   —0.122        0.635     0.036        0.455   —0.579•    0.416    1.196    0.190
+ Kurt     16.738    2,127      11.561    2.496        3.458     0.689        1.332    2.699     3.871    3.910    0.777
+                           .
+                                             3rd Quintile, 1962 to 1996
+ Mean     —0.000    0.033       0.028    0.078    0.210      —0.030     0.068         0.117     0.210   —0.109   —0.075
+ S.D.      1.000    0.933       0.906    0.931        0.971     0.825        1.002    0.992     0.970    0.997    0.973
+ Skew      0.698    0.223       0.529    0.656        0.326     0.539        0.442    0.885     0.820    0.163    0.123
+ Kurt     12.161    1.520       1.526    1.003        0.430     1.673        1.038    2.908     4.915    5.266    2.573
+                                             4th Quintile, 1962 to 1996
+ Mean      0.000   —0.079       0.037   —0.006    —0.044 —0.080         0.007         0.084     0.044    0.038   —0.048
+ S.D.      1.000    0.911       0.957    0.992     0.975      1.076     0.824         0.890     0.851    0.857    0.819
+ Skew      0.655   —0.456       2.671   —0.174     0.385      0.554     0.717         0.290     1.034    0.154   —0.149
+ Kurt     11.043    2.525      19.593    2.163     1.601      7.723     3.930         1.555     2.982    2.807    2.139
+                                           Largest Quintile, 1962 to 1996
+ Mean      0.000    0.026       0.058   —0.070        0.031     0.052    —0.013       0.001    —0.024    0.032   —0.018
+ S.D.      1.000    0.952       L002     0.895        1.060     1.076     0.871       0.794     0.958   .0.844    0.877
+ Skew      0.100   —0.266      —0.144    1.699        1.225     0.409     0.025       0.105     1.300    0.315   —0.363
+ Kurt      7.976    5.807       4.367    8.371        5.778     1.970        2.696    1.336     7.503    2.091    2.241
+                                       Table IV (continued)
+
+
+Moment    Raw      HS       1115     BTOP BEOT TTOP TEOT RTOP RBOT DTOP DBOT
+
+                                           All Stocks, 1962 to 1966
+Mean     —0.000    0.116     0.041    0.099      0.090     0.028    —0.066          0.100     0.010    0.096     0.027
+S.D.      1.000    0.912     0.949    0.989      1.039     1.015     0.839          0.925     0.873    1.039     0.840
+Skew      0.575    0.711     1.794    0.252      L258      1,601     0.247          2.015     1.021    0.533    —0.351
+Kurt      6.555    1.538     9.115    2.560      6.445     7.974     1.324         13.653     5.603    6.277     2.243
+                                           All Stocks, 1967 to 1971
+Mean     —0.000   —0.127     0.114    0.121      0.016     0.045    0.077           0.154     0.136   —0.000     0.006
+S.D.      1.000    0.864     osos     0.995     1.013      0.976         0.955      1.016     1.118    0.882     0.930
+Skew      0.734   —0.097     1.080    0.574     0.843      1.607         0.545      0.810     1.925    0.465     0.431
+Kurt      5.194    1.060     2.509    0.380     2.928     10.129         1.908      1.712     5.815    1.585     2.476
+                                           All Stocks, 1972 to 1976
+Mean      0.000    0.014     0.089   —0.403   —0.034     —0.132        —0.422      —0.076     0-108   —0.004    —0.163
+S.D.      1.000    0.575     0.908    0.569     0.803      0.618         0.830      0.886     0.910    0.924     0.564
+Skew      0,466   —0.281     0.973   —1.176     0.046    —0.064        -'--1.503   —2.728     2.047   —0.551    —0.791
+Kurt     17.228    2.194     1.828    0.077     0.587    —0.444          2.137     13.320     9.510    1.434     2.010
+                                           All Stocks, 1977 to 19-81
+Mean     —0.000    0.025   —0.212    —0.112   —0.056     —0.110          0.086      0.055     0.177    0.081.    0.040
+S.D.      1.000    0.769    1.025     1.091     0.838      0.683         0.834      1.036     1.047    0.986     0.880
+Skew      1.092    0.230   —1.516    —0.731     0.368      0.430         0.249      2.391     2.571    L520     —0.291
+Kurt     20.043    1.618    4.397     3.766     0.460      0.962         4.722      9.137    10.961    7.127     3.682
+                                           All Stocks, 1982 to 1986
+Mean      0.000   —0.147    0.204    —0.137   —0.001     —0.053        —0.022      —0.028     0.116   —0.224    —0.052
+S.D.      1.000    1.073     1.442    0.804     1.040      0.982         1.158      0.910     0.830    0.868     1.082
+Skew      1.267   —1.400    2.192     0.001     0.048      1.370         1.690     —0.120     0.048    0.001    —0.091
+Kurt     21.789    4.899   10.530     0,863     0.732      8.460 -       7.086      0.780     0.444    1.174     0.818
+                                           All Stocks, 1987 to 1991                                              -
+
+
+Mean.     0.000    0.012    0.120    —0.080   —0.031     —0.052          0.038      0.098     0.049   —0.048    —0.122 -
+S.D.      1.000    0.907   - 1.136    0.925     0.826      1.007         0.878      0.936     1.000    0.772     0.860
+Skew      0.104   —0.326     0.976   —0.342     0.234    —0.248          1.002      0.233     0.023   —0.105    —0.375
+Kurt     12.688    3.922    .5.183    1.839     0.734      2.796         2.768      1.038.    2.350    0.313     2.598
+                                          All Stocks, 1992 to 1996
+Mean      0.000   —0.119   —0.058    —0.033 —0.013 —0.078          0.086           —0.006    —0.011    0.003    —0.105
+S.D.      1.000    0.926    0.854     0.964     1.106     1.093          0.901      0.973     0.879    0.932     0.875
+Skew     —0.036    0.079   —0.015     1.399     0.158    —0.127          0.150      0.283     0.236    0.039    —0.097
+Kurt      5.377    2.818   —0.059     7.584     0.626     2.019          1.040      1.266     1.445    1.583     0.205
+                                                                      Table V
+
+Goodness-of-fit diagnostics for the conditional 1-day normalized returns, conditional on 10 technical indicators, for a sample of 350
+NYSE/AMEX stocks from 1962 to 1996 (10 stocks per size-quintile with at least 80% non-missing prices are randomly chosen in each
+five-year subperiod, yielding 50 stocks per subperiod over 7 subperiods). For each pattern, the percentage of conditional returns that
+fall within each of the 10 unconditional-return deciles is tabulated. If conditioning on the pattern provides no information, the expected
+percentage falling in each decile is 10%. Asymptotic t-statistics for this null hypothesis are reported in parentheses, and the x2 goodness-
+of-fitness test statistic Q is reported in the last column with the p-value in parentheses below the statistic. The 10 technical indicators
+are: head-and-shoulders (US), inverted head-and-shoulders (IllS), broadening top (BTOP), broadening bottom (BBOT), triangleS top
+(TTOP), triangle bottom (TBOT), rectangle top (RTOP), rectangle bottom (RBOT), double top (DTOP), and double bottom (DBOT).
+
+
+                                                                          DeciIe
+                 Pattern
+                              1         2         3        4         5              6          7         5         9        10      (p-Value)
+
+                 HS          8.9      10.4      11.2     11.7      12.2             7.9       9-2      10.4      10.8       7.1     39.31
+                           (—1.49)    (0.56)    (1.49)   (2.16)     (2.73)    (—3.05)       (—1.04)    (0.48)    (1.04)   (—4.46)    (0.000)
+                 Ills        8.6       9.7       9.4     11.2      13.7             7.7       9.1      11.1       9.6      10.0     40.95
+                           (—2.05)   (—0.36)   (—0.88)   (1.60)     (4,34)    (—3.44)       (—1.32)    (1.38)   (—0.62)   (—0.03)    (0.000)
+                 ETOP        9.4      10.6      10.6     11.9       8.7            6.6        9.2      13.7       9.2      10.1     23.40
+                           (—0.57)    (0.54)    (0.54)   (1.55)   (—1.25)     (—3.66)       (—0.71)    (2.87)   (—0.71)    (0.06)    (0.005)
+                 BBOT       11.5       9.9      13.0     11.1.      7.8            9.2        8.3       9.0      10.7       9.6     16.87
+                            (1.28)   (—0.10)    (2.42)   (0.95)   (—2.30)     (—0.73)       (—1.70)   (—1.00)    (0.62)   (—0.35)    (0.051)
+                 TTOP        7.8      10.4      10.9     11.3       9.0            9.9        10.0     10.7      10.5       9.7     12.03
+                           (—2.94)    (0.42)    (1.03)   (1.46)   (—1.30)     (—0.13)       (—0.04)    (0.77)    (0.60)   (—0.41)    (0.212)
+                 TBOT        8.9      10.6      10.9     12.2       9.2            8.7        9.3      11.6       8.7       9.8     17.12
+                           (—1.35)    (0.72)    (0.99)   (2.36)   (—0.93)     (—1.57)       (—0.83)    (1.69)   (—1.57)   (—0.22)   (0.047)
+                 RTOP        8.4       9.9       9.2     10.5      12.5        10.1           10.0     10.0      11.4       8.1     22.72
+                           (—2.27)   (—0.10)   (—1.10)   (0.58)     (2.89)         (0.16)   (—0.02)   (—0.02)    (1.70)   (—2.69)   (0.007)
+                 RBOT        8.6       9.6       7.8     10.5      12.9            10.8      11.6       9.3      10.3       8.7     33.94
+                           (—2.01)   (—0.56)   (—3.30)   (0.60)     (3.45)         (1.07)    (1.98)   (—0.99)    (0.44)   (—1.91)   (0.000)
+                 DTOP        8.2      10.9       9.6     12.4      11.8             7.5       8.2      11.3      10.3       9.7     50.97
+                           (—2.92)    (1.36)   (—0.64)   (3.29)    (2.61)     (—4.39)       (—2.92)    (1.83)    (0.46)   (—0.41)   (0.000)
+                 DBOT        9.7       9.9      10.0     10.9      11.4            8.5        9.2      10.0      10.7       9.8     12.92
+                           (—0.48)   (—0.18)   (—0.04)   (1.37)     (1.97)    (—2.40)       (—1.33)    (0.04)    (0.96)   (—0.33)   (0.166)
+                                                                     Table VT
+
+Goodness-of-fit diagnostics for the conditional 1-day normalized returns, conditional on 10 teclmical indicators, for a sample of 350
+NASDAQ stocks from 1962 to 1996 (10 stocks per size-quintile with at least 80% non-missing prices are randomly chosen in each five-
+year subperiod, yielding 50 stocks per subperiod over 7 subperiods). For each pattern, the percentage of conditional returns that fall
+within each of the 10 unconditional-return deciles is tabulated. If conditioning on the pattern provides no information, the expected
+percentage falling in each decile is 10%. Asymptotic t-statistics for this null hypothesis are reported in parentheses, and the x2 goodness-
+of-fitness test statistic Q is reported in the last column with the p-value in parentheses below the statistic. The 10 technical indicators
+are: head-and-shoulders (118), inverted head-and-shoulders (Ills), broadening top (BTOP), broadening bottom (BBOT), triangle top
+(TTOP), triangle bottom (TBOT), rectangle top (RTOP), rectangle bottom (RBOT), double top (DTOP), and double bottom (DBOT).
+
+
+                                                                          Decile;
+                                                                             .
+                 Pattern
+                              1        2         3         4         5              6         7         8                  10      (p-Value)
+
+
+                 HS         10.8     10.8      13.7       8.6       8.5            6.0       6.0      12.5      13.5       9.7     64.41
+                            (0.76)   (0.76)    (3.27)   (—1.52)   (—1.65)        (—5.13)   (—5.13)    (2.30)    (3.10)   (—0.32)   (0.000)
+                 fl-IS       9.4     14.1      12.5       8.0       7.7             4.8      6.4      13.5      12.5      11.3     75.84
+                           (—0.56)   (3.35)    (2.15)   (—2.16)   (—2.45)        (—7.01)   (—4.26)    (2.90)    (2.15)    (1.14)   (0.000)
+                 BTOP       11.6     12.3      12.8       7.7       8.2             6.8      4.3      13.3      12.1      10.9     34.12
+                            (1.01)   (1.44)    (1.71)   (—1.73)   (—1.32)        (—2.62)   (—5.64)    (1.97)    (1.30)    (0.57)   (0.000)
+                 BBOT       11.4     11.4      14.8       5.9       6.7             9.6      5.7      11.4       9.8      13.2     43.26
+                            (1.00)   (1.00)    (3.03)   (—3.91)   (—2.98)        (—0.27)   (—4.17)    (1.00)   (—0.12)    (2.12)   (0.000)
+                 TTOP       10.7     12.1      16.2       6.2       7.9             8.7      4.0      12.5      11.4      10.2     92.09
+                            (0.67)   (1.89)    (4.93)   (—4.54)   (—2.29)        (—1.34)   (—8.93)    (2.18)    (1.29)    (0.23)   (0.000)
+                 TBOT        9.9     11.3      15.6       7.9       7.7             5.7      5.3      14.6      12.0      10.0     85.26
+                           (—0.11)   (1.14)    (4.33)   (—2.24)   (—2.39)        (—5.20)   (—5.85)    (3.64)    (1.76)    (0.01)   (0.000)
+                 RTOP       11,2     10.8       8.8       8,3      10.2             7.1      7.7       9.3      15.3      11.3     57.08
+                            (1.28)   (0.92)   (—1.40)   (—2.09)    (0.25)        (—3.87)   (—2.95)   (—0.75)    (4.92)    (1.37)    (0.000)
+                 RBOT        8.9     12.3       8.9       8.9      11.6             8.9      7.0       9.5      13.6      10.3     45.79
+                           (—1.35)   (2.52)   (—1.35)   (—1.45)    (1.81)        (—1.35)   (—4.19)   (—0.66)    (3.85)    (0.36)    (0.000)
+                 DTOP       11.0     12.6      11.7       9.0       9.2             5.5      5.8      11.6      12.3      11.3     71.29
+                            (1.12)   (2.71)    (1.81)   (—1.18)   (—0.98)        (—6.76)   (—6.26)    (1.73)    (2.39)    (1.47)    (0.000)
+                 DBOT       10.9     11.5      13.1       8.0       8.1             7.1      7.6      11.5      12.8       9.3     51.23
+                            (0.98)   (1.60)    (3.09)   (—2.47)   (—2.35)        (—3.75)   (—3.09)    (1.60)    (2.85)   (—0.78)    (0.000)
+                                                     Table VII
+Kolmogorov-Smirnov test of the equality of conditional and unconditional 1-day return distributions
+for NYSE/AMEX stocks from 1962 to 1996, in 5-year subperiods, and in size quintiles. Conditional
+returns are defined as the daily return three days following the conclusion of an occurrence of one of
+10 technical indicators: head-and-shoulders (HS), inverted head-and-shoulders (1115), broadening
+top (BTOP), broadening bottom (BBOT), triangle top (PTOP), triangle bottom (TBOT), rect-
+angle top (RTOP), rectangle bottom (RBOT), double top (DTOP), and double bottom (DBOT).
+All returns have been normalized by subtraction of their means and division by their standard
+deviations, p-values are with respect to the asymptotic distribution of the Kolmogorov-Smirnov
+test statistic. The symbols 'r(x,j' and '-r(4' indicate that the conditional distribution is also
+conditioned on decreasing and increasing volume trend, respectively.
+
+
+
+        Statistic     HS     IllS    BTOJ>   BROT flOP TBOT              aro     RBOT    DTOP    DBOT
+
+                                              All Stocks, 1962 to 1996
+                     1,89    1.22    1.15    1.76      0.90     1.09     1.84    2.45    1.51    1.06
+        p-value      0.002   0.104   0.139   0.004     0.393    0.185    0.002   0.000   0.021   0.215
+        7 ,-('...)   1.49    0.95    0.44    0.62      0.73     1.33     1.37    1.77    0.96    0.78
+        p-value      0.024   0.327   0.989   0.839     0.657    0.059    0.047   0.004   0.319   0.579
+          r(,)       0.72
+                     0.671
+                             1.05
+                             0.220
+                                     1.33
+                                     0.059
+                                             1.59
+                                             0.013
+                                                       0.92
+                                                       0.368
+                                                                1.29
+                                                                0.073
+                                                                         1.13
+                                                                         0.156
+                                                                                 1.24
+                                                                                 0.090
+                                                                                         0.74
+                                                                                         0.638
+                                                                                                 0.84
+                                                                                                 0.481
+        p-value
+          Duff.      0.88    0.54    0.59    0.94      075      1.37     0.79    1.20    0.82    0.71
+        p-value      0.418   0.935   0.879   0.342     0.628    0.046    0.557   0.111   0.512   0.698
+                                    Table VII (continued)
+
+
+Statistic    HS     IHS ETOP BBOT flOP TEOT RTOP REOT DTOP DBOT
+
+                                    Smallest Quintile, 1962 to 1996
+7           0.59    1.19    0.72      1.20      0.98      1.43        1.09     1.19     0.84    0.78
+p-value     0.872   0.116   0.679     0.114     0.290     0.033       0.188    0.120    0.485   0.583
+7           0.67    0.80    1.16      0.69      1.00      1.46        1.31     0.94     1.12    0.73
+p-value     0.765   0.540   0.136     0.723     0.271     0.029       0.065    0.339    0.165   0.663
+7           0.43    0.95    0.67      1.03      0.47      0.88        0,51     0.93     0.94    0.58
+p-value     0.994   0.325   0.756     0.236     0.981     0.423       0.959    0.356    0.342   0.892
+7 Duff.     0.52    0.48    1.14      0.68      0.48      0.98        0.98     0.79     1.16    0.62
+p-value     0.951   0.974   0.151     0.741     0.976     0,291       0.294    0.552    0.133   0.840
+
+                                      2nd Quintile, 1962 to 1996
+7           1.82    L63     0.93      0.92      0.62      0.84        0.88     1.29     1.46    0.84
+p-value     0.003   0.010   0.353     0.365     0.505     0.485       0.417    0.073    0.029   0.478
+            1.62    L03     0.88      0.42      0.91      0.90        0.71     0.86     1,50    0.97
+p-value     0.010   0.242   0.427     0.994     0.378     0.394       0.703    0.443    0.022   0.298
+77(4        1.06
+            0.213
+                    1.63
+                    0.010
+                            0.96
+                            0.317
+                                      0.83
+                                      0.497
+                                                0.89
+                                                0.407
+                                                          0.98
+                                                          0.289
+                                                                      1.19
+                                                                      0.119
+                                                                               1.15
+                                                                               0.141
+                                                                                        0.96
+                                                                                        0.317
+                                                                                                0.99
+                                                                                                0.286
+p-value
+7 Duff.     0.78    0.94    1.04      0.71      1.22      0.92        0.99     0.79     1.18    0.68
+p-value     0.576   0.334   0.228     0.687     0.102     0.361       0.276    0.564    0.126   0.74 5
+                                       3rd Quintile, 1962 to 1996
+7           0.83    1.56    1.00      1.28      0.57      1.03        1.96     1.50     1.55    1.14
+p-value     0.502   0.016   0.266     0.074     0.903     0.243       0.001    0.023    0.016   0.150
+7           0.95    0.94    0.66      0.76      0.61      0.82        1.45     1.61     1.17    1,01
+p-value     0.326   0.346   0.775     0.613     0.854     0.520       0.031    0.012    0.131   0.258
+77(4        1.05
+            0.223
+                    1.43
+                    0.033
+                            0.93
+                            0.350
+                                      1.14
+                                      0.147
+                                                0.63
+                                                0.826
+                                                          0.80
+                                                          0.544
+                                                                      0.93
+                                                                      0.354
+                                                                               0.78
+                                                                               0.578
+                                                                                        0.59
+                                                                                        0.878
+                                                                                                0.86
+                                                                                                0.450
+p-value
+7 Duff.     1.02    1.14    0.45      0.48      0.50      0.89        0.66     0.91     0.72    1.15
+p-value     0.246   0.148   0.986     0.974     0.964     0.413       0.774    0.383    0.670   0.143
+                                       4th Quintile, 1962 to 1996
+7           0.72    0.61    1,29      0.84      0.61      0.84        1.37     1.37     0.72    0.53
+p-value     0.683   0.852   0.071     0.479     0.855     0.480       0.048    0.047    0.682   0.943
+7           1.01    0.95    0.83      0.96      0.78      0.84        1.34     0.72     0.62    1.01
+p-value     0.255   0.330   0.504     0.311     0.585     0.487       0.056    0.680    0.841   0.258
+77(4        0.93    0.66
+                    0.772
+                            1.29
+                            0.072
+                                      0.96
+                                      0.316
+                                                1.16      0.69        0.64
+                                                                      0.8 10
+                                                                               1.16
+                                                                               0.136
+                                                                                        0.69
+                                                                                        0.720
+                                                                                                0.85
+                                                                                                0.468
+p-value     0.349                               0.137     0.731
+7 Duff.     1.10    0.97    0.64      1.16      1.31      0.78        0.64     0.92     0.66    1.10
+p-value     0.175   0.301   0.804     0.138     0.065     0.571       0.806    0.363    0.780   0.176
+                                     Largest QuintiIe, 1962 to 1996
+7           1.25    1.16    0.98       0.48     0.50      0.80        0.94     1.76     0.90    1.28
+p-value     0.088   0.136   0,287      0.977    0.964     0.544       0.346    0.004    0.395   0.077
+77(N)       1.12    0.90    0.57       0.78     0.64       1.17       0.91     0.87     0.64    1.20
+p-value     0.164   0.386   0.906      0.580    0.806     0.127       0.379    0.44 2   0.802   0.114
+7 7(1')     0.81    0.93    0.83       0.61     0.69      0.81        0.73     0.87     0.46    0.88
+p-value     0.522   0.350   0.495      0.854    0.729     0.532       0.661    0.432    0.982   0.4 18
+7 Duff.     0.71    0.54    0.59       0.64     0.76       1.21       0.85     1.11     0.54    0.79
+p-value     0.699   0.934   0.874      0.800    0.607     0.110       0.467    0.170    0.929   0.552
+                                     Table VII (continued)
+
+ Statistic    115     IllS   UTOP BBOT flop TBOT ItTOP RBC)T DTOP DBOT
+
+
+             1.29    1.67    1.07      0.72     0.75       1.32    1.20     1.53    2.04    1.73
+p-value      0.072   0.007   0.202     0.671    0.634      0.062   0.112    0.018   0.001   0.005
+7 r('..)     0.83    1.01    1.04      0.80     0.63       1.80    0.66     1.84    1.03    1.54
+p-value      0.499   0.260   0.232     0.539    0.826     0.003    0.771    0.002   0.244   0.017
+7 r(,)       1.13    1.13    0.84      0.84     0.58      1.40     1.12     0.83    1.09    1.16
+p-value      0.156   0.153   0.480     0.475    0.894     0.040    0.163    0.492   0.183   0.135
+7 Duff.      0.65    0.71    0.75      0.76     0.60      1.90     0.68     1.35    0.73    0.83
+p-value      0.799   0.691   0.629     0.615    0.863     0.001    0.741    0.052   0.657   0.503
+                                        All Stocks, 1967 to 1971
+             1,10    0.96    0.60      0.65     0.98      0.76     1.29     1.65    0.87    1.22
+p-value      0.177   0.317   0.867     0.797    0.292     0.606    0.071    0.009   0.436   0.101
+7 i-(',)     1.02    0.80    0.53      0.85     0.97      0.77     0.71     1.42    0.97    1.06
+p-value      0.248   0.551   0.943     0.464    0.303     0.590    0.700    0.035   0.300   0.214
+7 r(i')      1.08    0.86    0.68      0.91     1.11      0.82     0.79     0.73    0.71    0.96
+p-value      0.190   0.454   0.750     0.373    0.169     0.508    0.554    0.660   0.699   0.315
+    Duff.    1.36    0.51    0.53      0.76     0.68      0.71     0.71     0.98    1.06    1.12
+p-value      0.049   0.956   0.942     0.616    0.751     0.699    0.701    0.290   0.210   0.163
+                                        All Stocks, 1972 to 1976
+7            0.47    0.75    0.87      1.56     1.21      0.75     0.87     0.94    1.64    1,20
+p-value      0.980   0.620   0.441     0.015    0.106     0.627    0.441    0.341   0.009   0.113
+7 r(')       0.80    0.40    0.50      1.24     1.21      0.65     1.26     0.63    0.70    1.39
+p-value      0.539   0.998   0.966     0.093    0.106     0.794    0.084    0.821   0.718   0.041
+7 r(,)       0.49    0.78    0.94      1.21     1.12      1.03     0.81     0.95    0.84    0.70
+p-value      0.970   0.577   0.340     0.108    0.159     0.244    0.521    0.331   0.485   0.7t9
+'y Duff.     0.55    0.56    0.51      0.95     0.81      1.11     1.15     0.62    0.67    1.31
+p-value      0.925   0.915   0.960     0.333    0.525     0.170    0.141    0.836   0.767   0.065
+                                        All Stocks, 1977 to 1981
+7            1.16    0.73    0.76      1.16     0.82      1.14     1.01     0.87    0.86    1.79
+p-value      0.138   0.665   0.617     0.136    0.506     0.147    0.263    0.428   0.449   0.003
+7 T(\)       1.04    0.73    1.00      1.31     1.10      1.32     0.83     0.80    1.20    1.81
+p-value      0.228   0.654   0.274    0.065     0.176     0.062    0.494    0.550   0.113   0.003
+7 t(,)       0.75    0.84    0.88     0.65      0.67      0.76     1.51     1.41    0.86    0.99
+p-value      0.623   0.476   0.426    0.799     0.754     0.602    0.020.   0.037   0.450   0.280
+7 Duff.      0.67    0.94    0.88     0.70      0.65      0.70     1.11     1.29    1.16    0.70
+p-value      0.767   0.335   0.423    0.708     0.785     0.716    0.172    0.073   0.137   0.713
+                                     Table VII (continued)
+
+Statistic     HS     IRS . BTOP       BBOT flop TROT RTOP RHOT DTOP DBOT
+
+                                        AU Stocks, 1982 to 1986
+             1.57    0.99    0.59      1.46      1.47       1.04     0.87    0.68    0.76      0.90
+p-value      0.015   0.276   0.883     0.029     0.027      0.232    0.431   0.742   0.617     0.387
+'7 r(".)     1.17    0.68    0.44      1.30.     1.53       1.21     1.08    0.93     0.84     0.88
+p-value      0.129   0.741   0.991     0.070     0.018      0.106    0.190   0.356    0.478    0.421
+'y i-(,)     0.81    1.03    0.74      0.62      0.83       1.23     0.77    0.79     0.63     0.81
+p-value      0.533   0.243   0.640     0.831     0.499      0.097    0.597   0.564    0.821    0.528
+  Duff.      0.51    0.79    0.70      0.81      0.74       1.21     0.73    0.75     0.93     0.74
+p-value      0.961   0.567   0.717     0.532     0.643      0.107    0.657   0.623    0.352    0.642
+                                        All Stocks,   1987 to 1991
+             1.36    1.53    1.05      0.67      0.75       0.86     0.60    1.09     1.20     0.67
+p-value      0.048   0.019   0.219     0.756     0.627      0.456    0.862   0.185    0.111    0.764
+  ,-('-.,)   0.52    1.16    1.25      0.72      1.03       0.81     0.81    0.61     1.07     0.68
+p-value      0.953   0.135   0.087     0.673     0.235      0.522    0.527   0.848    0.201    0.751
+'7 T(/)      1-72    1.03    0.64      137       0.74       1.10     1.04    1.20      1.02    1.32
+p-value      0.006   0.241   0.813     0.046     0.639      0.181    0.232   0.111   . 0.250   0.062
+  Duff.      1.11    1.29    1.07      1.06      0.67       0.93     0.89    0.74     0.84     1.17
+p-value      0.168   0.072   0.201     0.215     0.753      0.357    0.403   0.638    0.483    0.129
+                                        All Stocks,   1992 to 1996
+             1.50    1.31    1.05      1.89      1.27       0.94     1.23    0.66     1.72     1.54
+p-value      0.022   0.066   0.222     0.002     0.078      0.343    0.095   0.782    0.005    0.018
+7 r(',)      0.87    1.05    0.60      0.89      1.11       1.03     0.90    0.65     0.99     1.12
+p-value      0.443   0.218   0.858     0.404    0.174       0.242    0.390   0.787    0.2.83   0.165
+7 r(t)       0.72    0.66    0.75      1.42      1.02       0.58     0.61    0.64     1.36     0.93
+p-value      0.670   0.778   0.624     0.036     0.246      0.895    0.854   0.813    0.048    0.357
+7 Duff.      0.58    0.88    0.50      0.49     0.43        0.81     0.60    0.46     0.96     0.99
+p-value      0.887   0.422   0.966     0.971    0.993       0.528    0.858   0.984    0.314    0.282
+                                                  TabLe VIII
+Kolmogorov-Smirnov test of the equality of conditional and unconditional 1-day return distribu-
+tions for NASDAQ stocks from 1962 to 1996, in 5-year subperiods, and in size quintiles. Conditional
+returns are defined as the daily return three days following the conclusion of an occurrence of one of
+10 technical indicators: head-and-shoulders (HS), inverted head-and-shoulders (IHS), broadening
+top (BTOP), broadening bottom (BBOT), triangle top (TTOP), triangle bottom (TBOT), rect-
+angle top (RTOP), rectangle bottom (RBOT), double top (DTOP), and double bottom (DBOT).
+All returns have been normalized by subtraction of their means and division by their standard
+deviations, p-values are with respect to the asymptotic distribution of the Kolmogorov-Smirnov
+test statistic. The symbols 'r(N)' and 'r(4'           indicate that the conditional distribution is also
+conditioned on decreasing and increasing volume trend, respectively.
+
+
+
+        Statistic    HS     IRS     DTOP    BBOT flop TEOT              RTOP    REOT    DTOP    DEOT
+
+            ••!                              All Stocks, 1962 to 1996
+                    2.31    2.68    1.60    184      2.81      2.34     2.69    1.90    2.29    2.06
+        p-vatue     0.000   0.000   0.012   0.002    0.000     0.000    0.000   0.001   0.000   0.000
+        'y r(s,)    1.86    1.53    1.35    0.99     1.97      1.95     2.16    1.73    1.38    1.94
+        p-value     0.002   0.019   0.052   0.281    0.001     0.001    0.000   0.005   0.045   0.001
+        'y r(i.)    1.59    2.10    1.82    1.59     1.89      1.18     1.57    1.22    2.15    1.46
+        p-value     0.013   0.000   0.003   0.013    0.002     0.126    0.014   0.102   0.000   0.028
+        ' Duff.     1.08    0.86    1.10    0.80     1.73      0.74     0.91    0.75    0.76    1.52
+        p-value     0.195   0.450   0.175   0.542    0.005     0.637    0.379   0.621   0.619   0.020
+                                    Table VIII (continued)
+
+Statistic    IIS     IllS   BTOP BBOT flop TEOT RTOP R.BOT DTOP DBOT
+
+                                     Smallest Quintile, 1962 to 1996
+7           1.51    2.16    1.72       1.68      1.22      1.55        2,13    1.70     1.74     1.98
+p-value     0.021   0.000   0.006      0.007     0.101     0.016       0.000   0.006    0.005    0.001
+77(N)       1.16    1.30    0.85       1.14      1.25      1.62        1.43    1.05     1.08     1.95
+p-value     0.139   0.070   0.463      0.150     0.089     0.010       0.033   0.2 16   0.19 1   0.001
+7 r(,')     0.85    1.73    1.61       2.00      1.34      0.79        1.58    1.52     1.47     1.20
+p-value     0.462   0.005   0.012      0.001     0.055     0.553       0.014   0.019    0.026    0.115
+7 Duff.     1.04    0.95    0.83       1.44      1.39      0.72        0.95    0.73     0.94     1.09
+p-value     0.227   0.334   0.493      0.031     0.042     0.574       0.326   0.654    0.338    0.184
+                                       2nd Quintile, 1962 to 1996
+7           1.55    1.46    0.94       1.44      1.24      1.08        1.20    1.10     1.90     1.27
+p-value     0.016   0.029   0.341      0.031     0.095     0.192       0.113   0.175    0.001    0.078
+77(N)       1.11    1.13    1.08       0.92      1.23      0.79        1.34    1.19     1.09     1.61
+p-value     0.173   0.157   0.192      0.371     0.097     0.557       0.055   0.117    0.185    0.011
+7 r(,)      1.37    0.87    0.73       0.97      1.38      1.29        1.12    0.91     1.12     0.94
+p-value     0.048   0.439   0.665      0.309     0.044     0.073       0.162   0,38 1   0.165    0.343
+7 Duff.     1.23    0.62    0.97       0.69      1.02      1.05        1.09    0.78     0.58     0.51
+p-value     0.095   0.535   0.309      0.733     0.248     0.224       0.183   0.579    0.894    0.955
+                                       3rd Quintile, 1962 to 1996
+7           1.25    1.72    0.82       1.71      1.41      L52         1.25    1.84     1.86     1.82
+p-value     0.087   0.005   0.510     0.006     0.038      0.020       0.089   0.002    0.002    0.003
+77(N)       0.93    1.08    0.54      1.23      1.06       1.02        0.79    1.47     1.38     0.88
+p-vaLue     0.348   0.194   0.930     0.097     0.213      0.245       0.560   0.026    0.044    0,423
+7 r(,)      0.59    1.14    0.97      1.37      0.75       1.01        1.13    1.34     1.37     1.78
+p-value     0.873   0.146   0.309     0.047     0.633      0.262       0.159   0.054    0.047    0.003
+7 flit      0.61    0.89    0.58      0.46      0.61      0.89         0.52    0.38     0.60     1.09
+p-value     0.852   0.405   0.890     0.984     0.844     0.404        0.947   0.999    0.864    0.188
+                                       4th Quintile, 1962 to 1996
+7           1.04    0.82    1.20      0.98      1.30      1.25         1.88    0.79     0.94     0.66
+p-value     0.233   0.510   0.111     0.298     0.067     0.087        0.002   0.553    0.341    0.779
+7           0.81    0.54    0.57      1.05      0.92      1.06         1.23    0.72     1.53     0.87
+p-value     0.528   0.935   0.897     0.217     0.367     0.215        0.097   0.672    0.019    0.431
+7 r(,)      0.97    1.04    1.29      0.53      2.25      0.71         1.05    0.77     1.20     0.97
+p-value     0.306   0.229   0.071     0.938     0.000     0.696        0.219   0.589    0.114    0.309
+7 Duff.     1.17    0.89    0.98      0.97      1.86      0.62         0.93    0.73     1.31     0.92
+p-value     0.128   0.400   0.292     0.301     0.002     0.843        0.352   0.653    0.065    0.371
+                                     Largest Quintile, 1962 to 1996
+7           1.08    1.01    1.03      0.66      0.92      0.68         0.85
+p-value     0.190   0.255   0.242     0.778     0.360     0.742        0.462   0.137    0.150    0.756
+7           1.03    0.54    0.93      0.47      0.77      0.76         0.85    0.62     0.85     1.14
+p-value     0.237   0.931   0.356     0.981     0.587     0.612        0.468   0.840    0.465    0.149
+7           1.18    1.39    0.50      0.93      0.88      1.25         0.77    1.13     0.98     1.12
+p-value     0.123   0.041   0.967     0.358     0.415     0.089        0.597   0.156    0.292    0.160
+7 Duff.     0.94    1.25    0.73      0.84      0.76      1.11         0.73    0.86     0.86     0.77
+p-value     0.342   0.090   0.668     0.476     0.617     0.169        0.662   0.457    0.454    0598
+                                    Table VIII (continued)
+
+Statistic    HS     IHS     BTOP BBOT flOP TEOT RTOP RBOT DTOP DBOT
+
+                                        All Stocks, 1962 to 1966
+            1.01    0.84    1.08       0.82     0.71      0.70     1.59    0.89    1.12    1.10
+p-value     0.261   0.481   0.193      0.508    0.697     0.718    0.013   0.411   0.166   0.115
+7 T(\.)     0.95    0.65    0.41       1.05     0.51      1.13     0.79    0.93    0.93    1.21
+p-value     0.322   0.798   0.997      0.224    0.956     0.155    0.556   0.350   0.350   0.108
+7 T(/')     0.77    0.96    0.83       0,73     1.35      0.49     1.17    0.62    1.18    1.15
+p-value     0.586   0.314   0.489      0.663    0.052     0.972    0.130   0.843   0.121   0.140
+7 Duff.     1.10    0.67    0.32       0.69     1.29      0.58     0.80    0.75    0.98    1.06
+p-value     0.174   0.761   1.000      0.735    0.071     0.892    0.551   0.620   0.298   0.208
+                                        All Stocks, 1967 to 1971
+            0.75    1.10    1.00       0.74     1.27      1.35     1.16    0.74    0.74    1.21
+p-value     0.636   0.175   0.273      0437     0.079     0.052    0.136   0.642   0.638   0.107
+7 r("..)    1.03    0.52    0.70       0.87     1.24      1.33     1.29    0.83    0.72    1.45
+p-value     0.241   0.947   0.714      0.438    0.092     0.058    0.072   0.490   0.684   0.031
+7 r(,s)     1.05    1.08    1.12       0.64     0.79      0.65     0.55    0.53    0.75    0.69
+p-value     0.217   0.192   0.165      0.810    0.566     0.797    0.923   0.941   0.631   0.723
+  Duff.     1.24    0.89    0.66       0.78     1.07      0.88     0.88    0.40    0.91    0.76
+p-value     0.093   0.413   0.770      0.585    0.203     0.418    0.423   0.997   0.385   0.602
+                                        All Stocks, 1972 to 1976
+            0.82    1.28    1.84       1.13     1.45      1.53     1.31    0.96    0.85    1.76
+p-value     0.509   0.077   0.002      0.156    0.029     0.019    0.064   0.314   0.464   0.004
+7 r('.)     0.59    0.73 —99.00        0.91     1.39      0.73     1.37    0.98    1.22    0.94
+p-value     0.875   0.669   0.000      0.376    0.042     0.654    0.046   0.292   0.100   0.344
+7 r(,')     0.65    0.73 —99.00      —99.00 —99.00 —99.00          0.59    0.76    0.78    0.65
+p-value     0.800   0.653   0.000      0.000    0.000     0.000    0.878   0.611   0.573   0.798
+7 Duff.     0.48    0.57 —99.00      —99.00 —99.00 —99.00          0.63    0.55    0.92    0.37
+p-value     0.974   0.902   0.000      0.000    0.000     0.000    0.828   0.925   0.362   0.999
+                                        All Stocks, 1977 to 1981
+    •
+            1.35    1.40    1.03       1.02     1.55   2.07        0.74    0.62    0.92    1.28
+p-value     0.053   0.039   0.23t      0.249    0.016  0.000       0.636   0.842   0.369   0.077
+'y ,j)      1.19
+            0.117
+                    1.47 —99.00
+                    0.027   0.000
+                                     —99.00
+                                   0.000
+                                                0.96
+                                                0.317
+                                                       0.98
+                                                       0.290
+                                                                   0.86
+                                                                   0.453
+                                                                           0.79
+                                                                           0.554
+                                                                                   0.81
+                                                                                   0.522
+                                                                                           0.68
+                                                                                           0.748
+p-value
+  ,-(i')    0.69    0.94    0.80 —99.00         1.46 —99.00        0.56    0.82    1.06    094
+p-value     0.728   0.341   0.542  0.000        0.028  0.000       0.918   0.514   0.207   0.336
+  Diff.     0.73    0.90 —99.00 —9900           0.35 —99.00        0.44    0.37    0.80    0.53
+p-value     0.665   0.395   0.000      0.000    1.000  0.000       0.991   0.999   0.541   0.944
+                                    Table VIII (continued)
+
+Statistic    US      IllS   BTOP BBOT flop TBOT RTOP RBOT DTOP DBOT
+                                       All Stocks, 1982 to 1986
+            166     1.59    1.17      0.73     1.46      1.69     1.04    1.24    2.44    1.27
+p-value     0.008   0.013   0.129     0.654    0.028     0.006    0.232   0.093   0.000   0.078
+7 ,-()      1.65    1.10    0.46      0.74     0.95      1.47     0.83    1.18    1.20    0.59
+p-value     0.009   0.176   0.984     0.641    0.330     0.027    0.503   0.121   0.112   0.873
+7 T(/)      1.13    1.31    0.86      0.42     1.17      1.04     0.97    1.13    1.68    0.89
+p-value     0.153   0.065   0.445     0.995    0.129     0.231    0.302   0.155   0.007   0.405
+7 Duff.     0.67    0.39    0.51      0.42     0.85      0.43     0.41    0.67    0.66    0.75
+p-value     0.755   0.998   0.957     0.994    0.462     0.993    0.996   0.766   0.782   0.627
+                                       AU Stocks, 1987 to 1991
+-y          1.24    1.29    0.91      0.88     1.28      1.41     2.01    1.49    1.55    1.53
+p-value     0.091   0.070   0.384     0.421    0.074     0.039    0.001   0.024   0.017   0.019
+7 r(',.)    1.05    1.00    1.00      0.78     1.68      0.92     1.67    1.25    0.61    0.86
+p-value     0.221   0.266   0.274     0.580    0.007     0.369    0.008   0.087   0.849   0.448
+7 T(/)      1.23    1.26    1.06      1.32     0.65      1.27     1.10    1.26    1.67    1.81
+p-value     0.099   0.084   0.208     0.060    0.787     0.078    0.176   0.085   0.007   0.003
+7 Duff.     0.80    0.91    1.22      1,28     1.22      0.92     0.87    0.81    1.07    1.05
+p-value     0.552   0.375   0.103     0.075    0.102     0.360    0.431   0.520   0.202   0.217
+                                       All Stocks, 1992 to 1996
+            1.21    1.61    0.84      0.90     0.97      0.91     L60     1.51    1.13    LOU
+p-value     0.108   0.011   0.476     0.394    0.299     0.379    0.012   0.021   0.156   0.265
+7 t('.)     0.68    L02     0.81      0.78     0.81      0.93     0.79    1.07    0.94    0.64
+p-value     0.752   0.246   0.530     0.578    0.532     0.357    0.558   0.201   0.340   0.814
+7 T(/)      1.56    0.85    0.71      L00      1.10      1.04     1.43    0.93    0.90    1.44
+p-value     0.015   0.470   0.688     0.275    0.180     0.231    0.034   0.352   0.392   0.031
+yDiff.      1.45    0.59    0.94      0.62     1.15      1.14     0.64    0.52    0.59    1.35
+p-value     0.030   0.879   0.346     0.840    0.139     0.148    0.814   0,953   0.874   0.052
+                                                   Table IX
+Bootstrap percentiles for the Kolmogorov-Smirnov test of the equality of conditional and uncondi-
+tional 1-day return distributions for NYSE/AMEX and NASDAQ stocks from 1962 to 1996, and
+for size quintiles, under the null hypothesis of equality. For each of the two sets of market data,
+two sample sizes, in1 and in2, have been chosen to span the range of frequency counts of patterns
+reported in Table 1. For each sample size mj, we resample 1-day normalized returns (with replace-
+ment) to obtain a bootstrap sample of mj observations, compute the Kohnogorov-Smirnov test
+statistic (against the entire sample of 1-day normalized returns), and repeat this procedure 1,000
+times. The percentiles of the asymptotic distribution are also reported for comparison.
+
+
+                              NYSE!AMEX Saznpe                                NASDAQ Sample
+          Percentile
+                              Ami,n   '712                 A                Ami,n   m2 .           A
+
+                                              All Stocks, 1962 to 1996
+            0.01       2076   0.433   725       0.435    0.441       1320   0.430   414   0.438   0.441
+            0.05       2076   0.515   725       0.535    0.520       1320   0.514   414   0.522   0.520
+            0.10       2076   0.568   725       0.590    0.571       1320   0.573   414   0.566   0.571
+            0.50       2076   0.827   725       0.835    0.828       1320   0.840   414   0.826   0.828
+            0.90       2076   1.219   725       1.237    1.224       1320   1.244   414   1.229   1.224
+            0.95       2076   1.335   725       1.395    1.358       1320   1.373   414   1.340   1.358
+            0.99       2076   1.608   725       1.611    1.628       1320   1.645   414   1.600   1.628
+                                        Smallest Quintile, 1962 to 1996
+            0.01       320    0.456    78       0.406    0.441        218   0.459    41   0.436   0.441
+            0.05       320    0.535    78       0.502    0.520        218   0.533    41   0.498   0.520
+            0.10       320    0.586    78       0.559    0.571        218   0.590    41   0.543   0.571
+            0.50       320    0.848    78       0.814    0.828        218   0.847    41   0.801   0.828
+            0.90       320    1.231    78       1.204    1.224        218   1.229    41   1.216   1.224
+            0.95       320    1.357    78       1.330    1.358        218   1.381    41   1.332   1.358
+            0.99       320    1.661    78       1.590    1,628        218   1.708    41   1.571   1.628
+              .
+                                             2nd Quintile, 1962 to 1996
+            0.01       420    0.445   146       0.428     0.441     305     0.458    68   0.426   0.441
+            0.05       420    0.530   146       0.505    0.520-       305   0.557    68   0.501   0.520
+            0.10       420    0.580   146       0.553    0.571        305   0.610    68   0,559   0.571
+            0.50       420    0.831   146       0.823    0.828        305   0.862    68   0.804   0.828
+            0.90       420    L197    146       1.210    1.224        305   1.265    68   1.210   1.224
+            0.95       420    1.349   146       1.343    1.358        305   1.407    68   1.409   1,358
+            0.99       420    1.634   146       1.626    1.628        305   1.686    68   1.614   1.628
+                                             3rd Quintile, 1962 to   1996
+            0.01       458    0.442   145       0.458     0.441       279   0.464   105   0.425   0.441
+            0.05       458    0.516   145       0.508     0.520       279   0.539   105   0.525   0.520
+            0.10       458    0.559   145       0.557     0.571       279   0.586   105   0.570   0.571
+            0.50       458    0.833   145       0.835     0.828       279   0.832   105   0.818   0.828
+            0.90       458    1.216   145       1.251    1.224        279   1.220   105   1.233   1.224
+            0.95       458    1.406   145       1.397    1.358        279   1.357   105   1.355   1.358
+            0.99       458    1.660   145       1.661    1.628        279   1.606   105   1.638   1.628
+                           Table IX (continued)
+
+                   NYSE/AMEX Sample                               NASDAQ Sample
+Percentile
+             mj    An,,,   7712                 A        tvij   Ams,n         Am,,n    A
+
+                                  4th Qiiotile, 1962 to 1996
+  0.01       424   0.429   173       0.418    0.441       303   0.454   92    0.446   0,441
+  0.05       424   0.506   173       0.516    0.520       303   0.526   92    0.506   0.520
+  0.10       424   0.552   173       0.559    0.571       303   0.563   92    0.554   0.571
+  0.50       424   0.823   173       0.815    0.828       303   0.840   92    0.818   0.828
+  0.90       424   1.197   173       1,183    1.224       303   1.217   92    1.178   1.224
+  0.95       424   1.336   173       1.313    1.358       303   1.350   92    1.327   1.358
+  0.99       424   1.664   173       1.592    1.628       303   1.659    92   1.606   1.628
+                             Largest Quintile, 1962 to 1996
+  0.01       561   0.421   167       0.425     0.441      308   0.441   108   0.429   0.441
+  0.05       561   0.509   167       0.500     0.5W       308   0.520   108   0.508   0.520
+  0.10       561   0.557   167       0.554     0.571      308   0.573   108   0.558   0.571
+  0.50       561   0.830   157       0.817     0.828      308   0.842   108   0.816   0.828
+  0.90       561   1.218   167       1.202     1.224 ,    308   1.231   108   1.226   1.224
+  0.95       561   1.369   167       1.308     1.358      308   1.408   108   1.357   1.358
+  0.99       561   1.565   167       1.615     1.628      308   1.724   108   1.630   1.628
+                                 Table X (continued)
+                                                                                                  .
+
+                       NYSE/AMEX Sample                             NASI)AQ Sample
+    Percentile
+                 mj    Ami,,.   2      am,,,.      a       lThi   a1,. 2       a,,.,,,.    a
+                                      All Stocks, 1982 to 1986
+      0.01       313   0.462    106     0.437    0.441      120   0.448   44   0.417      0.441
+      0.05       313   0.542    106     0.506    0.520      120   0.514   44   0.499      0.520
+      0.10       313   0.585    106     0.559    0.571      120   0.579   44   0.555      0.571
+      0.50       313   0.844    106     0.819    0.828      120   0.825   44   0.802      0.828
+      0.90       313   1.266    106     1.220    1.224      120   1.253   44   1.197      1.224
+•
+      0.95       313   1.397    106     1.369    1.358      120   1.366   44   1.337      1.358
+      0.99       313   1.727    106     1.615    1.628      120   1.692   44   1.631      1.628
+                                      All Stocks, 1987 to 1991
+       0.01      287   0.443     98     0.449    0.441      312   0.455   50    0.432     0.441
+       0.05      287   0.513     98     0.522    0.520      312   0.542   50    0.517     0.520
+       0.10      287   0.565     98     0.566    0.571      312   0.610   50    0.563     0.571
+       0.50      287   0.837     98     0.813    0.828      312   0.878   50    0.814     0.828
+       0.90      287   1.200     98     1.217    1.224      312   1.319   50    1.216     1.224
+       0.95      287   1.336     98     1.348    1.358      312   1.457   50    1.323     1.358
+       0.99      287   1.626     98     1.563    1.628      312   1.701   50    1.648     1.628
+                                      All Stocks, 1992 to1996
+       0.01      389   0.438    102     0.432    0.441      361   0.447   87    0.428     0.441
+       0.05      389   0.522    102     0.506    0.520      361   0.518   87    0.492     0.520
+       0.10      389   0.567    102     0.558    0.571      361   0.559   87    0.550     0.571
+       0.50      389   0.824    102     0.818    0.828      361   0.817   87    0.799     0.828
+       0.90      389   1.220    102     1.213    1.224      361   1.226   87    1,216     1.224
+       0.95      389   1.321    102     1.310    1.358      361   1.353   87    1.341     1.358
+       0.99      389   1.580    102     1.616    1.628      361   1.617   87    1.572     1.628
+

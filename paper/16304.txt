@@ -1,0 +1,2148 @@
+                                 NBER WORKING PAPER SERIES
+
+
+
+
+       SOLVING THE MULTI-COUNTRY REAL BUSINESS CYCLE MODEL USING
+                          ERGODIC SET METHODS
+
+                                             Serguei Maliar
+                                              Lilia Maliar
+                                             Kenneth L. Judd
+
+                                          Working Paper 16304
+                                  http://www.nber.org/papers/w16304
+
+
+                       NATIONAL BUREAU OF ECONOMIC RESEARCH
+                                1050 Massachusetts Avenue
+                                  Cambridge, MA 02138
+                                      August 2010
+
+
+
+
+Lilia Maliar and Serguei Maliar acknowledge support from the Hoover Institution at Stanford University,
+the Stanford Institute for Theoretical Economics, the Center for Financial Studies in Frankfurt, the
+Paris School of Economics, the Ivie, the Ministerio de Ciencia e Innovación and FEDER funds under
+the project SEJ-2007-62656 and the Generalitat Valenciana under the grants BEST/2010/142 and BEST/2010/141,
+respectively. We thank Wouter Den Haan, Michel Juillard, Sébastien Villemot and an anonymous
+referee for useful comments. We thank Ben Malin and Paul Pichler for providing us with the Smolyak-polynomial
+terms and log-linear solutions, respectively. The views expressed herein are those of the authors and
+do not necessarily reflect the views of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2010 by Serguei Maliar, Lilia Maliar, and Kenneth L. Judd. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+Solving the Multi-Country Real Business Cycle Model Using Ergodic Set Methods
+Serguei Maliar, Lilia Maliar, and Kenneth L. Judd
+NBER Working Paper No. 16304
+August 2010
+JEL No. C63,C68
+
+                                              ABSTRACT
+
+We use the stochastic simulation algorithm, described in Judd, Maliar and Maliar (2009), and the cluster-grid
+algorithm, developed in Judd, Maliar and Maliar (2010a), to solve a collection of multi-country real
+business cycle models. The following ingredients help us reduce the cost in high-dimensional problems:
+an endogenous grid enclosing the ergodic set, linear approximation methods, fixed-point iteration
+and efficient integration methods, such as non-product monomial rules and Monte Carlo integration
+combined with regression. We show that high accuracy in intratemporal choice is crucial for the overall
+accuracy of solutions and offer two approaches, precomputation and iteration-on-allocation, that can
+solve for intratemporal choice both accurately and quickly. We also implement a hybrid solution algorithm
+that combines the perturbation and accurate intratemporal-choice methods.
+
+
+Serguei Maliar                                        Kenneth L. Judd
+Department of Economics                               Hoover Institution
+University of Alicante                                Stanford University
+Campus San Vicente del Raspeig                        Stanford, CA 94305-6010
+Ap. Correos 99, 03080 Alicante, Spain                 and NBER
+maliars@merlin.fae.ua.es                              kennethjudd@mac.com
+
+Lilia Maliar
+Department of Economics
+University of Alicante
+Campus San Vicente del Raspeig
+Ap. Correos 99, 03080 Alicante, Spain
+maliarl@merlin.fae.ua.es
+1       Introduction
+In the present paper, we show how to apply two ergodic-set algorithms for
+solving a collection of multi-country real business cycle models proposed
+by Den Haan, Judd and Juillard (2010) (henceforth, DJJ). One of these
+algorithms is the stochastic simulation algorithm (SSA) described in Judd,
+Maliar and Maliar (2009, 2010b).12 The other is the projection cluster-grid
+algorithm (CGA) developed in Judd, Maliar and Maliar (2010a) (henceforth,
+JMM). The models studied in the current JEDC project include up to 10
+countries (i.e., 20 state variables) and feature heterogeneity in fundamentals
+(preferences and technology) and endogenous labor-leisure choice, as well as
+complete markets, adjustment costs, continuously valued state variables, and
+non-additively separable preferences and technology.
+    SSA and CGA build on strategies that allow to reduce the cost of finding
+global solutions in high-dimensional applications. The first and most impor-
+tant distinctive feature of these two methods is that they operate on endoge-
+nous domains which enclose the ergodic set: SSA computes a solution on a
+set of simulated points, whereas CGA does so on a grid of points constructed
+by clustering simulated data (the center of each cluster represents one grid
+point). Focusing on the ergodic set allows us to avoid the costs associated
+with computing solutions in those areas of the state space that are never vis-
+ited in equilibrium. Second, to approximate policy functions, SSA and CGA
+use polynomials with additively separable terms, estimate the polynomial co-
+eﬃcients using numerically stable linear approximation methods and update
+the coeﬃcients along iterations using a fixed-point iteration method. These
+choices ensure that the cost of approximating the policy functions does not
+increase significantly with the dimensionality of the problem (in particular,
+because we iterate on policy functions of all countries simultaneously rather
+than country by country). Finally, to evaluate conditional expectations, SSA
+and CGA rely on integration methods that are particularly suitable for high-
+    1
+     JMM (2009) present SSA in the context of a one-country model. In a more recent
+version of the paper, JMM (2010b) extend the results to include the case of a multi-country
+model similar to Model 1 of the current JEDC project.
+   2
+     SSA is similar to the simulation-based parameterized expectations algorithm (PEA)
+by Marcet (1988) and Den Haan and Marcet (1990) in how it uses stochastic simulation
+to compute an ergodic distribution, its support and the associated policy functions. SSA
+diﬀers from the simulation-based PEA in that it relies on a mixture of techniques that
+ensures numerical stability; see JMM (2009) for a discussion.
+
+
+
+                                            2
+dimensional applications. Namely, SSA combines Monte Carlo integration
+and regression in a manner that makes it possible to approximate expec-
+tations (integrals) in all simulated points at once, whereas CGA performs
+numerical integration using low-cost non-product monomial rules and the
+product Gauss-Hermite rule with small numbers of nodes in each dimension
+(including the rule with one node).
+    The models considered in JMM (2010a, 2010b) include up to 200 coun-
+tries and thus, are more challenging in the dimensional aspect than those
+studied in the JEDC project. However, the models of the JEDC project are
+more challenging in another aspect, namely, in that solving for consumption
+and labor of heterogeneous countries is a non-trivial task. Let us separate
+the intertemporal choice (capital) and intratemporal choice (consumption
+and labor). The intertemporal choice is concerned with dynamics and is
+characterized by the capital policy functions defined in terms of state vari-
+ables. Such functions are also the laws of motion for capital and allow to
+compute an entire capital path without solving for consumption and labor.
+The intratemporal-choice problem is static: Given a capital path, in each
+period of time, we must solve a system of static optimality conditions (in-
+cluding a resource constraint) with respect to consumption and labor. In
+the models of the JEDC project, this system cannot be solved analytically.
+Solving this system numerically a large number of times (in each time pe-
+riod, iteration, grid point, integration node) is costly, especially when the
+number of countries is large. Moreover, as we show in the present paper,
+the intratemporal choice must be computed with a high degree of accuracy;
+otherwise, the overall accuracy of solutions decreases.
+    In the present paper, we describe two novel intratemporal-choice ap-
+proaches that can find the consumption and labor allocations both accu-
+rately and quickly. Our first approach, called iteration-on-allocation, relies
+on a numerical solver that implements fixed-point iteration directly on the
+intratemporal-choice variables. (The policy functions for the intratemporal-
+choice variables are never constructed explicitly). This approach allows us
+to achieve eﬀectively zero errors in all intratemporal-choice conditions (in-
+cluding the resource constraint) so that the only source of errors for us is
+Euler-equation errors.3 The iteration-on-allocation solver does not require
+derivatives (Jacobian and Hessian), and its cost does not increase signifi-
+  3
+    This approach was originally proposed in the context of PEA in Maliar and Maliar
+(2004) and was later implemented for SSA and CGA.
+
+
+                                         3
+cantly with dimension. Moreover, it can work with vectors and matrices,
+making it fast in vectorized applications.
+    Our second approach, called precomputation, constructs the intratemporal-
+choice functions on an appropriately chosen grid of points outside the main
+iterative cycle and uses the precomputed functions to interpolate the in-
+tratemporal choice inside the main iterative cycle as if a closed-form solution
+was available.4 Like iteration-on-allocation, this approach can work with
+vectors and matrices and attains high accuracy in the examples considered.
+    The iteration-on-allocation and precomputation approaches can be vec-
+torized because of the separation of the intertemporal and intratemporal
+choices. Given the laws of motion for capital, we construct a capital path
+without solving for the intratemporal-choice variables (consumption and la-
+bor). Then, given a capital path, we compute all the consumption and labor
+allocations at once rather than one by one.
+    The accuracy and speed of the SSA and CGA methods under our base-
+line implementation are assessed in Kollmann, Maliar, Malin and Pichler
+(2010) (henceforth, KMMP). In the present paper, we report a few additional
+experiments that show how the performance of the CGA method depends
+on the specific integration method, approximating polynomial function and
+intratemporal-choice approach.
+    First, we find that CGA can compute solutions of essentially the same
+accuracy as those submitted for the comparison in KMMP (2010) but at a
+significantly lower cost. Our baseline integration method (used to compute
+solutions submitted to the comparison in KMMP, 2010) is an accurate but
+expensive two-step procedure that combines a cheap non-product monomial
+rule and an expensive product Gauss-Hermite rule. It turns out that such a
+high-accuracy integration method is not needed for the models of the JEDC
+project since cheaper and less accurate integration methods also produce ac-
+curate solutions. For example, it took us 35 hours to solve an asymmetric
+ten-country model using our two-step integration procedure (see Table 3 in
+KMMP, 2010). In the present paper, we solve the same model in 7 minutes
+using only the first step of our two-step integration procedure without a visi-
+ble accuracy loss (solution errors are identical up to the fourth digit). More-
+over, using the one-node Gauss-Hermite rule advocated in JMM (2010a), we
+   4
+     Maliar and Maliar (2005) introduce the precomputation approach in the context of the
+standard neoclassical growth model for computing labor-leisure choice outside the main
+iterative cycle. Maliar and Maliar (2007) implement this approach in the context of the
+current JEDC project.
+
+                                           4
+solve this model in 2 minutes with a modest accuracy loss (maximum error
+increases by 5%).
+    Second, we find that the third-degree polynomial delivers solutions that
+are almost an order of magnitude more accurate than those produced by
+our baseline second-degree polynomial (used to generate the results for the
+comparison in KMMP, 2010). We also find that the Smolyak polynomial,
+used in the Smolyak collocation algorithm by Malin, Krueger and Kubler
+(2010) (henceforth, MKK), allows CGA to achieve nearly the same accuracy
+as does the third-degree polynomial. However, under the Smolyak polyno-
+mial, the cost grows less rapidly with dimension than under the third-degree
+polynomial (independently of dimension, the Smolyak polynomial has only
+four times more terms than the second-degree polynomial).
+    Third, our approach in which consumption and labor are approximated
+by functions of both the current-period state variables and the current period
+capital choices (i.e., next period’s values of the endogenous state variables)
+delivers much better accuracy than the standard intratemporal-choice ap-
+proach that approximates policy functions for consumption and labor by
+functions of state variables only. To be more specific, we approximate the
+consumption policy function(s) by a polynomial of the same (second) degree
+as that used to approximate the capital policy functions, and we obtain sub-
+stantially larger approximation errors in the intratemporal-choice conditions
+than in the intertemporal-choice conditions (Euler equations).5 For com-
+parison, we also solve the same model using the precomputation approach.
+Neither our baseline iteration-on-allocation approach (used to compute the
+solutions reported in KMMP, 2010) nor our precomputation approach (im-
+plemented in the present paper) restrict the overall accuracy of solutions.
+    Finally, we propose a way to increase the accuracy of the solution methods
+that do not accurately compute the intratemporal choice in their own solution
+procedures. We specifically take the capital policy functions delivered by such
+a method and replace its low-accuracy solution for consumption and labor
+with a high-accuracy solution (computed by the iteration-on-allocation and
+precomputation approaches). In our examples, this replacement increases
+the overall accuracy of solutions by an order of magnitude. We apply this
+idea for constructing a hybrid solution algorithm that combines the pertur-
+bation method (a cheap way to compute capital policy functions) and our
+   5
+    The importance of accuracy in intratemporal choice for the overall accuracy of solu-
+tions is also seen from Table 6 of the comparison paper by KMMP (2010).
+
+
+                                           5
+intratemporal-choice methods (a cheap way to accurately compute consump-
+tion and labor allocations).
+    The rest of the paper is as follows: Section 2 presents the model and
+derives the first-order conditions. Section 3 describes how SSA and CGA
+address challenges of high-dimensional problems. Section 4 develops two ap-
+proaches for computing the intratemporal choice. Section 5 outlines the steps
+of SSA and CGA. Section 6 describes the baseline and alternative implemen-
+tations of SSA and CGA. Section 7 presents the numerical results for CGA
+and constructs a hybrid of the perturbation and accurate intratemporal-
+choice methods. Finally, Section 8 concludes.
+
+
+2     The model
+We consider a model with a finite number of countries, N, in which each coun-
+try is populated by a representative consumer. A social planner maximizes a
+weighted sum of the expected lifetime utilities of the countries’ representative
+consumers subject to the aggregate resource constraint, i.e.,
+                                                 Ã∞                  !
+                                            X
+                                            N     X         ¡ j   j ¢
+                          max            E0   τj      β t uj ct , t          (1)
+                  j j j        j=1,...,N
+                {ct , t ,kt+1 }t=0,...,∞ j=1      t=0
+
+subject to
+                           ⎡                           Ã           !2              ⎤
+        X
+        N              X
+                       N
+                                   ¡        ¢               j
+                                                           kt+1
+               cjt =       ⎣ajt f j ktj , jt − φ ktj              −1             j ⎦
+                                                                        + ktj − kt+1 ,   (2)
+         j=1           j=1
+                                               2            ktj
+
+where Et is the operator of conditional expectation; cjt , jt , ktj , ajt , uj , f j and
+τ j are consumption, labor, capital, productivity level, utility function, pro-
+duction function and welfare weight of a country j ∈ {1, ..., N}, respectively;
+β is the discount factor; and φ is the adjustment-cost
+                                       ¡ 1          ¢   parameter.
+                                                                ¡ 1 Initial      ¢ con-
+                                                  N                           N
+dition (k0 , a0 ) is given, where k0 ≡ k0 , ..., k0 and a0 ≡ a0 , ..., a0 . The
+process for productivity levels in country j is given by
+                                   ln ajt = ρ ln ajt−1 + σεjt ,                          (3)
+where εjt ≡ et + ejt with et and ejt being common and country-specific pro-
+ductivity shocks, respectively, et , ejt ∼ N (0, 1); ρ is the autocorrelation coef-
+ficient of the productivity level; and σ determines the standard deviation of
+the productivity level.
+
+                                                6
+    An interior solution to the social planner’s problem (1) − (3) satisfies
+first-order conditions (FOCs) of the form
+                           ¡ j j¢ j        ³ 0 0´ 0
+                                        j0
+                        uc ct , t τ = uc cjt , jt τ j ,
+                         j
+                                                                        (4)
+                          ¡        ¢      ¡        ¢       ¡        ¢
+                        uj cjt , jt = −ujc cjt , jt ajt f j ktj , jt ,                       (5)
+          ¡        ¢            © ¡            ¢£                    ¡ j           ¢¤ª
+       ujc cjt , jt ωjt = βEt ujc cjt+1 , jt+1 π jt+1 + ajt+1 fkj kt+1   ,   j
+                                                                             t+1         ,   (6)
+where j, j 0 ∈ {1, ..., N}, and ω jt and π jt are defined as
+                                         Ã            !
+                                               j
+                              j               kt+1
+                             ωt ≡ 1 + φ            −1 ,
+                                               ktj
+                                     Ã          !Ã        !
+                                          j         j
+                                 φ       kt+1      kt+1
+                      π jt   ≡1+              −1        +1 .
+                                 2        ktj       ktj
+Here, and further on, notation of type Fxm stands for the first-order partial
+derivative of a function F (..., xm , ...) with respect to a variable xm .
+    In the project, eight models are considered. Models 1, 2, 3 and 4 have
+the same types of preferences and technology as do Models 5, 6, 7 and 8,
+respectively, however, the former models assume identical preferences and
+technology parameters for all countries, while the latter models have diﬀerent
+parameters across countries. Models 1 and 5 do not have endogenous labor-
+leisure choice, while the other models do. A description of the models studied
+is provided in Juillard and Villemot (2010).
+
+Intertemporal versus intratemporal choices Let us make a distinction
+between intertemporal and intratemporal choices. Consider a capital policy
+                                                                     j
+function that determines a country’s j end-of-period capital stock, kt+1 , as a
+function of the current state variables, kt and at ,
+                                 j
+                                kt+1 = K j (kt , at ) ,                       (7)
+             ¡           ¢           ¡           ¢          j
+where kt ≡ kt1 , ..., ktN and at ≡ a1t , ..., aN
+                                               t . We call kt+1 an intertemporal-
+choice variable because it captures dynamic aspects of the planner’s choice.
+A capital policy function is an equilibrium law of motion for capital.
+    For each period t, given kt , at and kt+1 , we must solve a system of 2N sta-
+tic optimality conditions (i.e., one resource constraint (2), N−1 conditions (4)
+
+                                             7
+                                              ¡          ¢         ¡            ¢
+and N conditions (5)) with respect to ct ≡ c1t , ..., cN
+                                                       t   and `t ≡ 1t , ..., N
+                                                                              t .
+A solution to this system is given by solution manifolds for consumption and
+labor:
+
+    cjt = Φj (kt , at , kt+1 )   and   j
+                                       t   = Θj (kt , at , kt+1 ) ,   j = 1, ..., N.   (8)
+
+We refer to consumption ct and labor `t as intratemporal-choice variables
+because under our representation, such variables are determined within pe-
+riod t if the state, (kt , at ), and the intertemporal choice, kt+1 , are given. For
+Model 1, the intratemporal choice can be expressed analytically, while for
+Models 2-8, it must be approximated numerically.
+
+
+3     Addressing challenges of high dimensions
+The high-dimensional models described in DJJ (2010) pose four challenges
+for numerical methods designed to find a global solution: (i) a large size of
+the domain on which the solution is computed, (ii) a high cost of finding the
+polynomial coeﬃcients in the approximating polynomial functions, (iii) a
+large number of integration nodes for evaluating the conditional expectation
+functions, and (iv) a high cost of solving for the intratemporal choice.
+    JMM (2010a, 2010b) show how to address the first three challenges in the
+context of CGA and SSA, respectively. The problems solved in JMM (2010a,
+2010b) are of higher dimensionality (they include up to 200 countries) but
+simpler in the structure of the intratemporal choice (which can be charac-
+terized analytically) than those studied in the current JEDC project. The
+strategies used by JMM (2010a, 2010b) to address challenges (i), (ii) and (iii)
+are discussed in Sections 3.1, 3.2 and 3.3, respectively, and the coordination
+of these strategies is described in Section 3.4. The last challenge, (iv), which
+is concerned with the intratemporal choice in high-dimensional problems, is
+not studied in JMM (2010a, 2010b). In the present paper, solving for the
+intratemporal choice accurately proved to be crucial for the overall accuracy
+of solutions. We address the intratemporal-choice challenge separately, in
+Section 4.
+
+3.1     Multi-dimensional domain
+To make a numerical method suitable for high-dimensional applications, we
+must restrict attention to a relatively small set of grid points in the multi-
+
+                                            8
+dimensional space.6 Both SSA and CGA achieve this goal by focusing on
+the ergodic set of points realized in equilibrium. In Figure 1a, we show
+the ergodic set constructed from a simulated series of 10, 000 observations,
+which are produced by the standard representative-agent neoclassical sto-
+chastic growth model. SSA computes the solution on the given set of simu-
+lated points (the number of simulated points is controlled by the researcher
+and needs not necessarily increase with the number of countries, N). CGA
+chooses a more eﬃcient representation of the ergodic set; namely, it replaces
+a large number of closely situated simulated points with relatively few rep-
+resentative points constructed by grouping similar points into clusters (the
+number of representative points is again controlled by the researcher). To
+be specific, CGA transforms correlated variables into uncorrelated principal
+components (denoted P Ct1 and P Ct2 ) using principal components (PCs) de-
+composition (see Figure 1b); normalizes the principal components to zero
+mean and unit variance (see Figure 1c); and constructs I clusters applying
+a clustering algorithm. It subsequently uses the centers of the constructed
+clusters as a grid for projections; see JMM (2010a) for details. (Note that
+CGA does not compute diﬀerent solutions in each cluster, but a global so-
+lution on the entire cluster grid). Making the domain endogenous to the
+model allows SSA and CGA to compute a solution only in the relevant area
+of the state space (an ellipsoid area shown in Figure 1a). This eliminates an
+enormously large number of grid points that are never visited in equilibrium.
+For example, for a model with 100 state variables, a hypersphere is only
+about a 2 · 10−70 fraction of a multi-dimensional hypercube which encloses
+the hypersphere; see JMM (2010a) for a further discussion.
+
+3.2     Multi-dimensional polynomials
+SSA and CGA parameterize policy functions by an additively separable com-
+plete polynomial. For example, parameterizing the end-of-period capital
+stock of a country j by a first-degree polynomial yields
+              j
+             kt+1 = v0j + v1j kt1 + ... + vN
+                                           j N     j
+                                             kt + vN+1              j
+                                                       a1t + ... + v2N aN
+                                                                        t ,         (9)
+   6
+     The literature commonly considers a multi-dimensional hypercube domain composed
+of the tensor product of discretized state variables. In this case, the total number of
+grid points grows exponentially with the dimensionality of the state space (the curse of
+dimensionality).
+
+
+
+                                           9
+       ¡                                 j ¢0
+where v0j , v1j , ..., vN
+                        j    j
+                          , vN+1 , ..., v2N   ≡ vj ∈ R(2N +1)×1 is country’s j vector of
+the polynomial coeﬃcients. The number of polynomial terms in the first-,
+second- and third-degree complete polynomials grows with the dimensionality
+of the problem linearly, quadratically and cubically, respectively; see Table 1
+in JMM (2010a). When the dimensionality is large, high-degree polynomials
+are costly.
+    The assumption of additively separable polynomials allows us to estimate
+the polynomial coeﬃcients using fast and numerically stable linear approx-
+imation methods, such as the least-squares methods using SVD and QR
+factorization, Tikhonov regularization, least-absolute deviation methods and
+the principal components method; see JMM (2009). Moreover, it allows us to
+estimate the polynomial coeﬃcients for all N countries at once rather than
+country by country.
+    To update the polynomial coeﬃcients along iterations, SSA and CGA use
+fixed-point iteration, which is a simple derivative-free iteration method whose
+cost does not significantly increase with the dimensionality of the problem;
+see Judd (1998, p. 555-557).7 Fixed-point iteration computes the coeﬃcients
+for the next iteration as a weighted average of the coeﬃcients at the beginning
+and at the end of the previous iteration. It works for vectors and matrices
+and allows to iterate on policy functions of all countries simultaneously. A
+shortcoming of fixed-point iteration is that it does not guarantee convergence.
+However, a slow updating is typically suﬃcient to ensure convergence; see
+Section 4.2 for a discussion. In the models of the JEDC project, fixed-point
+iteration was always numerically stable.
+
+3.3     Multi-dimensional integration
+SSA and CGA require the calculation of integrals that represent conditional
+expectation functions in the Euler equations. SSA employs Monte Carlo
+integration combined with regression, as is used in Den Haan and Marcet
+(1990). This integration procedure makes it possible to infer expectations
+(to compute integrals) simultaneously in all simulated points. If the length
+   7
+     Fixed-point iteration is simpler to implement than alternative iterative schemes such as
+time iteration (that involves finding a solution to a system non-linear equation; see Judd,
+1998, p. 553-555) or Newton methods (that require to compute Jacobian and Hessian
+matrices and to use optimization methods; see Judd, 1998, p. 103-119). Also, Gaspar
+and Judd (1997) argue that fixed-point iteration has a lower computational cost than time
+iteration and Newton methods for problems of medium and high dimensionality.
+
+
+                                             10
+of simulations T is held fixed, the cost of this integration procedure does not
+grow substantially with the dimensionality of the problem (though accuracy
+may decrease as more polynomial coeﬃcients must be identified); see JMM
+(2010b) for the corresponding results. In particular, JMM (2010b) find that
+under T = 10, 000, first- and second-degree complete polynomials are feasible
+for a model (similar to Model 1 of the present project) with up to N = 200
+and up to N = 30 countries, respectively.
+    CGA is a projection method and relies on deterministic methods of inte-
+gration. The choice of an integration method depends on the dimension-
+ality of the problem. One-dimensional integrals can be computed accu-
+rately using the Gaussian quadrature approach (as is done, for example,
+in Judd’s (1992) Galerkin algorithm). For a given weighting function w (ε),
+Gaussian quadrature approximates an integral (conditional expectation) by
+                 R                    XH
+E [G (ε) w (ε)] = R G (ε) w (ε) dε ≈      wh G (εh ) for some nodes {εh }h=1,...,H
+                                      h=1
+and weights {wh }h=1,...,H . One can extend the Gaussian quadrature approach
+to multi-dimensional integration problems using a product rule. However,
+product rules are not feasible in high-dimensional problems due to the curse
+of dimensionality: the total number of integration nodes H N increases ex-
+ponentially with dimension. To reduce the cost of numerical integration
+in economic applications of high dimensionality, Judd (1998) proposes to
+use non-product monomial integration formulas; see Judd (1998, p.271 and
+p.331). A large collection of such formulas is available in Stroud (1971).
+    JMM (2010a) elaborate the monomial formulas for a heterogeneous-agent
+model similar to those studied in the present paper, illustrate the use of such
+formulas by way of examples and provide an exhaustive comparison of the
+performance of the CGA method under diﬀerent integration strategies. Such
+strategies include the product Gauss-Hermite rule with 1, 2 and 3 nodes
+in each dimension (referred to as Q (1), Q (2) and Q (3), respectively) and
+non-product monomial rules with 2N and 2N 2 + 1 nodes (referred to as M1
+and M2, respectively). Using second-degree polynomials, JMM (2010a) find
+that the integration formulas Q (3), Q (2), M2, M1 and Q (1) are feasible
+for the models with up to N = 6, N = 8, N = 12, N = 20 and N = 40
+countries, respectively. Using first-degree polynomials, JMM (2010a) find
+that the formulas M1 and Q (1) are feasible for the models with up to N =
+100 and N = 200 countries, respectively.
+
+
+
+                                       11
+3.4    Coordinating the approximation, integration and
+       intratemporal-choice strategies
+As is argued in JMM (2010a), making a numerical method cost-eﬃcient re-
+quires proper coordination between the approximation and integration strate-
+gies. For example, if a polynomial approximation of a given degree can deliver
+accuracy of no more than 10−4 , it would be ineﬃcient to compute integrals
+with accuracy of 10−10 (doing so would increase costs without increasing
+the overall accuracy of the solutions). It is therefore important to identify
+combinations of the approximation and integration strategies that are well
+matched in terms of accuracy.
+    JMM (2010a) identifies the following regularities: For a first-degree poly-
+nomial, all integration methods lead to the same level of accuracy, including
+the one-node Gauss-Hermite quadrature rule. For a second-degree polyno-
+mial, the two- and three-node Gauss-Hermite rule and the monomial formulas
+lead to the same level of accuracy (up to the fourth digit), while the one-node
+Gauss-Hermite rule leads to Euler-equation errors that are 5 − 10% larger
+than those calculated with more accurate integration methods. JMM (2010a)
+give an example of coordination between the approximation and integration
+strategies that consists in combining the second-degree polynomial and the
+one-node Gauss-Hermite integration rule. This combination makes it possi-
+ble to increase the number of countries, N, from 20 to 40 at a cost of a small
+decrease in accuracy.
+    In the presence of endogenous labor-leisure choice, the approximation
+and integration strategies should be properly coordinated not only with each
+other, but also with the intratemporal-choice strategy. The numerical results
+in Section 7.1 show that insuﬃcient accuracy in intratemporal choice can
+drastically reduce the overall accuracy of the solutions; the importance of
+accuracy in intratemporal choice is also seen in Table 6 of the comparison
+paper by KMMP (2010).
+
+
+4     Intratemporal choice
+In Section 4.1, we discuss intratemporal-choice approaches that currently
+exist in the literature. In Sections 4.2 and 4.3, we describe two novel ap-
+proaches, iteration-on-allocation and precomputation, that allow us to solve
+for the intratemporal choice both accurately and quickly. Finally, in Section
+
+
+                                      12
+4.4, we show that combining iteration-on-allocation and precomputation can
+produce additional gains in speed.
+
+4.1    Standard intratemporal-choice approaches
+Existing literature provides two approaches to computing the intratemporal
+choice. First, given kt , at and kt+1 , one can solve a system of 2N equations,
+(2), (4) and (5), with respect to 2N unknowns, ct and `t , using a standard
+Newton method. The cost of this approach can be prohibitive because we
+must find a numerical solution to the 2N-dimensional system of equations
+a large number of times (in each time period, grid point, integration node)
+within an iterative cycle.
+    Second, one can treat the intratemporal choice in the same way as the
+intertemporal choice, i.e., one can compute the policy functions for the
+intratemporal-choice variables, cjt = C j (kt , at ) and jt = Lj (kt , at ) satis-
+fying the corresponding optimality conditions (2), (4) and (5) inside the
+main iterative cycle. (In contrast to the intratemporal-choice manifolds
+Φj (kt , at , kt+1 ) and Θj (kt , at , kt+1 ) in (8) defined for any kt+1 , the pol-
+icy functions C j (kt , at ) and Lj (kt , at ) do not include kt+1 as an argument
+because such functions are defined for the equilibrium intertemporal choice,
+kt+1 , determined by the capital policy functions (7)). In our experiments,
+this approach does not produce suﬃciently accurate results; see Section 7.1.
+Moreover, simultaneous iterations on policy functions for the intertemporal-
+and intratemporal-choice variables reduce both the numerical stability and
+the speed of convergence.
+
+4.2    Iteration-on-allocation
+The first intratemporal-choice approach we use relies on a numerical solver,
+(fixed-point) iteration-on-allocation, proposed by Maliar and Maliar (2004).
+This method’s name emphasizes that fixed-point iteration is applied to the
+intratemporal-choice allocations and distinguishes it from a diﬀerent fixed-
+point iteration procedure, described in Section 5, that is applied to the coef-
+ficients of an approximating polynomial function.
+     The iteration-on-allocation approach proceeds as follows:
+
+   • Step 1. Re-write conditions (2), (4) and (5) to define a mapping g that
+     explicitly and uniquely maps a set of values z t = (ct , `t ) into a new set
+
+                                        13
+                     ³        ´
+                et = e
+      of values z     ct , èt (this is possible to do for all of the eight models
+      studied in the current JEDC project):
+
+                                           et = g (z t ) .
+                                           z                                    (10)
+
+                                                         et via mapping (10).
+   • Step 2. Use some initial guess on z t and calculate z
+
+   • Step 3. Use partial updating (damping) to compute an input for the
+                                      z t , where ς ∈ (0, 1) is a damping para-
+     next iteration as (1 − ς) z t + ςe
+     meter.
+
+      Iterate until a fixed point, z t = g (z t ), is found with a given degree
+      of accuracy, i.e.,
+                                   T °            °
+                              1 X°    ° e
+                                        z t − z t °
+                                                  ° < 10−θ ,
+                                      °                                    (11)
+                            ς · T t=1       zt °
+
+   where θ > 0, and k·k is some vector norm.
+
+    On the initial iteration, we can assume that z t is equal to its steady-state
+value. Typically, we need not iterate on all 2N unknown elements of ct and `t
+since there are explicit closed-form expressions relating these variables, and
+fixing one or a few of them allows to analytically find the values of all the
+intratemporal-choice variables. As an example, we describe how to construct
+a mapping of type (10) for Model 5; the mappings for Models 6-8 are given
+in Appendix A.
+
+Example 1 (Model 5). There is no labor-leisure choice, so condition (5) is
+absent. The remaining intratemporal-choice conditions (4) and (2), written
+in a form suitable for iteration-on-allocation, respectively, are
+                          h¡ ¢               i−γ j
+                                −1/γ 1 1
+                  cjt =
+                  e         c1t       τ /τ j       ,         j = 2, ..., N,     (12)
+              ⎡                              Ã          !2       ⎤
+          X
+          N
+                          ¡ ¢                     j
+                                                 kt+1               XN
+    c1t =
+    e         ⎣ktj + ajt A ktj α − φ ktj                      j ⎦
+                                                                        cjt ,
+                                                                        e
+                                                    j −1   − kt+1 −             (13)
+          j=1
+                                   2              kt                j=2
+
+           j=1,...,N
+where {γ j }      are the utility-function parameters, and A is a normalizing
+constant. For given kt , at and kt+1 , equations (12) and (13) define a mapping
+
+                                             14
+c1t = g (c1t ). We iterate on consumption of the first country, c1t , as follows:
+e
+                                          © j ªj=2,...,N
+Assume some value for c1t ; compute e       ct                             c1t from
+                                                         from (12); obtain e
+(13); if c1t 6= e
+                c1t , compute the input for the next iteration as (1 − ς) c1t + ςe
+                                                                                 c1t .
+Iterate until convergence.
+
+    Iteration-on-allocation has two advantages over standard Newton-type
+methods. First, iteration-on-allocation does not require to compute deriva-
+tives (such as Jacobian or Hessian) but instead performs a straightforward
+summation; as a result, its cost does not increase considerably with the di-
+mensionality of the problem. Second, iteration-on-allocation can operate on
+a time series or on all grid points simultaneously while Newton-type methods
+compute a solution point by point and are more diﬃcult to vectorize.
+    Convergence of fixed-point iteration is in general not guaranteed; for for-
+mal results about convergence of fixed-point iteration, see Judd (1998 p.165-
+166). However, damping can often help achieve convergence. In particular,
+by choosing an appropriate value of the damping parameter, ς, we were able
+to achieve convergence in all eight models of the current JEDC project. Be-
+low, we discuss the issue of convergence using Model 5 as an example.
+
+Example 2 (Model 5). Conditions (12) and (13) together imply
+
+                                        XN ∙ 1            ¸−γ j
+                             ¡ 1¢           τ ¡ 1 ¢−1/γ 1
+                    c1t   = g ct ≡ ct −        c                ,                    (14)
+                                        j=2
+                                            τj t
+
+                                                                         j=1,...,N
+where ct is aggregate consumption that is given. Note that if {γ j }              are
+                           0 1                                              1 ∗
+of the same sign,¡ then   g (ct ) < 0. There is a unique fixed point (ct ) satis-
+            ∗          ∗¢
+fying (c1t ) = g (c1t ) (at this point, g (c1t ) crosses the 45o line). However,
+applying g iteratively to some initial guess c1t , i.e., g (...g (g (c1t ))) does not
+guarantee the convergence to this fixed point. Depending on whether g0 is
+larger than, smaller than or equal to minus one, the result will be conver-
+gence, divergence or cycling, respectively. (Note that the slope of g depends
+on the model’s parameters and welfare weights, as well as on the specific way
+in which g is constructed). Figures 2a and 2b show, respectively, the cases
+of convergence and divergence of fixed-point iteration. Figures 2c and 2d il-
+lustrate fixed-point iteration with damping (1 − ς) c1t + ςg (c1t ). In particular,
+Figure 2d demonstrates that a suﬃciently small damping parameter ς can
+help restore convergence.
+
+
+                                           15
+4.3    Precomputation
+The second intratemporal-choice approach we use is precomputation, which
+consists of constructing intratemporal-choice manifolds defined in (8) out-
+side the main iterative cycle using either analytical derivations or numerical
+computations or a combination of both. This approach was originally pro-
+posed by Maliar and Maliar (2005) for constructing a labor manifold outside
+the main iterative cycle in the standard neoclassical growth model. Maliar
+and Maliar (2007) introduced the precomputation approach in the context
+of the current JEDC project. In the present paper, we give a more elaborate
+description of the precomputation approach.
+    A general version of the precomputation approach, applied to the model
+(1) − (3), constructs the intratemporal-choice manifolds Φj (kt , at , kt+1 ) and
+Θj (kt , at , kt+1 ) in (8) as follows:
+
+   • Step 1. Outside the   © main iterative
+                                         ª       cycle, choose a grid of P values for
+                                       0
+     kt , at , kt+1 , i.e., kp , ap , kp p=1,...,P . For each grid point p = 1, ...P ,
+     solve equations (2), (4) and (5) using a numerical solver with respect
+     to consumption cjp and labor jp for j = 1, ..., N .
+
+   • Step 2. Extend the constructed set functions to the relevant continuous
+     domain using some interpolation method (a global polynomial approxi-
+     mation, piecewise linear polynomial approximation, splines, etc.), such
+     that
+               b j (k, a, k0 )
+          cj = Φ                 and    j    b j (k, a, k0 ) ,
+                                            =Θ                   j = 1, ..., N,   (15)
+
+      where Φ        b j are the precomputed consumption and labor manifolds
+             b j and Θ
+      of a country j, and (k, a, k0 ) ∈ R3N .
+
+   • Step 3. In the main iterative cycle, use the precomputed manifolds
+     b j (k, a, k0 ) and Θ
+     Φ                    b j (k, a, k0 ) to find the intratemporal choice given the
+     state, (kt , at ), and the intertemporal choice, kt+1 .
+
+    Many applications have enough structure to simplify the precomputation
+approach in two ways. First, it might be not necessary to precompute all
+the intratemporal-choice manifolds because some of these manifolds can be
+constructed analytically. Second, it may be possible to precompute the in-
+tratemporal choice in terms of a set of arguments that is smaller than kt , at ,
+
+                                         16
+kt+1 or that is given by some function of kt , at , kt+1 . We illustrate these two
+points by way of example for Model 5 described in Maliar and Maliar (2007).
+In this case, we precompute a single manifold, consumption of country 1, c1t ,
+in terms of one argument, aggregate consumption, ct (which is a function of
+kt , at , kt+1 ).
+
+Example 3 (Model 5). Outside the main iterative cycle, take P values
+for aggregate consumption ct , i.e., {cp }p=1,...,P . For each cp , use a numerical
+solver to find a solution c1p to equation (14) written as
+
+                                XN ∙ 1            ¸−γ j
+                                    τ ¡ 1 ¢−1/γ 1
+                        c1p   +        c                = cp .                  (16)
+                                j=2
+                                    τj p
+
+Interpolate the constructed set function to a continuous domain to obtain the
+manifold bc1 (c). Inside the main iterative cycle, given kt , at , kt+1 , compute
+ct from resource constraint (2), use the precomputed manifold to find con-
+sumption of country 1, c1t = b       c1 (ct ) and compute consumption of the other
+                   h 1               i−γ j
+                              −1/γ 1
+countries as cjt = ττ j (c1t )             , j = 2, ..., N.
+
+    As with Model 5, precomputing a single intratemporal-choice manifold
+(either consumption or labor manifolds) is suﬃcient for Models 2 and 6; see
+the formulas in Appendix A. For Models 3, 4, 7 and 8, we can precompute
+N labor manifolds and find the corresponding consumption allocations using
+the formulas provided in Appendix A; note that for these models, we cannot
+precompute N consumption manifolds and find the corresponding labor allo-
+cations analytically: there is a closed-form expression for consumption given
+labor but there is no closed-form expression for labor given consumption.8
+    We can precompute the intratemporal choice in Model 2 in terms of two
+composite arguments (see Appendix B for details). For the remaining mod-
+els - Models 3, 4, 6, 7 and 8 - the intratemporal-choice manifolds must be
+precomputed in terms of 3N arguments kt , at , kt+1 . To make the precompu-
+tation approach feasible for high-dimensional problems, we can precompute
+the intratemporal-choice manifolds on the ergodic set realized in equilib-
+  8
+    The advantage of solving for labor over solving for consumption was exploited by
+Maliar and Maliar (2005) to simplify finding the intratemporal choice in the standard
+neoclassical growth model.
+
+
+
+                                           17
+rium.9 For SSA, the domain for precomputation is a set of simulated points;
+for CGA, it is a set of the clusters’ centers obtained from simulated points.
+The domains of SSA and CGA are discussed in Section 5.
+
+4.4        Combining iteration-on-allocation and precompu-
+           tation
+For Models 3, 4, 7 and 8, the pure iteration-on-allocation approach requires
+                                                                    © ªj=1,...,N
+to iterate simultaneously on labor allocations of N countries jt                    (see
+Appendix A). In turn, the pure precomputation approach requires to pre-
+compute the labor choice of each country as a function of 3N arguments kt ,
+at , kt+1 . We now show that under the assumption of additively separable
+production across countries, we can combine iteration-on-allocation and pre-
+computation into a single method that precomputes the labor manifolds in
+terms of three arguments and iterates on one allocation.10 This is possible
+because conditions (4) and (5) implicitly define the intratemporal choice of
+each country j in terms of its own capital¡ktj , its own    ¢  productivity
+                                                                        ¡    level a¢jt
+and aggregate consumption ct ; i.e., cjt = Ωj ktj , ajt , ct and jt = Λj ktj , ajt , ct ,
+j = 1, ..., N. Model 2 is an example of the economy in which such manifolds
+can be constructed analytically (see Appendix B); generally, however, such
+manifolds must be precomputed numerically.11
+     We combine iteration-on-allocation and precomputation as follows:
+
+       • Step 1. Outside the main iterative cycle,    ©        for ª each country j, choose
+         a grid of P values for ktj , ajt , ct , i.e., kpj , ajp , cp p=1,...,P . For each grid
+         point p = 1, ...P , solve equations (4) and (5) using a numerical solver
+         with respect to cjp and jp for j = 1, ..., N.
+   9
+     To construct the domain for the intratemporal-choice manifolds, one can use a tensor-
+product grid of 3N arguments kt , at , kt+1 . However, the number of grid points will grow
+exponentially with dimension, and the precomputation method will not be feasible even
+for a moderately large number of countries.
+  10
+     Combining iteration-on-allocation and precomputation is also possible for Models 2
+and 6, but does not provide any advantages over the pure iteration-on-allocation method
+described in Section 4.2.
+  11
+     Maliar and Maliar (2001, 2003a) construct similar intratemporal-choice manifolds an-
+alytically for certain classes of heterogeneous-agent economies and use these manifolds to
+derive non-Gorman aggregation results.
+
+
+
+
+                                               18
+    • Step 2. Interpolate the constructed set functions to the relevant con-
+      tinuous domain,
+                  ¡           ¢            ¡           ¢
+               b j kj , aj , c
+          cj = Ω                        b j kj , aj , c , j = 1, ..., N,
+                                and j = Λ                                (17)
+
+      where Ωb j and Λ
+                     b j are the precomputed consumption and labor manifolds
+      of a country j, and (k j , aj , c) ∈ R3 .
+
+    • Step 3. Substitute the precomputed labor manifolds Λ           b j (kj , aj , c) for
+      j = 1, ..., N into resource constraint (2) to define the mapping of the
+      form ect = g (ct ),
+                  ⎡                                      Ã        !2                  ⎤
+            X N           ³         ¡              ¢´ φ    j
+       e
+       ct =                      b j ktj , ajt , ct − ktj kt+1 − 1 + ktj − kt+1
+                  ⎣ajt f j ktj , Λ                                                j ⎦
+                                                                                        .
+                                                             j
+             j=1
+                                                      2    kt
+                                                                             (18)
+      Inside the main iterative cycle, compute aggregate consumption, ct ,
+      using the iteration-on-allocation approach. For each t, given kt , at ,
+      kt+1 , assume some value for ct and calculate ect from (18); if ct 6= e  ct ,
+      compute an input for the next iteration equal to (1 − ς) ct + ςe
+                                                                     ct . Iterate
+      until convergence.
+
+   Like the pure iteration-on-allocation and precomputation methods, their
+combination allows to solve for the intratemporal allocations (including ag-
+gregate consumption, ct ) with a high degree of accuracy.
+
+
+5     Two ergodic-set algorithms
+In this section, we describe two ergodic-set algorithms, SSA and CGA, that
+we use to solve the models (1) − (3). Both algorithms find a solution on the
+ergodic set. However, they diﬀer in how they use information on the ergodic
+set: SSA uses simulated points both as a domain for finding the solution
+and as nodes for integration, while CGA uses such points exclusively for
+constructing the domain (it performs integration using deterministic methods
+unrelated to the estimated density function). For both methods, we re-write
+Euler equation (6) in a form suitable for parameterizing the capital policy
+
+
+
+
+                                           19
+           j
+function kt+1 = K j (kt , at ):
+                (      ¡            ¢                                            )
+                    ujc cjt+1 , jt+1 £ j       ¡ j                   ¢¤
+      kt+1 = Et β j ¡ j j ¢ j π t+1 + ajt+1 fkj kt+1
+       j
+                                                     ,         j
+                                                               t+1
+                                                                           j
+                                                                          kt+1       (19)
+                     uc ct , t ω t
+                ¡            ¢
+           ' Ψj kt , at ; v j ,
+
+where Ψj (kt , at ; vj ) is a flexible functional form used to parameterize the
+capital policy function, and v j is a vector of coeﬃcients.12 See Appendix C
+for the specifications of (19) corresponding to Models 5-8. We denote by v
+a matrix
+    ¡ 1 composed         of
+                         ¢ the vectors of polynomial coeﬃcients of all countries,
+                j      N
+v≡ v , ..., v , ..., v .
+    We assume that Ψj is given by a complete set of ordinary polynomials, i.e.,
+Ψj (kt , at ; vj ) ≡ X t v j , where X t is a row vector composed of t-period mono-
+mial terms of the state variables, kt and at . For the       ¡ first-degree polynomial¢
+function in the example given in (9), we have X t = 1, kt1 , ..., ktN , a1t , ..., aN
+                                                                                    t   ∈
+  1×(2N+1)           j
+                          ¡ j j         j    j          j ¢0   (2N+1)×1
+R            , and v = v0 , v1 , ..., vN , vN+1 , ..., v2N ∈ R          .
+    We should emphasize that the end-of-period capital stocks kt+1 are the
+only variables we approximate by functions of the state variables, kt and at .
+The remaining variables (consumption and labor) are either computed by the
+iteration-on-allocation solver or obtained from the precomputed intratemporal-
+choice manifolds in form (8).
+    Properly separating the intertemporal and intratemporal choices is cru-
+cial for the speed of SSA and CGA. Approximating the policy functions for
+capital, as in (19), has an important advantage over approximating the pol-
+icy functions for other variables such as consumption and leisure. Namely,
+the equilibrium capital policy functions are the equilibrium capital laws of
+           j
+motion kt+1      = K j (kt , at ) , j = 1, ..., N. As a result, we can first construct
+a path for capital, {kt+1 }t=0,...,T , and subsequently fill in the corresponding
+intratemporal allocations {ct , `t }t=1,...,T . The iteration-on-allocation and pre-
+computation methods can work with vectors and even matrices and can thus
+find the intratemporal choice in all periods, grid points, integration nodes at
+once rather than one by one.
+  12
+    This kind of parameterization was used by Den Haan (1990) as a device to implement
+the simulation-based parameterized expectations algorithm in a model with more than
+one Euler equation.
+
+
+
+
+                                          20
+5.1    Stochastic simulation algorithm
+SSA simultaneously computes the ergodic distribution of state variables, its
+support and the associated policy functions. It proceeds as follows:
+    Fix the simulations length T and initial condition (k0 , a0 ). Draw and fix
+for all simulations a sequence of productivity levels {at }t=1,...,T using equation
+(3). If precomputation is used, construct the intratemporal-choice manifolds
+of type (8) as described in Section 4.3, and if precomputation is combined
+with iteration-on-allocation, do so as described in Section 4.4.
+
+   • Step 1. For an iteration s, fix some matrix of coeﬃcients v (s). For each
+                                                                         j
+     country j = 1, ..., N, use the assumed capital policy function kt+1       =
+          j
+     X t v to recursively calculate a sequence of capital stocks {kt+1 }t=0,...,T
+     corresponding to a given sequence of productivity levels {at }t=0,...,T .
+
+   • Step 2. Given {kt , at , kt+1 }t=0,...,T , calculate {ct , `t }t=0,...,T using a vec-
+     torized version of either iteration-on-allocation or precomputation or
+     their combination.
+
+   • Step 3. For each country j = 1, ..., N, compute the integrand of (19),
+                        ¡ j     j ¢
+                     uj
+                         c    ,     £                 ¡ j         ¢¤ j
+              ytj ≡ β j ¡ j j ¢t+1j π jt+1 + ajt+1 fkj kt+1
+                      c   t+1
+                                                            , jt+1 kt+1 (20)
+                     uc ct , t ω t
+
+      for t = 0, ..., T − 1.
+
+   • Step 4. For each country j = 1, ..., N, run a linear regression of the
+     constructed variable ytj on a set of explanatory variables X t using the
+     numerically stable approximation methods described in JMM (2009,
+     2010b),
+                                 ytj = X t v j + jt ,                    (21)
+      where jt is a t-period regression error corresponding to country j. Let
+      the matrix of coeﬃcients estimated on iteration s be called vb (s).
+
+   • Step 5. Compute the matrix of coeﬃcients for the subsequent iteration
+     s + 1 using fixed-point iteration:
+
+                           v (s + 1) = (1 − ξ) v (s) + ξb
+                                                        v (s) ,                      (22)
+
+      where ξ ∈ (0, 1) is a damping parameter.
+
+                                           21
+   Iterate on Steps 1 − 5 until a fixed point is found such that for ϑ > 0:
+                            ¯                           ¯
+                 1 X X ¯¯ kt+1                 (s + 1) ¯¯
+                      T   N    j           j
+                                  (s) − kt+1
+                            ¯          j                ¯ < 10−ϑ ξ,      (23)
+               T · N t=1    ¯         kt+1 (s)          ¯
+                             j=1
+
+        j            j
+where kt+1 (s) and kt+1 (s + 1) are the j-th country’s capital stocks obtained
+on iterations, s and s + 1, respectively, and |·| denotes the absolute value.
+
+5.2     Cluster-grid algorithm
+CGA is a projection method that computes a solution on a grid constructed
+from clusters of simulated points. It proceeds as follows: Make an initial guess
+                                         j
+about the capital policy functions kt+1        = X t v j , j = 1, ..., N. Given initial
+condition (k0 , a0 ), draw a sequence of productivity levels {at }t=1,...,T using
+(3), and simulate the time series solution {kt+1 }t=0,...,T . Using simulated data,
+construct I clusters and compute the centers of the clusters, {ki , ai }i=1,...,I ,
+to be used as a grid for projections; see JMM (2010a) for a description of
+clustering methods and illustrative examples. In each grid point i = 1, ..., I,
+construct a function Γj (ki , ai , ε) that represents the integrand in (19),
+                           ³¡ ¢0 ¡ ¢0 ´
+                       ujc cji , ji     h¡ ¢0 ¡ ¢0 ³¡ ¢0 ¡ ¢0 ´i ¡ ¢0
+   Γj (ki , ai , ε) ≡ β j ¡ j j ¢          π ji + aji fkj kij , ji            kij ,
+                          uc ci , i ω j
+              ¡ 1        ¢                                                        (24)
+                       N
+where ε ≡ ε , ..., ε is the next-period shock. Furthermore, if precompu-
+tation is used, construct the intratemporal-choice manifolds of type (8) as
+described in Section 4.3, and if precomputation is combined with iteration-
+on-allocation, do so as described in Section 4.4.
+
+   • Step 1. On an iteration s, fix a matrix of coeﬃcients v (s). For each
+     country j, use the assumed capital policy ¡function to calculate the end-
+                                                  j ¢0
+     of-period capital stock in all grid points, ki ≡ X i v j for i = 1, ..., I.
+
+   • Step 2. Given {ki , ai , k0i }i=1,...,I , calculate {ci , `i }i=1,...,I using a vector-
+     ized version of iteration-on-allocation, precomputation or their combi-
+     nation.
+
+   • Step 3. For each country j = 1, ..., N, use a numerical integration
+     method (such as non-product monomial rules or product Gauss-Hermite
+
+                                           22
+      rule) to approximate
+                 ³ ´0       the conditional expectations of equation (24). Call
+      the result b  j
+                  k , i.e.,
+                    i
+                                ³ ´0    £                ¤
+                                 b
+                                 kij ≡ E Γj (ki , ai , ε) ,                    (25)
+                                                                   ¡             ¢
+      where the expectation is computed with respect to ε ≡ ε1 , ..., εN .
+      To calculate the next-period intratemporal choice {c0i , `0i }i=1,...,I , for
+      each integration node, use a vectorized version of either iteration-on-
+      allocation or precomputation or their combination as described in Sec-
+      tion 4.
+   • Step 4. For each country
+                       ³ ´0 j = 1, ..., N, run a linear regression of the con-
+     structed variable bkj on a set of explanatory variables X i using the
+                            i
+      numerically stable approximation methods described in JMM (2009,
+      2010b),                 ³ ´0
+                                b
+                                kij = X i v j + ji ,              (26)
+
+      where ji is an i-grid-poind regression error corresponding to country j.
+      Let the matrix of coeﬃcients estimated on iteration s be called vb (s).
+   • Step 5. Compute the matrix of coeﬃcients for the subsequent iteration
+     s + 1 using fixed-point iteration (22).
+
+
+Iterate on Steps 1 − 5 until a fixed point is found, such that for ϑ > 0:
+                                  ¯ ¡ ¢ ³ ´0 ¯
+                                  ¯ j 0       bj ¯
+                      1 X X ¯¯ ki − ki ¯¯
+                           I   N
+                                  ¯    ¡ j ¢0    ¯ < 10−ϑ ,               (27)
+                    I · N i=1 j=1 ¯     k        ¯
+                                  ¯      i       ¯
+       ¡ j ¢0     ³ ´0
+where ki and b     kij are the end-of-period capital stocks before and after
+the iteration, respectively.
+    After achieving convergence, we should generally re-run CGA using the
+obtained policy functions for capital as an initial guess for simulation. Do-
+ing so controls for the possibility that the initial guess for the capital policy
+functions was far from the true solution, and the simulated series (and con-
+sequently, our cluster grid) did not adequately represent the true ergodic
+set.
+
+                                         23
+6     Implementation details
+In Section 6.1, we describe the baseline implementation of SSA and CGA
+that was used to generate the results presented in the comparison paper by
+KMMP (2010). In Section 6.2, we discuss alternative implementations of
+these algorithms that are not included in KMMP (2010). Calibration of the
+models’ parameters is provided in Juillard and Villemot (2010).
+
+6.1    Baseline implementation of SSA and CGA
+Below, we describe the details of the baseline implementation of our methods,
+as well as the solution-output, hardware, software and measures of accuracy
+and cost.
+
+Stochastic simulation algorithm SSA computes solutions using the first-
+degree ordinary polynomial (9). To start the iterative process, we use an
+                             j
+(arbitrary) initial guess: kt+1  = 0.9ktj + 0.1ajt for all j = 1, ...N. Since the
+steady-state levels of capital and productivity are normalized to one, the
+above guess matches the steady-state level of capital. In terms of the vector
+of coeﬃcients v j , this guess implies that vjj = 0.9, vN+j
+                                                          j
+                                                              = 0.1, j = 1, ...N,
+                                            j
+and that the remaining coeﬃcients in v are equal to zero. Initial capital
+and productivity level are set at their steady-state values: k0j = 1 and aj0 = 1
+for all j = 1, ..., N. The simulation length is T = 10, 000.
+    To estimate the coeﬃcients in the linear regression (21), we use a least-
+squares truncated QR factorization method; see JMM (2009) for a discussion.
+We set the damping parameter in (22) to be the largest values of ξ that
+lead to convergence: ξ = 0.05 for Models 1 and 5, and ξ = 0.03 for the
+remaining models. We target seven digits of accuracy in the simulated data
+by fixing ϑ = 7 in convergence criterion (23). To rule out explosive and
+implosive behavior on initial iterations, we restrict the simulated series for
+capital using moving bounds as described in Maliar and Maliar (2003b); in
+most cases, however, the artificial bounds were not necessary as the initial
+guess led to a stationary simulated series.
+
+Cluster-grid algorithm CGA computes solutions using a second-degree
+ordinary polynomial. To start the iterative process, we use the first-degree
+polynomial solution computed by SSA as an initial guess. The SSA solution
+was used both to compute an initial guess for the matrix of coeﬃcients v
+
+                                       24
+and to construct 500 clusters. The clusters were constructed by applying an
+hierarchical clustering algorithm with Ward’s linkage to the principal com-
+ponents of the simulated data; see JMM (2010a) for a description of the
+clustering methods and illustrative examples.
+    To estimate linear regression (26), we again use a least-squares truncated
+QR factorization method. We set the damping parameter in (22) at ξ = 0.1
+for Models 1 and 5, and ξ = 0.05 for all other models. We use ϑ = 7 for
+convergence criterion (27). We solve the model twice: first, we compute the
+solution using a cheap non-product monomial rule M1 with 2N nodes, and
+then, we recompute it using an expensive product Gauss-Hermite rule Q(2)
+with two nodes in each dimension (2N nodes in total); see JMM (2010a) for
+a description of these integration methods.
+
+Iteration-on-allocation In the baseline versions of both SSA and CGA,
+we solve for the intratemporal choice using the iteration-on-allocation ap-
+proach. We use the damping parameter ς = 0.01 in all cases except for
+Models 1 and 5 under CGA in which case we use ς = 0.05. To start itera-
+tions under SSA, we assume that consumption and labor are equal to their
+steady-state values. Under CGA, we compute an initial guess for consump-
+tion and labor using the solution produced by SSA.
+     We would like to direct attention to an important aspect of the implemen-
+tation of iteration-on-allocation. Finding consumption and labor allocations
+with a high degree of accuracy on each iteration requires a high computa-
+tional cost and is in fact of no use, since on the next iteration, we must
+re-compute consumption and labor allocations for a diﬀerent matrix of coef-
+ficients v. We thus do not target any accuracy criteria in consumption and
+labor allocations in each iteration on v, but instead perform 10 subiterations
+on mapping (10) as described in Section 4 (except for Models 1 and 5 under
+CGA in which we perform 3 subiterations). We store in memory consump-
+tion and labor allocations obtained after each round of subiterations and use
+these allocations as inputs for the next round of the iteration-on-allocation
+process. Thus, as the policy functions for capital (characterized by v) are
+refined along the iterations, so do our consumption and labor allocations.
+     To enhance the numerical stability on initial iterations when the solution
+is inaccurate, we impose fixed lower and upper bounds (equal to 50% and
+150% of the steady-state level, respectively) on consumption in Model 5 and
+on labor in Models 6-8. This technique is similar to the moving bounds
+
+
+                                      25
+used to restrict simulated series for capital under SSA. With the imposition
+of bounds, the iteration-on-allocation procedure was numerically stable and
+converged to a fixed point at a good pace in all of our experiments. In
+convergence criterion (11), we use θ = 7.
+
+Solution-output delivered to the testing bench of Juillard and Ville-
+mot (2010) Under the iteration-on-allocation approach, SSA and CGA do
+not deliver explicit policy functions for consumption and labor. The only
+solution-output they produce is a matrix of the polynomial coeﬃcients for
+the capital
+     ¡        policy functions
+                           ¢         (laws of motion) of N heterogeneous countries,
+v = v 1 , ..., vj , ..., vN . Thus, in addition to the polynomial coeﬃcients v, we
+supply to the testing bench of Juillard and Villemot (2010) four iteration-
+on-allocation routines (one per each asymmetric model and its symmetric
+counterpart) that allow to find the intratemporal choice in simulation.13
+    The simulation of our solutions includes two steps: First, the capital laws
+               j
+of motion, kt+1      = Ψj (kt , at ; vj ) , j = 1, ...N, are used to generate the capital
+path {kt+1 }t=0,...,T . Then, given {kt , at , kt+1 }t=0,...,T , the corresponding in-
+tratemporal choice {ct , `t }t=0,...,T is filled in using the iteration-on-allocation
+method described in Section 4.2 and Appendix A. To begin the iteration-on-
+allocation process, we set consumption and labor equal to their steady-state
+values; we use the damping parameter ς = 0.01, and we perform iterations
+until the results satisfy convergence criterion (11) with θ = 10.
+
+Software, hardware, accuracy and cost Our programs are written in
+Matlab, version 7.6.0.324 (R2008a). We use a desktop computer with a
+Quad processor Intel(R) Core(TM) i7 CPU920 @2.67GHz, RAM 6,00GB
+and Windows Vista 64 bits. For each model studied, we report the running
+time in seconds: for SSA, the running time is defined as the time needed to
+compute a linear solution starting from a given initial guess, and for CGA, the
+running time is defined as the time needed to compute a quadratic solution
+starting from a linear SSA solution. Accuracy tests are performed using the
+testing bench of Juillard and Villemot (2010), and the results of these tests
+are described in KMMP (2010).
+  13
+     Using the iteration-on-allocation routines in simulation plays a key role in the overall
+accuracy of SSA and CGA because it allows us to solve for the intratemporal choice with
+essentially zero errors; see Table 4.3 in KKMP (2010). This would not be possible if we
+constructed and supplied the standard explicit consumption and/or labor policy functions
+in terms of state variables.
+
+                                             26
+6.2     Exploring alternative implementations
+The current JEDC project was launched in 2003, and since then, we have
+implemented many versions of the studied methods. We now compare our
+baseline implementation of SSA and CGA to alternative implementations
+explored, some of which are illustrated with numerical results in Section 7.
+
+Stochastic simulation algorithm At an early stage of the project, Maliar
+and Maliar (2004, 2007) implemented a stochastic simulation approach using
+the simulation-based parameterized expectation algorithm (PEA) by Den
+Haan and Marcet (1990). Under the PEA, policy functions are parame-
+terized by an exponentiated polynomial and are estimated using non-linear
+least-squares regression methods. The least-squares problem is typically ill-
+conditioned, which leads to numerical problems.14 Moreover, non-linear re-
+gression methods require a good initial guess and involve costly computations
+of Jacobian and Heissian matrices. Also, such methods cannot be easily vec-
+torized to estimate the policy functions of all countries simultaneously, which
+is critical for speed in multi-country settings; see JMM (2010b) for an exten-
+sive discussion. In the present paper, we rely on numerically stable stochastic
+simulation approaches described in JMM (2009): we use a linear regression
+model and employ a least-squares truncated QR factorization method suited
+for use with ill-conditioned problems. This approximation method (imple-
+mented in Matlab with the backslash operator) delivers the standard OLS
+estimator in the absence of ill-conditioning but removes highly collinear prin-
+cipal components in the presence of ill-conditioning.
+    We submitted for the comparison in KMMP (2010) the first-degree poly-
+nomial approximation because under the chosen simulation length T = 10, 000,
+it was more accurate than the second-degree polynomial approximation. This
+result is explained in JMM (2010b): The accuracy of Monte Carlo integration
+employed by SSA depends on how large the simulation length T is relative
+to the number of polynomial coeﬃcients in v. The higher is the polyno-
+mial degree and/or the dimensionality of the problem, N, the larger is the
+number of the coeﬃcients in v, and the larger simulation length is needed
+to appropriately identify the coeﬃcients. The simulation length assumed,
+  14
+    To be specific, polynomial terms in the approximating polynomial function are highly
+correlated (multicollinear), and the regression model cannot be estimated with the stan-
+dard least-squares method; see Den Haan and Marcet (1990), Christiano and Fisher (2000)
+and JMM (2009).
+
+
+                                          27
+T = 10, 000, is suﬃcient to accurately identify the coeﬃcients of the first-
+but not the second-degree polynomial. In a model similar to Model 1 of the
+current JEDC project, JMM (2010b) find that T should be increased from
+10, 000 to 50, 000 and to 100, 000 to make the second-degree polynomial ap-
+proximation more accurate than the first-degree polynomial approximation
+for the model with up to N = 4 and with up to N = 6, respectively. Running
+such a long simulation would be costly both in terms of time and memory.
+As follows from the comparison in KMMP (2010), even the linear solutions
+delivered by SSA are suﬃciently accurate. This is because SSA fits a poly-
+nomial exclusively in the relevant area of the state space (the ergodic set)
+and also because it solves accurately for the intratemporal choice using the
+iteration-on-allocation method.
+
+Cluster-grid algorithm In the case of CGA, we submitted for the com-
+parison in KMMP (2010) the second-degree polynomial approximation. CGA
+relies on accurate numerical integration methods, and the second-degree poly-
+nomial approximation is considerably more accurate than the first-degree
+one. The third-degree polynomial approximation is even more accurate. In
+particular, JMM (2010a) find that an increase in the polynomial degree used
+in CGA increases accuracy roughly by an order of magnitude in the examples
+considered. In Section 7, we compare the accuracy of the CGA method in the
+context of the current JEDC project using the first-, second- and third-degree
+ordinary polynomials, as well as using alternative Smolyak polynomials.
+    We also test how sensitive the CGA solutions are to the way in which the
+cluster grid is constructed. First, we tried to initialize CGA using a linear
+solution delivered by a log-linearization method instead of the one delivered
+by SSA.15 Second, we tried to construct clusters using an alternative K-
+means clustering algorithm and/or diﬀerent linkage methods instead of the
+baseline hierarchical algorithm with Ward’s linkage. These modifications
+do not visibly aﬀect the accuracy and speed of CGA. Finally, concerning
+the number of clusters, JMM (2010a) find that oversampling (when there are
+more grid points than the polynomial coeﬃcients) increases the accuracy and
+numerical stability of the CGA method compared to collocation (when the
+number of grid points is the same as the number of polynomial coeﬃcients).
+  15
+     In JMM (2010a), CGA is initialized without help of other methods: time series are
+simulated for an arbitrary initial guess and used to construct clusters on which a solution
+is computed. The obtained solution serves as a more accurate initial guess.
+
+
+                                            28
+In line with this finding, we choose to oversample and use 500 clusters to
+identify between 15 to 231 polynomial coeﬃcients in models with N ranging
+from 2 to 10, respectively.
+    To perform numerical integration, we tried to choose the most accurate
+integration strategy feasible for problems of given dimensionality, N ≤ 10.
+To this purpose, we design a two-step integration procedure that combines
+a low-cost monomial rule with 2N nodes (step one) and a costly monomial
+(quadrature) rule with 2N nodes (step two). It turned out that, in the studied
+models, gains from so accurate integration are minimal relative to less costly
+integration alternatives. In Section 7, we investigate how accuracy and cost
+of CGA depend on the specific integration method.
+
+Intratemporal-choice approaches In addition to our baseline iteration-
+on-allocation procedure, we explored other approaches for solving for the
+intratemporal choice. For all eight models studied, we computed the con-
+sumption and/or labor policy functions in terms of state variables within the
+main iterative cycle as described in Section 4.1, and we implemented a general
+version of the precomputation approach presented in Section 4.3. Also, for
+Model 5, we implemented the precomputation approach as described in Ex-
+ample 3, and for Models 6 and 7, we combined the precomputation approach
+and a numerical solver as described in Section 4.4.
+    To generate the results used for comparison in KMMP (2010), we opt for
+the most accurate method, which is iteration-on-allocation. However, our
+precomputation approach is a useful alternative to consider as it is faster than
+the iteration-on-allocation approach. In particular, it was adopted by Pichler
+(2010) for his solution method. In Section 7, we compare the performance of
+alternative intratemporal-choice approaches in the context of Model 5.
+
+
+7    Additional numerical results
+Accuracy and speed of SSA and CGA under the baseline implementation is
+assessed in KMMP (2010). In this section, we provide additional numerical
+results for CGA, which show how its accuracy and speed depend on the spe-
+cific intratemporal-choice approach, approximating polynomial function and
+integration method. To assess the accuracy of solutions, we implement a test
+that computes the average and maximum solution errors along a stochas-
+tic simulation of 10, 000 observations as described in Juillard and Villemot
+
+                                      29
+(2010).
+
+7.1       Comparison of intratemporal choice approaches
+To illustrate the role of the specific intratemporal-choice approach in deter-
+mining the accuracy of solutions, we use a two-country version of Model 5.
+We allow an intratemporal-choice approach used in the solution procedure
+diﬀer from that used in the simulation procedure. We report the results
+obtained using the second-degree polynomial approximation; the regularities
+under the first-order polynomial approximation are similar.
+    In the solution procedure, we consider four alternative intratemporal-
+choice approaches: (i) parameterize the consumption policy functions of
+both countries with a polynomial of the state variables and compute the
+polynomial coeﬃcients inside the main iterative cycle; (ii) parameterize and
+compute only the consumption policy function of country 1 inside the main
+iterative cycle and find consumption of country 2 from closed-form expres-
+sion (12); (iii) precompute the consumption manifold of country 1 outside the
+main iterative cycle in terms of aggregate consumption as described in Exam-
+ple 3 and find consumption of country 2 from (12); (iv) solve for consumption
+of both countries using the iteration-on-allocation approach, as described in
+Example 1.
+    In the simulation procedure, we solve for the intratemporal choice using
+four approaches that are parallel to those used in the solution procedure: (a)
+use the computed solution to construct the consumption policy functions for
+both countries in terms of the state variables (if not constructed by the solu-
+tion method used); (b) use the solution to construct the consumption policy
+function of country 1 in terms of the state variables (if not constructed by
+the solution method used) and find consumption of country 2 from (12); (c)
+find consumption of country 1 using the consumption manifold precomputed
+by method (iii) and find consumption of country 2 from (12); (d) solve for
+consumption of both countries using the iteration-on-allocation approach.
+    To implement precomputation in (iii), we consider an interval for aggre-
+gate consumption equal to ±20% of the steady-state value, and we split this
+interval into 300 equally spaced points. Outside the main iterative cycle,
+for each value of aggregate consumption cp , we compute c1p numerically from
+(16). Inside the main iterative cycle, we compute aggregate consumption ct
+from (2) and find the corresponding c1t using a piecewise linear polynomial
+interpolation. We tried other interpolation schemes such as a global high-
+
+                                      30
+order polynomial approximations, piecewise cubic polynomial interpolation,
+splines, etc., and found that piecewise low-order polynomial interpolation
+schemes lead to more accurate solutions (though are more costly) than global
+high-order polynomial approximations.
+     In Table 1, we present the results of combining methods (i)-(iv) in the
+solution procedure with methods (a)-(d) in the simulation procedure (all er-
+rors that are less than 10−10 are replaced by −∞). As the table indicates,
+if in both the solution and simulation procedures, we approximate a policy
+function for consumption using a second-degree polynomial of state variables,
+the resulting accuracy is low (namely, errors in the intratemporal-choice con-
+ditions including the resource constraint are large). If in the solution proce-
+dure, we solve for consumption very accurately (using precomputation and
+iteration-on-allocation) but in simulation, we solve for consumption not so
+accurately (using second-degree polynomials of state variables), the result-
+ing accuracy is again low. Finally, if in the solution procedure, we solve for
+consumption not very accurately (using second-degree polynomials of state
+variables), but in simulation, we solve for consumption very accurately (us-
+ing precomputation and iteration-on-allocation), the accuracy gets restored.
+These tendencies lead us to conclude that it is not so important for accuracy
+how we compute the intratemporal choice in the solution procedure but how
+we compute it in simulation (when running accuracy tests).
+     We would like to highlight two additional findings about accuracy in Table
+1. First, accuracy does not depend significantly on whether we approximate
+one or more than one intratemporal-choice variable using second-degree poly-
+nomials of state variables; in both cases, we suﬀer approximately the same
+accuracy loss. Second, the methods solving for the intratemporal choice ac-
+curately lead to considerably larger Euler-equation errors than those solving
+for the intratemporal choice less accurately.
+     Finally, Table 1 also shows the time, T CP U, needed to run the test on
+a stochastic simulation of 10, 000 observations. Under the precomputation
+approach, T CP U is only slightly larger than under the standard approach
+constructing the consumption and labor policy functions in terms of state
+variables, while under the iteration-on-allocation approach, T CP U is almost
+20 times larger. The iteration-on-allocation approach performs slowly in the
+test because our testing procedure is not vectorized along the time dimension;
+i.e., we use the iteration-on-allocation solver 10, 000 times to compute c1t and
+c2t period by period.
+
+
+                                      31
+7.2    Cost of iteration-on-allocation
+We now quantify the benefits of vectorizing the iteration-on-allocation ap-
+proach along the time dimension. In Table 2, we compare the time necessary
+to simulate a time-series solution of length T under two alternative simula-
+tion procedures: one in which the intratemporal choice is computed using the
+standard policy functions represented by second-degree polynomials of state
+variables (CP U1) and the other in which the intratemporal choice is com-
+puted using the iteration-on-allocation solver (CP U2). As an initial guess
+for allocations in the latter procedure, we use the allocations obtained in the
+former procedure.
+    Since our simulation routines are written in a vectorized form, the cost of
+iteration-on-allocation depends dramatically on the simulation length. When
+we simulate only one period entry (i.e., T = 1), the iteration-on-allocation
+approach is about 67 and 362 times more costly for Models 1 and 4, respec-
+tively, than the standard approach based on policy functions. However, as T
+increases, the relative cost of iteration-on-allocation decreases; in particular,
+for T = 10, 000, the iteration-on-allocation approach is about 4% and 250%
+more costly for Models 1 and 4, respectively, than the standard approach
+based on policy functions. The latter value is an upper bound. In other
+cases, the relative cost of iteration-on-allocation is even lower.
+
+7.3    Approximating functions and integration methods
+In Table 3, we assess the eﬀect of the specific approximating function and
+integration method on the accuracy of CGA in the context of two-country
+versions of Models 5-8. For each model studied, we consider four alternative
+approximating functions: the first-, second- and third-degree ordinary poly-
+nomials, as well as the Smolyak polynomial used in MKK (2010). We also
+consider five alternative integration methods: the product Gauss-Hermite
+rule with 1, 2N , 3N nodes, denoted Q (1), Q (2) and Q (3), respectively; and
+the monomial formulas with 2N and 2N 2 + 1 nodes, denoted M1 and M2,
+respectively.
+    We observe the following regularities from the table. First, all of the inte-
+gration rules considered, except for the one-node Gauss-Hermite rule Q (1),
+deliver solutions of virtually the same accuracy, with errors that are identical
+to the fourth digit. The Q (1) rule produces errors that are slightly larger;
+however, this rule has a substantially lower cost than the other integration
+
+
+                                       32
+methods and thus allows to solve problems of much higher dimensionality.
+In particular, JMM (2010a) use the Q (1) rule to compute first- and second-
+degree polynomial solutions to a model (similar to Model 1 of the current
+project) with up to N = 200 and N = 40 countries, respectively.
+    Second, when solutions are computed using ordinary polynomials, in-
+creasing the polynomial degree from one to two raises accuracy (reduces
+errors) by more than an order of magnitude; increasing the polynomial de-
+gree from two to three does so by slightly less than an order of magnitude.
+However, it is costly to increase the degree of a complete polynomial in high-
+dimensional problems. As is seen from Table 3, the Smolyak polynomial is a
+useful alternative for CGA: It leads to as nearly as accurate solutions as the
+third-degree complete polynomial, but its number of terms grows quadrati-
+cally instead of cubically with dimension (the Smolyak polynomial has only
+four times more terms than the second-degree complete polynomial indepen-
+dently of dimension); see MKK (2010) for a discussion and definition of the
+Smolyak polynomial.
+    In Table 4, we investigate how the cost and accuracy of CGA depend
+on the specific integration method used. To this purpose, we recompute the
+solutions to Models 5-8 under four alternative integration methods: Q(1),
+Q(2), M1 and M2. The accuracy measures in our Table 4 are analogous
+to those reported in Table 5 of KMMP (2010); however, our testing proce-
+dure uses random draws, which are diﬀerent from those used by Juillard and
+Villemot (2010). As Table 4 shows, the errors we found are very close to
+those shown in Table 5 of KMMP (2010). Furthermore, all of the integra-
+tion methods considered again lead to solutions of nearly the same accuracy,
+with the exception of the Q(1) rule (which produces slightly less accurate
+solutions).
+    The key finding in our Table 4 is that CGA can compute solutions of the
+same accuracy as those submitted for the comparison in KMMP (2010), but
+at a much lower cost. For example, we reduce the computational time for
+Model 5 with N = 10 countries from about 35 hours (reported in Table 3 of
+KMMP, 2010) to 7 minutes (reported in our Table 4) without a visible loss
+in accuracy by replacing our costly, baseline two-step integration procedure
+with just its first step based on the M1 monomial rule with 2N nodes.16 Al-
+  16
+     At the moment of submission of our solutions for the comparison in KMMP (2010), we
+did not have a reliable accuracy test, and we submitted the solutions obtained under the
+most accurate integration procedure feasible for CGA, which is a two-step combination of
+the M 1 and Q(2) rules.
+
+
+                                          33
+ternatively, we can solve a ten-country version of Model 5 in about 2 minutes
+using the Q(1) rule at the cost of a modest loss in accuracy. In Models 6-8, the
+cheaper integration rules reduce the computational time in roughly the same
+proportion as in Model 5. However, Models 6-8 are generally more costly
+to solve than Model 5 because of higher costs of computing the intratem-
+poral choice. The computational time for these models can be reduced (at
+the cost of some accuracy loss) by combining the iteration-on-allocation and
+precomputation approaches, as described in Section 4.3. In addition, we can
+decrease the computational time for all models by reducing the number of
+clusters; see JMM (2010a) for the corresponding experiments.
+
+7.4    Hybrid of perturbation and accurate intratemporal-
+       choice methods
+In Section 7.1, we show that using accurate intratemporal-choice approaches
+in simulation can increase the accuracy of solution methods that compute the
+intratemporal choice with insuﬃcient accuracy. A prominent example of such
+a method is perturbation, which in the studied models, produces small errors
+in the Euler equations but large errors in the intratemporal-choice conditions
+(especially, in the resource constraint); see Table 6 of KMMP (2010) for the
+accuracy by equation for the first- and second-order perturbation methods
+by Kollmann, Kim and Kim (2010) (referred to as PER1 and PER2, respec-
+tively). Consequently, there are potential benefits from constructing a hybrid
+of the standard perturbation method (used as a low-cost method for com-
+puting capital policy functions), and accurate intratemporal-choice methods
+(used to solve for consumption and labor after capital is computed).
+    To verify the above conjecture, we take the capital policy functions pro-
+duced by the standard log-linearization method for two-country versions of
+Models 5-8 and accurately solve for consumption and labor in simulation us-
+ing the iteration-on-allocation method. In Table 5, we compare the accuracy
+of the resulting hybrid method with that of the SSA, CGA, PER1 and PER2
+methods, as reported in Table 5 of KMMP (2010).
+    As Table 5 indicates, our hybrid method is far more accurate (by more
+than an order of magnitude) than PER1. It is even more accurate than
+PER2 and is only slightly less accurate than SSA. The hybrid method is still
+considerably less accurate than CGA. However, when comparing the hybrid
+method against CGA, we should take into account that the latter uses the
+
+
+                                      34
+second-degree polynomial, while the former uses the first-degree polynomial.
+The second-order hybrid perturbation method is likely to be more accurate
+than the first-order one.
+    Finally, to construct the hybrid perturbation method, we can use any
+numerical procedure that can accurately solve the system of intratemporal-
+choice conditions with respect to consumption and labor; e.g., a standard
+Newton-type solver. However, as we argued before, the iteration-on-allocation
+solver has advantages over other solvers. It is a good candidate for a fusion
+with perturbation.
+
+
+8    Conclusion
+In this paper, we oﬀer a mix of techniques that taken together allows us to
+address the challenges of high-dimensional problems. First, SSA and CGA
+operate on ergodic-set domains which in high-dimensional problems, are nor-
+mally just a tiny fraction of the standard hypercube domain used by other
+methods. Second, we use eﬃcient and numerically stable linear approxi-
+mation approaches described in JMM (2009). Third, we rely on low-cost
+integration methods, namely, a Monte Carlo integration method combined
+with regression under SSA, and non-product monomial rules and the Gauss-
+Hermite rule with one node under CGA. Fourth, we solve for the intratem-
+poral choice using the accurate iteration-on-allocation and precomputation
+methods. Fifth, we show that other polynomial families (such as Smolyak
+polynomials studied in MKK, 2010) can help increase accuracy and speed of
+our solution methods relative to our baseline family of ordinary polynomials.
+Finally, we argue that proper coordination of the approximation, integra-
+tion and intratemporal-choice strategies is critical for accuracy, speed and
+numerical stability of our solution methods.
+    If one uses a standard desktop computer (as we do), it is crucial for speed
+to vectorize computations. We iterate on policy functions of all countries si-
+multaneously rather than country by country, and we solve for the intratem-
+poral choice in all points at once rather than point by point. In contrast,
+if one uses parallel computing tools, it is essential to separate computations
+by country, grid point, integration node, etc. We should emphasize that the
+methods described in the paper are naturally parallelizable.
+    In addition to our main SSA and CGA algorithms, we construct a hy-
+brid solution algorithm that combines perturbation (used to compute policy
+
+                                      35
+functions for capital) and accurate intratemporal-choice methods (used to
+solve for consumption and labor allocations). We find that such a hybrid
+method delivers solutions that are more than an order of magnitude more
+accurate than those delivered by the pure perturbation method. This hy-
+brid perturbation method can be useful for solving problems of much higher
+dimensionality than those studied in the present paper.
+
+
+References
+ [1] Christiano, L. and D. Fisher, (2000). Algorithms for solving dynamic
+     models with occasionally binding constraints. Journal of Economic Dy-
+     namics and Control 24, 1179-1232.
+
+ [2] Den Haan, W. (1990). The optimal inflation path in a Sidrauski-type
+     model with uncertainty. Journal of Monetary Economics 25, 389-409.
+
+ [3] Den Haan W., K. Judd and M. Juillard, (2010). Computational suite
+     of models with heterogeneous agents: Milti-country real business cy-
+     cle models. Journal of Economic Dynamics and Control (special issue),
+     forthcoming.
+
+ [4] Den Haan, W. and A. Marcet, (1990). Solving the stochastic growth
+     model by parameterizing expectations. Journal of Business and Eco-
+     nomic Statistics 8, 31-34.
+
+ [5] Den Haan, W. and A. Marcet, (1994). Accuracy in simulations. Review
+     of Economic Studies 6, 3-17.
+
+ [6] Gaspar, J. and K. Judd, (1997). Solving large-scale rational-expectations
+     models. Macroeconomic Dynamics 1, 45-75.
+
+ [7] Judd, K., (1992). Projection methods for solving aggregate growth mod-
+     els. Journal of Economic Theory 58, 410-452.
+
+ [8] Judd, K., (1998). Numerical Methods in Economics. London, England:
+     The MIT Press, Cambridge Massachusetts.
+
+ [9] Judd, K., L. Maliar and S. Maliar, (2009). Numerically stable stochas-
+     tic simulation approaches for solving dynamic economic models, NBER
+     working paper 15296.
+
+                                     36
+[10] Judd, K., L. Maliar and S. Maliar, (2010a). A cluster-grid projection
+     method: solving problems with high dimensionality, NBER working pa-
+     per 15965.
+
+[11] Judd, K., L. Maliar and S. Maliar, (2010b). Numerically stable stochas-
+     tic simulation approaches for solving dynamic economic models. Manu-
+     script.
+
+[12] Juillard, M. and S. Villemot, (2010). Multi-country real business cycle
+     models: accuracy tests and testing bench. Journal of Economic Dynam-
+     ics and Control (special issue), forthcoming.
+
+[13] Kollmann, R., S. Kim and J. Kim, (2010). Solving the multi-country real
+     business cycle model using a perturbation method. Journal of Economic
+     Dynamics and Control (special issue), forthcoming.
+
+[14] Maliar, L. and S. Maliar, (2001). Heterogeneity in capital and skills in
+     a neoclassical stochastic growth model. Journal of Economic Dynamics
+     and Control 25, 1367-1397.
+
+[15] Maliar, L. and S. Maliar, (2003a). The representative consumer in the
+     neoclassical growth model with idiosyncratic shocks. Review of Eco-
+     nomic Dynamics 6, 362-380.
+
+[16] Maliar, L. and S. Maliar, (2003b). Parameterized expectations algorithm
+     and the moving bounds. Journal of Business and Economic Statistics 21,
+     88-92.
+
+[17] Maliar, L. and S. Maliar, (2004). Comparing numerical so-
+     lutions of models with heterogeneous agents (Model A): a
+     simulation-based parameterized expectations algorithm. Manuscript.
+     http://www.stanford.edu/~maliars/
+
+[18] Maliar, L. and S. Maliar, (2005). Parameterized expectations algorithm:
+     how to solve for labor easily. Computational Economics 25, 269-274.
+
+[19] Maliar, L. and S. Maliar, (2007). Comparing numerical so-
+     lutions of models with heterogeneous agents (Model A): a
+     simulation-based parameterized expectations algorithm. Manuscript.
+     http://www.stanford.edu/~maliars/
+
+
+                                     37
+[20] Malin, B., D. Krueger, and F. Kubler, (2010). Solving the multi-country
+     real business cycle model using a Smolyak-collocation method. Journal
+     of Economic Dynamics and Control (special issue), forthcoming.
+
+[21] Marcet, A., (1988). Solution of nonlinear models by parameterizing ex-
+     pectations. Carnegie Mellon University. Manuscript.
+
+[22] Pichler, P., (2010). Solving the multi-country real business cycle model
+     using a monomial rule Galerkin method. Journal of Economic Dynamics
+     and Control (special issue), forthcoming.
+
+[23] Stroud A., (1971). Approximate Integration of Multiple Integrals. Pren-
+     tice Hall: Englewood Cliﬀs, New Jersey.
+
+[24] Taylor, J. and H. Uhlig, (1990). Solving nonlinear stochastic growth
+     models: a comparison of alternative solution methods. Journal of Busi-
+     ness and Economic Statistics 8, 1-17.
+
+
+9       Appendix
+In this section, we present formulas used to implement the iteration-on-
+allocation and precomputation methods, as well as those used to parame-
+terize the capital policy functions.
+
+9.1       Appendix A
+This section describes how we implement the iteration-on-allocation approach
+in Models 6-8 (and their corresponding symmetric counterparts, Models 2-4).
+
+Model 6 Conditions (4), (5) and (2) can be represented as
+                   "                 # ηj
+                    j ¡ j ¢α 1 1 1+αηj
+                                          ¡ 1 ¢ ηη1(1+αη   )
+                                                  j      1
+
+              et =
+               j   at   kt     τ  b                 (1+αηj )
+                             α              t                       j = 2, ..., N,        (28)
+                   a1t (kt1 ) τ j bj
+
+         "             ¡ ¢α ¡ j ¢−α #γ j                 ½
+         (1 − α) ajt A ktj    lt                               ltj ≡ 1t , j = 1
+ cjt
+ e     =            ¡ j ¢1/ηj            ,      with                                     , (29)
+                bj lt                                          ltj ≡ ejt , j = 2, ..., N
+
+
+
+                                              38
+     ⎡           "                               µ         ¶2 #                       ⎤ 1
+         PN                                           j
+                                                     kt+1        PN j ¡ j ¢α ³ ej ´1−α 1−α
+     ⎢    j=1        cjt + kt+1
+                     e      j
+                                − ktj + φ2 ktj    ktj
+                                                      −1        − j=2 at A kt   t     ⎥
+     ⎢                                                                                ⎥
+e1 = ⎢                                                                                ⎥    ,
+ t   ⎢                                            1     1 α
+                                                 at A (kt )                           ⎥
+     ⎣                                                                                ⎦
+
+                                                                                (30)
+             j   j    j j=1,...,N
+where {γ , η , b }            are the utility-function parameters, and α is the
+share of capital in production. Condition (28) is obtained by combining (4)
+and (5), and conditions (29) and (30) follow from (5) and (2), respectively.
+For given kt , at , kt+1 , equations (28) −(30) define a mapping e1t = g ( 1t ). We
+iterate on labor of the first country, e1t , as follows: Assume some initial 1t ;
+          n oj=2,...,N                     © j ªj=1,...,N
+compute ejt                from (28); find e ct           from (29); obtain e1 from           t
+
+(30); if 6= e1t , compute the next-iteration input as (1 − ξ)
+         1
+         t
+                                                                                  1
+                                                                                  t   + ξ e1t . Iterate
+until convergence.
+
+Model 7 Conditions (5) and (4), respectively, are
+                    ¡       ¢
+             j   ψ Le − jt                 ¡ ¢α ¡ j ¢−α
+            e
+            ct =              (1 − α) ajt A ktj   t     ,                                         (31)
+                     1−ψ
+         "                                                         # (1−ψ)(1−1/γ
+                                                                           1
+                                             1 ψ(1−1/γ )−1 1
+                                                       1                         j)
+          ¡                ¢(1−ψ)(1−1/γ 1 (e
+                                         )  c  )              τ
+et = Le − Le −
+ j                       1                   t
+                                                                                      , j = 2, ..., N,
+                         t                 ¡ j ¢ψ(1−1/γ j )−1
+                                            e
+                                            ct                τj
+                                                                               (32)
+                                                                   e
+where ψ is the utility-function parameter, and L is the labor endowment
+of the representative agent. The resource constraint is given by (30) and
+determines e1t . For given kt , at , kt+1 , equations (30), (31) and (32) define a
+          n oj=1,...,N       ³© ªj=1,...,N ´
+mapping t   ej
+                         =g      j
+                                 t           . We iterate on labor of all countries,
+n oj=1,...,N                                        © ªj=1,...,N       © j ªj=1,...,N
+   ejt       , as follows: Assume some initial jt                , find ect
+                        n oj=2,...,N
+from (31); compute ejt               and e1t from (32) and (30), respectively; if
+ j     ej                                                                   j
+ t 6= t for j = 1, ..., N, calculate the next-iteration input as (1 − ξ) t + ξ t .
+                                                                                  ej
+Iterate until convergence.
+
+
+
+
+                                                     39
+Model 8 Conditions (5), (4) and (2), respectively, are
+        ⎡                                                                      ⎤χj
+                                ¡ j ¢μj −1 ³ ¡ j ¢μj          ¡ j ¢μj ´1/μj −1
+       ⎢ (1 −       α) ajt A      t         α kt     + (1 − α) t               ⎥ ¡ e   ¢
+ cjt = ⎢
+ e     ⎣
+                                                                               ⎥ L − jt ,
+                                                                               ⎦
+                                               bj
+
+                                                                                                                   (33)
+                  ⎡                                                                  ⎤      1
+                          Ã                      !     1−1/χj
+                                                                     ¡ j ¢1−1/χj          1−1/χj
+                                                     1/χj −1/γ j
+ ejt       ⎢1
+            e
+                                  u1c,t τ 1                           e
+                                                                      ct         ⎥
+       =L −⎣ j                ¡ j ¢−1/χj                           −       j     ⎦                   ,   j = 2, ..., N,
+            b                  e
+                               ct           τj                            b
+                                                                                                                   (34)
+                               ⎡Ã                                      !μj                    ⎤ 11
+                                                                                         μ1     μ
+
+                          e1 = ⎣                 ft1                           α (kt1 ) ⎦
+                           t                                       1         −                       ,             (35)
+                                        a1t A (1 − α)1/μ                        1−α
+                        j=1,...,N
+where {χj , μj }         are the utility-function parameters; ujc,t for j = 1 and
+ft1 are, respectively, the t-period marginal utility of consumption and output
+of country 1, defined as
+                         h¡ ¢1−1/χj     ¡       ¢1−1/χji
+                                                         1/χj −1/γ j
+                                                                     ¡ j ¢−1/χj
+                                                           1−1/χj
+                ujc,t   ≡ ctj                 j
+                                    + bj Le − t                       ct        ,                                  (36)
+
+                                      ⎡                                       Ã            !2 ⎤
+                                 X
+                                 N
+                                                        φ                          j
+                                                                                  kt+1
+                   ft1 ≡             ⎣e
+                                      cjt + kt+1
+                                             j
+                                                 − ktj + ktj                             −1 ⎦                      (37)
+                                 j=1
+                                                        2                          ktj
+                                     X
+                                     N            ³ ¡ ¢μj          ¡ ¢μj ´1/μj
+                                 −         ajt+1 A α ktj  + (1 − α) jt         .
+                                     j=2
+
+                                                                        n oj=1,...,N
+For given kt , at , kt+1 , equations (33) − (35) define a mapping ejt                  =
+  ³© ªj=1,...,N ´                                                  n oj=1,...,N
+g     j
+      t           . We iterate on labor of all countries, ejt                   , as fol-
+                               © j ªj=1,...,N       © j ªj=1,...,N
+lows: Assume some initial t                   ; find e
+                                                     ct            from (33); compute
+n oj=2,...,N
+  ejt        and e1 using (34) and (35), respectively; if jt 6= ejt for j = 1, ..., N,
+                           t
+
+calculate the next-iteration input as (1 − ξ) jt +ξ ejt . Iterate until convergence.
+
+
+                                                             40
+9.2     Appendix B
+In this section, we show that in Model 2, the solution manifold for aggre-
+gate consumption can be precomputed in terms of two composite arguments
+independently of the number of agents. Since all agents are identical in pref-
+erences and have identical welfare weights, τ j = 1 for j = 1, ..., N, the ratio
+of marginal utilities of any two agents in (4) is equal across agents. As a
+result, cjt = ct /N for all j. From the intratemporal FOC (5), we obtain
+                               "                  #− 1+αη
+                                                       η
+                                     1/γ −1/γ
+                          j         ct  N     b
+                          t =                ¡ ¢α         .                 (38)
+                                 (1 − α) Aajt ktj
+Substituting (38) into resource constraint (2), we obtain
+                                           η(1−α)
+                                         − γ(1+αη)
+                                 ct =   ct         qt   + dt ,                        (39)
+with the composite variables qt and dt being defined as
+       PN h j ¡ j ¢α i1+ η(1−α)
+                            1+αη                 Ã        !2
+         j=1 Aat kt
+                                                    j
+                                            φ j kt+1
+ qt =       h      i η(1−α)      ,   dt = − kt        j −1   + ktj − kt+1
+                                                                      j
+                                                                          .
+                      1+αη
+                N −1/γ b
+                                            2      k             t
+                (1−α)
+                                                                                       (40)
+We can use equation (39) to precompute consumption ct in terms of two
+variables qt and dt . (If welfare weights diﬀer across agents and consequently,
+individual consumption is not equal to average consumption, we can still
+construct the intratemporal-choice manifolds in terms of the same composite
+variables; see Maliar and Maliar, 2001, 2003b, for related results).
+     Outside the main iterative cycle, take a grid of P values for qt and dt ,
+i.e., {qp , dp }p=1,...,P . For each grid point p = 1, ..., P , use a numerical solver
+to find a solution for cp from equation (39) represented in a form suited
+for precomputation. Interpolate the constructed set function to the relevant
+continuous domain to obtain the manifold b        c (q, d). Inside the main iterative
+cycle, given kt , at , kt+1 , compute qt and dt from (40) for each t, use the
+precomputed manifold to find aggregate consumption, ct = b              ct (qt , dt ), and
+                                  j
+compute individual labor t from (38) for j = 1, ..., N.
+
+9.3     Appendix C
+In this section, we provide Euler equation (19) corresponding to Models 5-8.
+
+                                             41
+Model 5
+                         ⎧ ¡                                         ⎫
+                         ⎨ cj ¢−1/γ j h                ¡ j ¢α−1 j ⎬
+                                                               i
+            j
+           kt+1      = Et β ¡ t+1        θ j
+                                             + αaj
+                                                     A  kt+1     kt+1 .                          (41)
+                         ⎩ cj ¢−1/γ j ωj t+1     t+1
+                                                                     ⎭
+                              t        t
+
+
+Model 6
+            ⎧ ¡                                                                            ⎫
+            ⎨ cj ¢−1/γ j h               ¡ j ¢α−1 ¡                        ¢1−α i          ⎬
+  j
+ kt+1   = Et β ¡ t+1       θ j
+                               + αaj
+                                       A  kt+1                       j               j
+                                                                                    kt+1       . (42)
+            ⎩ cj ¢−1/γ ω j t+1
+                      j            t+1                               t+1
+                                                                                           ⎭
+                             t               t
+
+
+Model 7
+           ⎧ k                          l      j
+                                                                                                             ⎫
+                                     1−ψ 1−1/γ
+           ⎪
+           ⎪  (
+                       ψ
+                cjt+1 ) (Le − jt+1 )                                                                         ⎪
+                                                                                                             ⎪
+           ⎪
+           ⎨                                     h                                               i           ⎪
+                                                                                                             ⎬
+ j                           cjt+1                                ¡ j ¢α−1 ¡          j ¢1−α
+kt+1   = Et β k                      l            θjt+1 + αajt+1 A kt+1               t+1
+                                                                                                      j
+                                                                                                     kt+1        .
+           ⎪
+           ⎪     cj
+                     ψ
+                        Le − jt )
+                                 1−ψ  1−1/γ j
+                                                                                                             ⎪
+                                                                                                             ⎪
+           ⎩ ( t) (
+           ⎪                                  ωj   t
+                                                                                                             ⎪
+                                                                                                             ⎭
+                                       cjt
+                                                                                                 (43)
+
+Model 8
+                 (                 ∙                                                                     ¸           )
+ j                    ujc,t+1                       ¡ j ¢μj −1 ³ ¡ j ¢μj    ¡             ¢μj ´1/μj −1
+kt+1 = Et         β                 θjt+1 + αajt+1 A kt+1       α kt+1   +α         j
+                                                                                    t+1
+                                                                                                              j
+                                                                                                             kt+1        ,
+                      ujc,t ω jt
+                                                                                                 (44)
+where    ujc,t   is defined as in (36).
+
+
+
+
+                                                   42
+                         Figure 2a. Iteration-on-allocation under -1<g'<0:                                         Figure 2b. Iteration-on-allocation under g'<-1:
+                                 convergence without damping.                                                              divergence without damping.
+           1                                                                                              1
+
+
+          0.8                                                                                            0.8                       1
+                                                                                                                                g(ct )
+                                                                c1t                                                                                    c1t
+
+          0.6            g(c1)                                                                           0.6
+                            t
+g(c1t )
+
+
+
+
+                                                                                               g(c1t )
+          0.4                                                                                            0.4
+
+
+          0.2                                                                                            0.2
+
+
+           0                                                                                              0
+                0               0.2        0.4          0.6           0.8          1                           0     0.2          0.4           0.6          0.8     1
+                                                  c1                                                                                       c1
+                                                   t                                                                                        t
+
+                         Figure 2c. Iteration-on-allocation under -1<g'<0:                                         Figure 2d. Iteration-on-allocation under g'<-1:
+                                 convergence with damping.                                                                 convergence with damping.
+           1                                                                                              1
+
+
+          0.8                                                                                            0.8
+                                                              c1t                                                                                     c1
+                                                                                                                                 g(c1t )               t
+                        g(c1)
+          0.6              t                                                                             0.6
+g(c1t )
+
+
+
+
+                                                                                               g(c1t )
+          0.4                                                                                            0.4
+
+
+          0.2                                                                                            0.2
+
+
+           0                                                                                              0
+                0               0.2        0.4          0.6           0.8          1                           0     0.2          0.4           0.6          0.8     1
+                                                  c1                                                                                       c1
+                                                   t                                                                                        t
+                    Note: Figures 2a-2d illustrate possible outcomes of the iteration-on-allocation method; c1t is consumption of the first country; g is the mapping
+                    used in the iteration-on-allocation method and g' is the first derivative of g.
+Table 1. Accuracy and time needed to run the test for the two-country version of Model 5 under alternative intratemporal-choice
+approaches.
+
+
+   Intratemporal                                        Intratemporal choice in the simulation procedure
+      choice in                     (a) Two policy           (b) One policy       (c) Precomputation         (d) Iteration-on-
+                      Equation
+    the solution                       functions                function                                        -allocation
+     procedure                   ∆mean   ∆max   TCPU     ∆mean   ∆max   TCPU     ∆mean   ∆max   TCPU       ∆mean   ∆max   TCPU
+         (i)            Euler    -6.14 -4.55      15     -6.02 -4.55      15     -5.68 -4.29      17       -5.73 -4.29     226
+    Two policy           RC      -4.93 -3.48             -4.54 -3.09             -5.89 -5.61               -∞      -∞
+     functions          Intrat   -4.64 -3.22              -∞      -∞              -∞     -∞                -∞      -∞
+        (ii)            Euler    -5.98 -4.57      15     -6.06 -4.57      15     -5.68 -4.29      17       -5.72 -4.28     226
+     One policy          RC      -4.68 -3.60             -4.54 -3.09             -5.89 -5.61               -∞      -∞
+      function          Intrat   -4.69 -3.17              -∞      -∞              -∞     -∞                -∞      -∞
+        (iii)           Euler    -5.98 -4.42      14     -5.91 -4.42      14     -5.69 -4.35      16       -5.74 -4.35     231
+  Precomputation         RC      -4.66 -3.63             -4.43 -3.17             -5.89 -5.61               -∞      -∞
+                        Intrat   -4.65 -3.28              -∞      -∞              -∞     -∞                -∞      -∞
+        (iv)            Euler    -5.99 -4.42      15     -5.92 -4.42      15     -5.69 -4.35      17       -5.74 -4.35     232
+    Iteration-on-        RC      -4.66 -3.63             -4.42 -3.18             -5.89 -5.61               -∞      -∞
+     allocation         Intrat   -4.65 -3.28              -∞      -∞              -∞     -∞                -∞      -∞
+Note: ∆mean and ∆max are, respectively, the average and maximum errors in the corresponding optimality condition (in log10
+units) in the test on a stochastic simulation of 10,000 observations; TCPU is the time needed to run the test (in seconds).
+Abbreviations “Euler”, “RC” and “Intrat” denote the Euler equations, resource constraint and intratemporal-choice conditions,
+respectively.
+Table 2. Time for simulating Models 5-8 under two alternative simulation procedures: one using policy functions and the other using
+iteration-on-allocation.
+
+                    T=1                      T=10                 T=100                  T=1,000                 T=10,000
+     N
+             CPU1         CPU2        CPU1          CPU2      CPU1     CPU2           CPU1     CPU2           CPU1     CPU2
+ Model 5
+   2           0.0001      0.0071      0.0004       0.0090     0.0030      0.0182      0.0415      0.1038      5.4893      5.7720
+   4           0.0001      0.0041      0.0004       0.0055     0.0037      0.0144      0.0645      0.1218     22.1597     22.4737
+   6           0.0001      0.0033      0.0004       0.0046     0.0045      0.0171      0.2483      0.3546     48.7948     49.0005
+   8           0.0001      0.0028      0.0005       0.0040     0.0055      0.0173      0.5870      0.6553     82.8177     83.3027
+  10           0.0001      0.0022      0.0006       0.0036     0.0072      0.0184      0.9490      1.0325    124.5969    124.5281
+ Model 6
+   2           0.0001      0.0035      0.0004       0.0056     0.0032      0.0219      0.0416      0.1754      5.4723      6.0610
+   4           0.0001      0.0019      0.0006       0.0038     0.0041      0.0204      0.0694      0.1941     22.4622     22.9424
+   6           0.0002      0.0011      0.0006       0.0027     0.0052      0.0167      0.2573      0.3730     49.1699     49.5512
+   8           0.0002      0.0015      0.0007       0.0033     0.0067      0.0205      0.5774      0.7385     83.1369     83.7333
+ Model 7
+   2           0.0001      0.0302      0.0003       0.0430     0.0033      0.1544      0.0410      1.0800      5.5069      9.8106
+   4           0.0001      0.0200      0.0004       0.0422     0.0038      0.2006      0.0645      1.3623     22.4296     28.5446
+   6           0.0001      0.0227      0.0004       0.0506     0.0048      0.2958      0.2525      2.0232     49.0937     58.5057
+ Model 8
+   2           0.0001      0.0381      0.0004       0.0622     0.0033      0.2730      0.0412      2.1903      5.5690     14.0949
+   4           0.0001      0.0555      0.0004       0.1076     0.0041      0.6396      0.0664      5.1589     22.4694     53.7229
+   6           0.0002      0.0694      0.0006       0.1595     0.0050      0.9718      0.2472      8.5013     49.2921    101.2122
+
+Note: CPU1 and CPU2 are, respectively, the time necessary to simulate a time-series solution of length T under the simulation
+procedure using policy functions and the one using iteration-on-allocation (in seconds); N is the number of countries.
+Table 3. Effect of the specific polynomial on accuracy of CGA under five integration rules in the two-country versions of Models 5-8.
+
+   Poly-              Q(3)                     Q(2)                     M2                       M1                       Q(1)
+  nomial      ∆mean          ∆max      ∆mean          ∆max      ∆mean         ∆max       ∆mean         ∆max       ∆mean          ∆max
+  Model 5
+   1st       -4.90195    -3.13194     -4.90194    -3.13194    -4.90193       -3.13194   -4.90193      -3.13194   -4.88823    -3.13396
+   2nd       -6.38976    -4.34742     -6.38976    -4.34735    -6.38974       -4.34730   -6.38974      -4.34730   -5.86835    -4.30024
+   3rd       -7.15921    -5.15528     -7.15696    -5.15517    -7.15966       -5.15600   -7.15709      -5.15556   -5.89480    -4.96021
+  SMOL       -7.06458    -5.05292     -7.06445    -5.05265    -7.06427       -5.05233   -7.06425      -5.05236   -5.89095    -4.83609
+  Model 6
+   1st       -4.82343    -3.02274     -4.82342    -3.02274    -4.82340       -3.02274   -4.82341      -3.02274   -4.75012    -3.03238
+   2nd       -6.27646    -4.30442     -6.27647    -4.30437    -6.27646       -4.30432   -6.27647      -4.30432   -5.70532    -4.23380
+   3rd       -7.15049    -5.15572     -7.15109    -5.15531    -7.15136       -5.15497   -7.15144      -5.15489   -5.72017    -4.78838
+  SMOL       -6.98459    -4.98077     -6.98441    -4.98053    -6.98414       -4.98026   -6.98409      -4.98026   -5.71619    -4.70282
+  Model 7
+   1st       -4.77765    -3.03091     -4.77765    -3.03091    -4.77763       -3.03091   -4.77764      -3.03091   -4.73123    -3.03668
+   2nd       -6.07533    -4.24781     -6.07537    -4.24774    -6.07538       -4.24771   -6.07539      -4.24770   -5.65946    -4.20806
+   3rd       -7.06964    -4.99023     -7.07030    -4.99064    -7.07040       -4.99073   -7.07057      -4.99098   -5.67346    -4.75051
+  SMOL       -6.78548    -4.72708     -6.78540    -4.72691    -6.78532       -4.72679   -6.78525      -4.72677   -5.66775    -4.54921
+  Model 8
+   1st       -4.58750    -2.80045     -4.58750    -2.80045    -4.58749       -2.80045   -4.58749      -2.80045   -4.53314    -2.80015
+   2nd       -5.87377    -3.83040     -5.87378    -3.83037    -5.87377       -3.83035   -5.87378      -3.83035   -5.52168    -3.79411
+   3rd       -6.81686    -4.38437     -6.81684    -4.38446    -6.81679       -4.38448   -6.81674      -4.38452   -5.57508    -4.27229
+  SMOL       -6.69808    -4.56910     -6.69794    -4.56898    -6.69782       -4.56889   -6.69777      -4.56889   -5.57173    -4.40082
+
+Note: ∆mean and ∆max are, respectively, the average and maximum absolute errors across all optimality conditions (in log10 units) in the
+test on a stochastic simulation of 10,000 observations. Abbreviations “1st”, “2nd”, “3rd” and “SMOL” denote the first-, second-, third-
+degree ordinary polynomials and the Smolyak polynomial, respectively.
+  Table 4. Accuracy and speed of CGA for Models 5-8 under four integration rules.
+
+                        Q(2)                           M2                             M1                            Q(1)
+     N
+             ∆mean      ∆max      CPU       ∆mean      ∆max      CPU       ∆mean      ∆max      CPU       ∆mean     ∆max       CPU
+  Model 5
+    2          -6.39     -4.35     72        -6.39      -4.35       91      -6.39      -4.35       73      -5.87      -4.30       63
+    4          -6.44     -4.45    145        -6.44      -4.45      227      -6.44      -4.45      105      -5.70      -4.36       76
+    6          -6.44     -4.66    575        -6.44      -4.66      661      -6.44      -4.66      161      -5.64      -4.50       94
+    8          -6.42     -4.76   4319        -6.42      -4.76     1822      -6.42      -4.76      290      -5.62      -4.57      115
+   10          -6.39     -4.74 144327        -6.38      -4.75     4425      -6.38      -4.75      420      -5.62      -4.56      137
+  Model 6
+    2          -6.28     -4.30     1231      -6.28      -4.30     1417      -6.28      -4.30     1234      -5.71      -4.23      963
+    4          -6.31     -4.45     2687      -6.31      -4.45     3804      -6.31      -4.45     1781      -5.52      -4.35     1104
+    6          -6.32     -4.62     8556      -6.32      -4.62     8128      -6.32      -4.62     2207      -5.46      -4.40     1052
+    8          -6.31     -4.66    38392      -6.31      -4.66    19635      -6.31      -4.66     3864      -5.44      -4.46     1444
+  Model 7
+    2          -6.08     -4.25      759      -6.08      -4.25      912      -6.08      -4.25      768      -5.66      -4.21      614
+    4          -6.09     -4.21     1842      -6.09      -4.21     2745      -6.09      -4.21     1402      -5.52      -4.16      887
+    6          -6.09     -4.33     6254      -6.09      -4.33     7723      -6.09      -4.33     2449      -5.46      -4.23     1173
+  Model 8
+    2          -5.87     -3.83     1185      -5.87      -3.83     1400      -5.87      -3.83     1177      -5.52      -3.79      894
+    4          -5.93     -4.13     3807      -5.93      -4.13     5631      -5.93      -4.13     2913      -5.38      -4.05     1790
+    6          -5.96     -4.22    13414      -5.96      -4.22    14385      -5.96      -4.22     3869      -5.32      -4.09     1756
+
+Note: ∆mean and ∆max are, respectively, the average and maximum absolute errors across all optimality conditions (in log10 units) in the
+test on a stochastic simulation of 10,000 observations; CPU is the time necessary to compute a solution (in seconds); N is the number of
+countries.
+Table 5. Accuracy of the hybrid perturbation method and other solution methods for the two-country versions of Models 5-8.
+
+                   SSA                     CGA                      PER1                    PER2                       Hybrid
+ Model
+            ∆mean        ∆max        ∆mean        ∆max        ∆mean        ∆max        ∆mean       ∆max        ∆mean            ∆max
+   5          -4.79       -3.20        -6.39       -4.53        -3.69       -1.70        -5.13      -2.60         -4.50          -2.88
+   6          -4.79       -3.12        -6.38       -4.50        -3.53       -1.45        -4.84      -2.30         -4.56          -2.84
+   7          -4.08       -3.08        -6.15       -4.19        -3.05       -1.20        -4.21      -1.90         -4.57          -2.87
+   8          -4.62       -2.90        -5.98       -4.07        -3.11       -1.25        -4.35      -2.09         -4.36          -2.64
+
+Note: ∆mean and ∆max are, respectively, the average and maximum absolute errors across all optimality conditions (in log10 units) in
+the test on a stochastic simulation of 10,000 observations: The results for SSA, CGA, PER1 and PER2 are reproduced from KMMP
+(2010).
+

@@ -1,0 +1,1696 @@
+                                NBER WORKING PAPER SERIES
+
+
+
+
+               COMPUTING STOCHASTIC DYNAMIC ECONOMIC MODELS
+                  WITH A LARGE NUMBER OF STATE VARIABLES:
+                      A DESCRIPTION AND APPLICATION OF
+                      A SMOLYAK-COLLOCATION METHOD
+
+                                           Benjamin Malin
+                                            Dirk Krueger
+                                            Felix Kubler
+
+                                         Working Paper 13517
+                                  http://www.nber.org/papers/w13517
+
+
+                      NATIONAL BUREAU OF ECONOMIC RESEARCH
+                               1050 Massachusetts Avenue
+                                 Cambridge, MA 02138
+                                     October 2007
+
+
+
+
+This paper was prepared for the JEDC project on solving models with heterogeneous agents. We thank
+Ken Judd for clarifying discussions about the scope and focus of this paper and gratefully acknowledge
+financial support under NSF grant SES-0004376. The views expressed in this paper are solely our
+own and should not be interpreted as reflecting those of the Board of Governors, the staff of the Federal
+Reserve System, or the National Bureau of Economic Research.
+
+© 2007 by Benjamin Malin, Dirk Krueger, and Felix Kubler. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+Computing Stochastic Dynamic Economic Models with a Large Number of State Variables:
+A Description and Application of a Smolyak-Collocation Method
+Benjamin Malin, Dirk Krueger, and Felix Kubler
+NBER Working Paper No. 13517
+October 2007
+JEL No. C68,C88,F41
+
+                                             ABSTRACT
+
+We describe a sparse grid collocation algorithm to compute recursive solutions of dynamic economies
+with a sizable number of state variables. We show how powerful this method may be in applications
+by computing the nonlinear recursive solution of an international real business cycle model with a
+substantial number of countries, complete insurance markets and frictions that impede frictionless
+international capital flows. In this economy the aggregate state vector includes the distribution of world
+capital across different countries as well as the exogenous country-specific technology shocks. We
+use the algorithm to efficiently solve models with 2, 4, and 6 countries (i.e., up to 12 continuous state
+variables).
+
+Benjamin Malin                                      Felix Kubler
+Federal Reserve Board of Governors                  University of Pennsylvania
+Mail Stop 97                                        fkubler@gmail.com
+21st and C St., NW
+Washington, D.C. 20551
+bmalin06@gmail.com
+
+Dirk Krueger
+Department of Economics
+University of Pennsylvania
+3718 Locust Walk
+Philadelphia, PA 19104
+and NBER
+dkrueger@econ.upenn.edu
+   Computing Stochastic Dynamic Economic
+ Models with a Large Number of State Variables:
+      A Description and Application of a
+         Smolyak-Collocation Method∗
+                               Benjamin Malin
+                      Federal Reserve Board of Governors
+                              Dirk Krueger
+              University of Pennsylvania, CEPR and NBER
+                                   Felix Kubler
+                            University of Pennsylvania
+                                 September 28, 2007
+
+
+                                         Abstract
+          We describe a sparse grid collocation algorithm to compute recursive
+      solutions of dynamic economies with a sizable number of state variables.
+      We show how powerful this method may be in applications by comput-
+      ing the nonlinear recursive solution of an international real business cycle
+      model with a substantial number of countries, complete insurance mar-
+      kets and frictions that impede frictionless international capital flows. In
+      this economy the aggregate state vector includes the distribution of world
+      capital across different countries as well as the exogenous country-specific
+      technology shocks. We use the algorithm to efficiently solve models with
+      2, 4, and 6 countries (i.e., up to 12 continuous state variables).
+
+
+1     Introduction
+The stochastic neoclassical growth model has arguably been the most important
+workhorse in modern macroeconomic analysis. Its open economy counterpart,
+the international real business cycle model, has been fruitfully applied to study
+   ∗ This paper was prepared for the JEDC project on solving models with heterogeneous
+
+agents. We thank Ken Judd for clarifying discussions about the scope and focus of this
+paper and gratefully acknowledge financial support under NSF grant SES-0004376. The views
+expressed in this paper are solely our own and should not be interpreted as reflecting those of
+the Board of Governors or the staff of the Federal Reserve System.
+
+
+
+                                              1
+the co-movement of output, investment, and consumption across countries and
+international capital flows between countries. See Backus et al. (1992) as an
+important example of this literature and Backus et al. (1995) for an overview.
+    Apart from highly stylistic examples, international real business cycles can-
+not be solved analytically, and one has to resort to numerical techniques to
+compute the equilibrium of these models. Even the simplest version of the
+model with two countries and country-specific, serially correlated technology
+shocks requires at least three state variables in its recursive formulation. This
+explains why most of the literature resorts to (log-)linearization of the equi-
+librium or optimality conditions of a world social planner problem to solve for
+equilibrium allocations. Since the true equilibrium is unknown, it is hard to
+assess how accurate numerical approximations of the equilibrium are that rely
+on these (log-)linear approximations.
+    In this paper we propose a projection method based on Smolyak’s (1963)
+algorithm to compute globally accurate solutions to models characterized by a
+sizeable number of continuous state variables, such as international real business
+cycle models with a substantial number of countries. While collocation methods
+using full grids become infeasible for three or more dimensions, the use of a
+sparse grid constructed with Smolyak’s algorithm allows us to handle ten or
+more state variables.
+    Our objectives are threefold: first, we provide an easily accessible general
+description of our algorithm; second, we show how powerful this method is
+by numerically solving an international real business cycle model with many
+countries and international capital market frictions; and third, we assess the
+quality of our approximations.
+    We find that our projection method performs quite well for a wide variety of
+model specifications including models with up to 6 countries (i.e., 12 continuous
+state variables), specifications that introduce a great deal of curvature into util-
+ity and production functions, and models with asymmetries between countries.
+Our method is also substantially more accurate than a linear approximation of
+the solution, especially when the exogenous shocks to the economy are large.
+The greatest challenge to using this method is finding bounds for the state vari-
+ables which are not violated by the solution of the model. For international real
+business cycle models, this is most difficult for asymmetric specifications with
+a large number of countries.
+    The rest of the paper is organized as follows. Section 2 describes the in-
+ternational real business cycle model that we solve in this paper, while section
+3 provides a general description of our projection method. Section 4 presents
+results, accuracy tests, and running times. Section 5 concludes.
+
+
+2    An International Real Business Cycle Model
+In this section, we introduce a simple dynamic model with a significant number
+of continuous state variables, an international real business cycle model with N
+countries. We will confine ourselves to economies in which equilibria are Pareto
+
+
+                                         2
+optimal, so they can be characterized by solving an appropriately defined social
+planner’s problem. In addition, we allow for frictions to international capital
+flows due to adjustment costs but require that these costs leave the optimal
+decision rules sufficiently smooth (that is, continuously differentiable).
+
+2.1      Description of the Model
+We consider a world composed of N countries that are subject to technology
+shocks which contain a country-specific and a common component. Changes in
+a country’s capital stock are subject to quadratic adjustment costs, which in-
+hibit frictionless flows of capital across the N countries.1 As a consequence the
+entire distribution of capital stocks, and not only aggregate output, becomes a
+state variable in the recursive formulation of the social planner’s problem asso-
+ciated with this economy. There are complete asset markets, so that the welfare
+theorems apply. Thus one can solve for competitive equilibrium allocations by
+solving a social planner’s problem for appropriate welfare weights of individual
+countries.
+    For a given set of Pareto weights (τ 1 , ..., τ N ), the social planner solves the
+problem
+                                                                                      N
+                                                                                      X          X
+                                                               max               E0         τi       β t ui (cit , lti )
+                                                    {{cit ,lti ,kt+1
+                                                                 i   }N    ∞
+                                                                      i=1 }t=0        i=1        t
+                                                 s.t.
+                                  ln(ait )     = ρ ln(ait−1 ) + σ(εit + εt )
+                                     i
+                                    kt+1       = (1 − δ)kti + iit
+      N             N             N               N                             i
+                                                                                     − kti )2
+                                                                                              
+      X             X             X              X                           φ (kt+1
+            cit +         iit −         δkti   =      ait f i (kti , lti ) −
+      i=1           i=1           i=1            i=1
+                                                                             2      kti
+
+where εt , εit are iid standard normal random variables2 and φ ≥ 0 is a scale
+parameter. In particular, the parametrization nests the case of no adjustment
+costs, φ = 0. Denote the initial distribution of capital across countries by
+(k01 , . . . , k0N ), which determines what point on the Pareto frontier (i.e. what
+vector of Pareto weights) corresponds to a competitive equilibrium. Our algo-
+rithm will solve for optimal policies for arbitrary Pareto weights, and thus for
+the entire equilibrium manifold.3
+     In general, the state variables for the recursive formulation of the social plan-
+ner’s problem consist of the vector of current exogenous shocks a = (a1 , . . . , aN )
+and the vector of endogenous current capital stocks k = (k 1 , . . . , k N ). Denote
+   1 The quadratic form of the adjustment cost is not crucial for our algorithm to work. Any
+
+strictly convex and continuously differentiable adjustment cost function will do.
+   2 As long as we know the joint distribution of (a1 , . . . aN ) given (a1            N
+                                                       t       t           t−1 , . . . at−1 ), we can
+numerically solve this model.
+   3 Indirectly, and if we do the additional step of mapping Pareto weights into initial wealth
+
+distribution, directly.
+
+
+
+                                                           3
+by s = (k, a) the current state, which is of dimension 2N. Below we discuss one
+example where the number of state variables can be reduced to N + 1.
+   The planner’s problem in recursive formulation can be written as
+                                                                           N
+                                                                           X                             Z
+                                       V (k, a)     =           max
+                                                                i i i0
+                                                                                 τ i ui (ci , li ) + β       V (k 0 , a0 )ga (a0 )da0
+                                                            {c ,l ,k }
+                                                                           i=1
+                                                      s.t.
+                                        ln(ai0 )    = ρ ln(ai ) + σ(εi + ε)
+N           N           N                                   N                                 N
+X
+      i
+            X
+                  i0
+                        X φ(k i0 − k i )2                   X
+                                                                     i i    i     i
+                                                                                              X
+                                                                                                    ki
+                                                                                      
+      c +         k +                               =             af       k ,l           +
+i=1         i=1         i=1
+                                      2k i                  i=1                               i=1
+
+where ga (a ) denotes the probability density function over a0 , given a. We will
+              0
+
+now derive the system of functional equations used to compute this model. We
+seek functions C i (s), Li (s), and K i0 (s) for i = 1, . . . , N, mapping the current
+state s = (k, a) into consumption and labor supply of each country today and
+its capital stock tomorrow. For future reference we define as
+                                                    N
+                                                    X
+                                   C(s)       =            C i (s)
+                                                    i=1
+                                                    N
+                                                    X
+                                   Y (s)      =            ai f i (k i , Li (s))
+                                                    i=1
+                                                    N
+                                                    X
+                                        K     =            ki
+                                                    i=1
+                                  K 0 (s)     =     (K 10 (s), . . . , K N 0 (s)).
+
+Attaching Lagrange multiplier µ to the resource constraint, we find as first order
+conditions
+
+                                                  τ i uic (ci , li ) = µ                  ∀i
+                                                τ i uil (ci , li )
+                                                                     = µ                  ∀i
+                                               −ai fli (k i , li )
+                                      Vki (k 0 , a0 )ga (a0 )da0
+                                  R
+                              β
+                                             φ(ki0 −ki )
+                                                                      = µ                 ∀i
+                                       1+       ki
+
+where lower case letters attached to functions denote partial derivatives of the
+function with respect to the corresponding argument. The envelope condition
+
+
+
+
+                                                           4
+reads as
+                                           φ (k i0 − k i )(k i0 + k i )
+                                                                       
+                                  ai fki (k i , li
+                                                     
+Vki (k, a) = µ 1 +                    +                    2
+                                           2           ki
+                                                    φ (k i0 − k i )(k i0 + k i )
+                                                                                 
+               i i i i              i i i i
+           = τ uc (c , l ) 1 + a fk (k , l +                            2                                     ∀i
+                                                       2           ki
+                                                     φ (k i0 − k i )(k i0 + k i )
+                                                                                  
+           = τ j ujc (cj , lj ) 1 + ai fki (k i , li +                   2                                        ∀i, j.
+                                                        2            ki
+
+Combining the first order conditions and the envelope conditions gives (replacing
+choices by policy functions and abusing notation by writing s0 = (K 0 (s), a0 ))
+       τ i uic C i (s), Li (s) =
+                              
+                                      "                                              #
+                                           1 + ai0 fki K i0 , Li (s0 ) +
+                                                                           
+                           0    i 0
+                                                                                       ga (a0 )da0
+           R i i       i
+                                    
+       β τ uc C (s ) , L (s )           φ (K i0 (s0 )−K i0 (s))(K i0 (s0 )+K i0 (s))
+                                                         2                   K i0 (s)2
+                                                             φ(K i0 (s0 )−K i0 (s))
+                                                                                                                     (1)
+                                                1+                  K i0 (s)
+
+which together with
+                                           τ i uic C i (s), Li (s)             = τ j ujc C j (s), Lj (s)
+                                                                                                       
+                                                                                                                     (2)
+                                                                   
+                                              uil C i (s), Li (s)
+                                                                               = −ai fli (k i , Li (s))              (3)
+                                               uic (C i (s), Li (s))
+                  N                       N
+                  X                       X φ(K i0 (s) − k i )2
+        C(s) +            K i0 (s) +                                           = Y (s) + K                           (4)
+                  i=1                     i=1
+                                                              2k i
+
+provide 3N functional equations to be jointly solved for the 3N functions {C i (s),
+Li (s), K i0 (s)}N
+                 i=1 .
+
+
+2.2     Special Cases
+In general, these 3N functional equations have to be solved jointly, but there
+are special cases where the problem becomes easier. If labor is supplied in-
+elastically, we can drop the N functional equations (3), leaving 2N functional
+equations to be jointly solved for the 2N functions {C i (s), K i0 (s)}N            i=1 . There
+is a sense in which production and consumption decisions are separable. The
+N − 1 equations
+                               "                                             #
+                           0
+                                       1 + ai0 fki K i0 (s) +
+                                                                                ga (a0 )da0
+               R i i    i
+                             
+             β τ uc C (s )       φ (K i0 (s0 )−K i0 (s))(K i0 (s0 )+K i0 (s))
+                                                2                        K i0 (s)2
+                                                              φ(K i0 (s0 )−K i0 (s))
+                                                 1+                  K i0 (s)
+                                            "                                                   #
+                                                              1 + aj0 fkj K i0 (s) +
+                                                                                  
+                                      0
+                                                                                                    ga (a0 )da0
+                                      
+                      τ i uic    i
+                  R
+              β                 C (s )          φ (K j0 (s0 )−K j0 (s))(K j0 (s0 )+K j0 (s))
+                                                2                 K j0 (s)2
+         =                                             φ(K j0 (s0 )−K j0 (s))
+                                                                                                                     (5)
+                                                  1+          K j0 (s)
+
+
+                                                                 5
+for a given total amount of capital to be carried forward to tomorrow determine
+the allocation of capital across the countries. However, the decision of how much
+total consumption and how much accumulation is optimal cannot in general be
+solved for independent of the allocation of consumption across countries, which
+is simply another way of saying that the 2N equations have to solved jointly.
+Note that so far no assumptions about the functional form of ui , f i and the
+equality of preference or technology parameters have been made.
+
+2.2.1    Exogenous Labor and CRRA Utility
+There are two interesting examples for which the problem with exogenous labor
+supply becomes even easier. Suppose all households have identical CRRA period
+utility function with risk aversion parameter γ. Then from
+
+                           τ i uic C i (s) = τ j ujc C j (s) ,
+                                                           
+
+it follows that
+                                                                 γ1
+                                                           τi
+                                                       
+                                            i
+                                       C (s) =                         C 1 (s)
+                                                           τ1
+and thus
+                                           N                                  N
+                                           X
+                                                   i            C 1 (s) X                  γ1
+                            C(s) =               C (s) =                 1           τi
+                                           i=1                  (τ 1 )   γ
+                                                                              i=1
+
+and thus consumption follows the linear risk sharing rule
+                                                                 γ1
+                                       i                   τi
+                                   C (s) = PN                          1     C(s).                                 (6)
+                                                        i=1     (τ i ) γ
+
+That is, each agents’ consumption is a constant fraction of aggregate consump-
+tion. For this example one can first jointly solve for aggregate consumption,
+aggregate investment and its allocation across countries, and then separately
+solve for the distribution of consumption across countries, according to (6).
+Using (6) in (5) yields the N − 1 equations
+                             "                                             #
+                                             i0 i       i0
+                          −γ         1   +  a  f  k  K     (s)    +
+                 (C (s0 ))                                                    ga (a0 )da0
+              R
+                               φ (K i0 (s0 )−K i0 (s))(K i0 (s0 )+K i0 (s))
+                                           2                    K i0 (s)2
+                                                       φ(K i0 (s0 )−K i0 (s))
+                                                 1+             K i0 (s)
+                                   "                                                             #
+                                                  1 + aj0 fkj K i0 (s) +
+                                                                      
+                              −γ
+                      (C (s0 ))                                                                      ga (a0 )da0
+                  R
+                                           φ (K j0 (s0 )−K j0 (s))(K j0 (s0 )+K j0 (s))
+                                           2                  K j0 (s)2
+           =                                           φ(K j0 (s0 )−K j0 (s))
+                                                                                                                   (7)
+                                               1+             K j0 (s)
+
+which, together with the resource constraint (4) and an equation similar to
+(1) can be solved for the functions (C(s), K 10 (s), . . . , K N 0 (s)). Now indeed a
+complete separation between production and consumption allocations arises.
+
+                                                           6
+This separation reduces the computational burden for this case by significantly
+reducing the number of equations that have to be solved simultaneously. But it
+does not ease the curse of dimensionality since no reduction in the number of
+continuous state variables is possible in this case.
+
+2.2.2    Exogenous Labor and No Capital Adjustment Cost
+If there are no adjustment costs, that is, if φ = 0, then we can reduce the number
+of state variables from the 2N variables (k, a) to the N + 1 variables s = (y, a)
+where y is total output in the current period.
+                                                   N
+                                                   X                          Z
+                         V (s)       =    max
+                                          i i0
+                                                           τ i ui (ci ) + β       V (s0 )ga (a0 )da0
+                                         {c ,k }
+                                                    i=1
+           N
+           X            N
+                        X                N
+                                         X                  N
+                                                          X
+                 ci +         k i0   =         ai f i k i +   ki
+           i=1          i=1              i=1                      i=1
+                                         N
+                                         X
+                               y0    =         ai0 f i (k i0 ).
+                                         i=1
+
+The first order and envelope conditions imply
+                         Z
+             i i i
+                           1 + ai0 fki (k i0 ) Vy (y 0 (a0 ), a0 )ga (a0 )da0 = Vy (s).
+                                              
+       µ = τ uc (c ) = β
+
+The 2N functional equations determining the functions {C i (s), K i0 (s))}i∈I are
+the same as in the general case (with φ = 0), but the policy functions are simply
+functions of the N + 1 state variables s = (y, a).
+    In this special case models with more countries can feasibly be computed
+since the addition of one country adds only one, rather than two, continuous
+state variables to the problem.
+
+
+3       A Sparse Grid Collocation Method
+We will solve for an approximate equilibrium of the international real business
+cycle model using a Smolyak collocation method. The basic idea of collocation
+methods is to approximate the functions {C i (s), Li (s), K i0 (s)}N
+                                                                   i=1 by weighted
+sums of ‘easier functions’, e.g. by polynomials. In order to determine the un-
+known coefficients of the polynomials, we require that equations (1)-(4) hold
+exactly at finitely many points - the so-called collocation points. While col-
+location methods are routinely used in economics to solve non-linear dynamic
+models, our innovation is to use a Smolyak sparse grid method which allows
+us to consider fairly high-dimensional problems. The use of sparse grids is well
+established in numerical analysis (see e.g. Bungartz and Griebel (2004) for an
+overview) and was first introduced, as far as we know, to economics by Krueger
+and Kubler (2004).
+
+
+                                                       7
+    From a technical point of view, collocation methods pose three challenges.
+First, the state space is high-dimensional4 which means that the policy func-
+tions, which have to be approximated, are high-dimensional. Second, the con-
+ditional expectations in agents’ Euler equations are high-dimensional integrals5
+which have to be evaluated very frequently in the solution procedure. Lastly,
+one has to solve a rather large system of non-linear equations to obtain the
+unknown coefficients.
+    While the focus of this paper is on the first problem (the high dimensionality
+of the state space), we will also discuss the issues associated with the second
+problem and propose a solution based on monomial rules (see Judd (1998)).
+Regarding the third problem, we chose to use a simple time-iteration scheme
+rather than more efficient methods - we briefly discuss this issue at the end of
+this section.
+
+3.1     Smolyak Sparse Grids
+In order to motivate the choice of Smolyak points as collocation points, we con-
+sider the abstract problem of how to approximate the unknown policy function
+f : [−1, 1]d → R by interpolating a finite number of known function values,
+i.e. we try to find a finite number of points H ⊂ [−1, 1]d and a function fˆ
+such that given the points (xi , yi = f (xi )) with xi ∈ H, the function fˆ satisfies
+fˆ(xi ) = f (xi ) and such that fˆ approximates f well on its entire domain [−1, 1]d .
+Here d is the dimension of the problem, in our application the dimension of the
+state space. The remaining questions are then how to choose the interpolation
+points H and how to choose the interpolating function fˆ.
+    Smolyak’s (1963) method provides both sets of points as well as formulas
+for the approximating functions. To describe Smolyak’s method, adopted to
+the problem of high-dimensional interpolation on sparse grids by Barthelmann
+et al. (2000), we start by defining a set of points in [−1, 1]d which can be
+interpolated by polynomials of relatively low degree. Then we give a formula for
+the interpolating polynomial. This description is meant to be a more accessible
+version of the discussion in Krueger and Kubler (2004), which in turn follows
+Barthelmann et al. (2000).
+    Since we know from the structure of the economy that the true policy func-
+tion f is smooth, we use a multivariate polynomial to approximate it. In one
+dimension, it is well known that one can interpolate n points by a univariate
+polynomial of degree n − 1, i.e. by a polynomial with n terms of the form
+                                                 n
+                                                 X
+                                   pn−1 (x) =          θj xj−1 .                               (8)
+                                                 j=1
+
+   4 As shown above, it consists, in general, of the capital stocks in all countries as well as all
+
+country-specific technology shocks.
+   5 The dimension of the integral is equal to the number of countries, if each country is hit
+
+by one technology shock. If the shock has finite support, then the integral is replaced by a
+sum.
+
+
+
+                                                8
+In order to find the unknown n coefficients (θ1 , . . . , θn ), one can simply use the
+n equations (which are linear in the unknowns)
+                                  n
+                                  X               j−1
+                           yi =         θj (xi )          for i = 1, . . . , n.
+                                  j=1
+
+    It is now common in economics to use the orthogonal Chebychev polynomials
+to express the approximating function and write
+                                                      n
+                                                      X
+                                    pn−1 (x) =              θj Tj (x),                   (9)
+                                                      j=1
+
+where the Chebychev polynomials T1 (.), T2 (.), ... can be evaluated recursively
+by T1 (x) = 1, T2 (x) = x and Tj+1 (x) = 2xTj (x) − Tj−1 (x). While (9) is just
+a different way to express the same function as in (8), the advantage of using
+Chebychev polynomials is, that since the Tj are all orthogonal, the coefficients
+are smaller and the interpolation problem better conditioned (see Judd (1998)).
+Although we use Chebychev polynomials in our method, it is important to
+understand that Smolyak’s algorithm in no way depends on the use of this
+particular set of polynomials.
+    While approximation of a function by interpolation is straightforward in one
+dimension, it is much more complicated in several dimensions. In particular, it
+is not true that with a polynomial of n terms one can interpolate arbitrary n
+points in higher dimensions (in fact, this is the exception). Moreover, it is not
+obvious how to optimally choose the collocation points in higher dimensions.
+Any rule to choose these points has to satisfy, in order to be of practical use for
+high-dimensional problems, that the number of interpolation points does not
+grow exponentially in the dimensionality of the problem.
+    The simplest approach to multi-variate interpolation is to span a rectangular
+grid with n values in each dimension and use a tensor product of one-dimensional
+polynomials as a set of approximating functions. Thus one would approximate a
+d-dimensional function f : [−1, 1]d → R by interpolating the function values at
+the nd grid points by a polynomial of total degree6 (n − 1)d. The problem with
+this approach is that it becomes infeasible very fast as d becomes large since
+the number of unknown coefficients grows exponentially with the dimension d.
+If one chooses nd points and thus univariate polynomials of degree n − 1, the
+  6 The degree of a multi-variate polynomial is defined to be the degree of its leading mono-
+
+mial. If the set of one-dimensional polynomials of degree n (along dimension i) is denoted by
+Pn = {pn (xi )}, the tensor product for d dimensions is given by the set
+                                                d
+                                                Y
+                       Pnd = {p(x)|p(x) =             pn (xi ) for pn (xi ) ∈ Pn }.
+                                                i=1
+
+For example, if d = 3 and n = 1 the set is given by
+                        P13 = {c, x1 , x2 , x3 , x1 x2 , x1 x3 , x2 x3 , x1 x2 x3 },
+and the total degree of the highest order polynomial in P13 is 3.
+
+
+                                                      9
+number of unknown coefficients to be solved is nd . This is the well-known curse
+of dimensionality.
+     The alternative we propose is to use ‘Smolyak points’ for the interpolation
+and to use linear combinations of polynomials which interpolate function values
+in certain directions. In order to understand the method, note that even in one
+dimension, in order to approximate a smooth function on the interval [−1, 1] by
+interpolating n of its function values, one needs to carefully choose the nodes
+x1 , ..., xn . It is known that both the extrema and the zeros of the Chebychev
+polynomials are nearly optimal in the following sense. Given any continuous
+function f : [−1, 1] → R, let gn∗ denote the polynomial of degree n that mini-
+mizes maxx∈[−1,1] |f (x) − gn∗ (x)|. Then if pn interpolates f either at the (n + 1)
+Chebyvhev zeros or at the (n + 1) extrema, we have
+
+                  max |pn (x) − f (x)| ≤ Λn max |gn∗ (x) − f (x)|,
+                x∈[−1,1]                        x∈[−1,1]
+
+
+with Λn ≤ C + π2 log(n + 1), where C is independent of n and the bounds are
+sharp, in the sense that they attained for some (classes of) examples. (see e.g.
+Cheney and Light (2000)).
+    Following Barthelmann et al. (2000), we use the extrema of Chebychev
+polynomials as our basis for the grid of points H. We let G 1 = {0} and for
+n = 2, ..., we define the sets G n = {ζ 1 , ..., ζ n } ⊂ [−1, 1] as the set of the extrema
+of the Chebychev polynomials
+                                                  
+                                     π(j − 1)
+                        ζ j = −cos                      j = 1, ..., n.
+                                      n−1
+
+Define a sequence of positive integers by m(1) = 1 and m(i) = 2i−1 + 1 for
+i = 2, 3, .... It is easy to see, and this turns out to be crucial for Smolyak’s
+construction, that the sets of interpolation points satisfy G m(i) ⊂ G m(i+1) for
+all i. The construction of the integers m(i) is therefore crucial in assuring that
+the sets of Chebychev extrema are nested, as long as only sets of size m(i) are
+permitted.
+    Smolyak’s method uses this fact to build a hierarchical sparse grid out of
+combinations of the grids G m(i) for different values of i. We first present a simple,
+albeit still abstract, three-dimensional example to illustrate the intuition of this
+idea and then move to a general description of the method.
+
+3.1.1    The Three-Dimensional Case
+We choose three dimensions because we can represent our selection of grid points
+graphically, and two dimensions are not sufficient to clarify how exactly the
+method avoids the curse of dimensionality.
+    We want to approximate a smooth function f : [−1, 1]3 → R by a polynomial
+of relatively small degree with few monomial terms, and we are looking for a
+method that is flexible in the sense that it is easy to add terms of higher degree
+and thereby increase the quality of the approximation.
+
+
+                                           10
+    Define a 3-dimensional grid of approximation level λ ≥ 1 as follows:
+                              [
+           H3,λ =                          G m(i1 ) × G m(i2 ) × G m(i3 ) .             (10)
+                     (i1 ,i2 ,i3 )Z3++ : i1 +i2 +i3 =3+λ
+
+
+    Recall that for m(i) as defined above, the grids G m(i) are nested for i =
+1, 2, .... In order to understand how the formula constructs the interpolation
+points, it is useful to go through the cases λ = 1, 2, 3 one by one. Recall that
+G m(1) = {0} and that G m(2) consists of three points, {−1, 0, 1}. Then, according
+to formula (10),
+
+H3,1 = G m(2) × G m(1) × G m(1) ∪ G m(1) × G m(2) × G m(1) ∪ G m(1) × G m(1) × G m(2) .
+
+So the first level grid consists of the 7 points (−1, 0, 0), (0, 0, 0), (1, 0, 0), (0, −1, 0),
+(0, 1, 0), (0, 0, −1) and (0, 0, 1).
+    Now, let’s move to the case λ = 2. Recall that G m(3) consists of 5 points.
+The formula gives
+
+H3,2 = G m(3) × G m(1) × G m(1) ∪ G m(1) × G m(3) × G m(1) ∪ G m(1) × G m(1) × G m(3)
+     ∪G m(2) × G m(2) × G m(1) ∪ G m(2) × G m(1) × G m(2) ∪ G m(1) × G m(2) × G m(2)
+
+    Figure 1 shows where these points are located in the three-dimensional cube
+[−1, 1]3 . It first shows, for clarity, the point grids in two of the three dimensions,
+holding the third dimension fixed at 0, that is, at G m(1) . The last panel then
+shows the three dimensional grid, which is generated as the appropriate union
+of the three two-dimensional sets (see formula (10)).
+    Note that H3,1 ⊂ H3,2 and in general, as one can verify from Equation (10),
+  3,λ
+H     ⊂ H3,λ+1 . Passing from level λ to the next level of approximation λ + 1
+can therefore be viewed as adding new points to the existing grid.
+    At the risk of boring the reader, for clarification let us consider one more
+level of approximation, i.e. λ = 3 which leads to m(4) = 9 points along each
+dimension (holding the two others fixed at zero). We have as the third level
+Smolyak grid
+
+
+H3,3 = G m(4) × G m(1) × G m(1) ∪ G m(1) × G m(4) × G m(1) ∪ G m(1) × G m(1) × G m(4)
+                                ∪G m(3) × G m(2) × G m(1) ∪ G m(2) × G m(3) × G m(1)
+                                ∪G m(3) × G m(1) × G m(2) ∪ G m(2) × G m(1) × G m(3)
+        m(1)     m(3)     m(2)
+     ∪G      ×G       ×G       ∪ G m(1) × G m(2) × G m(3) ∪ G m(2) × G m(2) × G m(2) .
+
+3.1.2    Grids in Arbitrary Dimensions
+In general, for approximation in the d-dimensional hypercube, we can construct
+grids Hd,λ in exactly the same fashion. In order to give the general formula, for
+arbitrary dimension d and arbitrary approximation level λ, define a multi-index
+to be a vector of positive integers i = (i1 , ..., id ) ∈ Zd++ and let |i| = i1 + ... + id .
+
+
+                                                 11
+                                Figure 1: Smolyak Points
+
+
+            1                                                1
+
+
+
+
+                                                   z−axis
+            0                                                0
+
+
+
+           −1                                               −1
+            1                                                1
+                                              1                                              1
+                 0                                                  0
+                                   0                                                  0
+                      −1   −1                                    y−axis   −1   −1   x−axis
+
+
+
+
+            1                                                1
+
+
+
+            0                                                0
+
+
+
+           −1                                               −1
+            1                                                1
+                                              1                                              1
+                 0                                                  0
+                                   0                                                  0
+                      −1   −1                                             −1   −1
+
+
+
+
+For integers λ ≥ 1, we can then define a sparse grid of points in [−1, 1]d as
+follows:                     [
+                   Hd,λ =         (G m(i1 ) × ... × G m(id ) ).
+                                 i: |i|=d+λ
+
+It can be easily verified that for d = 3 and λ = 1, 2, 3, this gives the sets of
+points which we described in the previous example.
+    It turns out that for the international real business cycle model solved in
+this paper, a level 2 construction is sufficient to obtain fairly high accuracy, so
+for arbitrary dimension d, we always consider Hd,2 as our set of points. Note
+that this is simply the union of d-dimensional sets of the form
+
+                       G m(1) × G m(1) × ... × G m(3) × ... × G m(1)
+                       G m(1) × G m(2) × ... × G m(2) × ... × G m(1) .
+
+Since a complete enumeration of these sets is straightforward, the construction
+of Hd,2 is very simple for arbitrary dimension d.
+
+3.1.3   Interpolation
+Given the construction of these points, we now briefly describe an easy way to
+construct an interpolating polynomial. Smolyak’s method interpolates at nodes
+in H, using weighted sums of polynomials which interpolate subsets of H.
+    Define pi to be the tensor-product multivariate polynomial which interpo-
+lates on G m(i1 ) × ... × G m(id ) . As pointed out above, we represent this in Cheby-
+
+                                                  12
+chev form (that is, use Chebychev polynomials), i.e.
+                                          m(i1 )         m(id )
+                                          X              X
+                                  piθ =            ...            θl1 ...ld Tl1 ...Tld .
+                                          l1 =1          ld =1
+
+The coefficients θl1 ...ld can be efficiently computed as follows. Consider a full
+d−dimensional grid with k1 , ..., kd > 1 points along each direction. Then
+                                                     k1       kd
+                       2d                  1        X        X    Tl1 (ζ j1 ) · · · Tld (ζ jd ) · f (ζ j1 , ..., ζ jd )
+θl1 ...ld =                                              ···
+              (k1 − 1) · · · (kd − 1) cl1 · · · cld j =1     j =1
+                                                                                     cj1 · · · cjd
+                                                             1            d
+
+
+with c1 = ckd = 2 and cj = 1 for j = 2, ..., kd − 1. For the Smolyak construction,
+directions with only one point are then simply dropped, in the sense that if
+m(id ) = 1, we do not include the direction in the computation of the coefficient.
+    To return briefly to the three-dimensional example, p(i,1,1) is the polynomial
+of degree 2i−1 which interpolates m(i) = 2i−1 + 1 points in the first direction
+and is constant along the second and third dimension. p(2,2,1) is the tensor
+product of two univariate polynomials of degree m(2) − 1 = 2 and interpolates
+the function on the 3 by 3 grid G m(2) × G m(2) × G m(1) . For λ = 2, it then
+might seem that the interpolating polynomial for the entire grid H3,2 should be
+a weighted sum of the univariate polynomials in each direction as well as the
+2-dimensional tensor product on each plane. However, it turns out that things
+are not quite as simple, and that one also needs to include the polynomials that
+interpolate H3,1 . To see this, note that in order to interpolate the points in
+G m(2) × G m(2) × G m(1) , one would have to weight the polynomial p2,2,1 with one
+and all others with zero. But then, to interpolate points in G m(3) ×G m(1) ×G m(1)
+which are not in the previous grid (e.g. the point (cos(π/4), 0, 0)) one would
+have to weight the polynomial p3,1,1 with one. Of course, in order to do both,
+one would need to subtract some polynomials. The solution to this is to take
+the weighted sum not only of polynomials associated with H3,2 but also those
+associated with H3,1 (i.e. the polynomials p2,1,1 , p1,2,1 , p1,1,2 ) as well as the
+constant p1,1,1 . It turns out that by including these, it is possible to find the
+correct weights to interpolate all points in H3,2 .
+    In general, the Smolyak function which interpolates on Hd,λ is given by the
+weighted sum of low dimensional tensor products. Denote by q = max(d, λ + 1).
+At a point x ∈ [−1, 1]d we then approximate f (x) by
+                                                             
+                              X                      d−1
+              fˆd,λ (x) =          (−1)d+λ−|i|                  pi (x).         (11)
+                                                  d + λ − |i|
+                                 q≤|i|≤d+λ
+                                          
+                                d−1
+    The weights, (−1)d+λ−|i|               , are chosen to ensure that the
+                             d + λ − |i|
+weighted sum of polynomials which interpolate on subsets of H interpolates
+on the entire set.7
+   7 See   Barthelmann et al. (2000) for a proof that this procedure indeed works.
+
+
+                                                           13
+3.1.4   Some Properties of Smolyak’s Method
+Without getting into mathematical details, we want to briefly discuss the ad-
+vantages of Smolyak’s method. The first obvious advantage is that the number
+of grid points does not grow exponentially with the dimension. It can be veri-
+fied that the number of points in Hd,λ is 1 + 2d for λ = 1, 1 + 4d + 4 d(d−1)2   for
+                                                                           d(d−1)
+λ = 2 (the level of approximation used in this paper), and 1 + 8d + 12 2 +
+8 d(d−1)(d−2)
+       6      for λ = 3. The nestedness of the nodes, G m(i) , implies that in
+general the number of points in Hd,λ grows only polynomially in d if λ is taken
+fixed. Note that it grows quickly in λ, but the examples below show that very
+good approximations are achieved even for λ = 2.
+    Moreover, it can be shown that fˆd,λ exactly replicates any polynomial func-
+tion of degree less than or equal to λ, in the sense that fˆd,λ is identically equal
+to this polynomial if fˆd,λ interpolates it at the Smolyak points. At a first glance
+this might seem a bit disappointing. After all, fˆd,λ is a polynomial of degree
+2λ - however, since the ratio between the degree of fˆ and the degree of any
+polynomial that can be replicated by fˆ is independent of the dimension d, the
+algorithm is regarded as nearly optimal. In general, better schemes are not
+known. Moreover, this makes clear that using a level-2 Smolyak approximation
+is at least as good as (and often strictly better than) using any second degree
+polynomial.
+
+3.2     Integration
+Once we approximate the unknown policy functions by Smolyak polynomials, we
+require that the unknown coefficients ensure that equations (1)-(4) hold exactly
+at the points in the grid. In order to solve for the coefficients, we obviously
+need a way to evaluate the integral in equation (1). Since uc and fk as well as
+the probability density function are not polynomials, we need to approximate
+the integral numerically. It is well known that for integration in relatively low
+dimensions (say around 10-15), if the integrand is sufficiently smooth, routines
+based on interpolatory cubature rules turn out to deliver much more accurate
+results than Monte Carlo or quasi Monte Carlo methods (see Cools (2002) or
+Schürer (2003)). Since Judd’s (1998) textbook contains an excellent description
+of these various rules we do not discuss them in detail here. In the computations,
+we use a degree 5 rule for an integrand on an unbounded range weighted by a
+
+
+
+
+                                        14
+standard normal.8
+    Note that although the exogenous shocks (a) in our model are not normally
+distributed, we can easily rewrite the integral in equation (1) as a function of
+the underlying innovations (ε) which   are indeed standard normal. Thus, the
+                                 − d     x2i
+                       R           P
+integral is in the form Rd f (x)e    i=1     dx and can be approximated by this
+degree 5 rule.9
+
+3.3          Finding the Unknown Coefficients
+Using Smolyak’s polynomials to approximate the policy functions and using the
+cubature rule to approximate the integrals now allows us to consider a finite
+system of non-linear equations whose solutions are the unknown coefficients θ
+of the approximate policy-functions. In principle, this system can be solved
+easily by modern non-linear equation solvers which are variations of Newton’s
+method. However, since the focus of this paper lies on Smolyak’s method to
+construct sparse grids, and since we want to be able to easily increase the size of
+the problem (by adding additional countries and hence additional endogenous
+and exogenous states), we chose to solve for the coefficients by a “time-iteration”
+algorithm.
+    First we guess policy functions K0i0 (s), Li0 (s) and C0i (s) for all i ∈ I. For a
+                                                          i0
+given iteration n−1 and associated policy functions {Kn−1      (s), Lin−1 (s), Cn−1
+                                                                                i
+                                                                                    (s)}i∈I
+the iteration n policy functions are, for all s = (k, a), defined by the 3N equa-
+     8 More   precisely,
+Z                  Pd                                 d
+                          x2
+                                                      X
+         f (x)e−                                            f (rei ) + f (−rei ) +
+                                                                                
+                    i=1    i   dx   ≈   Af (0) + B
+    Rd                                                i=1
+                                            d−1
+                                            X     d
+                                                  X
+                                                        f (sei + sej ) + f (sei − sej ) + f (−sei + sej ) + f (−sei − sej ) ,
+                                                                                                                           
+                                        D
+                                            i=1 j=i+1
+
+with
+                   p            p               2π d/2      (4 − d)π d/2        π d/2
+             r=     1 + d/2, s = 1/2 + d/4, A =        ,B =              ,D =          .
+                                                d+2          2(d + 2)2        (d + 2)2
+
+     9 In
+      order to verify the quality of approximation, we compared the results with a simple
+Monte-Carlo method that uses 10000 draws. In all cases, the differences were on the order of
+at most 10−5 .
+
+
+
+
+                                                            15
+tions10
+
+        τ i uic Cni (s), Lin (s)
+                                
+
+                                                                   1 + ai0 fki Kni0 (s), Lin−1 (s0 ) +
+                                                          "                                                #
+                                    0
+                                        ) , Lin−1 (s0 )                                                         ga (a0 )da0
+                                                      
+                τ i uic    i
+            R
+        β                 Cn−1    (s                               i0     0    i0         i0 0 i0
+                                                              φ (Kn−1 (s )−Kn (s))(Kn−1 (s )+Kn (s))
+                                                              2                   Kni0 (s)2
+    =                                                             i0
+                                                              φ(Kn−1  (s0 )−Kni0 (s))
+                                                  1+                   i0 (s)
+                                                                      Kn
+                                                                                                         
+                                                                   1 + aj0 fkj Kni0 (s), Ljn−1 (s0 ) +
+                               (s0 ) , Lin−1 (s0 )                                                          ga (a0 )da0
+                                                  
+                τ i uic    i
+            R
+        β                 Cn−1                                     j0    0   j0        j0  0   j0
+                                                               φ (Kn−1 (s )−Kn (s))(Kn−1 (s )+Kn (s))
+                                                               2                 j0    2
+                                                                                Kn (s)
+    =                                                            j0         j0
+                                                              φ(Kn−1 (s0 )−Kn  (s))
+                                                      1+                  j0
+                                                                         Kn  (s)
+
+        τ j ujc    Cnj (s), Ljn (s)
+                                        
+    =
+
+
+                                                                        
+                                                   uil Cni (s), Lin (s)
+                                                                                   = −ai fli (k i , Lin )
+                                                   uic (Cni (s), Lin (s))
+                            N                   N
+                            X                   X φ(K i0 (s) − k i )2
+                                                              n
+            Cn (s) +              Kni0 (s) +                                       = Y (s) + K.
+                            i=1                 i=1
+                                                                  2k i
+
+    In terms of running-times, this method is obviously not comparable to New-
+ton’s method, however, it has the advantage that it can easily handle very large
+systems. Moreover, it has a nice economic interpretation in that it can be viewed
+as approximating the infinite horizon economy by an economy with a large finite
+horizon.
+
+
+4       Numerical Results
+We present results – including policy functions plots, approximation errors,
+and running times – for a number of specifications of the model described in
+the previous section. Throughout, we approximate the policy functions with a
+polynomial of total degree 4 (i.e., λ = 2). Higher-order approximations yield
+smaller approximation errors at the cost of longer running times.
+
+4.1       Model Specifications
+The various model specifications we solve differ by the number of countries N ,
+the forms of the utility and production functions, and the parameter values
+chosen for the technology shock process, capital adjustment costs, and utility
+and production functions. “Problem A” of the JEDC Numerical Methods Com-
+parison Project (Den Haan, Judd, and Juillard (2004)) provides a complete
+ 10 Again   we abuse notation and let s0 = (Kn
+                                             0 (s), a0 ).
+
+
+
+
+                                                              16
+description of the different specifications and their calibration. Following is a
+condensed version of this description.
+   As described above, the capital adjustment cost is assumed to be quadratic
+with scale parameter φ. The period utility function is of one of the forms11
+                                                1− 1
+                            
+                                              c γ
+                                               1− γ1
+                            
+                            
+                            
+                                          1− 1        1+ 1
+                            
+                            
+                                         c   γ       l η
+                                             1 − b
+                            
+                            
+                                                     1+ η1
+                            
+                                        1− γ
+                            
+                                                            1
+                                        ψ   e    (1−ψ) 1− γ
+                  u(c, l) =           (c (L −l)         )
+                            
+                                              1− γ1
+                                                               1
+                                                     1 1 1− γ
+                                   1− 1          1− 1
+                            
+                                                         1−
+                                            e
+                            
+                            
+                                c   χ +b[L −l]     χ       χ 
+                            
+                                                                   ,
+                            
+                            
+                                               1− 1            γ
+
+
+and the production function is of one of the forms
+                                                   1
+
+                 f (k, l) =   A (αk µ + (1 − α)lµ ) µ , µ 6= 0
+                                    Ak α l1−α , µ = 0.
+
+Table 1 lists the parameters which vary across specifications and the functional
+forms used in each specification.12
+
+4.1.1      Challenges for Solving the Model
+A few key issues arise in the application of Smolyak’s method, described gen-
+erally in Section 3, to our specific economic model. The first issue is choosing
+bounds for the state variables, a necessary step since Smolyak’s method is de-
+fined over a closed hypercube, [−1, 1]2N .13 For the exogenous state variables,
+we simply set [ln(ai ), ln(āi )] = [ −tr σ tr σ
+                                       1−ρ , 1−ρ ], where tr is some positive scalar.
+For the endogenous state variable, the bounds must be chosen with great care
+to ensure the capital policy functions, K n0 (k, a), stay within the chosen bounds.
+All else equal, the wider the capital bounds the more likely the capital policy
+function is to stay in bounds but the poorer the accuracy of the solution.
+    There is also an interaction between the bounds on capital and the bounds
+on the technology shocks. As is known from the one-country stochastic growth
+model, capital exhibits a positive, hump-shaped response to a technological
+shock, and thus, for a fixed capital interval, larger technological shocks make it
+more likely for the capital policy function to go out of bounds. For this reason,
+  11 The     case γ = 1 is understood to be the logarithmic case.
+  12 The     other parameter values are β = 0.99, δ = 0.025, α = 0.36, and A = (1 − β)/(αβ).
+A is chosen so the steady-state capital stock is equal to unity for all countries, and (where
+applicable) b and ψ are chosen so the steady-state labor supply is also equal to unity. The
+value of Le = 2.5 is chosen so that steady-state labor supply equals 40% of time endowment,
+Le . Finally, the Pareto weights (τ 1 , ..., τ N ) are pinned down by assuming that each country
+optimally consumes its net output in steady state.
+  13 Although the state variable generally does not lie in [−1, 1]2N , it lies in the box B =
+
+[k1 , k̄1 ] × ... × [kN , k̄N ] × [ln(a1 ), ln(ā1 )] × ... × [ln(aN ), ln(āN )]. It is straightforward to use
+a change of variables to map a state x ∈ B to [−1, 1]2N .
+
+
+                                                     17
+                            Table 1: Model Specifications
+
+  Mod       N     Volatility       φ            γ           η            χ              µ
+  A1       2,6      L, H         0.5,10         1           –             –             0
+  A2       2,6      L, H         0.5,10      0.25, 1      0.1, 1          –             0
+  A3       2,6      L, H         0.5,10      0.25, 1        –            –              0
+  A4       2,6      L, H         0.5,10       0.25          –           0.83           -0.2
+  A5       2,6      L, H         0.5,10     (0.25,1)        –             –           (0,0)
+  A6       2,6      L, H         0.5,10     (0.25,1)     (0.1,1)          –           (0,0)
+  A7       2,4      L, H         0.5,10      (0.5,1)        –             –           (0,0)
+  A8       2,4      L, H         0.5,10     (0.2,0.4)       –        (0.75,0.9)     (-0.3,0.3)
+
+Notes: As described in Den Haan, Judd, and Juillard (2004), A1 and A5 have
+inelastic labor supply with CRRA utility over consumption; A2 and A6 have
+separable utility functions with isoleastic labor supply and CRRA utility over
+consumption; A3 and A7 exhibit Cobb-Douglas utility over consumption and
+leisure, while A4 and A8 have CES utility. In A1-A4, the countries are symmet-
+ric, while in A5-A8, the parameters of the utility and production functions differ
+across countries. An entry (x, y) for a given parameter ζ indicates that country
+i = 1, ..., N has parameter ζ i = x + Ni−1−1 (y − x). Finally, low (L) volatility
+corresponds to ρ = 0.8, σ = 0.001 and high (H) volatility to ρ = 0.95, σ = 0.01.
+
+
+the high volatility case tends to be more difficult to solve than the low volatility
+case, but both can be solved with the proper choice of bounds. Unless noted
+otherwise, we use tr = 1.25 and [k, k̄] = [0.5kss , 1.5kss ] to generate all the results
+for the symmetric cases (A1-A4) reported below.
+    For asymmetric cases with endogenous labor supply (A6-A8), finding appro-
+priate bounds for the capital interval provides an additional challenge because
+the true capital policy functions are asymmetric across countries. To see this,
+consider specifications A6-A8 without any capital adjustment costs (φ = 0)
+or technology shocks (ln(ait+1 ) = 0). In equilibrium, the marginal utility of
+consumption is equalized across countries at each date, and thus one can see
+from the intertemporal Euler equations that the distribution of t + 1 capital
+will be set to equate the marginal product of capital across countries in t + 1,
+which requires equating countries’ capital/labor ratios. Because some countries
+have more elastic labor supplies than others, the countries will supply differ-
+ent levels of labor if provided with the same non-steady-state capital stock.
+Figure 4 (to be described later) illustrates this for specification A6. Conse-
+quently, the true equilibrium features asymmetric capital policy functions. Solv-
+ing for these policy functions thus requires specifying asymmetric bounds for the
+country-specific capital stocks.14 In practice, we let [k 1 , k̄1 ] = [0.42kss , 1.58kss ],
+  14 The program converges when using symmetric capital intervals (for example, symmetric
+
+intervals were used to create Figures 2 - 4), but the accuracy is better in the case of asymmetric
+capital intervals.
+
+
+
+                                               18
+[k N , k̄N ] = [0.58kss , 1.42kss ], and choose intermediate values for the widths of
+the other countries’ capital intervals.15
+    A second issue that arises in using Smolyak’s method is finding a good
+initial guess for the time-iteration algorithm to compute policy functions. In
+general it is not possible to establish that the operator used for the time-iteration
+procedure is a contraction mapping, and thus, convergence is not guaranteed
+for any initial guess. In fact, it turns out that poor guesses for labor supply
+often lead to difficulties for our method. To minimize these difficulties, we have
+at times found it useful to slightly alter the time-iteration algorithm described
+in Section 3.3. Rather than using the previous iteration of the policy function
+for labor supply Ln−1 (s0 ) on the right-hand side of the intertemporal Euler
+equation, we solve for tomorrow’s labor, denoted by L∗ , using
+
+                         uil (Cn−1
+                               i
+                                   (s0 ), L∗ )
+                               i
+                                               = −ai fli (Kni0 (s), L∗ ).                   (12)
+                         uic (Cn−1 (s0 ), L∗ )
+
+This reduces the importance of the initial guess for labor supply, which turns
+out to be especially helpful for finding a solution in cases A6-A8.
+    Finally, our procedure can solve specifications of the model with up to N = 6
+countries (12 state variables). As currently written, our procedure does not
+exploit any of the symmetries between the countries (for cases A1-A4) when
+computing the solution of the model. But because the Smolyak points are
+symmetric (see Figure 1), one could envision utilizing the symmetry of cases
+A1-A4 by solving for the policy functions of only one country at each iteration
+and then doing the proper transformation to generate the policy functions of
+the other countries. Doing so may make solving for N = 10 countries less
+time intensive in these cases. However, given the results reported below, in
+which increasing the number of countries does not appear to lead to particularly
+interesting economic insights, we choose not to pursue this direction of research
+at this point.
+
+4.1.2    Policy Functions
+Figures 2 - 4 plot the country-specific capital, consumption, and labor policy
+functions for specification A6 with N = 2, high volatility, and low adjustment
+costs. There are four plots in each figure: the plots show the policy functions of
+both countries (blue-solid = country 1, red-dashed = country 2) as a function
+of the own country’s and the other country’s capital stocks (top two plots) and
+own country’s and other country’s technology shock (bottom two plots), holding
+the other state variables constant at their steady-state values.16
+    These policy functions are representative, in a qualitative sense, of the policy
+functions from other specifications. In particular, the capital policy functions
+   15 For case A8, the order of the capital grids is reversed with country N having the widest
+
+grid, i.e., [k1 , k̄1 ] = [0.58kss , 1.42kss ], [kN , k̄N ] = [0.42kss , 1.58kss ].
+   16 In order to show all the interesting movements in the policy functions, we solved over
+
+a capital interval of [0.1kss , 1.9kss ] and set tr = 1.25 so the technological shock interval is
+[-0.25, 0.25].
+
+
+                                               19
+are fairly linear in all state variables, while consumption is slightly concave with
+respect to capital and slightly convex with respect to technology shocks. The
+labor supply functions clearly display the most significant non-linearities, with
+labor supply being a non-monotonic function of a country’s own capital stock.
+We take these non-linearities as evidence that non-linear solution methods do,
+in fact, provide better approximations of the true solution of the model than
+linear methods. Kim, Kim, and Kollmann (2007) (KKK) document this same
+result quantitatively by showing that a quadratic approximation of the solution
+outperforms a linear approximation. Our solution method is also significantly
+more accurate than a linear approximation, as can be seen by comparing our
+results reported below (in Table 2) to the linear approximation results in KKK.
+    It is also interesting to note the effect of asymmetric parameter values on the
+policy functions. The labor supply functions again display the most interesting
+results. The optimality condition for labor supply of country i can be written
+as
+                                     "             # ηi
+                                        1/γ 1 i i α 1+ηi α
+                                       A     a k
+                                              t t
+                               lti =        1/γ 1
+                                                           ,
+                                          1
+                                         ct
+where we have substituted in the optimality condition equating the marginal
+utility of consumption across countries.17 Thus, it is easy to see that country
+2 (η 2 = 1.0) will have a more elastic labor supply with respect to a movement
+in productivity than country 1 (η 1 = 0.1), as is confirmed by Figure 4. It is
+also interesting to note that, except at very low capital levels, labor supply
+falls with an increase in own-country capital because the direct income effect
+(i.e., increased consumption) overwhelms the substitution effect from a higher
+wage (top-left panel of Figure 4). Furthermore, consumption is also more elastic
+for country 2 (γ 2 = 1.0) than country 1 (γ 1 = 0.25) because the equilibrium
+                                                                          γ 2 /γ 1
+condition for consumption-sharing implies that c2t is proportional to c1t           .
+
+4.2    Approximation Errors and Running Times
+We check the accuracy of the solution in three ways, the first two of which require
+the computation of conditional error functions. These functions, denoted by
+Rn (xt ) for n = 1, .., 3N , are unit-free versions of the 3N optimality conditions
+(see equations (1) - (4)) evaluated at the present state xt ≡ (kt , at ). The true
+solution of the model has Rn (xt ) = 0, for all n and xt . These functions are
+                                                       1                 i
+ 17 Note   that the Pareto weights are τ i =                       = A1/γ .
+                                               uic (ciss ,liss )
+
+
+
+
+                                                  20
+                                               Figure 2: Capital Policy Functions for A6
+
+   2                                                                                              2
+
+
+
+
+  1.5                                                                                            1.5
+
+
+
+
+   1                                                                                              1
+
+
+
+
+  0.5                                                                                            0.5
+
+
+
+
+   0                                                                                              0
+        0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90         0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90
+
+  1.5                                                                                            1.5
+
+
+
+
+   1                                                                                              1
+
+
+
+
+  0.5                                                                                            0.5
+     -0.25     -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25      -0.25     -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25
+
+
+
+
+Notes: Capital stock tomorrow as a function of own and other capital stocks (top
+two plots) and own and other technology shocks (bottom two plots), holding
+other state variables at steady-state values. The blue lines are for country 1
+(γ = 0.25, η = 0.1), and the red-dashed lines are for country 2 (γ = 1.0, η = 1.0).
+Model specification: A6, N = 2, high volatility, φ = 0.5.
+
+
+
+
+                                                                                            21
+                                        Figure 3: Consumption Policy Functions for A6
+
+  0.04                                                                                            0.04
+
+
+
+
+  0.03                                                                                            0.03
+
+
+
+
+  0.02                                                                                            0.02
+
+
+
+
+  0.01                                                                                            0.01
+         0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90          0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90
+
+   0.03                                                                                            0.03
+
+
+
+
+  0.029                                                                                           0.029
+
+
+
+
+  0.028                                                                                           0.028
+
+
+
+
+  0.027                                                                                           0.027
+
+
+
+
+  0.026                                                                                           0.026
+       -0.25    -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25        -0.25    -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25
+
+
+
+
+Notes: Consumption as a function of own and other capital stocks (top two
+plots) and own and other technology shocks (bottom two plots), holding other
+state variables at steady-state values. The blue lines are for country 1 (γ =
+0.25, η = 0.1), and the red-dashed lines are for country 2 (γ = 1.0, η = 1.0).
+Model specification: A6, N = 2, high volatility, φ = 0.5.
+
+
+
+
+                                                                                             22
+                                                Figure 4: Labor Policy Functions for A6
+
+  1.6                                                                                            1.6
+
+
+
+
+  1.3                                                                                            1.3
+
+
+
+
+   1                                                                                              1
+
+
+
+
+  0.7                                                                                            0.7
+
+
+
+
+  0.4                                                                                            0.4
+        0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90         0.10   0.26    0.43    0.59    0.75    0.92    1.08   1.25   1.41   1.57   1.74   1.90
+
+  1.6                                                                                            1.6
+
+
+
+
+  1.3                                                                                            1.3
+
+
+
+
+   1                                                                                              1
+
+
+
+
+  0.7                                                                                            0.7
+
+
+
+
+  0.4                                                                                            0.4
+     -0.25     -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25      -0.25     -0.20   -0.16   -0.11   -0.07   -0.02   0.02   0.07   0.11   0.16   0.20   0.25
+
+
+
+
+Notes: Labor supply as a function of own country and other country capi-
+tal stocks (top two plots) and own and other technology shocks (bottom two
+plots), holding other state variables at steady-state values. The blue lines are
+for country 1 (γ = 0.25, η = 0.1), and the red-dashed lines are for country 2
+(γ = 1.0, η = 1.0). Model specification: A6, N = 2, high volatility, φ = 0.5.
+
+
+
+
+                                                                                            23
+given by
+                                   h                             i
+                         un            1 + ant+1 fk,t+1
+                                                   n
+                                                         + φn2,t+1 
+                            c,t+1
+       Rn     ≡ βEt                                                  − 1, for n = 1, ..., N
+                         unc,t                  1 + φn1,t
+                                                          
+                                                                   
+
+                   un−N  n−N n−N
+                    c,t at  fl,t
+       Rn     ≡                             + 1, for n = N + 1, ..., 2N
+                          un−N
+                           l,t
+                      Yt + Kt
+  R2N +1      ≡                   −1
+                   Ct + Kt+1 + φt
+                   τ n−2N un−2N
+                              c,t
+       Rn     ≡                   − 1, for n = 2N + 2, ..., 3N
+                       τ 1 u1c,t
+
+where the arguments of all functions have been suppressed, e.g., unc,t ≡ unc (cn (xt ), ln (xt )).18
+Then, letting R(xt ) denote the 3N -dimensional vector of conditional errors eval-
+uated at state, xt , Accuracy Tests 1 and 2 are implemented as follows:
+         Accuracy Test 1: R(xt ) is computed for 100 independent random
+vectors xt = {kti , ait }N
+                         i=1 at radius r from the deterministic steady-state, for
+r = {0.01, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30}.19 We report Tr ≡ maxn,t |Rn (xt )|.
+         Accuracy Test 2: The model is simulated for 1000 periods.20 Let
+Sn,max ≡ maxt |Rn (xt )| and Sn,mean ≡ mean(|Rn (xt )|) for t = 1, ..., 1000. We
+report Smax and Smean , which are the maximum Sn,max and Sn,mean (across
+n).
+    The third accuracy test is the so-called Den Haan-Marcet statistic (Den Haan
+and Marcet (1994)) and focuses solely on the N intertemporal equilibrium con-
+ditions. This statistic tests whether the realized errors in the intertemporal
+conditions are orthogonal to a constant and first- and second-order monomials
+of the state variables. This holds for the true solution since the intertemporal
+equilibrium conditions are conditional expectations. Accuracy Test 3 is imple-
+mented as follows:
+          Accuracy Test 3: We run 200 simulations of the model, each last-
+ing 1000 periods. For each run, the Den Haan-Marcet statistic (1994, p.5) is
+constructed, and we compare the frequency distribution of this statistic (across
+the 200 simulations) to the theoretical χ2N (2N 2 +3N +1) distribution, where the
+degrees of freedom for the χ2 distribution are determined by the number of
+  18 We use the degree-5 monomial integration formula described in Section 3.2 to calculate
+
+the expectations in the intertemporal conditions.
+  19 Recall that our solution method requires us to place bounds on the state variables. The
+
+bounds for the capital stocks are roughly 0.5 units from the steady state, while those for the
+technology shocks are 0.25 units away (tr = 1.25, ρ = 0.95, σ = 0.01). Thus, it is possible that
+a sampled point r = 0.30 units from the steady state could lie outside the technology shock
+bound for one country. In this case, we reduce the deviation from the steady state in that
+dimension and increase the deviations equally in all other dimensions. In effect, we choose a
+different sample point that is still r = 0.30 units from the steady-state and also in bounds.
+  20 The state variables are initially set at their steady state values. The actual length of the
+
+simulation was 1200 periods, and the first 200 periods were discarded to ensure independence
+from initial conditions. We use this same ‘burn-off’ period for Accuracy Test 3.
+
+
+                                                 24
+intertemporal equilibrium conditions (N ) multiplied by the number of instru-
+ments (2N 2 + 3N + 1). We report the percentage of the simulations with a
+statistic in the lower [P.05 ] and upper [P.95 ] critical 5% of the χ2 distribution.
+Fairly similar distributions are taken as evidence for an accurate solution.
+     Table 2 reports results of the accuracy tests for 20 of the 96 specifications
+listed in Table 1. For A2 and A3, we only report results for the parameteriza-
+tions with greatest and least curvature since these results bracket the others.
+All reported statistics are for high volatility, ρ = 0.95 and σ = 0.01, and low ad-
+justment costs φ = 0.5 because these cases usually21 have the largest conditional
+error functions. Increasing the adjustment costs to φ = 10 typically reduces the
+errors slightly, while lowering the volatility has a much larger effect. In fact, of
+all parameters, those with the biggest impact on the solution accuracy are the
+volatility parameters.
+     The numbers shown for Tests 1 and 2 are logs of the error measures (log10 (Tr ),
+log10 (Smax ), log10 (Smean )). Recall that the true solution has conditional error
+functions equal to zero, and thus, a smaller reported statistic implies greater
+accuracy. It is clear from the results of Test 1 that the accuracy of our approxi-
+mation is highest when the economy is close to its steady state, as Tr is smallest
+when r, the distance from the steady state, is small. This fact also helps explain
+why the errors reported for Accuracy Test 2 lie between the errors for T.01 and
+T.3 ; in the simulations we ran for Accuracy Test 2, the state variables [k, ln(a)]
+always lie within 0.12 of their steady-state values.
+     One can also see from Table 2 that the number of countries N typically does
+not have a large impact on the error measures Tr , Smax , and Smean , although
+in cases A4 and A6, the decline in accuracy with higher N is more substantial.
+The curvature parameters have some impact on accuracy as specifications with
+more curvature (low η and/or low γ for A2-A3) have larger approximation errors
+close to the deterministic steady-state (T.01 ) but smaller approximation errors
+further away (T.30 ). Finally, functional forms A3/A7 and A4/A8 appear to have
+slightly larger approximation errors than A1/A5 and A2/A6, although this may
+have as much to do with differences in curvature (parameter values) as it does
+with the particular functional forms.
+     Although we only report the largest errors across all conditional error func-
+tions, it turns out that these almost always correspond to the intertemporal
+Euler equations. This deserves some comment. In our solution procedure, the
+static conditions that determine labor supply and the sharing of consumption
+across countries hold quite exactly. This is because we solve these equations as
+functions of the state variables and consumption of country 1, without imposing
+any functional form on the labor supply of any country or the consumption of
+countries 2−N . Thus, even though the policy functions for labor supply may be
+  21 The high volatility case of a particular specification always has larger errors (Accuracy
+
+Test 2) than the low volatility case, while the low adjustment cost case usually does. In the
+instances when high adjustment costs produce larger errors, the difference is never greater
+than 0.25 (in log10 ). None of our qualitative conclusions hinge importantly on reporting
+results for φ = 0.5 rather than φ = 10.
+
+
+
+
+                                             25
+highly nonlinear (see top-left panel of Figure 4), they do not present a problem
+for our solution method. Rather, any approximation errors will occur mainly in
+the intertemporal Euler equations and aggregate resource constraint.
+
+
+       Table 2: Accuracy tests: results for selected specifications
+
+                                      Test 1             Test 2              Test 3
+             γ         η      T.01     T.1 T.3        Smax Smean           P.05 P.95
+   N=    2
+   A1        1.0        –      -6.0    -5.1    -4.2    -5.2      -5.8       .04     .06
+   A2       0.25       0.1     -5.4    -4.7    -4.1    -4.7      -5.3       .03     .09
+   A2        1.0      1.0      -6.0    -4.8    -3.7    -4.6      -5.5       .03     .08
+   A3       0.25        –      -5.3    -4.3    -3.7    -4.2      -5.0       .03     .07
+   A3        1.0        –      -5.8    -4.6    -3.7    -4.4      -5.3       .03     .06
+   A4       0.25        –      -5.2    -4.3    -3.7    -4.3      -4.9       .03     .07
+   A5     (.25,1)       –      -5.8    -4.9    -4.0    -5.1      -5.6       .04     .06
+   A6     (.25,1)    (.1,1)    -5.8    -4.7    -3.9    -4.9      -5.6       .04     .06
+   A7      (.5,1)       –      -5.5    -4.5    -3.6    -4.3      -5.0       .03     .07
+   A8     (.2,.4)       –      -4.9    -4.2    -3.6    -4.1      -4.6       .03     .07
+
+   N=    6 for A1-A6 , N = 4 for      A7-A8
+   A1        1.0     –    -5.9        -5.2 -4.6        -5.1      -5.8        0      .47
+   A2       0.25    0.1   -5.3        -4.8 -4.5        -4.7      -5.3        0      .51
+   A2        1.0   1.0    -5.9        -4.9 -4.0        -4.4      -5.3        0      .58
+   A3       0.25     –    -5.4        -4.6 -4.0        -4.1      -4.8        0      .55
+   A3        1.0     –    -5.8        -4.8 -4.0        -4.3      -5.1        0      .62
+   A4       0.25     –    -5.3        -4.2 -3.1        -3.4      -4.0        0      .55
+   A5     (.25,1)    –    -5.5        -5.1 -4.6        -5.0      -5.6        0      .48
+   A6     (.25,1) (.1,1) -4.4         -4.3 -3.9        -4.4      -4.5        0      .53
+   A7      (.5,1)    –    -5.5        -4.5 -4.0        -4.5      -5.1        0      .36
+   A8     (.2,.4)    –    -4.9        -4.1 -3.7        -4.2      -4.7        0      .39
+
+Notes: The first three columns specify the model and some parameters
+that vary across alternative specifications. All reported statistics are for
+high volatility, ρ = 0.95 and σ = 0.01, and low adjustment costs φ =
+0.5. The figures shown for Tests 1 and 2 are logs of the error measures
+(log10 (Tr ), log10 (Smax ), log10 (Smean )).
+
+   For Test 3, recall that numbers near or below .05 provide evidence of an
+accurate solution. Thus, the Den Haan-Marcet accuracy measures in Table 222
+are much worse when the number of countries is large (N = 4, 6) than when
+  22 As mentioned earlier, the reported measures in Table 2 are for the high volatility and
+
+low adjustment cost case. The Den Haan-Marcet measures suggest our solution method is
+less accurate in the high adjustment cost case (φ = 10), with approximately 13% of the test
+statistics lying in the upper critical 5% of the χ2 distribution for N = 2. Results available
+upon request.
+
+
+                                              26
+N = 2: the percentage of observations of the test statistic in the upper critical
+5% of the χ2 distribution is much greater than 5% for large N . At this point, it
+is not clear whether these measures reflect poor accuracy of our solution method
+or sensitivity of the DM statistic to a large number of instruments. In our tests,
+there are 15 instruments when N = 2, 45 when N = 4, and 91 when N = 6,
+whereas the largest number of instruments used by Den Haan and Marcet (1994)
+was 7. Further experiments will be done to assess whether Accuracy Test 3 is,
+in fact, a good accuracy measure for this class of problems.
+    Table 3 reports the time required to compute and run accuracy tests on the
+solutions of different specifications of the model.23 In particular, the column
+labelled “Sol” shows the time it takes to compute the solution. For N = 2
+countries, this is on the order of seconds; for N = 4 (not reported), it takes
+minutes; and for N = 6, the program can take an hour or more.
+    Some specifications, namely A7 and A8, take significantly longer to run than
+others. For these specifications, our solution procedure, as described earlier,
+solves a nonlinear equation for the labor supply on the right-hand side of the
+intertemporal Euler equation rather than simply using the labor supply policy
+function from the previous iteration. Because this must be done quite often,
+the program takes much more time to converge, and we choose to only solve for
+policy functions for up to N = 4 countries for these specifications. We also solve
+a nonlinear equation for labor in specification A6, but because it is possible to
+solve the equation analytically in this case, the program runs relatively quickly.
+
+
+5    Conclusion
+In this paper we described and used a projection method based on Smolyak’s
+algorithm to compute globally accurate solutions to models featuring a sizeable
+number of continuous state variables. The method was applied to solving a
+wide variety of international real business cycle model specifications with high
+accuracy and reasonable running times and appears to be a viable solution
+method for use in a wide class of economic models.
+     One goal of this paper has been to make this solution method more accessible
+to other economists. To this end, we provided both a general description of the
+method and a discussion of some of the practical challenges to implementing
+it, such as choosing appropriate bounds for the state variables. We have made
+available corresponding computer code for the Smolyak method,24 which should
+enable any researcher armed with a set of optimality conditions to solve for the
+nonlinear solution of her model without having to undertake the fixed costs of
+implementing the construction of the Smolyak grid.
+ 23 These programs were run using FORTRAN 6.6 on a Pentium 4 PC (2.8 GHz).
+ 24 The program for specification A8 of this paper is available at
+http://www.econ.upenn.edu/˜dkrueger/research.php.
+
+
+
+
+                                        27
+            Table 3: Computing Times for selected models
+
+                                                 Time(seconds)
+                   γ        η       Sol.        Test 1 Test 2 Test 3
+          N=   2
+          A1       1.0       –      1.0          0.01   0.07    1.9
+          A2      0.25      0.1     1.7          0.02   0.08    2.2
+          A2       1.0      1.0     1.5          0.02   0.08    2.2
+          A3      0.25       –      6.2           0.7    1.0   14.6
+          A3       1.0       –      4.8           0.7    1.0   14.2
+          A4      0.25       –      5.1           0.8    1.2   16.9
+          A5    (.25,1)      –      1.3          0.01   0.06    1.9
+          A6    (.25,1)   (.1,1)    2.6          0.02   0.08    2.1
+          A7     (.5,1)      –      73           0.7     1.1   14.6
+          A8    (.2,.4)      –      70           0.8     1.2   16.9
+
+          N=   6 for A1-A6 , N     = 4 for A7-A8
+          A1       1.0     –        1364     1.6         2.4    974
+          A2      0.25    0.1       2068     1.7         2.6    990
+          A2       1.0    1.0       1676     1.7         2.6    977
+          A3      0.25     –        5430    16.7        24.8   1210
+          A3       1.0     –        3244    16.4        24.4   1215
+          A4      0.25     –        3297    19.9        28.9   1039
+          A5    (.25,1)    –        1718     1.6         2.4   1148
+          A6    (.25,1) (.1,1)      2068     1.8         2.7   1201
+          A7     (.5,1)    –        2949     4.9         7.3     64
+          A8    (.2,.4)    –        2603     5.7         8.5     70
+
+Notes: Column labelled “Sol.” is the computing time for the solution of the
+model, while the columns labelled “Test 1”, “Test 2”, and “Test 3” record
+the computing time for the various accuracy tests. All reported statistics are
+for high volatility, ρ = 0.95 and σ = 0.01, and low adjustment costs φ = 0.5.
+
+
+
+
+                                           28
+References
+ [1] Backus, D., P. Kehoe and F. Kydland (1992), “International Real Business
+     Cycles,” Journal of Political Economy, 100, 745-775.
+ [2] Backus, D., P. Kehoe and F. Kydland (1995), “International Business Cy-
+     cles, Theory and Evidence,” in T. Cooley (ed.) Frontiers of Business Cycle
+     Research, Princeton University Press, Princeton, NJ.
+
+ [3] Barthelmann, V., E. Novak and K. Ritter (2000), “High Dimensional Poly-
+     nomial Interpolation on Sparse Grids”, Advances in Computational Math-
+     ematics, 12, 273-288.
+ [4] Bungartz, H.J. and M. Griebel (2004), “Sparse grids ”, Acta Numerica, 13:
+     147-269.
+ [5] Cheney, E. W. and W. Light (1999), A Course in Approximation Theory,
+     Brooks/Cole Company.
+ [6] Cools, R., (2002), “Advances in multidimensional integration ”, Journal of
+     Computational and Applied Mathematics, 149, 1–12.
+ [7] Den Haan, W., K. Judd, and M. Juillard (2004), “Comparing Numerical
+     Solutions of Models with Heterogenous Agents,” Mimeo, LBS, Stanford
+     University, and CEPREMAP.
+ [8] Den Haan, W. and A. Marcet (1994), “Accuracy in Simulations,” Review
+     of Economic Studies, 61, 3-17.
+ [9] Judd, K. (1998), Numerical Methods in Economics, MIT Press, Cambridge,
+     MA.
+[10] Kim, J., S. Kim, and R. Kollmann (2007), “Solving a Multi-Country RBC
+     Model Using Sims’ Second-Order Accurate Algorithm,” Mimeo, University
+     of Paris XII.
+[11] Krueger, D. and F. Kubler (2004), “Computing Equilibrium in OLG Models
+     with Stochastic Production,” Journal of Economic Dynamics and Control,
+     28(7), 1411-1436.
+[12] Schürer, R. (2003), “A comparison between (quasi-) Monte Carlo and cu-
+     bature rule based methods for solving high-dimensional integration prob-
+     lems”Mathematics and Computers in Simulation, 62, 509-517.
+[13] Smolyak, S. (1963), “Quadrature and Interpolation Formulas for Tensor
+     Products of Certain Classes of Functions” Soviet Mathematics, Doklady, 4,
+     240-243.
+
+
+
+
+                                      29
+

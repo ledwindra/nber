@@ -1,0 +1,1516 @@
+                                NBER WORKING PAPER SERIES
+
+
+
+
+      NUMERICAL SOLUTION OF DYNAMIC PORTFOLIO OPTIMIZATION WITH
+                         TRANSACTION COSTS
+
+                                           Yongyang Cai
+                                          Kenneth L. Judd
+                                             Rong Xu
+
+                                        Working Paper 18709
+                                http://www.nber.org/papers/w18709
+
+
+                      NATIONAL BUREAU OF ECONOMIC RESEARCH
+                               1050 Massachusetts Avenue
+                                 Cambridge, MA 02138
+                                     January 2013
+
+
+
+
+Cai and Judd gratefully acknowledge NSF support (SES-0951576) We thank Walter Murray, Michael
+Saunders, Sunil Kumar, Benjamin Van Roy and Gerd Infanger for comments on earlier versions of
+this work. The views expressed herein are those of the authors and do not necessarily reflect the views
+of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2013 by Yongyang Cai, Kenneth L. Judd, and Rong Xu. All rights reserved. Short sections of text,
+not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+Numerical Solution of Dynamic Portfolio Optimization with Transaction Costs
+Yongyang Cai, Kenneth L. Judd, and Rong Xu
+NBER Working Paper No. 18709
+January 2013
+JEL No. C61,C63,G11
+
+                                           ABSTRACT
+
+We apply numerical dynamic programming to multi-asset dynamic portfolio optimization problems
+with proportional transaction costs. Examples include problems with one safe asset plus two to six
+risky stocks, and seven to 360 trading periods in a finite horizon problem. These examples show that
+it is now tractable to solve such problems.
+
+
+Yongyang Cai                                     Rong Xu
+Hoover Institution                               Department of Management Science and Engineering
+Stanford University                              Stanford University
+Stanford, CA 94305                               Stanford, CA 94305, USA
+yycai@stanford.edu                               rongxu06@gmail.com
+
+Kenneth L. Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+kennethjudd@mac.com
+1    Introduction
+Dynamic management of portfolios is a critical part of any investment strat-
+egy by individuals and firms. Standard theory assumes that there is no cost
+to rebalancing a portfolio but transaction costs are not negligible in real
+markets. Not only are there transaction fees such as brokerage expenses
+but the presence of a bid-ask spread creates a transaction cost to a trader.
+These costs may be small, but the frequency of rebalancing is, theoretically,
+high. Therefore, any examination of real-world dynamic portfolio manage-
+ment needs to consider these frictions.
+    Multi-stage portfolio optimization problems with transaction costs as-
+sume that there are k risky assets (“stocks”) and/or a riskless asset (“bank
+account” paying a fixed interest rate r) traded during the period [0, T ]. In
+our discrete-time analysis, portfolio adjustments are made at N fixed times
+in [0, T ], 0 = t0 < t1 < · · · < tN −1 < tN = T . Trades are made to maximize
+the investor’s expected utility over terminal wealth (T is the terminal time)
+and/or consumption during [0, T ]. We will examine only the case of propor-
+tional transaction costs. If the major transaction cost is the bid-ask spread,
+then proportional transaction costs are the correct case to study.
+    Multi-stage portfolio optimization problems with transaction costs have
+been studied in many papers. The problem with one risky asset has been
+well studied; see Zabel (1973), Constantinides (1976, 1986), Gennotte and
+Jung (1994), and Boyle and Lin (1997). The key insight is that transaction
+costs create a “no-trade region” (NTR); that is, no trading is done if the
+current portfolio is inside the no-trade region, and otherwise the investor
+trades to some point on the boundary of the no-trade region. Kamin (1975)
+considered the case with only two risky assets. Constantinides (1979) and
+Abrams and Karmarkar (1980) established some properties of the NTR for
+multiple assets, but present only numerical examples with one safe and one
+risky asset. Brown and Smith (2011) evaluated some heuristic strategies and
+their bounds based on simulation, but their method cannot give the optimal
+portfolios.
+    In the continuous-time version, there are many papers about the portfolio
+
+
+                                      2
+optimization problem with transaction costs with one or two risky assets;
+see Davis and Norman (1990), Duffie and Sun (1990), Akian et al. (1996),
+Janecek and Shreve (2004), Liu (2004), and Goodman and Ostrov (2010).
+Muthuraman and Kumar (2006, 2008) gave numerical examples at most
+three risky assets. Muthuraman and Zha (2008) provided a computational
+scheme that combines simulation with the boundary update procedure, and
+presented some computational results with k ≥ 3. However, the presence of
+simulation implies that the boundary of the NTR is not precisely computed.
+    To the best of our knowledge, when the number of correlated risky assets
+is bigger than three and T ≥ 6, our DP method is the first one to explic-
+itly give good numerical solutions with transaction costs and general utility
+functions.
+
+
+2    Portfolio Models
+Assume that there are k risky assets ("stocks") and one riskless asset ("bond")
+available for investment. The investor’s objective is to maximize the ex-
+pected utility at the terminal time T . In [0, T ], there are N + 1 stages,
+0 = t0 < t1 < · · · < tN −1 < tN = T . At each stage ti (for i = 0, . . . , N − 1),
+the investor has an opportunity to reallocate the portfolio, which will incur
+transaction costs. For simplicity, we assume these stages are equally sepa-
+rated with a unit length of time, and then we use t = i as the i-th stage in
+this paper.
+    Let R = (R1 , . . . , Rk )> be the random one-period return vector of the
+stocks, and Rf be the return of the bond. The portfolio fraction for asset
+i at the beginning of period t right before reallocation is denoted xti , and
+let xt = (xt,1 , . . . , xt,k )> . Let Wt be the total wealth at the beginning of
+period t right before reallocation. The difference between the total wealth
+and the wealth invested in stocks is invested in the bond. Let δt,i Wt denote
+the amount of dollars for buying or selling part of the i-th stock at stage t,
+expressed as a fraction of wealth, while δt,i > 0 means buying, and δt,i < 0
+means selling. We assume that f (δt,i Wt ) = τ |δt,i Wt | with a constant τ > 0
+is the transaction cost function for buying or selling part of the i-th stock
+
+                                        3
+using δt,i Wt dollars. Let e denote the column vector of all elements equal to
+1. Then the multi-stage portfolio optimization problem can be expressed as
+
+           V0 (W0 , x0 ) = max E {u(WT )}
+                              δt
+
+                         s.t.       Wt+1 = e> Xt+1 + Rf (1 − e> xt − yt )Wt ),
+                                        Xt+1,i = Ri (xt,i + δt,i )Wt ,
+                                        yt = e> (δt + τ |δt |),
+                                        xt+1,i = Xt+1,i /Wt+1 ,
+                                        t = 0, . . . , T − 1;     i = 1, . . . , k,
+
+where E{·} is the expectation operator, Xt+1 = (Xt+1,1 , . . . , Xt+1,k )> is the
+vector of the amount of dollars invested in the risky assets at stage t + 1, and
+δt = (δt,1 , . . . , δt,k )> . Note that all of Xt+1 , xt+1 , Wt+1 , yt+1 and δt+1 are
+random as R is random. So when R has a continuous distribution, R must be
+discretized or simulated so that the model is solvable. But the exponential
+growth of scenarios over the number of periods T allows us to solve this
+model directly only when T is very limited, typically T ≤ 4. This limitation
+makes it necessary to change this model into a DP model discussed in Section
+3.
+     To be more general, we can assume that Rf and the multivariate distri-
+bution of R are dependent on a vector discrete time stochastic process θt ,
+denoted by Rf (θt ) and R(θt ) respectively, for t = 0, . . . , T − 1. Then the
+above model becomes
+
+          V0 (W0 , x0 , θ0 ) = max E {u(WT )}
+                                   δt
+
+                       s.t.     Wt+1 = e> Xt+1 + Rf (θt )(1 − e> xt − yt )Wt ,
+                                   Xt+1,i = Ri (θt )(xt,i + δt,i )Wt ,
+                                   yt = e> (δt + τ |δt |),
+                                   xt+1,i = Xt+1,i /Wt+1 ,
+                                   t = 0, . . . , T − 1;        i = 1, . . . , k.
+
+
+
+                                                   4
+    When there is a consumption decision at each stage, a dynamic portfolio
+optimization problem is to find an optimal portfolio and a consumption
+decision Ct at each stage t such that we have a maximal expected total
+utility, i.e.,
+                                               T −1
+                               (                              )
+                                               X
+                      max E β T u(WT ) +              β t u(Ct ) ,
+                                                t=0
+
+where u is the given utility function, β is the discount factor, Wt+1 =
+e> Xt+1 + Rf (1 − e> xt − yt )Wt − Ct ), and Xt , xt and yt have the same
+definitions in the equality constraints of the first model.
+    All these models have their corresponding DP models in the next section
+to avoid the exponential growth of scenarios over the number of periods T ,
+so that these problems can be solved for a few periods.
+
+
+3     DP Models for Portfolio Problems with Transac-
+      tion Costs
+For dynamic portfolio problems with transaction costs, we can choose the
+state variables as the total wealth Wt and allocation fractions xt = (xt,1 , . . . , xt,k )>
+invested in the risky assets. Here Wt and xt are the values right before real-
+location at time t. Thus, the DP model becomes
+
+                   Vt (Wt , xt ) = max E {Vt+1 (Wt+1 , xt+1 )} ,
+                                    δt
+
+where
+
+                      yt ≡ e> (δt + τ |δt |),                                      (1)
+                 Xt+1,i ≡ Ri (xt,i + δt,i )Wt ,
+                  Wt+1 ≡ e> Xt+1 + Rf (1 − e> xt − yt )Wt ,
+                  xt+1,i ≡ Xt+1,i /Wt+1 ,
+
+for i = 1, . . . , k. The terminal value function is VT (W, x) = u(W ) for some
+given utility function u. Sometimes, the terminal value function is chosen as
+
+
+                                          5
+VT (W, x) = u((1 − τ e> x)W ), if we assume that all risky assets have to be
+converted into the riskless asset before consumption. Later, we just assume
+that VT (W, x) = u(W ) for simplicity.
+    In the model, the constraint (1) is nondifferentiable because of the ex-
+istence of the absolute operator. We can change the nondifferentiable con-
+straint into a linear constraint. Let δt = δt+ − δt− with δt+ , δt− ≥ 0, we have
+|δt | = δt+ + δt− . Here δt+ = (δt,1
+                                 +              + >
+                                     , . . . , δt,k ) is the vector of fractions of wealth
+Wt for buying stocks, and δt− = (δt,1
+                                  −              − >
+                                      , . . . , δt,k ) is the vector of fractions of
+wealth Wt for selling stocks. Thus, by using δt+ and δt− instead of δt in the
+models, the constraint (1) is changed into a linear constraint:
+
+                        yt ≡ e> ((δt+ − δt− ) + τ (δt+ + δt− )).
+
+We will still use the absolute value notation in the rest of the paper to
+simplify the presentation.
+    If we do not allow shorting stocks or borrowing cash, then we just need
+to add the constraints xt + δt ≥ 0 and 1 − e> xt ≥ yt . And the range of xt
+and xt+1 is [0, 1]k while e> xt+1 ≤ 1.
+
+3.1    Portfolio with a CRRA Utility
+In economics and finance, we usually assume a CRRA utility function, i.e.,
+u(W ) = W 1−γ /(1 − γ) for some constant γ > 0 and γ 6= 1, or u(W ) =
+log(W ) for γ = 1. Thus, for u(W ) = W 1−γ /(1 − γ), if we assume that
+                       1−γ
+Vt+1 (Wt+1 , xt+1 ) = Wt+1 · gt+1 (xt+1 ), then
+                                        n                   o
+                                          1−γ
+                   Vt (Wt , xt ) = max E Wt+1 · gt+1 (xt+1 ) ,
+                                    δt
+
+
+
+
+                                            6
+where
+
+                    st+1,i ≡ Ri (xt,i + δt,i ),
+                        yt ≡ e> (δt + τ |δt |),
+                     Πt+1 ≡ e> st+1 + Rf (1 − e> xt − yt ),
+                    Wt+1 ≡ Πt+1 Wt ,
+                    xt+1,i ≡ st+1,i /Πt+1 ,
+
+for i = 1, . . . , k. By changing Wt+1 to Πt+1 Wt in the objective function, we
+get Vt (Wt , xt ) = Wt1−γ · gt (xt ), where
+                                   n                        o
+                                     1−γ
+                   gt (xt ) = max E Πt+1 · gt+1 (xt+1 ) | xt .             (2)
+                                 δt
+
+
+    Therefore, by induction, from VT (W, x) = u(W ) = W 1−γ · 1/(1 − γ), we
+showed that
+                            Vt (Wt , xt ) = Wt1−γ · gt (xt )
+
+for any time t = 0, 1, . . . , T , while gt (x) has the iterative formula given
+in the above optimization problem and gT (x) = 1/(1 − γ) (or gT (x) =
+(1 − τ e> |x|)1−γ /(1 − γ) when we assume that all risky assets have to be
+converted into the riskless asset before consumption), if we assume a pro-
+portional transaction cost and a power utility u(W ) = W 1−γ /(1 − γ) with a
+constant relative risk aversion coefficient γ > 0 and γ 6= 1.
+    For u(W ) = log(W ), we can also show by induction that
+
+                          Vt (Wt , xt ) = log(Wt ) + gt (xt ),
+
+where
+                gt (xt ) = max E {log(Πt+1 ) + gt+1 (xt+1 ) | xt } ,       (3)
+                            δt
+
+while gT (x) = 0 (or gT (x) = log(1 − τ e> |x|), when we assume that all risky
+assets have to be converted into the riskless asset before consumption).
+    Since Wt and xt are separable for CRRA utilities, we could just do a
+backward recursion on the functions gt (x) instead of Vt (W, x).
+
+
+                                           7
+    When there is no riskless asset, we just need to cancel the Rf term and
+replace mt with 0 in the above models for gt or ψt , while we should have
+e> xt = 1. (The state variable vector xt = (xt,1 , . . . , xt,k ) should be changed
+to (xt,1 , . . . , xt,k−1 ), and there is the same cutoff in xt+1 ).
+    If we do not allow shorting stocks or borrowing cash, then the range of
+xt is [0, 1]k , and in the models we just need to add the constraints xt + δt ≥ 0
+and yt ≤ 1 − e> xt , so that xt+1 ∈ [0, 1]n and e> xt+1 ≤ 1. And we still have
+the property of separation of W and x in the value functions V (W, x).
+    We know that there is a NTR, Ωt , for any t = 0, 1, . . . , T − 1. When
+xt ∈ Ωt , the investor will not trade at all, and when xt ∈
+                                                          / Ωt , the investor
+will trade to some point on the boundary of Ωt . That is, Ωt is defined as
+
+                                 Ωt = {xt : δt∗ = 0},
+
+where δt∗ is the optimal control for the given xt . See Kamin (1975), Con-
+stantinides (1976, 1979, 1986), Davis and Norman (1990), Muthuraman and
+Kumar (2006), and so on.
+    Abrams and Karmarkar (1980) showed that NTR is a connected set and
+that it is a cone when the utility function is assumed to be positively homo-
+geneous (a function u(x) is positively homogeneous if there exists a positive
+value function ψ(x) such that u(ax) = ψ(a)u(x) for any a > 0). Moreover,
+in the case of proportional transaction costs and concave utility functions,
+NTR can take on many forms ranging from a simple half-line to a nonconvex
+set. So we should use numerical methods to compute NTR.
+    From the separability of W and x, we see that the optimal portfolio
+rules are independent of wealth Wt . Thus the “no-trade” regions Ωt are also
+independent of Wt , for the CRRA utility functions.
+
+3.2    Serially Correlated Asset Returns with Stochastic Pa-
+       rameters
+In the previous model, we assume that the interest rate is fixed and the risky
+asset returns have the same multivariate distribution throughout time, and
+they are not serially correlated. But in real-life models, the riskless return
+
+                                           8
+Rf and the multivariate distribution of risky asset returns are stochastic
+and serial-correlated. Assume that they are dependent on some stochastic
+parameters. Let all these parameters be denoted as a vector θt at time t.
+They could be discrete Markov chains with a given transition probability
+matrix from the previous stage to the current stage, or continuously dis-
+tributed, conditional on their previous-stage values. Let us denote Rf (θt )
+for the bond return and R(θt ) for the stocks return vector respectively, for
+t = 0, . . . , T − 1.
+    With wealth Wt , allocation fractions xt and parameters θt as the state
+variables, the DP model becomes
+
+          Vt (Wt , xt , θt ) = max E {Vt+1 (Wt+1 , xt+1 , θt+1 ) | Wt , xt , θt } ,
+                                δt
+
+
+where the terminal value function is VT (W, x, θ) = u(W ), and
+
+                         yt ≡ e> (δt + τ |δt |),
+                 Xt+1,i ≡ Ri (θt )(xt,i + δt,i )Wt ,
+                  Wt+1 ≡ e> Xt+1 + Rf (θt )(1 − e> xt − yt )Wt ,
+                  xt+1,i ≡ Xt+1,i /Wt+1 .
+
+    Like what we discussed in Section 3.1, when the utility function is u(W ) =
+W 1−γ /(1−γ)     with γ > 0 and γ 6= 1, we have Vt (Wt , xt , θt ) = Wt1−γ ·gt (xt , θt )
+where                              n                                      o
+              gt (xt , θt ) = max E Π1−γ
+                                     t+1 · gt+1 (xt+1 , θt+1 ) | x t , θt   ,         (4)
+                               δt
+
+where
+
+                    st+1,i ≡ Ri (θt )(xt,i + δt,i ),
+                        Πt+1 ≡ e> st+1 + Rf (θt )(1 − e> xt − yt ),
+
+with gT (x, θ) = 1/(1 − γ). Similarly, we also have the separability of W and
+(x, θ) when u(W ) = log(W ). Moreover, the separability still holds if we add
+"no-shorting" and/or "no-borrowing" constraints.
+
+
+
+                                             9
+   From the separability of W and (x, θ), we see that the optimal portfolio
+rules are independent of wealth Wt . Thus, the NTR is also independent of
+Wt for CRRA utility functions, but will depend on θt .
+
+3.3     Portfolio with Transaction Costs and Consumption
+If we allow assets to finance consumption during the investment period, then
+the DP model becomes
+
+            Vt (Wt , xt ) = max u(Ct )h + βE {Vt+1 (Wt+1 , xt+1 )} ,
+                               Ct ,δt
+
+
+where h is the length of one period,
+
+                yt ≡ e> (δt + τ |δt |),
+           Xt+1,i ≡ Ri (xt,i + δt,i )Wt ,
+            Wt+1 ≡ e> Xt+1 + Rf (Wt (1 − e> xt − yt ) − Ct h),
+            xt+1,i ≡ Xt+1,i /Wt+1 ,
+
+and the terminal value function VT (W, x) is given.
+   Let Ct = ct Wt . Like what we discussed in Section 3.1, when the utility
+function is u(C) = C 1−γ /(1 − γ) with γ > 0 and γ 6= 1, and the terminal
+value function is VT (W, x) = W 1−γ · gT (xt ) for some given gT (x), we have
+
+                              Vt (Wt , xt ) = Wt1−γ · gt (xt ),
+
+where                                 n                               o
+           gt (xt ) = max u(ct )h + βE Π1−γ
+                                        t+1 · gt+1 (xt+1 ) | x t , ct   .   (5)
+                     ct ,δt
+
+Here,
+
+                st+1,i ≡ Ri (xt,i + δt,i ),
+                Πt+1 ≡ e> st+1 + Rf (1 − e> xt − yt − ct h).
+
+Similarly, we can also have the separability of W and x when u(C) = log(C)
+
+
+                                             10
+and VT (W, x) = log(W ) + gT (xt ). Moreover, the separability still holds if
+we add "no-shorting" and/or "no-borrowing" constraints. If R and Rf are
+dependent on a Markov chain parameter vector θt , then we still have the
+separability of W and (x, θ).
+    From the separability of W and x, we see that the optimal portfolio rules
+are independent of wealth Wt . Thus NTR, Ωt , is also independent of Wt , for
+the CRRA utility functions. Here Ωt is defined as
+
+                           Ωt = {xt /(1 − c∗t h) : δt∗ = 0},
+
+where c∗t and δt∗ are the optimal controls for the given xt .
+
+
+4    Numerical DP Algorithms
+If state and control variables in a DP problem are continuous, then the value
+function must be approximated in some computationally tractable manner.
+It is common to approximate value functions with a finitely parameterized
+collection of functions; that is, we use some functional form V̂ (x; b), where
+b is a vector of parameters, and approximate a value function, V (x), with
+V̂ (x; b) for some parameter value b. For example, V̂ could be a linear com-
+bination of polynomials where b would be the weights on polynomials. After
+the functional form is fixed, we focus on finding the vector of parameters,
+b, such that V̂ (x; b) approximately satisfies the Bellman equation (Bellman,
+1957).
+    Numerical solutions to a DP problem are based on the Bellman equation:
+
+                                      ut (x, a) + βE Vt+1 (x+ , θ+ ) | x, θ, a ,
+                                                    
+           Vt (x, θ) =     max                                                     (6)
+                         a∈D(x,θ,t)
+
+                           s.t.   x+ = Gt (x, θ, a, ω),
+                                  θ+ = Ht (θ, a, ),
+
+where x is the continuous state, θ is the discrete state, Vt (x, θ) is called the
+value function at time t ≤ T (the terminal value function VT (x, θ) is given),
+a is the action variable vector in its feasible set D(x, θ, t), x+ is the next-
+
+
+                                           11
+stage continuous state with its transition function Gt at time t, θ+ is the
+next-stage discrete state with its transition function Ht at time t, ω and 
+are two random variables, and ut (x, a) is the utility function at time t, β is
+the discount factor, and E{·} is the expectation operator.
+   The following is the algorithm of parametric DP with value function
+iteration for finite horizon problems.
+
+Algorithm 1. Numerical Dynamic Programming with Value Function Iter-
+      ation for Finite Horizon Problems
+
+Initialization. Choose the approximation nodes, Xt = {xit : 1 ≤ i ≤ mt } ⊂
+      Rd , for every t < T , and choose a functional form for V̂ (x, θ; b). Let
+      V̂ (x, θ; bT ) ≡ VT (x, θ). Then for t = T −1, T −2, . . . , 0, iterate through
+      steps 1 and 2.
+
+Step 1. Maximization Step. Compute
+                                                              n                    o
+                   vi,j =      max            ut (xi , a) + βE V̂ (x+ , θ+ ; bt+1 )
+                            a∈D(xi ,θj ,t)
+
+                                 s.t.        x+ = Gt (xi , θj , a, ω),
+                                             θ+ = Ht (θj , a, ),
+
+      for each θj ∈ Θ, xi ∈ Xt , 1 ≤ i ≤ mt .
+
+Step 2. Fitting Step. Using an appropriate approximation method, compute
+      the bt such that V̂ (x, θj ; bt ) approximates (xi , vi,j ) data for each θj ∈
+      Θ.
+
+Algorithm 1 shows that there are three main components in value function
+iteration for deterministic DP problems: optimization, approximation, and
+integration. More detailed discussion of numerical DP can be found in Cai
+(2009), Cai and Judd (2010), Judd (1998) and Rust (2008).
+
+4.1   Approximation
+An approximation scheme consists of two parts: basis functions and approx-
+imation nodes. Approximation nodes can be chosen as uniformly spaced
+
+                                                12
+nodes, Chebyshev nodes, or some other specified nodes. From the view-
+point of basis functions, approximation methods can be classified as either
+spectral methods or finite element methods. A spectral method uses globally
+nonzero basis functions φj (x) such that V̂ (x; b) = nj=0 bj φj (x) is a degree-n
+                                                    P
+
+approximation. Examples of spectral methods include ordinary polynomial
+approximation, Chebyshev polynomial approximation, and shape-preserving
+Chebyshev polynomial approximation (Cai and Judd, 2012a), and Hermite
+approximation (Cai and Judd, 2012c). In contrast, a finite element method
+uses locally basis functions φj (x) that are nonzero over sub-domains of the
+approximation domain. Examples of finite element methods include piece-
+wise linear interpolation, cubic splines, B-splines, and shape-preserving ra-
+tional splines (Cai and Judd, 2012b). See Cai (2009), Cai and Judd (2010),
+and Judd (1998) for more details.
+    We prefer Chebyshev polynomials when the value function is smooth.
+Chebyshev polynomials on [−1, 1] are defined as Tj (x) = cos(j cos−1 (x)),
+while general Chebyshev polynomials on [xmin , xmax ] are defined as Tj ((2x −
+xmin − xmax )/(xmax − xmin )) for j = 0, 1, 2, . . .. In a d-dimensional approxi-
+mation problem, let the domain of the value function be
+
+                    x = (x1 , . . . , xd ) : xmin ≤ xj ≤ xmax
+                
+                                              j           j   , j = 1, . . . d ,
+
+for some real numbers xmin
+                       j   and xmax
+                                j   with xmax
+                                          j   > xmin
+                                                 j   for j = 1, . . . , d.
+Let xmin = (xmin          min
+             1 , . . . , xd ) and x
+                                    max = (xmax , . . . , xmax ). Then we denote
+                                            1              d
+[xmin , xmax ] as the domain. Let α = (α1 , . . . , αd ) be a vector of nonneg-
+ative integers. Let Tα (z) denote the product Tα1 (z1 ) · · · Tαd (zd ) for z =
+(z1 , . . . , zd ) ∈ [−1, 1]d . Let
+
+                              2x1 − xmin − xmax           2xd − xmin − xmax
+                                                                              
+                                     1        1                   d      d
+              Z(x) =                            , . . . ,
+                                 xmax
+                                  1   −  x min
+                                           1                 x max − xmin
+                                                               d      d
+
+for any x = (x1 , . . . , xd ) ∈ [xmin , xmax ].
+    Using these notations, the degree-n complete Chebyshev approximation
+
+
+
+
+                                               13
+for V (x) is
+                                         X
+                         V̂n (x; b) =             bα Tα (Z(x)) ,             (7)
+                                        0≤|α|≤n
+               Pd
+where |α| =     j=1 αj
+                    for the nonnegative integer vector α = (α1 , . . . , αd ). So
+the number of terms with 0 ≤ |α| = dj=1 αi ≤ n is n+d
+                                    P                    
+                                                       d   for the degree-n
+complete Chebyshev approximation in Rd .
+
+4.2    Numerical Integration
+In the objective function of the Bellman equation, we often need to compute
+the conditional expectation of V (x+ | x, a). When the random variable is
+continuous, we have to use numerical integration to compute the expectation.
+   One naive way is to apply Monte Carlo or pseudo Monte Carlo meth-
+ods to compute the expectation. By the central limit theorem in statistics,
+the numerical error of the integration computed by (pseudo) Monte Carlo
+methods has a distribution that is close to normal. So there is no bound for
+the numerical error occurred by (pseudo) Monte Carlo methods. Moreover,
+the optimization problem often needs hundreds or thousands of evaluations
+of the objective function. This implies that once one evaluation of the ob-
+jective function has a big numerical error, the previous iterations to solve
+the optimization problem may make no sense. Therefore, the iterations may
+never converge to the optimal solution. Thus it is not practical to apply
+(pseudo) Monte Carlo methods to the optimization problem generally, un-
+less the stopping criterion of the optimization problem is set very loosely.
+   Therefore, it will be good to have a numerical integration method with a
+bounded numerical error. Here we present a common numerical integration
+method when the random variable is normal.
+   In the expectation operator of the objective function of the Bellman equa-
+tion, if the random variable has a normal distribution, then it will be good to
+apply the Gauss-Hermite quadrature formula to compute the numerical inte-
+gration. That is, if we want to compute E{f (Y )} where Y has a distribution
+
+
+
+
+                                           14
+N (µ, σ 2 ), then
+                                                      ˆ   ∞
+                                          2 −1/2                               2 /(2σ 2 )
+           E{f (Y )} = (2πσ )                                  f (y)e−(y−µ)                 dy
+                                                      ˆ−∞         √             2√
+                                                        ∞
+                          = (2πσ 2 )−1/2                       f ( 2 σ x + µ)e−x 2σdx
+                                                        −∞
+                                          m
+                          .        − 12
+                                          X            √
+                          = π                    ωi f ( 2σxi + µ),
+                                          i=1
+
+where ωi and xi are the Gauss-Hermite quadrature weights and nodes over
+(−∞, ∞). See Stroud and Secrest (1966).
+    If Y is log normal, i.e., log(Y ) has a distribution N (µ, σ 2 ), then we can
+assume that Y = eX where X ∼ N (µ, σ 2 ), thus
+                                            m      √
+                                     . − 12 X
+                                                              
+                                            X         2σxi +µ
+               E{f (Y )} = E{f (e )} = π      ωi f e            .
+                                                                 i=1
+
+    If we want to compute a multidimensional integration, we could apply
+the product rule. For example, suppose that we want to compute E{f (X)},
+where X is a random vector with multivariate normal distribution N (µ, Σ)
+over (−∞, +∞)d , where µ is the mean column vector and Σ is the covariance
+matrix, then we could do the Cholesky factorization first, i.e., find a lower
+triangular matrix L such that Σ = LL> . This is feasible as Σ must be a
+positive semi-definite matrix from the covariance property. Thus,
+                         −1/2 ˆ                > −1
+ E{f (X)} =   (2π) det(Σ)   d
+                                     f (y)e−(y−µ) Σ (y−µ)/2 dy
+                                  Rd
+                           −1/2 ˆ     √            >
+          =   (2π)d det(L)2           f    2Lx + µ e−x x 2d/2 det(L)dx
+                                                          Rd
+                           m              m
+              .    d       X              X                          √
+              = π− 2               ···           ωi 1 · · · ωi d f       2L1,1 xi1 + µ1 ,
+                           i1 =1         id =1
+                                                                  d
+                                                                                   !
+                    √                                         √ X
+                        2(L2,1 xi1 + L2,2 xi2 ) + µ2 , · · · , 2(   Ld,j xij ) + µd ,
+                                                                               j=1
+
+
+where ωi and xi are the Gauss-Hermite quadrature weights and nodes over
+
+
+                                                        15
+(−∞, ∞), Li,j is the (i, j)-element of L, and det(·) means the matrix deter-
+minant operator.
+
+4.3    Parallelization
+Parallelization allows researchers to solve huge problems and is the founda-
+tion of modern scientific computation. Our work shows that parallelization
+can also be used effectively in solving the dynamic portfolio optimization
+problems using value function iteration. The key fact is that at each max-
+imization step, there are many independent optimization problems, one for
+each (xi , θj ). In our portfolio problems there are often thousands of such
+independent problems, and future problems will easily have millions of inde-
+pendent problems. See Cai et al. (2013) for more detailed discussion. In this
+paper, we will use the parallel DP algorithms to solve a dynamic portfolio
+problem with seven assets.
+
+
+5     Numerical DP in Portfolio Problems
+All the optimization problems of Section 3 have differential objective func-
+tions and constraints after replacing δt with δt+ − δt− , and replacing |δt | by
+δt+ + δt− , where δt+ , δt− ≥ 0. Therefore, we can apply some fast Newton-type
+solvers, such as NPSOL optimization package (Gill et al., 1994), to solve
+the maximization problems in numerical DP algorithms (Algorithm 1). The
+maximization problems (2) and 4 are formulated in terms of 2k control vari-
+ables (δt+ and δt− ), and 2k bound constraints (δt+ , δt− ≥ 0), where k is the
+number of risky assets, and other unknowns are expressed in terms of these
+controls. The problem (5) has one more control at each time, ct , and one
+more bound constraint, ct ≥ 0. If we do not allow shorting stocks or bor-
+rowing cash, then there are (k + 1) more constraints, xt + δt+ − δt− ≥ 0 and
+yt ≤ 1 − e> xt (or yt ≤ 1 − e> xt − ct when there is a consumption decision),
+where yt ≡ e> ((δt+ − δt− ) + τ (δt+ + δt− )).
+    If the return for a risky asset i, Ri , is unbounded (e.g., log-normal),
+then we have P(Πt ≤ 0) > 0 when xt,i + δt,i < 0. It follows that for the
+
+
+                                         16
+                                                               ∗ ≥ 0 unless
+CRRA utility functions, the optimal solution must have xt,i + δt,i
+the asset i can be replicated by other assets, which is a degenerate case.
+Since the expectation of next-time value function is computed numerically
+                                                    +      −
+by numerical DP, we must add the constraint xt,i + δt,i − δt,i ≥ 0 to avoid
+an unreasonable approximation solution. If returns are unbounded, then for
+CRRA utility functions, we must have both “no-shorting” and “no-borrowing”
+constraints: xt + δt+ − δt− ≥ 0 and yt ≤ 1 − e> xt (or yt ≤ 1 − e> xt − ct when
+there is a consumption decision). Thus, we can set the domain of xt as [0, 1]k
+for each stage t.
+    We assume R is log-normal and with correlation, therefore, log(R) =
+(log(R1 ), · · · , log(Rk ))> ∈ Rk , has the multivariate normal distribution
+          2
+N ((µ − σ2 )h, (ΛΣΛ)h), where h is the length of a period, µ = (µ1 , · · · , µk )>
+is the drift, σ = (σ1 , · · · , σk )> is the volatility, and Σ is the correlation ma-
+trix of the log-returns, and Λ = diag(σ1 , . . . , σk ). Let the interest rate be r
+be constant with gross return per period equaling Rf = exp(rh). We can
+express the returns in terms of the Cholesky factorization Σ = LL> , where
+L = (Li,j )k×k is a lower triangular matrix, implying
+
+                                              √ X      i
+                                    σ2
+                    log(Ri ) = (µi − i )h + σi h  Li,j zj ,
+                                     2
+                                                     j=1
+
+
+where zi are independent standard normal random variables, for i = 1, . . . , k.
+Therefore, for the optimization problems (2), (4) and (5), we apply a product
+Gauss-Hermite quadrature to estimate the conditional expectation of Π1−γ
+                                                                     t+1 ·
+gt+1 (xt+1 ) while xt is given.
+
+
+6    Numerical Examples
+In this section, we give several numerical examples for solving the multi-
+stage portfolio optimization problems with proportional transaction costs
+and a power utility function u(W ) = W 1−γ /(1 − γ). In these examples, the
+length of one period is h, Rf = exp(rh) for an interest rate r, and R is
+
+
+
+
+                                         17
+always assumed to be log-normal with
+
+                                             σ2
+                          log(R) ∼ N ((µ −      )h, (ΛΣΛ)h)
+                                             2
+
+in Rk , where µ = (µ1 , · · · , µk )> is the drift, σ = (σ1 , · · · , σk )> is the
+volatility, and Σ is the correlation matrix of the log-returns, and Λ =
+diag(σ1 , . . . , σk ).
+    In these examples, the number of stages is from 7 to 361, and the number
+of assets is from 3 to 7. By using the numerical DP method, we computed
+the “no-trade” regions for each stage in these examples. We applied the
+NPSOL optimization package (Gill et al., 1994), and the complete Chebyshev
+approximation method, and the multi-dimensional product Gauss-Hermite
+quadrature rule in the numerical DP method for these examples.
+
+6.1      Three-Asset Portfolio Problems without Consumption
+We gives two examples to illustrate our numerical DP method for solving
+the model (2) and (4) respectively, the multi-stage portfolio optimization
+problems without consumption. In these examples, the assets available for
+trading include one bond with a constant interest rate r and k = 2 stocks
+with independent log-normal annual returns. We assume that the utility
+function at the terminal time is u(W ) = W 1−γ /(1 − γ) with γ = 3. In the
+numerical DP method for these examples, we use the degree-10 complete
+Chebyshev approximation method with 11k tensor Chebyshev nodes for k
+stocks, and the multi-dimensional product Gauss-Hermite quadrature rule
+with 9 nodes in each dimension.
+
+6.1.1      Example 1
+
+The first example is a simple three asset portfolio problem of the model (2)
+with quarterly time periods and 10-year horizon, i.e., h = 0.25 year and
+T = 40 periods. We let r = 0.03, µ = (0.07, 0.07)> and σ = (0.2, 0.2)> .
+Figure 1 shows NTR’s with τ = 0.5% at stages t = 0, 37, 38, 39, and Figure 2
+shows NTR’s at stage t = 0 with various τ = 0.1%, 0.2%, 0.5%, 1%, 2%, 4%.
+
+
+                                        18
+        Figure 1: No trade regions of Example 1 at various stages
+                                         0.55                                                                                   t=0
+                                                                                                                                t=37
+                                                                                                                                t=38
+                                                                                                                                t=39
+                                          0.5
+
+
+
+                                         0.45
+
+
+
+                                          0.4
+
+
+
+
+                      Stock 2 fraction
+                                         0.35
+
+
+
+                                          0.3
+
+
+
+                                         0.25
+
+
+
+                                          0.2
+
+
+
+                                         0.15
+                                            0.15   0.2          0.25         0.3      0.35         0.4         0.45     0.5     0.55
+                                                                                   Stock 1 fraction
+
+
+
+
+   Figure 2: No trade regions of Example 1 at various transaction costs
+                                          0.5                                                                                 τ=0.1%
+                                                                                                                              τ=0.2%
+                                                                                                                              τ=0.5%
+                                                                                                                              τ=1%
+                                         0.45                                                                                 τ=2%
+                                                                                                                              τ=4%
+
+
+                                          0.4
+                      Stock 2 fraction
+
+
+
+
+                                         0.35
+
+
+
+
+                                          0.3
+
+
+
+
+                                         0.25
+
+
+
+
+                                          0.2
+                                            0.2          0.25          0.3             0.35              0.4          0.45        0.5
+                                                                                   Stock 1 fraction
+
+
+
+
+The circle point located inside the NTR’s is the Merton point, that is, the
+portfolio that would be chosen if there were no transaction costs and the
+horizon were infinite (Merton 1969, 1971). These NTR’s are symmetric
+w.r.t. the 45 degree line, which is expected because the two stocks are i.i.d.
+Also, each NTR is close to being square.
+   Figure 1 shows that the NTR’s depend on the trading horizon, but the
+sensitivity is small. Only the T = 39 case is significantly different than the
+others, due to the fact that the T = 39 is the last period before liquidation.
+The NTR’s are otherwise nearly the same for all stages less than 37. This
+indicates that the trading strategies for most periods are the same as an
+infinite-horizon problem.
+   Figure 2 displays the sensitivity of the NTR to transaction costs τ . Note
+
+
+                                                                                    19
+that a very small transaction cost, τ = 0.1%, creates a nontrivial NTR, but
+that the NTR’s grow more slowly in size than τ grows as we increase τ .
+The width of the NTR’s is expanding in a rate of about τ 1/3 . For example,
+the width of the NTR of τ = 4% is a nearly (0.04/0.001)1/3 ≈ 3.4 times of
+the width of τ = 0.1%. This reflects the theoretical asymptotic results of
+Goodman and Ostrov (2010) for an infinite-horizon problem.
+
+6.1.2    Example 2
+
+In this example, we solve the three asset portfolio model (4) with one-year
+time periods and 6-year horizon, i.e., h = 1 year and T = 6 periods. The
+drift terms of stocks, µt = (µt,1 , µt,2 )> , are discrete Markov chains and in-
+dependent of each other. The transition probability matrix
+                                                 "               #
+                                                     0.75 0.25
+                           P(µt+1,i | µt,i ) =
+                                                     0.25 0.75
+
+for i = 1, 2, while µt,1 is independent of µt,2 . We let r = 0.04 and σ =
+(0.2, 0.2)> . The proportional transaction cost ratio is τ = 1% for buying or
+selling stocks.
+    Figure 3 displays NTR’s for four possible discrete states of (µt,1 , µt,2 ) at
+stages t = 0, 1, 4, 5. These NTR’s are close to be square as the two stocks are
+i.i.d.. The top-right squares are NTR’s for the state (µt,1 , µt,2 ) = (0.08, 0.08),
+the bottom-left squares are the NTR for the state (µt,1 , µt,2 ) = (0.06, 0.06),
+and the top-left and the bottom-right squares are respectively the NTR
+for the states (µt,1 , µt,2 ) = (0.06, 0.08) and (µt,1 , µt,2 ) = (0.08, 0.06). The
+circle points inside the squares are the optimal allocation fractions given the
+discrete states (µt,1 , µt,2 ) if there were no transaction costs for trading stocks.
+We see that in the case with serially correlated parameters, the sensitivity
+of NTR’s on the trading horizon is still small, and only the last period is
+significantly different.
+    In Figure 3, the circle points representing τ = 0 are not in centers of their
+corresponding squares when t < 5. Each circle point stays away from the
+center of its square at each stage, and the “outside edges” of its NTR are closer
+
+
+                                            20
+                                Figure 3: NTR for 2 stocks with stochastic µ and 1 bond
+                                                  No−trade region at stage t=0                                                                                    No−trade region at stage t=1
+                    0.5                                                                                                             0.5
+
+
+                   0.45                                                                                                            0.45
+
+
+                    0.4                                                                                                             0.4
+
+
+                   0.35                                                                                                            0.35
+
+
+                    0.3                                                                                                             0.3
+Stock 2 fraction
+
+
+
+
+                   0.25                                                                                         Stock 2 fraction   0.25
+
+
+                    0.2                                                                                                             0.2
+
+
+                   0.15                                                                                                            0.15
+
+
+                    0.1                                                                                                             0.1
+
+
+                   0.05                                                                                                            0.05
+
+
+                     0                                                                                                               0
+                          0   0.05   0.1   0.15     0.2        0.25        0.3   0.35   0.4   0.45   0.5                                  0   0.05   0.1   0.15     0.2        0.25        0.3   0.35   0.4   0.45   0.5
+                                                          Stock 1 fraction                                                                                                Stock 1 fraction
+
+
+
+
+                                                  No−trade region at stage t=4                                                                                    No−trade region at stage t=5
+                    0.5                                                                                                             0.5
+
+
+                   0.45                                                                                                            0.45
+
+
+                    0.4                                                                                                             0.4
+
+
+                   0.35                                                                                                            0.35
+
+
+                    0.3                                                                                                             0.3
+Stock 2 fraction
+
+
+
+
+                                                                                                                Stock 2 fraction
+
+
+
+
+                   0.25                                                                                                            0.25
+
+
+                    0.2                                                                                                             0.2
+
+
+                   0.15                                                                                                            0.15
+
+
+                    0.1                                                                                                             0.1
+
+
+                   0.05                                                                                                            0.05
+
+
+                     0                                                                                                               0
+                          0   0.05   0.1   0.15     0.2        0.25        0.3   0.35   0.4   0.45   0.5                                  0   0.05   0.1   0.15     0.2        0.25        0.3   0.35   0.4   0.45   0.5
+                                                          Stock 1 fraction                                                                                                Stock 1 fraction
+
+
+
+
+                                                                                                           21
+to the circle point than the “inside edges”. Suppose that the discrete state
+at time t is (µt,1 , µt,2 ) = (0.06, 0.06), i.e., the NTR is the bottom-left square,
+a portfolio before rebalance locates near the center of all the four squares
+(i.e., a point in the northeast direction of the circle in the bottom-left square)
+tends to have less trade than another portfolio having the same distance from
+the circle but away from the center (i.e., a point in the southwest direction of
+the circle in the NTR). This confirms the intuition that if the portfolio is in
+a position closer to the center of all NTR’s, there is little or no incentive to
+trade, because the expected direction of next period’s trade is close to zero.
+   We ran Example 1 and 2 on a single core of a Mac laptop with a 2.5 GHz
+processor. Every case in both examples took only several seconds.
+
+6.2     Portfolio Problems with Consumption
+We gives two examples to illustrate our numerical DP method for solving the
+model (5), the multi-stage portfolio optimization problems with consump-
+tion. In these examples, the assets available for trading include one bond
+with a constant interest rate r and two or three stocks with correlated log-
+normal annual returns. Table 1 lists the other parameters and running times
+on a single core of a Mac laptop with a 2.5 GHz processor.
+
+
+
+
+6.2.1    Example 3
+
+This example assumes that the total investment horizon is 30 years and
+the portfolio is rebalanced each month. This is a finite-horizon discrete
+time approximation for the infinite-horizon continuous-time dynamic port-
+folio problem given by Discussion 1 in Muthuraman and Kumar (2006). To
+approximate the infinite-horizon problem, we assume that after the termi-
+nal stage T = 360, the transaction cost becomes 0 and the portfolio can be
+traded at any time, so the investor will always choose the Merton ratio,
+
+                                    (ΛΣΛ)−1 (µ − r)
+                             x∗ =                   ,
+                                          γ
+
+
+                                        22
+Table 1: Parameters and Running Times for Examples of Portfolio Problems
+with Consumption
+                           Example 3             Example 4
+              k                 2                      3
+              h          1/12 (1 month)                1
+              T                360                     6
+              γ                 2                      3
+              β            exp(−0.1h)                0.95
+              r                0.07                  0.04
+             µ >
+                          √(0.15, 0.15)
+                                  √           (0.07, 0.07, 0.07)
+             σ>          ( 0.17, 0.17)       (0.2, 0.2, 0.2) 
+                                             1     0.4 0.4
+                            1     0.4706     0.4
+              Σ                                       1    0.16 
+                         0.4706      1
+                                              0.4 0.16       1
+         Running time      3.5 minutes           8 minutes
+
+
+and the optimal portfolio and the optimal consumption rate is
+
+                                  (µ − r)> x∗
+                                               
+              ∗  1
+             c ≡    ρ − (1 − γ)               +r    = 9.14%,
+                 γ                     2
+
+where ρ = − log(β)/h = 0.1 is the continuously compounded discount rate
+corresponding to the discretely compounded discount factor β. See Merton
+(1969, 1971) for more details. Therefore, the terminal value function is
+VT (W, x) = W 1−γ · gT (x), with
+                              ˆ   ∞
+                                                          (c∗ )1−γ
+                   gT (x) =           e−ρt u (c∗ ) dt =            .
+                              0                           ρ(1 − γ)
+
+In the numerical DP method for this example, we use the degree-14 complete
+Chebyshev approximation method with 152 tensor Chebyshev nodes for two
+stocks, and the multi-dimensional product Gauss-Hermite quadrature rule
+with 9 nodes in each dimension.
+   Figure 4 displays NTR’s at the stage t = 0, 320, 357, 358, 359, when
+h = 1/12 year and the transaction cost proportion is τ = 1%. The circle
+point located inside NTR is the Merton point (0.16, 0.16). We found that
+
+
+
+                                           23
+Figure 4: NTR for 2 correlated stocks and 1 bond with consumption when
+τ = 1% (Example 2)
+                                                                                                                                      t=0
+                                                                                                                                      t=320
+                                                                                                                                      t=357
+                                                                                                                                      t=358
+                                                 0.5                                                                                  t=359
+
+
+
+
+                                                 0.4
+
+
+
+
+                              Stock 2 fraction   0.3
+
+
+
+
+                                                 0.2
+
+
+
+
+                                                 0.1
+
+
+
+
+                                                  0
+                                                       0          0.1          0.2            0.3            0.4         0.5                  0.6
+                                                                                        Stock 1 fraction
+
+
+
+
+Figure 5: Initial-time NTR for 2 correlated stocks and 1 bond with consump-
+tion at various transaction costs (Example 2)
+                                            0.24
+                                                                                                                                  τ=0.1%
+                                                                                                                                  τ=0.2%
+                                            0.22                                                                                  τ=0.5%
+                                                                                                                                  τ=1%
+                                                                                                                                  τ=2%
+                                                 0.2
+
+
+
+                                            0.18
+                     Stock 2 fraction
+
+
+
+
+                                            0.16
+
+
+
+                                            0.14
+
+
+
+                                            0.12
+
+
+
+                                                 0.1
+
+
+
+                                            0.08
+
+                                                           0.08   0.1   0.12         0.14       0.16       0.18    0.2         0.22           0.24
+                                                                                        Stock 1 fraction
+
+
+
+
+NTR at stage t = 0 is close to the solution given in Muthuraman and Kumar
+(2006).
+   We also ran the same example with h = 0.25 year and various τ using
+numerical DP algorithm. Figure 5 shows NTR’s at t = 0 with h = 0.25 year
+and various transaction cost proportions τ = 0.1%, 0.2%, 0.5%, 1%, 2%. We
+can also see that the NTR with larger τ contains the NTR with smaller τ . It
+also shows that the NTR’s at time t = 0 converges to a point (0.159, 0.159)
+which is very close to the Merton’s point, as τ −→ 0.
+
+
+
+
+                                                                                         24
+6.2.2    Example 4
+
+In this example, we have one bond and three stocks available for trading,
+with a transaction cost proportion τ = 1%. The terminal value function is
+VT (W, x) = W 1−γ /(1 − γ). In the numerical DP method for this example,
+we use the degree-10 complete Chebyshev approximation method with 113
+tensor Chebyshev nodes for three stocks, and the multi-dimensional product
+Gauss-Hermite quadrature rule with 9 nodes in each dimension.
+   Figure 6 displays NTR’s for t = 0, 1, 4, 5. Notice that the faces of the
+NTR’s seem to be flat, but in fact there are small perturbation on the faces,
+which might be due to numerical errors or the possibility that the exact NTR
+might have curvy faces. The NTR’s are tilted as the stocks are correlated.
+We see that in the case with 3 correlated stocks and 1 bond and consumption,
+the sensitivity of NTR’s on the trading horizon is still small, and only the
+last period is significantly different.
+
+6.3     Seven-Asset Portfolio Problem
+Our last example solves the model (2), where the assets available for trading
+include one bond with a constant interest rate r = 0.03 and six stocks with
+independent log-normal annual returns. We assume that
+
+                µ = (0.06, 0.064, 0.068, 0.072, 0.076, 0.08)> ,
+                σ = (0.2, 0.22, 0.24, 0.26, 0.28, 0.3)> ,
+
+γ = 5, τ = 1%, and h = 1 year.
+   We applied the degree-4 complete Chebyshev approximation method
+with 5 Chebyshev nodes in each dimension, and the multi-dimensional prod-
+uct Gauss-Hermite quadrature rule with 5 nodes in each dimension. Thus,
+for each value function iteration, it has 56 = 15, 625 optimization problems
+in the maximization step. Moreover, the evaluation of the objective function
+of each optimization problem is also time-consuming: it needs 56 = 15, 625
+evaluations of degree-4 complete Chebyshev polynomials. This is a compu-
+tationally intensive problem. But we can solve it by parallelization.
+
+
+                                          25
+Figure 6: NTR for 3 stocks with higher correlation and 1 bond with con-
+sumption (Example 4)
+                               0.3                                                  0.3
+
+                         0.2                                                  0.2
+
+
+                 0.1                                                  0.1
+
+
+   0.0                                                  0.0
+
+
+
+   0.3                                                  0.3
+
+
+
+
+     0.2                                                  0.2
+
+
+
+
+         0.1                                                  0.1
+
+
+
+
+           0.0                                                  0.0
+           0.0                                                  0.0
+
+                       0.1                                                  0.1
+
+                                     0.2                                                  0.2
+
+                                             0.3                                                  0.3
+
+
+                                           t=0                                                  t=1
+                               0.3                                                  0.3
+
+                         0.2                                                  0.2
+
+
+                 0.1                                                  0.1
+
+
+   0.0                                                  0.0
+
+
+
+   0.3                                                  0.3
+
+
+
+
+     0.2                                                  0.2
+
+
+
+
+         0.1                                                  0.1
+
+
+
+
+           0.0                                                  0.0
+           0.0                                                  0.0
+
+                       0.1                                                  0.1
+
+                                     0.2                                                  0.2
+
+                                             0.3                                                  0.3
+
+
+                                           t=4                                                  t=5
+
+
+
+
+                                                   26
+                                           Figure 7: NTR for 6 independent stocks and 1 bond
+                                                           No−trade regions at stage t=0                                                                             No−trade regions at stage t=1
+
+                                   NTR of Stock 1 and 2                                                                                      NTR of Stock 1 and 2
+                      0.2          NTR of Stock 3 and 4                                                                         0.2          NTR of Stock 3 and 4
+                                   NTR of Stock 5 and 6                                                                                      NTR of Stock 5 and 6
+                                   Bound of Stock 1                                                                                          Bound of Stock 1
+                                   Bound of Stock 2                                                                                          Bound of Stock 2
+                     0.18          Bound of Stock 3                                                                            0.18          Bound of Stock 3
+                                   Bound of Stock 4                                                                                          Bound of Stock 4
+                                   Bound of Stock 5                                                                                          Bound of Stock 5
+                                   Bound of Stock 6                                                                                          Bound of Stock 6
+                     0.16                                                                                                      0.16
+   Stocks fraction
+
+
+
+
+                                                                                                             Stocks fraction
+                     0.14                                                                                                      0.14
+
+
+
+                     0.12                                                                                                      0.12
+
+
+
+                      0.1                                                                                                       0.1
+
+
+
+                     0.08                                                                                                      0.08
+
+
+                            0.08            0.1           0.12         0.14         0.16   0.18   0.2                                 0.08            0.1           0.12         0.14         0.16   0.18   0.2
+                                                                  Stocks fraction                                                                                           Stocks fraction
+
+
+
+
+                                                                 t=0                                                                                                       t=1
+                                                           No−trade regions at stage t=4                                                                             No−trade regions at stage t=5
+
+                                   NTR of Stock 1 and 2                                                                                      NTR of Stock 1 and 2
+                      0.2          NTR of Stock 3 and 4                                                                         0.2          NTR of Stock 3 and 4
+                                   NTR of Stock 5 and 6                                                                                      NTR of Stock 5 and 6
+                                   Bound of Stock 1                                                                                          Bound of Stock 1
+                                   Bound of Stock 2                                                                                          Bound of Stock 2
+                     0.18          Bound of Stock 3                                                                            0.18          Bound of Stock 3
+                                   Bound of Stock 4                                                                                          Bound of Stock 4
+                                   Bound of Stock 5                                                                                          Bound of Stock 5
+                                   Bound of Stock 6                                                                                          Bound of Stock 6
+                     0.16                                                                                                      0.16
+                                                                                                             Stocks fraction
+   Stocks fraction
+
+
+
+
+                     0.14                                                                                                      0.14
+
+
+
+                     0.12                                                                                                      0.12
+
+
+
+                      0.1                                                                                                       0.1
+
+
+
+                     0.08                                                                                                      0.08
+
+
+                            0.08            0.1           0.12         0.14         0.16   0.18   0.2                                 0.08            0.1           0.12         0.14         0.16   0.18   0.2
+                                                                  Stocks fraction                                                                                           Stocks fraction
+
+
+
+
+                                                                 t=4                                                                                                       t=5
+
+
+   At first, we applied the parallel DP algorithm in the HTCondor-MW sys-
+tem, a high-throughput distributed computing framework with high-latency
+on a cluster of computers. It took 1.3 hours to get the solutions by re-
+questing 100 worker processes in the system. More details about the DP
+parallelization in the HTCondor-MW system are discussed in Cai et al.
+(2013). The parallel DP algorithm can also be extended to be applied in
+high-performance supercomputing with low-latency. We used a supercom-
+puter in Computation Institute of University of Chicago, called Beagle (see
+http://beagle.ci.uchicago.edu for more details), to solve the problem. The
+parallel DP algorithm used 480 cores and took only 16 minutes to get the
+solutions.
+   Figure 7 displays NTR’s for t = 0, 1, 4, 5, and we see that the regions
+
+
+                                                                                                        27
+are close to hypercubes as the six stocks are uncorrelated. In the figure, the
+circle, the mark and the plus are, respectively, the Merton points for stock 1
+and 2, stock 3 and 4, and stock 5 and 6. The top-right squares, the middle
+squares, and the bottom-left squares are the cross-sections of the hypercube
+NTR’s for stock 1 and 2, stock 3 and 4, and stock 5 and 6, respectively.
+We see that in the case with 6 stocks and 1 bond, the sensitivity of NTR’s
+on the trading horizon is still small, and only the last period is significantly
+different.
+    There is no problem to apply parallel DP algorithms to solve a problem
+with 6 correlated stocks and 1 bond, and clearly the parallel DP algorithms
+can be also applied to solve a problem with more stocks as the supercom-
+puters typically now have more than 100,000 cores.
+
+
+7    Conclusion
+This paper has shown that numerical value function iteration can solve multi-
+stage portfolio optimization problems with multiple assets and transaction
+costs in an efficient and accurate manner. We illustrate the trading strate-
+gies by describing the no-trade regions for various choices of asset returns
+and transaction costs. The numerical DP algorithms may be computational
+intensive for large portfolio optimization problems, but modern hardware
+and parallel DP algorithms make it possible to now solve such big problems.
+
+
+
+
+                                      28
+References
+      [1] Abrams,    R.A.,   and    U.S.   Karmarkar   (1980).   Optimal
+         multiperiod investment-consumption policies. Econometrica,
+         48(2):333–353.
+
+      [2] Akian, M., J.L. Menaldi, and A. Sulem (1996). On an
+         investment-consumption model with transaction costs. SIAM
+         Journal of Control and Optimization, 34(1):329–364.
+
+      [3] Boyle, P.P., and X. Lin (1997). Optimal portfolio selection with
+         transaction costs. North American Actuarial Journal, 1(2):27–
+         39.
+
+      [4] Brown, D.B., and J.E. Smith (2011). Dynamic portfolio opti-
+         mization with transaction costs: heuristics and dual bounds.
+         Management Science, 57(10):1752–1770.
+
+      [5] Cai, Y. (2009). Dynamic Programming and Its Application in
+         Economics and Finance. PhD thesis, Stanford University.
+
+      [6] Cai, Y., and K.L. Judd (2010). Stable and efficient computa-
+         tional methods for dynamic programming. Journal of the Eu-
+         ropean Economic Association, Vol. 8, No. 2-3, 626–634.
+
+      [7] Cai, Y., and K.L. Judd (2012a). Dynamic programming with
+         shape-preserving rational spline Hermite interpolation. Eco-
+         nomics Letters, Vol. 117, No. 1, 161–164.
+
+      [8] Cai, Y., and K.L. Judd (2012b). Shape-preserving dynamic pro-
+         gramming. Mathematical Methods of Operations Research, DOI:
+         10.1007/s00186-012-0406-5.
+
+      [9] Cai, Y., and K.L. Judd (2012c). Dynamic programming with
+         Hermite approximation. NBER working paper No. 18540.
+
+
+
+
+                                   29
+[10] Cai, Y., K.L. Judd, G. Thain, and S. Wright (2013). Solving dy-
+    namic programming problems on a computational grid. Hoover
+    working paper.
+
+[11] Constantinides, G.M. (1976). Optimal portfolio revision with
+    proportional transaction costs: extension to HARA utility func-
+    tions and exogenous deterministic income. Management Sci-
+    ence, 22(8):921–923.
+
+[12] Constantinides, G.M. (1979). Multiperiod consumption and in-
+    vestment behavior with convex transaction costs. Management
+    Science, 25:1127–1137.
+
+[13] Constantinides, G.M. (1986). Capital market equilibrium with
+    transaction costs. Journal of Political Economy, 94(4):842–862.
+
+[14] Davis, M.H.A., and A.R. Norman (1990). Portfolio selection
+    with transaction costs. Mathematics of Operations Research,
+    15(4):676–713.
+
+[15] Duffie, D., and T.S. Sun (1990). Transaction costs and portfo-
+    lio choice in a discrete-continuous-time setting. Journal of Eco-
+    nomic Dynamics and Control, 14:35–51.
+
+[16] Gennotte, G., and A. Jung (1994). Investment strategies under
+    transaction costs: the finite horizon case. Management Science,
+    40(3):385–404.
+
+[17] Gill, P., W. Murray, M.A. Saunders and M.H. Wright (1994).
+    User’s Guide for NPSOL 5.0: a Fortran Package for Nonlinear
+    Programming. Technical report, SOL, Stanford University.
+
+[18] Goodman, J., and D.N. Ostrov (2010). Balancing small trans-
+    action costs with loss of optimal allocation in dynamic stock
+    trading strategies. SIAM Journal of Applied Mathematics,
+    70(6):1977–1998.
+
+
+                             30
+[19] Janecek, K., and S.E. Shreve (2004). Asymptotic analysis for
+    optimal investment and consumption with transaction costs.
+    Finance Stochast., 8(2):181–206.
+
+[20] Kamin, J.H. (1975). Optimal portfolio revision with a pro-
+    portional transaction cost. Management Science, 21(11):1263–
+    1271.
+
+[21] Liu, H. (2004). Optimal consumption and investment with
+    transaction costs and multiple risky assets. Journal of Finance,
+    59:289–338.
+
+[22] Merton, R. (1969). Lifetime portfolio selection under uncer-
+    tainty: the continuous time case. The Review of Economics and
+    Statistics, 51(3):247–257.
+
+[23] Merton, R. (1971). Optimum consumption and portfolio rules in
+    a continuous time model. Journal of Economic Theory, 3:373–
+    413.
+
+[24] Muthuraman, K., and S. Kumar (2006). Multidimensional port-
+    folio optimization with proportional transaction costs. Mathe-
+    matical Finance, 16(2):301–335.
+
+[25] Muthuraman, K., and S. Kumar (2008). Solving free-boundary
+    problems with applications in finance. Foundations and Trends
+    in Stochastic Systems, 1(4):259–341.
+
+[26] Muthuraman, K., and H. Zha (2008). Simulation-based port-
+    folio optimization for large portfolios with transaction costs.
+    Mathematical Finance, 18(1):115–134.
+
+[27] Rust, J. (2008). Dynamic Programming. In: New Palgrave Dic-
+    tionary of Economics, ed. by Steven N. Durlauf and Lawrence
+    E. Blume. Palgrave Macmillan, second edition.
+
+[28] Zabel, E. (1973). Consumer choice, portfolio decisions, and
+    transaction costs. Econometrica, 41(2):321–335.
+
+                            31
+

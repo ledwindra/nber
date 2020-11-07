@@ -1,0 +1,2486 @@
+                                NBER WORKING PAPER SERIES
+
+
+
+
+             REAL-TIME FORECASTING WITH A MIXED-FREQUENCY VAR
+
+                                         Frank Schorfheide
+                                           Dongho Song
+
+                                        Working Paper 19712
+                                http://www.nber.org/papers/w19712
+
+
+                      NATIONAL BUREAU OF ECONOMIC RESEARCH
+                               1050 Massachusetts Avenue
+                                 Cambridge, MA 02138
+                                    December 2013
+
+
+
+
+We thank two anonymous referees and an associate editor, Frank Diebold, Jonathan Wright, Kei-Mu
+Yi, and seminar participants at the 2012 AEA Meetings and the University of Pennsylvania for helpful
+comments and discussions. We greatly benefited from a MATLAB program written by Marco Del
+Negro and Dan Herbst to compile real-time data sets for˛the recursive estimation of forecasting models.
+Financial support from the Federal Reserve Bank of Minneapolis is gratefully acknowledged. The
+views expressed herein are those of the authors and not necessarily those of the Federal Reserve Bank
+of Minneapolis or the Federal Reserve System. The views expressed herein are those of the authors
+and do not necessarily reflect the views of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2013 by Frank Schorfheide and Dongho Song. All rights reserved. Short sections of text, not to
+exceed two paragraphs, may be quoted without explicit permission provided that full credit, including
+© notice, is given to the source.
+Real-Time Forecasting with a Mixed-Frequency VAR
+Frank Schorfheide and Dongho Song
+NBER Working Paper No. 19712
+December 2013
+JEL No. C11,C32,C53
+
+                                           ABSTRACT
+
+This paper develops a vector autoregression (VAR) for time series which are observed at mixed
+frequencies - quarterly and monthly. The model is cast in state-space form and estimated with Bayesian
+methods under a Minnesota-style prior. We show how to evaluate the marginal data density to
+implement a data-driven hyperparameter selection. Using a real-time data set, we evaluate forecasts
+from the mixed-frequency VAR and compare them to standard quarterly-frequency VAR and to
+forecasts from MIDAS regressions. We document the extent to which information that becomes
+available within the quarter improves the forecasts in real time.
+
+
+Frank Schorfheide
+University of Pennsylvania
+Department of Economics
+3718 Locust Walk
+Philadelphia, PA 19104-6297
+and NBER
+schorf@ssc.upenn.edu
+
+Dongho Song
+University of Pennsylvania
+Department of Economics
+3718 Locust Walk
+Philadelphia, PA 19104
+donghos@sas.upenn.edu
+                                                                                           1
+
+
+1      Introduction
+
+In macroeconomic applications, vector autoregressions (VARs) are typically estimated either
+exclusively based on quarterly observations or exclusively based on monthly observations.
+In a forecasting setting, the advantage of using quarterly observations is that the set of
+macroeconomic series that could potentially be included in the VAR is larger. Gross domestic
+product (GDP), as well as many other series that are published as part of the national income
+and product accounts (NIPA), are only available at quarterly frequency. The advantage of
+using monthly information, on the other hand, is that the VAR is able to track the economy
+more closely in real time.
+
+    To exploit the respective advantages of both monthly and quarterly VARs, this paper de-
+velops a mixed-frequency VAR (MF-VAR) that allows some series to be observed at monthly
+and others at quarterly frequency. The MF-VAR can be conveniently represented as a state-
+space model, in which the state-transition equations are given by a VAR at monthly frequency
+and the measurement equations relate the observed series to the underlying, potentially un-
+observed, monthly variables that are stacked in the state vector. The MF-VAR is meant
+to be an attractive alternative to a standard VAR in which all series are time-aggregated
+to quarterly frequency (QF-VAR). To cope with the high dimensionality of the parameter
+space, the MF-VAR is equipped with a Minnesota prior and estimated using Bayesian meth-
+ods. The Minnesota prior is indexed by a vector of hyperparameters that determine the
+relative weight of a priori and sample information.
+
+    This paper makes contributions in two areas. On the methodological front we show how to
+numerically approximate the marginal data density (MDD) of a linear Gaussian MF-VAR.
+The MDD can be used for a data-based selection of hyperparameters, which is essential
+to achieve a good forecasting performance with a densely parameterized VAR. The second
+set of contributions is empirical. We compile a real-time data set for an eleven-variable
+VAR that includes observations on real aggregate activity, prices, and financial variables,
+including GDP, unemployment, inflation, and the federal funds rate. Using this data set, we
+recursively estimate the MF-VAR and assess its forecasting performance. The comparison
+to a QF-VAR is the main focus of the empirical analysis.
+
+    First, we ask the following very basic question: what is the gain, if any, from utilizing
+within-quarter monthly information in a VAR framework? To answer this question, we
+group our end-of-month forecast origins in three bins. Given the release schedule of macroe-
+conomic data in the U.S., at the end of the first month of the quarter, no additional monthly
+                                                                                             2
+
+
+observations of non-financial variables for the current quarter are available. At the end of
+the second and third month either one or two within-quarter monthly observations are avail-
+able. We find that during the third month of the quarter the switch from a QF-VAR to a
+MF-VAR improves the one-step-ahead forecast (nowcast) accuracy on average by 60% for
+nonfinancial variables observed at the monthly frequency and by 11% for variables observed
+at quarterly frequency. In the first month of the quarter the improvements are about 6%.
+The improvement in forecast accuracy is most pronounced for short-horizon forecasts and
+tempers off in the medium and long run. Thus, if the goal is to generate VAR nowcasts or
+forecasts of one- or two-quarters ahead, it is well worth switching to from a QF-VAR to a
+MF-VAR. If the focus is on a one- to two-year horizon, the QF-VAR is likely to suffice.
+
+  Second, we generate real-time forecasts of macroeconomic aggregates for the 2008-09
+(Great) recession period. This episode is of great interest to macroeconomists, because
+the large drop in aggregate real activity poses a challenge for existing structural and non-
+structural models. We document that the monthly information helped the MF-VAR track
+the economic downturn more closely in real time than the QF-VAR supporting the view that
+the MF-VAR is an attractive alternative to a standard QF-VAR. Third, as a by-product of
+the MF-VAR estimation, we generate an estimate of monthly GDP growth rates, which may
+be of independent interest to business cycle researchers. Finally, we also provide a compari-
+son of bivariate MF-VARs to mixed data sampling (MIDAS) regressions. We find for GDP
+forecasts that the percentage differential in forecast accuracy is the same, regardless whether
+the forecast is made at the end of the first, second, or third month of the quarter. We are in-
+terpreting this finding as both approaches being able to exploit the information differentials
+between the three months of the quarter in relative terms equally well. In absolute terms,
+the MF-VARs tend to outperform the MIDAS regressions in our particular implementation.
+
+  This paper focuses on VARs which are time series models that generate multivariate predic-
+tive distributions. VARs have been an important forecasting tool in practice (see Litterman
+(1986) for an early assessment and Giannone, Lenza, and Primiceri (2012) for a recent assess-
+ment) and there is strong evidence that they perform well in high-dimensional environments
+if estimated with shrinkage estimation techniques (see, e.g., De Mol, Giannone, and Reichlin
+(2008) and Banbura, Giannone, and Reichlin (2010)). Moreover, in addition to generating
+unconditional forecasts, they are widely used to produce conditional forecasts, e.g., condi-
+tional on an interest rate path (see Doan, Litterman, and Sims (1984) and Waggoner and
+Zha (1999)), which do require a multivariate framework. In our comparison between MF-
+VARs and QF-VARs we mostly study univariate root-mean-squared errors (RMSEs), though
+                                                                                            3
+
+
+we also consider log determinants of (multivariate) forecast error covariance matrices. To
+the extent that we are considering univariate RMSEs one could conduct comparisons with
+univariate predictive regressions. However, comparisons of VAR forecasts to forecasts from
+other classes of time series models are not the focus of this paper and can be found elsewhere
+in the literature (see, e.g., Chauvet and Potter (2013) for forecasting output and Faust and
+Wright (2013) for forecasting inflation).
+
+  To cope with the high dimensionality of the parameter space, the MF-VAR is equipped with
+a Minnesota prior and estimated with Bayesian methods. Our version of the Minnesota prior
+is based on Sims and Zha (1998). This prior is also used, for instance, in Banbura, Giannone,
+and Reichlin (2010) and Giannone, Lenza, and Primiceri (2012) and the authors document
+that the forecasting performance of the Bayesian VAR dominates that of an unrestricted
+VAR by a large margin. Alternative prior specifications for Bayesian VARs are surveyed
+in Karlsson (2013) and the effect of specification choice on forecast accuracy is studied
+in Carriero, Clark, and Marcellino (2011). In order to generate accurate forecasts it is
+important that the prior covariance matrix is properly configured. A set of hyperparameters
+controls the degree of shrinkage toward the prior mean and we choose the hyperparameter
+to maximize the log MDD. MDD-based hyperparameter selection has been discussed, for
+instance, in Phillips (1996), used in Del Negro and Schorfheide (2004) and, most recently,
+studied in Giannone, Lenza, and Primiceri (2012).
+
+  We are building on existing approaches of treating missing observations in state-space
+models (see, for instance, the books by Harvey (1989) and Durbin and Koopman (2001)).
+We are employing modern Bayesian computational tools, in particular the method of data
+augmentation. We construct a Gibbs sampler along the lines of Carter and Kohn (1994) that
+alternates between the conditional distribution of the VAR parameters given the unobserved
+monthly series, and the conditional distribution of the missing monthly observations given
+the VAR parameters. Draws from the former distribution are generated by direct sampling
+from a Normal-Inverted Wishart distribution, whereas draws from the latter are obtained
+by applying a simulation smoother to the state-space representation of the MF-VAR. Our
+numerical approximation of the log MDD is based on the modified harmonic mean estimator
+proposed by Geweke (1999).
+
+  An alternative Gibbs sampling approach for the coefficients in an MF-VAR is explored in
+Chiu, Foerster, Kim, and Seoane (2012). Their algorithm also iterates over the conditional
+posterior distributions of the VAR parameters and the missing monthly observations, but
+utilizes a different procedure to draw the missing observations. The focus of their paper is
+                                                                                           4
+
+
+on parameter estimation rather than forecasting. The authors link the coefficients of the
+MF-VAR to the coefficients of a QF-VAR via a transformation. Chiu, Foerster, Kim, and
+Seoane (2012) then compare the posterior distributions of parameters and impulse response
+functions obtained from the estimation of the two models to document the value of the
+monthly observations.
+
+ Mixed-frequency observations have also been utilized in the estimation of dynamic factor
+models (DFMs). Mariano and Murasawa (2003) apply maximum-likelihood factor analysis
+to a mixed-frequency series of quarterly real GDP and monthly business cycle indicators
+to construct an index that is related to monthly real GDP. Aruoba, Diebold, and Scotti
+(2009) develop a DFM to construct a broad index of economic activity in real time using a
+variety of data observed at different frequencies. Giannone, Reichlin, and Small (2008) use
+a mixed-frequency DFM to evaluate the marginal impact that intra-monthly data releases
+have on current-quarter forecasts (nowcasts) of real GDP growth.
+
+ When using our MF-VAR to forecast quarterly GDP growth, we are essentially predict-
+ing a quarterly variable based on a mixture of quarterly and monthly regressors. Ghysels,
+Sinko, and Valkanov (2007) propose a simple univariate regression model, called a mixed
+data sampling (MIDAS) regression, to exploit high-frequency information without having
+to estimate a state-space model. To cope with potentially large numbers of regressors, the
+coefficients for the high-frequency regressors are tightly restricted through distributed lag
+polynomials that are indexed by a small number of hyperparameters. Bayesian versions of
+the MIDAS approach are developed in Rodriguez and Puggioni (2010) and Carriero, Clark,
+and Marcellino (2012).
+
+ Ghysels (2012) generalizes the MIDAS approach to a VAR setting. Unlike our MF-VAR,
+his MIDAS VAR is an observation-driven model that does not require numerical techniques
+to integrate out unobserved monthly variables. As in Chiu, Foerster, Kim, and Seoane
+(2012), the empirical analysis focuses on impulse responses but not on real-time forecasting.
+In our view, the state-space setup pursued in this paper is more transparent and flexible
+and the computational advances of the last decade make it feasible to estimate Bayesian
+state-space models with code written in high-level languages such as MATLAB in a short
+amount of time.
+
+ Bai, Ghysels, and Wright (2013) examine the relationship between MIDAS regressions and
+state-space models applied to mixed-frequency data. They consider dynamic factor models
+and characterize conditions under which the MIDAS regression exactly replicates the steady
+                                                                                               5
+
+
+state Kalman filter weights on lagged observables. They conclude that Kalman filter forecasts
+are typically a little better, but MIDAS regressions can be more accurate if the state-space
+model is misspecified or over-parameterized. Kuzin, Marcellino, and Schumacher (2011)
+compare the accuracy of Euro Area GDP growth forecasts from MIDAS regressions and MF-
+VARs estimated by maximum likelihood. The authors find that the relative performances
+of MIDAS and MF-VAR forecasts differ depending on the predictors and forecast horizons.
+Overall, the authors do not find a clear winner in terms of forecasting performance.
+
+    The remainder of this paper is organized as follows. Section 2 presents the state-space
+representation of the MF-VAR and discusses Bayesian inference and forecasting. The real-
+time data sets used for the forecast comparison of MF-VAR and QF-VAR, as well as the
+timing of within-quarter monthly information, are discussed in Section 3. The empirical
+results are presented in Section 4. Finally, Section 5 concludes. The Online Appendix
+provides detailed information about the Bayesian computations, the construction of the
+data set, as well as additional empirical results.
+
+
+
+2      A Mixed-Frequency Vector Autoregression
+
+The MF-VAR considered in this paper is based on a standard constant-parameter VAR in
+which the length of the time period is one month. Since some macroeconomic time series, e.g.,
+GDP, are measured only at quarterly frequency, we treat the corresponding monthly values
+as unobserved. To cope with the missing observations, the MF-VAR is represented as a state-
+space model in Section 2.1. In order to ease the exposition, we use a representation with a
+state vector that includes even those variables that are observable at monthly frequency, e.g.,
+the aggregate price level, the unemployment rate, and the interest rate. A computationally
+more efficient representation in which variables observed at monthly frequency are dropped
+from the state vector is presented in the Online Appendix. Bayesian inference and forecasting
+are discussed in Section 2.2.
+
+    Throughout this paper, we use Yt0 :t1 to denote the sequence of observations or random
+variables {yt0 , . . . , yt1 }. If no ambiguity arises, we sometimes drop the time subscripts and
+abbreviate Y1:T by Y . If θ is the parameter vector, then we use p(θ) to denote the prior
+density, p(Y |θ) is the likelihood function, and p(θ|Y ) the posterior density. We use iid
+to abbreviate independently and identically distributed, and N (µ, Σ) denotes a multivari-
+ate normal distribution with mean µ and covariance matrix Σ. Let ⊗ be the Kronecker
+                                                                                                        6
+
+
+product. If X|Σ ∼ M Np×q (M, Σ ⊗ P ) is matricvariate Normal and Σ ∼ IWq (S, ν) has an In-
+verted Wishart distribution, we say that (X, Σ) has a Normal-Inverted Wishart distribution:
+(X, Σ) ∼ M N IW (M, P, S, ν).
+
+
+2.1     State-Transitions and Measurement
+
+We assume that the economy evolves at monthly frequency according to the following VAR(p)
+dynamics:
+                                                                                   
+                    xt = Φ1 xt−1 + . . . + Φp xt−p + Φc + ut ,       ut ∼ iidN 0, Σ .                 (1)
+
+The n × 1 vector of macroeconomic variables xt can be composed into xt = [x0m,t , x0q,t ]0 , where
+the nm × 1 vector xm,t collects variables that are observed at monthly frequency, e.g., the
+consumer price index and the unemployment rate, and the nq × 1 vector xq,t comprises the
+unobserved monthly variables that are only published at quarterly frequency, e.g., GDP.
+Define zt = [x0t , . . . , x0t−p+1 ]0 and Φ = [Φ1 , . . . , Φp , Φc ]0 . Write the VAR in (1) in companion
+form as
+                                                                             
+                       zt = F1 (Φ)zt−1 + Fc (Φ) + vt ,      vt ∼ iidN 0, Ω(Σ) ,                       (2)
+
+where the first n rows of F1 (Φ), Fc (Φ), and vt are defined to reproduce (1) and the remaining
+rows are defined to deliver the identities xq,t−l = xq,t−l for l = 1, . . . , p−1. The n×n upper-left
+submatrix of Ω equals Σ and all other elements are zero. Equation (2) is the state-transition
+equation of the MF-VAR.
+
+  We proceed by describing the measurement equation. One can handle the unobserved
+variables in several ways: by imputing zeros and modifying the measurement equation by
+setting the loadings on the state variables to zero (e.g., Mariano and Murasawa (2003));
+by setting the measurement error variance to infinity (e.g., Giannone, Reichlin, and Small
+(2008)); or by varying the dimension of the vector of observables as a function of time t (e.g.,
+Durbin and Koopman (2001)). We employ the latter approach. To do so, some additional
+notation is useful. Let T denote the forecast origin and let Tb ≤ T be the last period that
+corresponds to the last month of the quarter for which all quarterly observations are available.
+The subscript b stands for balanced sample. Up until period Tb the vector of monthly series
+xm,t is observed every month. We denote the actual observations by ym,t and write
+
+                                     ym,t = xm,t ,   t = 1, . . . , Tb .                              (3)
+                                                                                             7
+
+
+Assuming that the underlying monthly VAR has at least three lags, that is, p ≥ 3, we express
+the three-month average of xq,t as
+                                  1
+                           ỹq,t = (xq,t + xq,t−1 + xq,t−2 ) = Λqz zt .                    (4)
+                                  3
+For variables measured in logs, e.g., ln GDP , the formula can be interpreted as a log-linear
+approximation to an arithmetic average of GDP that preserves the linear structure of the
+state-space model. For flow variables such as GDP, we adopt the NIPA convention and
+annualize high-frequency flows. As a consequence, quarterly flows are the average and not
+the sum of monthly flows. This three-month average, however, is only observed for every
+third month, which is why we use a tilde superscript. Let Mq,t be a selection matrix that
+equals the identity matrix if t corresponds to the last month of a quarter and is empty
+otherwise. Adopting the convention that the dimension of the vector yq,t is nq in periods in
+which quarterly averages are observed and zero otherwise, we write
+
+                         yq,t = Mq,t ỹq,t = Mq,t Λqz zt ,   t = 1, . . . , Tb .           (5)
+
+  For periods t = Tb + 1, . . . , T no additional observations of the quarterly time series are
+available. Thus, for these periods the dimension of yq,t is zero and the selection matrix Mq,t
+in (5) is empty. However, the forecaster might observe additional monthly variables. Let
+ym,t denote the subset of monthly variables for which period t observations are reported by
+the statistical agency after period T , and let Mm,t be a deterministic sequence of selection
+matrices such that (3) can be extended to
+
+                            ym,t = Mm,t xm,t ,      t = Tb + 1, . . . , T.                 (6)
+
+Notice that the dimension of the vector ym,t is potentially time varying and less than nm .
+The measurement equations (3) to (6) can be written more compactly as
+
+                                 yt = Mt Λz zt ,     t = 1, . . . , T.                     (7)
+
+Here, Mt is a sequence of selection matrices that selects the time t variables that have been
+observed by period T and are part of the forecaster’s information set. In sum, the state-space
+representation of the MF-VAR is given by (2) and (7).
+
+
+2.2    Bayesian Inference
+
+The starting point of Bayesian inference for the MF-VAR is a joint distribution of observ-
+ables Y1:T , latent states Z0:T , and parameters (Φ, Σ), conditional on a pre-sample Y−p+1:0 to
+                                                                                              8
+
+
+initialize lags. Using a Gibbs sampler, we generate draws from the posterior distributions of
+(Φ, Σ)|(Z0:T , Y−p+1:T ) and Z0:T |(Φ, Σ, Y−p+1:T ). Based on these draws, we are able to simu-
+late future trajectories of yt to characterize the predictive distribution associated with the
+MF-VAR and to calculate point and density forecasts.
+
+Prior Distribution. An important challenge in practical work with VARs is to cope with
+the dimensionality of the coefficient matrix Φ. Informative prior distributions can often
+mitigate the curse of dimensionality. A widely used prior in the VAR literature is the so-
+called Minnesota prior. This prior dates back to Litterman (1980) and Doan, Litterman,
+and Sims (1984). We use the version of the Minnesota prior described in Del Negro and
+Schorfheide (2011)’s handbook chapter, which in turn is based on Sims and Zha (1998).
+The main idea of the Minnesota prior is to center the distribution of Φ at a value that
+implies a random-walk behavior for each of the components of xt in (1). Our version of
+the Minnesota prior for (Φ, Σ) is proper and belongs to the family of MNIW distributions.
+We implement the Minnesota prior by mixing artificial (or dummy) observations into the
+estimation sample. The artificial observations are computationally convenient and allow us
+to generate plausible a priori correlations between VAR parameters. The variance of the
+prior distribution is controlled by a low-dimensional vector of hyperparameters λ. Details
+of the prior are relegated to the Online Appendix, and the choice of hyperparameters is
+discussed below.
+
+Posterior Inference. The joint distribution of data, latent variables, and parameters
+conditional on some observations to initialize lags can be factorized as follows:
+
+                   p(Y1:T , Z0:T , Φ, Σ|Y−p+1:0 , λ)                                        (8)
+                     = p(Y1:T |Z0:T )p(Z1:T |z0 , Φ, Σ)p(z0 |Y−p+1:0 )p(Φ, Σ|λ).
+
+The distribution of Y1:T |Z1:T is given by a point mass at the value of Y1:T that satisfies (7).
+The density p(Z1:T |z0 , Φ, Σ) is obtained from the linear Gaussian regression (2). The condi-
+tional density p(z0 |Y−p+1:0 ) is chosen to be Gaussian and specified in the Online Appendix.
+Finally, p(Φ, Σ|λ) represents the prior density of the VAR parameters. The factorization (8)
+implies that the conditional posterior densities of the VAR parameters and the latent states
+of the MF-VAR take the form
+
+              p(Φ, Σ|Z0:T , Y−p+1:T ) ∝ p(Z1:T |z0 , Φ, Σ)p(Φ, Σ|λ)                         (9)
+              p(Z0:T |Φ, Σ, Y−p+1:T ) ∝ p(Y1:T |Z1:T )p(Z1:T |z0 , Φ, Σ)p(z0 |Y−p+1 ).
+                                                                                                   9
+
+
+We follow Carter and Kohn (1994) and use a Gibbs sampler that iterates over the two
+conditional posterior distributions in (9). Conditional on Z0:T , the companion-form state
+transition (2) is a multivariate linear Gaussian regression. Since our prior for (Φ, Σ) belongs
+to the MNIW family, so does the posterior and draws from this posterior can be obtained
+by direct Monte Carlo sampling. Likewise, since the MF-VAR is set up as a linear Gaussian
+state-space model, a standard simulation smoother can be used to draw the sequence Z0:T
+conditional on the VAR parameters. The distribution p(z0 |Y−p+1 ) provides the initialization
+for the Kalman-filtering step of the simulation smoother. A detailed discussion of these
+computations can be found in textbook treatments of the Bayesian analysis of state-space
+models, e.g., the handbook chapters by Del Negro and Schorfheide (2011) and Giordani,
+Pitt, and Kohn (2011).
+
+Computational Considerations. For expositional purposes, it has been convenient to
+define the vector of state variables as zt = [x0t , . . . , xt−p+1 ]0 , which includes the variables
+observed at monthly frequency. From a computational perspective, this definition is ineffi-
+cient because it enlarges the state space of the model unnecessarily. We show in the Online
+Appendix how to rewrite the state-space representation of the MF-VAR in terms of a lower-
+dimensional state vector st = [x0q,t , . . . , xq,t−p ]0 that only includes the variables (and their
+lags) observed at quarterly frequency. Our simulation smoother uses the small state vector
+st for t = 1, . . . , Tb and then switches to the larger state vector zt for t = Tb + 1, . . . , T to
+accommodate missing monthly observations toward the end of the sample.
+
+Forecasting. For each draw (Φ, Σ, Z0:T ) from the posterior distribution we simulate a tra-
+jectory ZT +1:T +H based on the state-transition equation (2). Since we evaluate forecasts of
+quarterly averages in our empirical analysis, we time-aggregate the simulated trajectories ac-
+cordingly. Based on the simulated trajectories (approximate) point forecasts can be obtained
+by computing means or medians. Interval forecasts and probability integral transformations
+(see Section C.3) can be computed from the empirical distribution of the simulated trajec-
+tories.
+
+
+2.3       Marginal Likelihood Function and Hyperparameter Selection
+
+The empirical performance of the MF-VAR is sensitive to the choice of hyperparameters. The
+prior is parameterized such that λ = 0 corresponds to a flat (and therefore improper) prior
+for (Φ, Σ). As λ −→ ∞, the MF-VAR is estimated subject to the random-walk restriction
+implied by the Minnesota prior. The best forecasting performance of the MF-VAR is likely
+                                                                                                        10
+
+
+to be achieved for values of λ that are in between the two extremes. In a Bayesian framework
+the hyperparameter, λ can be interpreted as a model index (since a Bayesian model is the
+product of likelihood function and prior distribution). We consider a grid λ ∈ Λ and assign
+equal prior probability to each value on the grid. Thus, the posterior probability of λ is
+proportional to the MDD
+                                            Z
+                p(Y1:T |Y−p+1:0 , λ) =           p(Y1:T , Z0:T , Φ, Σ|Y−p+1:0 , λ)d(Z0:T , Φ, Σ).      (10)
+
+The log MDD can be interpreted as the sum of one-step-ahead predictive scores:
+                                 T
+                                 X          Z
+     ln p(Y1:T |Y−p+1:0 , λ) =         ln       p(yt |Y−p+1:t−1 , Φ, Σ)p(Φ, Σ|Y−p+1:t−1 , λ)d(Φ, Σ).   (11)
+                                 t=1
+
+The terms on the right-hand side of (11) provide a decomposition of the one-step-ahead
+predictive densities p(yt |Y1−p:t−1 , λ). This decomposition highlights the fact that inference
+about the parameter is based on time t − 1 information, when making a one-step-ahead
+prediction for yt .
+
+Hyperparameter Selection. To generate the MF-VAR forecasts, for each forecast origin
+we condition on the value λ̂T that maximizes the log MDD. This procedure can be viewed
+as an approximation to a model averaging procedure that integrates out λ based on the
+posterior p(λ|Y−p+1:T ). The MDD-based selection of VAR hyperparameters has a fairly long
+history and tends to work well for forecasting purposes (see Giannone, Lenza, and Primiceri
+(2012) for a recent study).
+
+Marginal Data Density Approximation. From (10) we see that the computation of the
+MDD involves integrating out the latent states. In the remainder of this section we describe
+how we compute the integral. To simplify the exposition we consider the special case of
+n = 2, p = 1, and T = 3. We assume that one of the variables is observed at monthly
+frequency and the other as a quarterly average. Thus, we can write zt = [xm,t , xq,t ]0 . The
+observations Y1:3 are related to the states Z1:3 as follows:
+                                                   "                                           #
+                                                                              xm,3
+                      y1 = xm,1 ,      y2 = xm,2 ,      y3 =       1
+                                                                                                   .   (12)
+                                                                   3
+                                                                     (xq,1   + xq,2 + xq,3 )
+
+Using a change of variable of the form
+                                                            "          #
+                                                                Y1:3
+                                                 Z1:3 = J                                              (13)
+                                                                W1:3
+                                                                                                             11
+
+
+where Z1:3 = [z10 , z20 , z3 ]0 , Y1:3 = [y1 , y2 , y30 ]0 , W1:3 = [xq,1 , xq,2 ]0 (note that despite the 1 : 3
+subscript, W1:3 is a 2 × 1 vector in this example), and J is a 6 × 6 non-singular matrix of
+constants. Thus, we can replace p(Z1:3 |λ) by p(Y1:3 , W1:3 |λ) = p(Y1:3 |W1:3 )p(W1:3 |λ). Using
+Bayes Theorem, we can write (abstracting from the initialization of the VAR)
+
+                                            1           p(W1:3 |Y1:3 , λ)
+                                                    =                     .                                (14)
+                                       p(Y1:3 |λ)       p(Y1:3 , W1:3 |λ)
+                                                          R                                    (i)
+  Suppose that f (W1:3 ) has the property that                f (W1:3 )dW1:3 = 1, and let {W1:3 }N
+                                                                                                 i=1 denote
+a sequence of draws from the posterior distribution of W1:3 |(Y1:3 , λ). Then the MDD can be
+approximated using Geweke (1999)’s harmonic mean estimator, which is widely used in the
+DSGE model literature to approximate MDDs in high-dimensional settings:
+                                       "    N
+                                                                   #−1
+                                                         (i)
+                                         1 X      f (W1:3 )
+                         p̂(Y1:3 |λ) =                     (i)
+                                                                       .                                   (15)
+                                         N i=1 p(Y1:3 , W1:3   |λ)
+
+The draws from the distribution of W1:3 |(Y1:3 , λ) can be obtained by transforming the draws
+from Z1:3 |(Y1:3 , λ), which are generated as a by-product of the posterior sampler described in
+Section 2.2. Using the properties of the MNIW distribution, it is straightforward to compute
+                                      Z
+                         p(Z1:3 |λ) = p(Z1:3 |Φ, Σ)p(Φ, Σ|λ)d(Φ, Σ)                     (16)
+
+analytically. A straightforward change of variables based on (13) leads from p(Z1:3 |λ) to
+           (i)
+p(Y1:3 , W1:3 |λ). Note that the Jacobian of this transformation is simply a constant term.
+Generalization. Taking the initialization of the VAR into account, the identity provided
+in (14) can be generalized as follows:
+
+                                    1             p(W1:T , w0 |Y1:T , Y−p+1:0 , λ)
+                                                =                                  ,                       (17)
+                           p(Y1:T |Y−p+1:0 , λ)   p(W1:T , Y1:T , w0 |Y−p+1:0 , λ)
+
+with the understanding that W1:T stacks the unobserved values of xq,t for the first and second
+month of each quarter of the estimation sample and w0 contains the corresponding values
+for the initialization period t = −p + 1, . . . , 0. The approximation of the MDD becomes:
+                                          "    N
+                                                                                    #−1
+                                                               (i)       (i)
+                                            1 X           f0 (w0 )f (W1:T )
+                p̂(Y1:T |Y−p+1:0 , λ) = c            (i)   (i)       (i)
+                                                                                        , (18)
+                                            N i=1 p(Z1:T |z0 , λ)p(z0 |Y−p+1:0 , λ)
+
+The constant c in (18) captures the Jacobian term associated with the change-of-variables
+from (w0 , W1:T , Y1:T ) to (z0 , Z1:T ). For the function f (·) we follow Geweke (1999) and use
+                                                                                 (i)
+a trimmed multivariate normal distribution with mean µ̂W1:T = N1 N
+                                                                          P
+                                                                            i=1 W1:T and variance
+                                                                                                   12
+
+               PN       (i)   (i)0
+Σ̂W1:T =   1
+           N    i=1   W1:T W1:T −µ̂W1:T µ̂0W1:T . This normal distribution approximates p(W1:T |Y−p+1:T )
+                                                   (i)       (i)
+and stabilizes the ratio in (18). We set f0 (w0 ) = p(z0 |Y−p+1:0 , λ) such that the two terms
+                                                                                    (i)   (i)
+cancel. To evaluate the denominator, we use the analytical expression for p(Z1:T |z0 , Y−p+1:0 , λ),
+which is obtained from the the normalization constants for the MNIW distribution and is
+provided, for instance, in Section 2 of Del Negro and Schorfheide (2011).
+
+
+
+3     Real-Time Data Sets and Information Structure
+
+We subsequently conduct a pseudo-out-of-sample forecast experiment with real-time data
+to study the extent to which the incorporation of monthly observations via an MF-VAR
+model improves upon forecasts generated with a VAR that is based on time-aggregated
+quarterly data (QF-VAR). We consider VARs for eleven macroeconomic variables, which are
+summarized in Section 3.1. The construction of the real-time data sets and the classification
+of forecast origins based on within-quarter monthly information are described in Section 3.2.
+Section 3.3 explains our choice of actual values that are used to compute forecast errors.
+
+
+3.1    Macroeconomic Variables
+
+We consider VARs for eleven macroeconomic variables, of which three are observed at quar-
+terly frequency and eight are observed at monthly frequency. The quarterly series are GDP,
+Fixed Investment (INVFIX), and Government Expenditures (GOV). The monthly series are
+the Unemployment Rate (UNR), Hours Worked (HRS), Consumer Price Index (CPI), In-
+dustrial Production Index (IP), Personal Consumption Expenditure (PCE), Federal Funds
+Rate (FF), Treasury Bond Yield (TB), and S&P 500 Index (SP500). Precise data definitions
+are provided in the Online Appendix. Series that are observed at a higher than monthly
+frequency are time-aggregated to monthly frequency. The variables enter the VARs in log
+levels with the exception of UNR, FF, and TB, which are divided by 100 in order to make
+them commensurable in scale to the other log-transformed variables.
+
+
+3.2    Real-Time Data for End-of-Month Forecasts
+
+We consider an increasing sequence of estimation samples Y−p+1:T , T = Tmin , . . . , Tmax , and
+generate forecasts for periods T + 1, . . . , T + H. The maximum forecast horizon H is chosen
+to be 24 months. The period t = 1 corresponds to 1968:M1, Tmin is 1997:M7, and Tmax
+                                                                                                  13
+
+
+is 2010:M1, which yields 151 estimation samples. We eliminated four of the 151 samples
+because the real-time data for PCE and INVFIX were incomplete. The estimation samples
+are constructed from real-time data sets, assuming that the forecasts are generated on the
+last day of each month. Due to data revisions by statistical agencies, observations of Y1:T −1
+published in period T are potentially different from the observations that had been published
+in period T −1. For this reason, real-time data are often indexed by a superscript, say τ ≥ T ,
+which indicates the vintage or data release date. Using this notation, a forecaster at time
+                                                        1         2                 T
+T potentially has access to a triangular array of data Y−p+1:1 , Y−p+1:2 , . . . , Y−p+1:T . Rather
+than using the entire triangular array and trying to exploit the information content in data
+revisions, we estimate the MF-VAR and QF-VAR for each forecast origin T based on the
+                 T          T
+information set Y−p+1:T = {y−p+1 , . . . , yTT }. As in Section 2, we are using the convention
+that the vector ytT contains only the subset of the eleven variables listed above for which
+observations are available at the end of month T .
+
+  In order to assess the usefulness of within-quarter information from monthly variables, we
+sort the forecast origins Tmin , . . . , Tmax into three groups that reflect different within-quarter
+information sets. Forecast error statistics will be computed for each group separately. The
+grouping of forecast origins is best explained in a concrete example. Consider the January
+31, 1998 forecast origin. By the end of January, the Bureau of Economic Analysis (BEA) has
+just published an advance estimate of 1997:Q4 GDP. In addition, the forecaster has access
+to nonfinancial monthly indicators from December 1997 and earlier. A similar situation
+arises at the end of April, July, and October. We refer to this group of forecast origins as
+“+0 months,” because the current-quarter forecasts do not use any additional nonfinancial
+monthly variables.
+
+  At the end of February 1998, the forecaster has access to an preliminary estimate of
+1997:Q4 GDP and to observations for unemployment, industrial production, and so forth,
+for January 1998. Thus, we group February, May, August, and November forecasts and refer
+to them as “+1 month.” Following the same logic, the last subgroup of forecast origins
+has two additional monthly indicators (“+2 months”) and the final release of GDP for
+1997:Q4 in the information set. Unlike the non-financial variables, which are released with
+a lag, financial variables are essentially available instantaneously. In particular, at the end
+of each month, the forecaster has access to average interest rates (FF and TB) and stock
+prices (SP500). The typical information sets for the three subgroups of forecast origins are
+summarized in Table 1.
+
+  Unfortunately, due to variation in release dates, not all 151 estimation samples mimic
+                                                                                                   14
+
+
+                             Table 1: Illustration of Information Sets
+
+                                      January (+0 Months)
+               UNR     HRS     CPI    IP   PCE     FF    TB    SP500     GDP     INVFIX      GOV
+
+  Q4    M12      X       X       X    X      X      X     X       X      QAv       QAv       QAv
+  Q1    M1       ∅       ∅       ∅     ∅     ∅      X     X       X        ∅         ∅         ∅
+
+
+                                      February (+1 Month)
+
+               UNR     HRS     CPI    IP   PCE     FF    TB    SP500     GDP     INVFIX      GOV
+
+  Q4    M12      X       X       X    X      X      X     X       X      QAv       QAv       QAv
+  Q1    M1       X       X       X    X      X      X     X       X        ∅         ∅         ∅
+  Q1    M2       ∅       ∅       ∅     ∅     ∅      X     X       X        ∅         ∅         ∅
+
+
+                                       March (+2 Month)
+
+               UNR     HRS     CPI    IP   PCE     FF    TB    SP500     GDP     INVFIX      GOV
+
+  Q4    M12      X       X       X    X      X      X     X       X      QAv       QAv       QAv
+  Q1    M1       X       X       X    X      X      X     X       X        ∅         ∅         ∅
+  Q1    M2       X       X       X    X      X      X     X       X        ∅         ∅         ∅
+  Q1    M3       ∅       ∅       ∅     ∅     ∅      X     X       X        ∅         ∅         ∅
+
+Notes: ∅ indicates that the observation is missing. X denotes monthly observation and QAv denotes
+quarterly average. “+0 Months” group: January, April, July, October; “+1 Month” group: February, May,
+August, November; “+2 Month” group: March, June, September, December.
+
+
+the information structure in Table 1. For 47 samples the last PCE figure is released with
+a two-period (approximately five weeks) instead of one-period (approximately four weeks)
+lag. This exception occurs for 28 samples of the “+0 months” group. For these samples a
+late release of PCE implies the quarterly consumption for the last completed quarter is not
+available. In turn, the QF-VAR could only be estimated based on information up to T − 4
+instead of T −1 and would be at a severe disadvantage compared to the MF-VAR. Since PCE
+is released only a few days after the period T forecasts are made, we pre-date its release.
+Thus, for the 28 samples of the “+0 months” group that are subject to the irregular timing,
+we use P CET −1 in the estimation of both the QF-VAR and MF-VAR. No adjustments are
+made for the “+1 month” and “+2 months” groups. Further details about these exceptions
+                                                                                            15
+
+
+are provided in the Online Appendix.
+
+
+3.3     Actuals for Forecast Evaluation
+
+The real-time-forecasting literature is divided as to whether forecast errors should be com-
+puted based on the first release following the forecast date, say yTT +h
+                                                                      +h
+                                                                         , or based on the most
+                     T∗
+recent vintage, say yt+h . The former might do a better job of capturing the forecaster’s loss,
+whereas the latter is presumably closer to the underlying “true” value of the time series. We
+decided to follow the second approach and evaluate the forecasts based on actual values from
+the T∗ = 2012:M1 data vintage. While the MF-VAR in principle generates predictions at
+the monthly frequency, we focus on the forecasts of quarterly averages, which can be easily
+compared to forecasts from the QF-VAR.
+
+
+
+4      Empirical Results
+
+The empirical analysis proceeds in four parts. The hyperparameter selection is discussed
+in Section 4.1. Section 4.2 compares root mean squared error (RMSE) statistics from the
+MF-VAR to a QF-VAR and a set of MIDAS regressions. Section 4.3 contrasts MF-VAR
+density forecasts during the 2008-9 (Great) recession with QF-VAR forecasts. Finally, in
+Section 4.4 we present a monthly GDP series that arises as a by-product of the MF-VAR
+estimation. Based on some preliminary exploration of the MDDs, we set the number of lags
+in the (monthly) state transition of the MF-VAR to p(m) = 6 and the number of lags in the
+QF-VAR to p(q) = 2.
+
+    Unless otherwise noted, for each estimation sample we generate 20,000 draws from the
+posterior distribution of the VAR parameters using the MCMC algorithm described in Sec-
+tion 2.2. We discard the first 10,000 draws and use the remaining 10,000 to calculate Monte
+Carlo approximations of posterior moments. The Online Appendix provides some informa-
+tion on the accuracy of the MCMC. The Monte Carlo standard deviation of the posterior
+mean forecasts (output, inflation, interest rates, and unemployment), computed across in-
+dependent runs of the MCMC, is generally less than 0.5 basis points. For comparison, the
+RMSE associated with these forecasts ranges from 10 to 200 basis points.
+                                                                                               16
+
+
+4.1    Hyperparameter Selection
+
+We will subsequently compare MF-VAR and QF-VAR forecasts. Both VARs are equipped
+with a Minnesota prior that is represented in terms of dummy observations and indexed by
+a vector of hyperparameters λ. We use the same set of dummy observations for both types
+of VAR. However, the hyperparameters are chosen for each type of VAR separately. The
+careful choice of this hyperparameter vector is crucial for obtaining accurate forecasts. As
+explained in Section 2.3, we determine the hyperparameters by maximizing the log MDD. For
+the QF-VAR the MDD can be computed analytically (see, e.g., Del Negro and Schorfheide
+(2011)) and the maximization is straightforward. Thus, we will focus on the hyperparameter
+selection for the MF-VAR.
+
+  The hyperparameter vector consists of five element, controlling: the overall tightness of
+the prior (λ1 ); the rate at which the prior variance on higher-order lag coefficients decays
+(λ2 ); the dispersion of the prior on the innovation covariance matrix (λ3 ); the extent to
+which the sum-of-coefficient on the lags of a variable xi,t is tilted toward unity (λ4 ); and
+the extent to which co-persistence restrictions are imposed on the VAR coefficients (λ5 ).
+In general, the larger λi the smaller the prior variance and the more informative the prior.
+From a preliminary analysis based on the QF-VAR, we conclude that λ3 is not particularly
+important for the forecasting performance and fix it as λ̂3 = 1. Based on a preliminary
+search over a grid Λ(1) we determine suitable values for λ4 and λ5 for the first recursive
+sample, which ranges from 1968:M1 to 1997:M7. These values are λ̂4 = 2.7 and λ̂5 = 4.3.
+Conditioning on λ̂3 to λ̂5 , we use a second grid, Λ̂(2) to refine the choice of λ1 and λ2 .
+
+  The log MDD surface is depicted in the left panel of Figure 1 as function of λ1 and λ2 ,
+holding the remaining three hyperparameters fixed at λ3 = 1, λ4 = λ̂4 , and λ5 = λ̂5 . The
+surface has a convex shape and is maximized at λ̂1 = 0.09 and λ̂2 = 4.3. At its peak the
+value of the log MDD is approximately 11,460. While the surface is fairly flat near the peak,
+e.g. for λ1 ∈ [0.05, 0.15] and λ2 ∈ [4, 4.5], the MDD values drop substantially for values of λ
+outside of these intervals. To assess the accuracy of the MDD evaluation, which involves the
+numerical evaluation of a high-dimensional integral, we display a hairplot of a slice of the
+MDD surface in the right panel of Figure 1, fixing λ2 at 4.3. Each hairline corresponds to
+a separate run of the MCMC algorithm. We focus on the interval λ1 ∈ [0.05, 0.15]. While
+there is some noticeable Monte Carlo variation with respect to the absolute magnitude of the
+log MDD, this variation does not affect inference with respect to the optimal value of λ on the
+grid. For each simulation, the log MDD peaks at 0.09. The accuracy of the approximation
+                                                                                                              17
+
+
+                   Figure 1: Log Marginal Data Density for 11-Variable MF-VAR
+
+                      Log MDD Surface                                      Multiple MDD Evaluations
+
+                                                                       4
+                                                                    x 10
+               4                                            1.147
+            x 10
+     1.14
+
+     1.12
+
+      1.1                                                   1.146
+
+     1.08
+
+     1.06
+     0.13
+         0.11                                               1.145
+             0.09                                     5.3
+                 0.07                           4.3
+            λ1       0.05                 3.3
+                         0.03
+                             0.01   2.3         λ2             0.05                   0.09             0.15
+                                                                                       λ1
+
+Notes: The two plots depict ln p̂(Y1:T |Y−p+1:0,λ ). In the left panel, we condition on λ3 = 1, λ4 = 2.7, and
+λ5 = 4.3. In the right panel we condition on λ2 = 4.3, λ3 = 1, λ4 = 2.7, and λ5 = 4.3. Each “hair”
+corresponds to a separate run of the MCMC algorithm.
+
+
+can be improved by increasing the number of MCMC draws.
+
+  The re-optimization of the hyperparameters for the MF-VAR is computationally costly.
+Because we expect the optimal hyperparameter choices to evolve smoothly over time, we are
+reoptimizing with respect to λ approximately every three years, namely for the 40th, the
+75th, the 110th, and the 151th recursive sample. During this reoptimization we keep λ̂3 , λ̂4 ,
+and λ̂5 fixed. The reoptimization essentially left the choice of hyperparameters unchanged.
+We obtained a similar result for the QF-VAR and decided to keep the MF-VAR and the
+QF-VAR hyperparameters constant for all recursive sample.
+
+  The hyperparameter estimates for the MF-VAR and the QF-VAR are summarized in Ta-
+ble 2. While the overall tightness of the prior, controlled by λ1 , is larger for the QF-VAR
+than the MF-VAR, the MF-VAR strongly shrinks the coefficients on higher-order lags to
+zero. The QF-VAR only uses two lags which are associated with 22 regression coefficients
+for each endogenous variable. The MF-VAR, on the other hand, uses six lags which are
+associated with 66 regression coefficients. Roughly 30% of these coefficients are associated
+with regressors that are only observed a quarterly frequency. The hyperparameters for the
+QF-VAR are broadly in line with the results in Giannone, Lenza, and Primiceri (2012).
+                                                                                         18
+
+
+                                Table 2: Hyperparameters
+
+                                        λ1    λ2     λ3    λ4     λ5
+
+                       MF-VAR(11)      0.09   4.30   1.0   2.70   4.30
+                       QF-VAR(11)      3.08   0.01   1.0   1.12   1.62
+
+
+
+4.2    MF-VAR Point Forecasts
+
+MF-VAR versus QF-VAR. We begin by comparing RMSEs for MF-VAR and QF-VAR
+forecasts of quarterly averages to assess the usefulness of monthly information. The RMSEs
+are computed separately for the “+0 months,” “+1 month,” and “+2 months” forecast
+origins defined in the previous section. Results for GDP growth (GDP), unemployment
+(UNR), inflation (INF), and the federal funds rate (FF) are reported in Figure 2. The figure
+depicts relative RMSEs defined as
+                                          RM SE(i|h) − RM SEBenchmark (i|h)
+            Relative RMSE(i|h) = 100 ×                                      ,          (19)
+                                               RM SEBenchmark (i|h)
+
+where i denotes the variable and we adopt the convention (in slight abuse of notation) that
+the forecast horizon h is measured in quarters. The QF-VAR serves as a benchmark model
+and h = 1 corresponds to the quarter in which the forecast is generated. The h = 1 forecast
+is often called a nowcast. Absolute RMSEs for the 11-variable MF-VAR are tabulated in the
+Online Appendix.
+ For all four series, the use of monthly information via the MF-VAR leads to a substantial
+RMSE reduction in the short run. Consider the GDP growth forecasts. The “+2” nowcasts
+have a 27% lower RMSE than the QF-VAR nowcasts. For the “+1 month” group and the
+“+0 months” group, the reductions are both 15%. While the “+2 months” group forecasts
+clearly dominate at the nowcast horizon h = 1, the relative ranking among the three sets
+of MF-VAR forecasts becomes ambiguous for h ≥ 2. As the forecast horizon increases to
+h = 4, the QF-VAR catches up with the MF-VAR. For horizons h ≥ 4, the RMSE differentials
+between QF-VAR and MF-VAR GDP growth forecasts are negligible.
+ For the monthly unemployment, inflation, and federal funds rate series, the short-run
+RMSE reductions attained by the MF-VAR for the monthly series are even stronger than for
+GDP growth, which is observed at quarterly frequency. This is, of course, not surprising. At
+the nowcast horizon, the MF-VAR is able to improve over the precision of the QF-VAR for
+                                                                                                                                                       19
+
+
+                           Figure 2: Relative RMSEs of 11-Variable MF-VAR versus QF-VAR
+
+                                  GDP Growth                                                                          Unemployment Rate
+                  5
+                                                                                                    0
+                  0
+Relative RMSE
+
+
+
+
+                                                                                  Relative RMSE
+                 −5
+                                                                                                  −20
+                −10
+                −15                                                                               −40
+                −20
+                                                        +0 Months                                                                              +0 Months
+                −25                                     +1 Months                                 −60                                          +1 Months
+                                                        +2 Months                                                                              +2 Months
+                −30
+                   1   2     3      4       5       6      7        8                               1         2   3       4       5        6     7         8
+                                 Forecast Horizon                                                                      Forecast Horizon
+
+                                     Inﬂation                                                                         Federal Funds Rate
+                  0                                                                                 0
+
+                                                                                                  −20
+Relative RMSE
+
+
+
+
+                                                                           Relative RMSE
+                −20
+                                                                                                  −40
+
+                −40                                                                               −60
+
+                                                        +0 Months                                 −80                                          +0 Months
+                −60                                     +1 Months                                                                              +1 Months
+                                                        +2 Months                                                                              +2 Months
+                                                                                           −100
+                  1    2     3      4       5       6      7        8                          1              2   3       4       5        6     7         8
+                                 Forecast Horizon                                                                      Forecast Horizon
+
+
+
+
+the “+2 months” forecasts by 65% for unemployment, 70% for inflation, and 100% for the
+federal funds rate. Recall that “+2 months” corresponds to the last month of the quarter,
+which means that at the end of the last month, the average quarterly interest rate is known.
+Thus, by construction the RMSE reduction for the federal funds rate is 100%. The RMSE
+reductions for the “+1 month” group range from 40% (unemployment) to 80% (federal
+funds rate). For the “+0 months” group the improvement of the nowcast from using the
+MF-VAR is about 10% for inflation and the unemployment rate and 60% for the federal funds
+rate. While the gains from using monthly information tend to persist for unemployment and
+interest rates as the forecast horizon h increases, for inflation, monthly observations generate
+no improvements of forecast performance beyond the nowcast horizon.
+                To summarize the multivariate forecast performance of the VARs and aggregate the uni-
+variate RMSE differentials across quarterly and monthly nonfinancial variables we consider
+the log-determinant of the forecast error covariance matrix, proposed by Doan, Litterman,
+and Sims (1984):
+                                                                             TX
+                                                                              max
+                                                                     1
+                                                f (ˆt ) = ln(|                   ˆt ˆ0t ) |),                                                     (20)
+                                                                Tmax − Tmin t=T
+                                                                                                        min
+
+where ˆt is a vector of forecast errors. Log-determinant differentials of MF-VAR versus
+                                                                                                                                                                            20
+
+
+                                             Figure 3: Log Determinant of MF-VAR versus QF-VAR
+
+                                             Quarterly Variables                                                        Monthly (Non-Fin) Variables
+                                        5
+                                                                                                                         0
+
+
+                                                                                                                       −10
+
+
+
+
+                                                                                            Relative Log Determinant
+                                        0
+           Relative Log Determinant
+
+
+
+
+                                                                                                                       −20
+
+
+                                       −5                                                                              −30
+
+
+                                                                                                                       −40
+
+                                      −10
+                                                                                                                       −50
+
+                                                                            +0 Months                                                                       +0 Months
+                                                                            +1 Months                                  −60                                  +1 Months
+                                                                            +2 Months                                                                       +2 Months
+                                      −15
+                                         1   2   3      4       5       6     7         8                                1   2   3      4       5       6     7         8
+                                                     Forecast Horizon                                                                Forecast Horizon
+
+
+
+Notes: The relative log determinant is defined as Relative Log Determinant = (100 · 0.5/nvar )[f (ˆ
+                                                                                                  t,M F ) −
+f (ˆ
+   t,QF )], where f (·) is given in (20) and nvar = 3 for quarterly variables and nvar = 5 for monthly
+nonfinancial variables. The forecast horizon h is measured in quarters and h = 1 corresponds to the quarter
+in which the forecast is generated.
+
+
+QF-VAR forecasts are depicted in Figure 3. We scale the log-determinant differentials by
+100 · 0.5/nvar . The factor 0.5 converts mean-squared errors into RMSEs, the division by
+nvar yields an average across the variables included in ˆt , and the factor 100 converts the
+differential into percentages. This scaling makes the log-determinant differentials comparable
+to the RMSE differentials depicted in Figure 2. The results are qualitatively consistent
+with the comparison of univariate RMSEs. Not surprisingly, for the group of quarterly
+variables (GDP, INVFIX, GOV) the gain from including within-quarter monthly information
+is smaller than for the group of monthly nonfinancial variables (UNR, HRS, CPI, IP, PCE).
+For quarterly variables the forecast accuracy gains relative to the QF-VAR range from 11%
+(“+2 months” group) to 6% (“+0 months” group). For monthly variables the gains for the
+three forecast origin groups are 60%, 30% and 6% respectively. For h ≥ 3 the QF-VAR
+catches up with the MF-VAR and the benefit from using monthly information vanishes. The
+only exception are the “+2” months forecasts of the monthly variables. Here the within-
+quarter monthly information remains even for forecast horizons exceeding one year. We
+exclude the financial variables (FF, TB, SP500) from the group of monthly variables because
+the financial variables are essentially known at the end of each quarter (“+2 months” group)
+which creates a near-singularity in forecast error covariance matrices that include one or
+more financial variables.
+                                                                                                      21
+
+
+MF-VAR versus MIDAS. A popular alternative to the multivariate state-space framework
+used in this paper are MIDAS regressions. While there exist generalizations of the MIDAS
+approach to VAR settings, in most applications MIDAS regressions are used as univariate
+forecasting models. For a comparison of the two approaches we will focus on output growth.
+Our VAR models use 11 macroeconomic variables. If all of these variables are included in a
+MIDAS regression without any further restrictions, the MIDAS regression will perform very
+poorly. The distributed-lag restrictions on high-frequency regressors are designed to deal
+with many (high-frequency) observations of a single regressor but they are not designed to
+impose parsimony on a specification with many different right-hand-side variables. Thus,
+instead of comparing the 11-variable MF-VAR with MIDAS regressions, we will provide
+comparisons between bivariate MF-VARs and MIDAS regressions, estimated using the same
+set of variables.
+
+  Foroni, Marcellino, and Schumacher (2013) propose an unrestricted version of the MI-
+DAS model (U-MIDAS) and show that when the mismatch of the frequency is low, like
+in macroeconomic applications that typically involve monthly and quarterly data only, this
+unrestricted version performs better in Monte Carlo experiments and provides a better GDP
+nowcasting performance than a MIDAS regression with distributed-lag restrictions on the
+coefficients of the high-frequency variables. Thus, we consider U-MIDAS (instead of MIDAS)
+regressions in our comparison. The key aspect of our empirical analysis is the distinction
+between three groups of forecast origins, denoted by “+0,” “+1,” and “+2” (months). Each
+of these groups uses different within-quarter monthly information. Accordingly, we use three
+separate U-MIDAS regressions, which, using the notation of Section 2, can be written as
+                                                 6
+                                                 X
+“+0” : ỹq,t+3h = β0 + β1 ỹq,t + β2 ỹq,t−3 +         γs xm,t−s+1 + residt+3h                      (21)
+                                                 s=1
+                                                 X6
+“+1” : ỹq,t+3h = β0 + β1 ỹq,t + β2 ỹq,t−3 +         γs xm,t−s+1 + δ1 xm,t+1 + residt+3h
+                                                 s=1
+                                                 X6
+“+2” : ỹq,t+3h = β0 + β1 ỹq,t + β2 ỹq,t−3 +         γs xm,t−s+1 + δ1 xm,t+1 + δ2 xm,t+2 + residt+3h ,
+                                                 s=1
+
+where t = 0, 3, 6, 9, . . .. The quarterly variable ỹq,t+3h was defined as average of unobserved
+monthly variables in (4) and corresponds to log GDP. The monthly variable xm,t is assumed to
+be scalar and we consider all eight of our monthly variables individually. The regression (21)
+is estimated by OLS for each group of forecast origins and for each forecast horizon separately.
+Thus, as in Foroni, Marcellino, and Schumacher (2013) we use direct estimation, i.e., the
+                                                                                                                                                       22
+
+
+                              Figure 4: Relative RMSEs of Bivariate MF-VAR versus MIDAS
+
+                           MF-VAR (UNR) versus MIDAS (UNR)                                                    MF-VAR (IP) versus MIDAS (IP)
+                  5                                                                              10
+
+                  0                                                                               0
+Relative RMSE
+
+
+
+
+                                                                                Relative RMSE
+                 −5                                                                             −10
+
+                −10                                                                             −20
+
+                −15                                         +0 Months                           −30                                           +0 Months
+                                                            +1 Months                                                                         +1 Months
+                                                            +2 Months                                                                         +2 Months
+                −20                                                                             −40
+                   1   2       3       4       5       6       7        8                          1   2         3      4       5       6          7        8
+                                    Forecast Horizon                                                                 Forecast Horizon
+
+                           MF-VAR (PCE) versus MIDAS (PCE)                                                 MF-VAR (SP500) versus MIDAS (SP500)
+                  5                                                                              10
+                  0
+                                                                                                  0
+Relative RMSE
+
+
+
+
+                                                                                Relative RMSE
+                 −5
+                −10
+                                                                                                −10
+                −15
+                −20                                                                             −20
+                                                            +0 Months                                                                         +0 Months
+                −25                                         +1 Months                                                                         +1 Months
+                                                            +2 Months                                                                         +2 Months
+                −30                                                                             −30
+                   1   2       3       4       5       6       7        8                          1   2         3      4       5       6          7        8
+                                    Forecast Horizon                                                                 Forecast Horizon
+                           MF-VAR (HRS) versus MIDAS (HRS)                                                  MF-VAR (CPI) versus MIDAS (CPI)
+                                                                                                10
+                                                            +0 Months
+                  0                                         +1 Months
+                                                            +2 Months                            0
+Relative RMSE
+
+
+
+
+                                                                            Relative RMSE
+
+
+
+
+                −10                                                                         −10
+
+                −20                                                                         −20
+
+                                                                                            −30                                             +0 Months
+                −30                                                                                                                         +1 Months
+                                                                                                                                            +2 Months
+                                                                                            −40
+                  1    2       3      4       5        6      7         8                      1       2        3       4       5       6      7        8
+                                   Forecast Horizon                                                                  Forecast Horizon
+
+                            MF-VAR (FF) versus MIDAS (FF)                                                   MF-VAR (TB) versus MIDAS (TB)
+                 10                                                                             10
+
+                  5
+                                                                                                 0
+Relative RMSE
+
+
+
+
+                                                                            Relative RMSE
+
+
+
+
+                  0
+
+                 −5                                                                         −10
+
+                −10
+                                                            +0 Months                       −20                                             +0 Months
+                −15                                         +1 Months                                                                       +1 Months
+                                                            +2 Months                                                                       +2 Months
+                −20                                                                         −30
+                   1   2       3      4       5        6      7         8                      1       2        3       4       5       6      7        8
+                                   Forecast Horizon                                                                  Forecast Horizon
+
+
+
+
+projection of ỹq,t+3h on the predictors available at the forecast origin, to determine the
+coefficients for the multi-step forecasting equation. Recall that under the Bayesian approach
+employed for the analysis of the MF-VAR multi-step forecasts are generated by iterating the
+                                                                                          23
+
+
+VAR forward and using the posterior distribution to integrate out the unknown parameters.
+
+ Figure 4 illustrates the log GDP forecast performance of the bivariate MF-VARs relative to
+the MIDAS regressions. Each panel corresponds to a different monthly variable. Two results
+stand out. First, by and large, both the MF-VAR and MIDAS utilize the within-quarter
+monthly information equally well. The RMSE differentials are essentially the same for each
+of the three informational groups. For six out of the eight monthly variables the MF-VAR
+forecasts are more accurate than the MIDAS forecasts at some horizons, and no worse at
+the other horizons. For the unemployment rate, the gain from using the MF-VAR is highest
+for horizons of 2-5 quarters. For industrial production, the stock market index, hours, and
+the treasury bond rate the largest gain is realized at the long-horizon whereas for PCE the
+improvement if fairly uniform for one- to eight-quarter ahead forecasts. Only for the federal
+funds rate and CPI inflation MIDAS forecasts appear to be marginally more accurate than
+the MF-VAR forecasts.
+
+Other Comparisons. In the Online Appendix we also provide RMSE comparisons between
+the 11-variable MF-VAR and univariate QF-AR(2) models; and between a 4-variable MF-
+VAR (GDP, CPI, UNR, FF) and a 4-variable QF-VAR. The results are qualitatively very
+similar: there is a substantial gain from using the within-quarter-monthly information for
+nowcasting and short-horizon forecasting. This gain vanishes over one- to two-year horizons.
+Finally, the Online Appendix contains a careful comparison between MF-VAR forecasts and
+Greenbook (now Tealbook) forecasts, prepared by the staff of the Board of Governors for
+the meetings of the Federal Open Market Committee. At the nowcast horizon the unem-
+ployment forecasts of the MF-VAR are at par with the Greenbook forecasts, whereas the
+GDP growth and inflation forecasts are less accurate than the Greenbook forecasts. Over a
+four- to five-quarter horizon the MF-VAR generates more accurate GDP forecasts, whereas
+the Greenbook contains more precise inflation and unemployment rate forecasts.
+
+
+4.3    Forecasting During the Great Recession
+
+The pseudo-out-of-sample forecast performance of the previous section documented that
+the use of within-quarter monthly observations increases the precision of short-run forecast.
+We now examine how the use of monthly real-time information sharpened the VAR forecasts
+during the recent recession. We focus on the period from October to December 2008. Figure 5
+depicts real-time interval forecasts from the MF-VAR and the QF-VAR. Moreover, we plot
+actual values using the 2011:M7 data vintage. We focus on real GDP growth and CPI
+                                                                                             24
+
+
+inflation. The figure is divided into subpanels that correspond to particular estimation
+samples and forecast horizons. The first column of panels depicts October 2008 forecasts
+(“+0 months” group), and the second and third columns show November (“+1 month”)
+and December (“+2 months”) forecasts, respectively. A comparison between the first and
+second (third and forth) row of panels shows how monthly within-quarter information alters
+the density forecast for GDP (inflation).
+
+  The most striking feature of the top panels of Figure 5 is the -2% quarter-on-quarter
+growth rate of GDP in 2008:Q4. The magnitude of the drop in output growth in late 2008 is
+unexpected by the VAR models. It is, for all forecast origins, outside of the 90% predictive in-
+terval. The drop in GDP growth is equally unexpected by state-of-the-art dynamic stochastic
+general equilibrium (DSGE) models and the Blue Chip survey of professional forecasters as
+documented in Del Negro and Schorfheide (2013). A comparison of the MF-VAR and QF-
+VAR forecasts highlights how monthly information alters the within-quarter predictions.
+Notice that the QF-VAR forecasts do not stay constant within the quarter. The variation
+is caused by data revisions. As discussed in Section 3, each month new data releases for the
+previous quarter become available and change the lagged observations that determine the
+initial conditions for the VAR at the forecast origin. However, the within-quarter variation
+of the QF-VAR forecasts is fairly small.
+
+  By December 2008 the QF-VAR nowcasts and forecasts show still no evidence of a severe
+downturn, because the latest information that is used to generate the predictions stems from
+2008:Q3. The MF-VAR forecasts, on the other hand, do get revised more substantially
+during each quarter. In addition to the presence of data revisions, the forecasts are updated
+based on the information that is available at monthly frequency. Compared to the QF-VAR
+forecasts, the MF-VAR nowcasts during the fourth quarter of 2008 are a lot more pessimistic,
+which is in line with the actual realization of output growth. Over a one-year horizon the
+discrepancy between the MF-VAR and QF-VAR forecasts vanishes, which is consistent with
+the forecast error statistics presented in the previous section. According to both VARs the
+GDP growth forecasts are mean reverting. The models predict a GDP growth rate of about
+1% for the second half of 2009. This prediction turned out to be accurate.
+
+  The bottom panels of Figure 5 depict the evolution of inflation forecasts in the last quarter
+of 2008. Since the CPI is published at a monthly frequency, the differences between within-
+quarter inflation forecasts from the MF-VAR and QF-VAR are much more pronounced than
+for GDP. Throughout 2008:Q4 the inflation forecasts from the QF-VAR stay essentially
+constant and miss the -2% deflation rate in 2008:Q4. The MF-VAR, on the other hand,
+                                                                                                         25
+
+
+                   Figure 5: Real-Time Forecasts During the Great Recession
+
+                                 GDP-Growth Forecasts: MF-VAR
+
+
+
+
+                                 GDP-Growth Forecasts: QF-VAR
+
+
+
+
+                                    Inflation Forecasts: MF-VAR
+
+
+
+
+                                    Inflation Forecasts: QF-VAR
+
+
+
+
+Notes: Actual values are from the T∗ = 2012 : M 1 data vintage and are denoted as the black line with
+triangles. The title in each subplot indicates the forecast origin and the data vintage that are used in the
+estimation. We show the median, 60% bands, and 90% bands constructed from the predictive distribution.
+
+
+detects the deflation by November 2008 as it is unfolding. At the longer horizon, the MF-
+                                                                                                          26
+
+
+                   Figure 6: Monthly GDP Growth (Scaled to a Quarterly Rate)
+
+
+
+
+VAR correctly predicts that the deflation episode is short-lived and that inflation rate will,
+with about 50% probability, be positive by the end of 2009. To summarize, these real-time
+forecasts during the Great Recession illustrate that the MF-VAR can transform within-
+quarter monthly information into more accurate nowcasts and forecasts of quarterly averages.
+
+
+4.4        Monthly GDP
+
+The estimation of the MF-VAR generates a monthly GDP series as a by-product. This series
+is implicitly extracted during the smoothing step of the Gibbs sampler (see Section 2.2) from
+the eleven macroeconomic time series that enter the MF-VAR. A time series plot of monthly
+GDP growth is depicted in Figure 6. For each trajectory of log GDP generated with the Gibbs
+sampler, we compute month-on-month growth rates (scaled by a factor of 3 to make them
+comparable to quarter-on-quarter rates). For each month we then plot the median growth
+rate across the simulated trajectories. We overlay monthly GDP growth rates published
+by Stock and Watson (2010), who combine monthly information about GDP components
+to distribute quarterly GDP across the three months of the quarter.1 Moreover, we plot
+growth rates computed from NIPA’s quarterly GDP, implicitly assuming that GDP growth
+is constant within a quarter. Two observations stand out. First, at a monthly frequency GDP
+growth is much more volatile than at a quarterly level. Second, the monthly GDP growth
+series obtained from the MF-VAR estimation is somewhat smoother than the Stock-Watson
+   1
+       Frale, Marcellino, Mazzi, and Proietti (2011) use a similar approach to construct a monthly GDP series
+for the Euro Area.
+                                                                                         27
+
+
+series. While the two monthly measures are positively correlated, they are not perfectly
+synchronized, which is consistent with these measures being constructed from very different
+source data.
+
+
+
+5      Conclusion
+
+We have specified a VAR for observations that are observed at different frequencies, namely,
+monthly and quarterly. A Gibbs sampler was utilized to conduct Bayesian inference for
+model parameters and unobserved monthly variables. To cope with the dimensionality of
+the MF-VAR, we used a Minnesota prior that shrinks the VAR coefficients toward univariate
+random-walk representations. The degree of shrinkage is determined in a data-driven way,
+by maximizing the log MDD with respect to a low-dimensional vector of hyperparameters
+and we show how to approximate the MDD of a MF-VAR. Finally, we used the model to
+generate forecasts. The main finding is that within-quarter monthly information leads to
+drastic improvements in the short-horizon forecasting performance. These improvements are
+increasing in the time that has passed since the beginning of the quarter. Over a one- to
+two-year horizon there are, however, no noticeable gains from using the monthly information.
+
+
+
+References
+Aruoba, S. B., F. X. Diebold, and C. Scotti (2009): “Real-Time Measurement of
+    Business Conditions,” Journal of Business & Economics Statistics, 27(4), 417–427.
+
+Bai, J., E. Ghysels, and Wright (2013): “State Space Models and MIDAS Regressions,”
+    Econometric Reviews, 32(7), 779–813.
+
+Banbura, M., D. Giannone, and L. Reichlin (2010): “Large Bayesian VARs,” Journal
+    of Applied Econometrics, 25(1), 71–92.
+
+Carriero, A., T. E. Clark, and M. Marcellino (2011): “Bayesian VARs: Specifica-
+    tion Choices and Forecast Accuracy,” FRB Cleveland Working Paper 11-12.
+
+           (2012): “Real-Time Nowcasting with a Bayesian Mixed Frequency Model with
+    Stochastic Volatility,” FRB Cleveland Working Paper 12-27.
+                                                                                         28
+
+
+Carter, C. K., and R. Kohn (1994): “On Gibbs Sampling for State Space Models,”
+  Biometrika, 81(3), 541–553.
+
+Chauvet, M., and S. Potter (2013): “Forecasting Output,” in Handbook of Economic
+  Forecasting, ed. by G. Elliott, and A. Timmermann, vol. 2. Elsevier.
+
+Chiu, C. W. Eraker, B., A. Foerster, T. B. Kim, and H. Seoane (2012): “Esti-
+  mating VAR’s Sampled at Mixed or Irregular Spaced Frequencies: A Bayesian Approach,”
+  FRB Kansas City RWP 11-11.
+
+De Mol, C., D. Giannone, and L. Reichlin (2008): “Forecasting Using a Large Num-
+  ber of Predictors: Is Bayesian Shrinkage a Valid Alternative to Principal Components?,”
+  Journal of Econometrics, 146(2), 318–328.
+
+Del Negro, M., and F. Schorfheide (2004): “Priors from General Equilibrium Models
+  for VARs,” International Economic Review, 45(2), 643 – 673.
+
+Del Negro, M., and F. Schorfheide (2011): “Bayesian Macroeconometrics,” in The
+  Oxford Handbook of Bayesian Econometrics, ed. by J. Geweke, G. Koop, and H. van Dijk,
+  pp. 293–389. Oxford University Press.
+
+Del Negro, M., and F. Schorfheide (2013): “DSGE Model-Based Forecasting,” in
+  Handbook of Economic Forecasting, ed. by G. Elliott, and A. Timmermann, vol. 2. Elsevier.
+
+Doan, T., R. Litterman, and C. A. Sims (1984): “Forecasting and Conditional Pro-
+  jection Using Realistic Prior Distributions,” Econometric Reviews, 3(1), 1–100.
+
+Durbin, J., and S. J. Koopman (2001): Time Series Analysis by State Space Methods.
+  Oxford University Press.
+
+Faust, J., and J. Wright (2013): “Forecasting Inflation,” in Handbook of Economic
+  Forecasting, ed. by G. Elliott, and A. Timmermann, vol. 2. Elsevier.
+
+Foroni, C., M. Marcellino, and C. Schumacher (2013): “U-MIDAS: MIDAS Regres-
+  sions with Unrestricted Lag Polynomials,” Journal of the Royal Statistical Society, Series
+  A, Forthcoming.
+
+Frale, C., M. Marcellino, G. L. Mazzi, and T. Proietti (2011): “EUROMIND: A
+  Monthly Indicator of the Euro Area Economic Conditions,” Journal of the Royal Statistical
+  Society, Series A, 174(2), 439–470.
+                                                                                     29
+
+
+Geweke, J. (1999): “Using Simulation Methods for Bayesian Econometric Models: Infer-
+  ence, Development, and Communication,” Econometric Reviews, 18(1), 1–126.
+
+Ghysels, E. (2012): “Macroeconomics and the Reality of Mixed Frequency Data,”
+  Manuscript, University of North Carolina at Chapel Hill.
+
+Ghysels, E., A. Sinko, and R. Valkanov (2007): “MIDAS Regressions: Further Results
+  and New Directions,” Econometric Reviews, 26(1), 53–90.
+
+Giannone, D., M. Lenza, and G. Primiceri (2012): “Prior Selection for Vector Au-
+  toregressions,” NBER Working Paper w18467.
+
+Giannone, D., L. Reichlin, and D. Small (2008): “Nowcasting: The Real-Time In-
+  formational Content of Macroeconomic Data,” Journal of Monetary Economics, 55(4),
+  665–676.
+
+Giordani, P., M. K. Pitt, and R. Kohn (2011): “Bayesian Inference for Time Se-
+  ries State Space Models,” in The Oxford Handbook of Bayesian Econometrics, ed. by
+  J. Geweke, G. Koop, and H. K. van Dijk, pp. 61–124. Oxford University Press.
+
+Harvey, A. C. (1989): Forecasting, Structural Time Series Models, and the Kalman Filter.
+  Cambridge University Press.
+
+Karlsson, S. (2013): “Forecasting with Bayesian Vector Autoregressions,” in Handbook of
+  Economic Forecasting, ed. by G. Elliott, and A. Timmermann, vol. 2. Elsevier.
+
+Kuzin, V., M. Marcellino, and C. Schumacher (2011): “MIDAS vs. Mixed-Frequency
+  VAR: Nowcasting GDP in the Euro Area,” International Journal of Forecasting, 27(2),
+  529–542.
+
+Litterman, R. (1986): “Forecasting with Bayesian Vector Autoregressions - Five Years of
+  Experience,” Journal of Business & Economic Statistics, 4(1), 25–38.
+
+Litterman, R. B. (1980): “Techniques for Forecasting with Vector Autoregressions,”
+  Ph.D. thesis, University of Minnesota.
+
+Mariano, R. S., and Y. Murasawa (2003): “A New Coincident Index of Business Cycles
+  Based on Monthly and Quarterly Series,” Journal of Applied Econometrics, 18(4), 427–
+  443.
+                                                                                     30
+
+
+Phillips, P. C. B. (1996): “Econometric Model Determination,” Econometrica, 64(4),
+  763–812.
+
+Rodriguez, A., and G. Puggioni (2010): “Mixed Frequency Models: Bayesian Ap-
+  proaches to Estimation and Prediction,” International Journal of Forecasting, 26, 293–
+  311.
+
+Sims, C. A., and T. Zha (1998): “Bayesian Methods for Dynamic Multivariate Models,”
+  International Economic Review, 39(4), 949–968.
+
+Stock, J. H., and M. W. Watson (2010): “Monthly Estimates of Real GDP/GDI:
+  Research Memorandum,” Manuscript, Harvard University and Princeton University.
+
+Waggoner, D. F., and T. Zha (1999): “Conditional Forecasts in Dynamic Multivariate
+  Models,” Review of Economics and Statistics, 81(4), 639–651.
+Online Appendix                                                                                A-1
+
+
+                Online Appendix for
+ Real-Time Forecasting with a Mixed-Frequency VAR
+                        Frank Schorfheide and Dongho Song
+
+Section A of this appendix provides details of the implementation of the Bayesian computa-
+tions for the MF-VAR presented in the main text. Section B discusses the construction of
+the real-time data set. Finally, Section C of this appendix provides tables and figures with
+additional empirical results. References to equations, tables, and figures without an A, B,
+or C prefix refer to equations, tables, and figures in the main text.
+
+
+
+A       Implementation Details
+
+Recall from the exposition in the main text (see equation (9)) that the Bayesian computations
+are implemented with a Gibbs sampler that iterates over the conditional distributions
+
+                         p(Φ, Σ|Z0:T , Y−p+1:T ) and p(Z0:T |Φ, Σ, Y−p+1:T ).
+
+Conditional on Z0:T the MF-VAR reduces to a standard linear Gaussian VAR with a conju-
+gate prior. The reader is referred to Section 2 of the handbook chapter by Del Negro and
+Schorfheide (2011) for a detailed discussion of posterior inference for such a VAR.
+  We limit the exposition in this appendix to a brief presentation of the Minnesota prior and
+the hyperparameter selection (Section A.1). The sampling from the conditional posterior
+of Z0:T |(Φ, Σ, Y−p+1:T ) is implemented with a standard simulation smoother, discussed in
+detail, for instance, in Carter and Kohn (1994), the state-space model textbook of Durbin
+and Koopman (2001), or the handbook chapter by Giordani, Pitt, and Kohn (2011). The
+only two aspects of our implementation that deserve further discussion are the initialization
+(Section A.2) and the use of the more compact state-space representation for periods t =
+1, . . . , Tb (Section A.3).
+
+
+A.1      Minnesota Prior and Its Hyperparameters
+
+To simplify the exposition, suppose that n = 2 and p = 2. A transposed version of (1) can
+be written as
+
+                     x0t = [x0t−1 , x0t−2 , 1]0 Φ + u0t = wt0 Φ + u0t ,   ut ∼ iidN (0, Σ).   (A-1)
+Online Appendix                                                                                 A-2
+
+
+We generate the Minnesota prior by dummy observations (x∗ , w∗ ) that are indexed by a 5×1
+vector of hyperparameters λ with elements λi . Using a pre-sample, let x and s be n × 1
+vectors of means and standard deviations. For time series that are observed at monthly
+frequency, the computation of pre-sample moments is straightforward. In order to obtain
+pre-sample means and standard deviations for those series that are observed at quarterly
+frequency, we simply equate xq with the pre-sample mean of the observed quarterly values
+and set s equal to the pre-sample standard deviation of the observed quarterly series.
+
+Dummy Observations for Φ1 .
+         "              # "                   #    "         #
+            λ1 s1  0        λ1 s1  0    0 0 0        u11 u12
+                         =                      Φ+             .                              (A-2)
+             0    λ1 s2      0    λ1 s2 0 0 0        u21 u22
+
+We can rewrite the first row of (A-2) as
+
+                           λ1 s1 = λ1 s1 φ11 + u11 ,       0 = λ1 s1 φ21 + u12 .
+
+Since, according to (A-1) the ut ’s are normally distributed, we can interpret the relationships
+as
+                      φ11 ∼ N (1, Σ11 /(λ21 s21 )),      φ21 ∼ N (0, Σ22 /(λ21 , s21 )).
+
+where φij denotes the element i, j of the matrix Φ, and Σij corresponds to element i, j of Σ.
+The hyperparameter λ1 controls the tightness of the prior.
+
+Dummy Observations for Φ2 .
+               "      # "                             #
+                 0 0        0 0 λ1 s1 2λ2     0     0
+                       =                                Φ + U,                                (A-3)
+                 0 0        0 0     0     λ1 s2 2λ2 0
+
+where the hyperparameter λ2 is used to scale the prior standard deviations for coefficients
+associated with xt−l according to l−λ2 .
+
+Dummy Observations for Σ. A prior for the covariance matrix Σ, centered at a matrix
+that is diagonal with elements equal to the pre-sample variance of xt , is obtained by stacking
+the observations             "             #       "                  #
+                                 s1   0                0 0 0 0 0
+                                               =                          Φ+U                 (A-4)
+                                 0    s2               0 0 0 0 0
+λ3 times.
+
+Sums-of-Coefficients Dummy Observations. When lagged values of a variable xi,t are
+at the level xi , the same value xi is a priori likely to be a good forecast of xi,t , regardless of
+Online Appendix                                                                                               A-3
+
+
+the value of other variables:
+                 "                    #       "                                                 #
+                    λ4 x1    0                      λ4 x1       0         λ4 x1       0     0
+                                          =                                                         Φ + U.   (A-5)
+                        0     λ4 x2                  0         λ4 x2       0         λ4 x2 0
+
+Co-persistence Dummy Observations. When all lagged xt ’s are at the level x, a priori
+xt tends to persist at that level:
+                  h              i h                        i
+                    λ5 x1 λ5 x2 = λ5 x1 λ5 x2 λ5 x1 λ5 x2 λ5 Φ + U.                                          (A-6)
+
+
+Prior Distribution. After collecting the T ∗ dummy observations in matrices X ∗ and W ∗ ,
+the likelihood function associated with (A-1) can be used to relate the dummy observa-
+tions to the parameters Φ and Σ. If we combine the likelihood function with the improper
+prior p(Φ, Σ) ∝ |Σ|−(n+1)/2 , we can deduce that the product p(X ∗ |Φ, Σ) · |Σ|−(n+1)/2 can be
+interpreted as
+                                                                    0
+                            (Φ, Σ) ∼ M N IW (Φ, (W ∗ W ∗ )−1 , S, T ∗ − k),                                  (A-7)
+
+where Φ and S are
+
+                  Φ = (W ∗0 W ∗ )−1 W ∗0 W ∗ ,              S = (X ∗ − W ∗ Φ)0 (X ∗ − W ∗ Φ).
+                                          0
+Provided that T ∗ > k + n and W ∗ W ∗ is invertible, the prior distribution is proper.
+
+Hyperparameter Grid Search for MF-VAR: For the first recursive sample the grid
+search proceeds in three steps. Define:
+
+                  (1)        
+                 Λ1     =        0.01, 1.12, 2.23, 3.34, 4.45, 5.56, 6.67, 7.78, 8.89, 10
+                  (1)        
+                 Λ2     =   0.01, 1.12, 2.23, 3.34, 4.45, 5.56, 6.67, 7.78, 8.89, 10
+                  (1)     
+                 Λ3     = 1
+                  (1)     
+                 Λ4     = 2.23, 2, 7, 3.34, 4.3, 4.45, 5.56
+                  (1)     
+                 Λ5     = 2.23, 2, 7, 3.34, 4.3, 4.45, 5.56
+
+The first grid is given by
+
+                                              (1)        (1)        (1)        (1)        (1)
+                                 Λ(1) = Λ1 ⊗ Λ2 ⊗ Λ3 ⊗ Λ4 ⊗ Λ5 ,
+
+where ⊗ denote the Cartesian product. Thus, we are fixing λ3 = 1 throughout. We maximize
+ln p̂(Y1:T |Y−p+1:0,λ ) with respect to λ ∈ Λ(1) . By construction λ̂3 = 1. We retain the argmax
+values λ̂4 = 2.7 and λ̂5 = 4.3.
+Online Appendix                                                                             A-4
+
+
+  In the second step we refine the grids for λ1 and λ2 as follows:
+
+                       (2)        
+                     Λ1      =        0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15
+                       (2)        
+                     Λ2      =        0.8, 1.3, 2.1, 2.8, 3.5, 4.3, 4.8, 5.2 .
+
+                                                                (2)     (2)
+Maximization of the MDD with respect to Λ(2) = Λ1 ⊗ Λ2 ⊗ {1.0} ⊗ {2.70} ⊗ {4.30} yields
+λ̂ for the first recursive sample.
+
+  In the third step we reoptimize the choice of λ1 and λ2 for recursive samples 40, 75, 110,
+and 151. In this step we use the following grids for λ1 and λ2 :
+
+                                  (3)        
+                                 Λ1      =       0.05, 0.07, 0.09, 0.11, 0.13
+                                  (3)        
+                                 Λ2      =       2.1, 2.8, 3.5, 4.3, 4.8 .
+
+
+  Hyperparameter Grid Search for QF-VAR: For the QF-VAR we are also fixing
+λ3 = 1. The grids for λ1 and λ2 are given by the 40 equally-spaced points on the interval
+[0.01, 10]. The grids for λ4 and λ5 are given by the 40 equally-spaced points on the interval
+[0.1, 10].
+
+
+A.2      Initial Distribution p(z0 |Y−p+1:0 )
+
+Recall that t = 1 corresponds to 1968:M1. Let T− = −11 such that t = T− corresponds
+to 1967:M1. We then initialize zT− using actual observations. This is straightforward for
+xm,T− , xm,T− −1 , xm,T− −p because they are observed. We set xq,T− , xq,T− −1 , xq,T− −p equal
+to the observed quarterly values, assuming that during these periods the monthly within-
+quarter values simply equal the observed averages during the quarter. This provides us
+with a distribution for p(zT− ) that is simply a point mass. We then set Φ and Σ equal to
+their respective prior means and apply the Kalman filter for t = T− + 1, . . . , 0 to the state-
+space system described in (2) and (7), updating the beliefs about the latent state zt with
+pre-sample observations YT− :0 . In slight abuse of notation, we denote the distribution of zt
+obtained after the period 0 updating by p(z0 |Y−p+1 ). Note that this distribution does not
+depend on the “unknown” parameters Φ and Σ, because the Kalman filter iterations were
+implemented based on the prior means of these matrices.
+Online Appendix                                                                                A-5
+
+
+A.3     Compact State-Space Representation
+
+As discussed in the main text, the computational efficiency of the simulation-smoother step
+in the Gibbs sampler can be improved by eliminating, for t = 1, . . . , Tb , the monthly ob-
+servations xm,t from the state vector zt that appears in the measurement equation (7). We
+begin by re-ordering the lags of xt and the VAR coefficients in (1) to separate lags of xm,t
+from lags of xq,t . Define the pnm × 1 vector zm,t and pnq × 1 vector zq,t as
+
+                    0
+                        = x0m,t , . . . , x0m,t−p+1 ,    0
+                                                             = x0q,t , . . . , x0q,t−p+1 .
+                                                                                     
+                   zm,t                                 zq,t
+
+In a similar manner, define the nm ×pnm matrix Φmm , the nm ×pnq matrix Φmq , the nq ×pnm
+matrix Φqm , and the nq × pnq matrix Φqq such that (1) can be rewritten as
+              "      # "               #"          # "        # "          #
+                xm,t        Φmm Φmq         zm,t−1       Φmc         um,t
+                       =                             +          +            .                (A-8)
+                xq,t        Φqm Φqq         zq,t−1       Φqc         uq,t
+
+Recall that for t ≤ Tb , all the monthly series are observed. Thus, ym,t = xm,t and, in slight
+                                                                   0
+abuse of notation, zm,t−1 = ym,t−p:t−1 . Now define st = [x0q,t , zq,t−1 ]0 and notice that based
+on the second equation in (A-8), one can define matrices Γs , Γzm , Γc , and Γu such that we
+obtain a state-transition equation in companion form
+
+                           st = Γs st−1 + Γzm ym,t−p:t−1 + Γc + Γu uq,t .                     (A-9)
+
+The measurement equation for the monthly series takes the form
+
+                          ym,t = Λms st + Φmm ym,t−p:t−1 + Φmc + um,t .                      (A-10)
+
+Finally, the measurement equation for the quarterly series can be expressed as
+
+                                           yq,t = Mq,t Λqs st ,                              (A-11)
+
+where the matrix Λqs st averages xq,t , xq,t−1 , and xq,t−2 and Mq,t is a time-varying selection
+matrix that selects the elements of Λqs st that are observed in period t. In sum, (A-9),
+(A-10), and (A-11) provide an alternative state-space representation of the MF-VAR that
+reduces the dimension of the state vector from np to nq (p + 1). In this alternative repre-
+sentation, the “measurement errors” um,t in (A-10) are correlated with the innovations uq,t
+in the state-transition equation (A-9). Moreover, the lagged observables ym,t−p:t−1 directly
+enter the state-transition and measurement equations. Since these observables are part of
+the t − 1 information, the modification of the Kalman filter and simulation smoother is
+straightforward.
+Online Appendix                                                                                                       A-6
+
+
+   At the end of period t = Tb , we switch from the state-space representation in terms of st =
+[x0q,t , . . . , x0q,t−p ]0   to a state-space representation in terms of z̃t = [zt0 , x0t−p ] = [x0t , . . . , x0t−p ]0 .2
+                                                                            s
+In the forward pass of the Kalman filter, let ŝt|t = E[st |Y−p+1:t ] and Pt|t = V[st |Y−p+1:t ]
+(omitting (Φ, Σ) from the conditioning set). Since xm,t , . . . , xm,t−p+1 is known conditional on
+the Y−p+1:t , we can easily obtain z̃ˆt|t = E[z̃t |Y−p+1:t ] by augmenting ŝt|t with ym,t , . . . , ym,t−p .
+            z̃                                                    s
+Moreover, Pt|t = V[z̃t |Y−p+1:t ] can be obtained by augmenting Pt|t by zeros, to reflect that
+xm,t , . . . , xm,t−p are known with certainty. In the backward pass of the simulation smoother
+we start out with a sequence of draws from z̃T |Y−p+1:T and z̃t |(Z̃t+1:T , Y−p+1:T ) for t = T −
+1, . . . , Tb +1. Let z̃ˆt|T and P z̃ denote the mean and variance associated with this distribution.
+                                          t|T
+At t = Tb we convert the conditional mean and variance of z̃Tb into a conditional mean and
+variance for sTb . This is done by eliminating all elements associated with xm,t , . . . , xm,t−p .
+
+
+
+B          Construction of Real-Time Data Set
+
+The eleven real-time macroeconomic data series are obtained from the ALFRED database
+maintained by the Federal Reserve Bank of St. Louis. Table B-1 summarizes how the series
+used in this paper are linked to the series provided by ALFRED.
+
+   We construct two sequences of dates that contain the set of forecast origins (Tmin , . . . , Tmax ).
+One sequence contains the last day of each month, and the other sequence will comprise the
+Greenbook forecast dates. ALFRED provides a publication date for each data vintage. We
+wrote a computer program that selects for every forecast origin, the most recent ALFRED
+vintage for each of the eleven variables and combines the series into a single data set. This
+leaves us with a real-time data set for each forecast origin. Based on the missing values in
+each real-time data set, we construct the selection matrices Mt , t = Tb + 1, . . . , T , that ap-
+pear in (7). The patterns of missing values are summarized in Tables 1 and B-2. Greenbook
+forecasts are also obtained from the ALFRED database.
+
+   Some of the vintages of PCE and INVFIX extracted from ALFRED were incomplete. The
+recent vintages of PCE and INVFIX from ALFRED do not include data prior to 1990 or
+1995 (depending on the vintages). However, the most recent data for PCE and INVFIX can
+be obtained from BEA or NIPA, say, from 1/1/1967 to 1/1/2012. Let us consider PCE for
+    2
+        We augment the state vector zt in (2) and (7) by an additional lag of xt to ensure that st is a sub-
+vector of the resulting z̃t . This augmentation requires a straightforward modification of the state-transition
+equation (2) and the measurement equations (7).
+Online Appendix                                                                          A-7
+
+
+                       Table B-1: ALFRED Series Used in Analysis
+
+               Time Series                                   ALFRED Name
+
+               Gross Domestic Product (GDP)                  GDPC1
+               Fixed Investment (INVFIX)                     FPIC1
+               Government Expenditures (GOV)                 GCEC1
+               Unemployment Rate (UNR)                       UNRATE
+               Hours Worked (HRS)                            AWHI
+               Consumer Price Index (CPI)                    CPIAUCSL
+               Industrial Production Index (IP)              INDPRO
+               Personal Consumption Expenditure (PCE)        PCEC96
+               Federal Fund Rate (FF)                        FEDFUNDS
+               Treasury Bond Yield (TB)                      GS10
+               S&P 500 (SP500)                               SP500
+
+
+
+illustration. For the vintages between 12/10/2003 and 6/25/2009, data start from 1/1/1990,
+and for the vintages between 7/31/2009 and the present, data start from 1/1/1995. First, we
+compute the growth rates from the most recent data. Based on the computed growth rates,
+we can backcast historical series up to 1/1/1967 using the 1/1/1990 (1/1/1995) data points
+as initializations. We think this is a reasonable way to construct the missing points. We
+eliminated 4 of the 151 samples (28, 29, 33, 145) because the vintages for PCE and INVFIX
+were incomplete. In principle, we could backcast as for the other vintages, but we took a
+shortcut.
+
+  Table B-2 lists exceptions for the classification of information sets for specific forecast
+origins.
+Online Appendix                                                                                             A-8
+
+
+
+
+                       Table B-2: Illustration of Information Sets: Exceptions
+
+                                Exceptions E0 : January (+0 Months)
+                UNR       HRS     CPI     IP   PCE      FF     TB    SP500      GDP      INVFIX       GOV
+
+  Q4    M10        X       X       X      X      X       X      X       X       QAv        QAv        QAv
+  Q4    M11        X       X       X      X      X       X      X       X       QAv        QAv        QAv
+  Q4    M12        X       X       X      X       ∅      X      X       X       QAv        QAv        QAv
+  Q1    M1         ∅        ∅       ∅     ∅       ∅      X      X       X         ∅          ∅          ∅
+
+
+                                Exceptions E1 : February (+1 Month)
+
+                UNR       HRS     CPI     IP   PCE      FF     TB    SP500      GDP      INVFIX       GOV
+
+  Q4    M11        X       X       X      X      X       X      X       X       QAv        QAv        QAv
+  Q4    M12        X       X       X      X      X       X      X       X       QAv        QAv        QAv
+  Q1    M1         X       X       X      X       ∅      X      X       X         ∅          ∅          ∅
+  Q1    M2         ∅        ∅       ∅     ∅       ∅      X      X       X         ∅          ∅          ∅
+
+
+                                 Exceptions E2 : March (+2 Months)
+
+                UNR       HRS     CPI     IP   PCE      FF     TB    SP500      GDP      INVFIX       GOV
+  Q4    M12        X       X       X      X      X       X      X       X       QAv        QAv        QAv
+  Q1    M1         X       X       X      X      X       X      X       X         ∅          ∅          ∅
+  Q1    M2         X       X       X      X       ∅      X      X       X         ∅          ∅          ∅
+  Q1    M3         ∅        ∅       ∅     ∅       ∅      X      X       X         ∅          ∅          ∅
+
+Notes: ∅ indicates that the variable is missing. X denotes monthly observation and QAv denotes quarterly
+average. “+0 months” group: January, April, July, October; “+1 month” group: February, May, August,
+November; “+2 month” group: March, June, September, December. The table illustrates exceptions that
+arise due to an occasional two-month publication lag for PCE. Exception E0 occurs for 28 out of 151 recursive
+samples (1, 4, 7, 10, 13, 16, 19, 22, 28, 37, 43, 52, 61, 64, 73, 79, 85, 88, 97, 106, 109, 115, 124, 130, 133,
+139, 145, 151). Exception E1 occurs for 14 out of 151 recursive samples (8, 20, 44, 53, 56, 68, 80, 89, 98,
+101, 104, 116, 119, 140). Exception E2 occurs for 5 out of 151 recursive samples (21, 27, 48, 51, 78).
+Online Appendix                                                                           A-9
+
+
+C        Additional Empirical Results
+
+C.1      11-Variable VAR, End-of-Month Forecasts
+
+Table C-1 provides numerical values for the RMSEs attained by the eleven-variable MF-VAR.
+
+Figure C-1 compares the 11-variable MF-VAR forecasts to quarterly-frequency AR(2) fore-
+casts.
+
+Figure C-2 depicts recursive means of h = 1 and h = 8 step-ahead mean forecasts (setting
+future shocks equal to zero). Each hairline corresponds to a separate run of our MCMC
+algorithm. In each run, we generate 20,000 draws and discard the first 10,000 draws. We
+plot Monte Carlo averages based on the subsequent 500, 1,000, 1,500, . . ., 10,000 draws.
+The units on the y-axis are percentages. With the exception of the eight-quarter-ahead
+federal funds rate forecast, the Monte Carlo variation is below one basis point and negligible
+compare to the overall forecast error.
+Online Appendix                                                                                   A-10
+
+
+
+
+                         Table C-1: RMSEs for 11-Variable MF-VAR
+
+      Horizon   UNR    HRS    CPI    IP     PCE    FF       TB     SP500   GDP    INVFIX   GOV
+                                             +0 Months
+      1         0.21   0.50   0.57   0.99   0.55   0.21     0.17   3.05    0.57    1.73    0.80
+      2         0.47   0.80   0.61   1.45   0.69   0.69     0.43   7.93    0.79    2.45    0.75
+      3         0.80   0.98   0.64   1.71   0.74   1.10     0.61   8.04    0.86    2.86    0.74
+      4         1.12   1.01   0.62   1.72   0.72   1.45     0.70   7.97    0.88    2.85    0.77
+      5         1.40   0.96   0.64   1.66   0.69   1.78     0.79   7.72    0.86    2.77    0.78
+      6         1.63   0.91   0.64   1.59   0.68   2.08     0.86   7.72    0.83    2.66    0.74
+      7         1.84   0.87   0.63   1.56   0.65   2.31     0.89   7.98    0.79    2.54    0.69
+      8         2.00   0.85   0.63   1.54   0.64   2.50     0.94   7.82    0.79    2.59    0.79
+                                             +1 Month
+      1         0.15   0.39   0.33   0.98   0.49   0.07     0.08   1.24    0.57    1.53    0.81
+      2         0.44   0.79   0.62   1.44   0.71   0.55     0.34   7.97    0.79    2.39    0.75
+      3         0.75   0.97   0.64   1.71   0.75   0.93     0.53   7.98    0.86    2.86    0.75
+      4         1.07   1.01   0.62   1.72   0.73   1.29     0.63   7.98    0.88    2.87    0.75
+      5         1.36   0.98   0.63   1.69   0.70   1.64     0.74   7.77    0.86    2.79    0.72
+      6         1.61   0.93   0.62   1.61   0.67   1.95     0.80   7.75    0.83    2.70    0.75
+      7         1.81   0.88   0.64   1.59   0.66   2.20     0.82   7.84    0.82    2.59    0.74
+      8         1.98   0.86   0.63   1.56   0.66   2.40     0.86   7.84    0.80    2.59    0.77
+                                             +2 Months
+      1         0.08   0.30   0.20   0.73   0.38   0.00     0.00   0.00    0.50    1.41    0.81
+      2         0.30   0.60   0.60   1.15   0.67   0.39     0.38   7.05    0.68    2.06    0.77
+      3         0.59   0.90   0.62   1.63   0.75   0.76     0.61   8.02    0.84    2.77    0.76
+      4         0.92   1.01   0.62   1.72   0.74   1.12     0.72   7.84    0.89    2.89    0.76
+      5         1.23   0.99   0.62   1.67   0.70   1.50     0.81   7.79    0.86    2.82    0.71
+      6         1.50   0.93   0.63   1.60   0.68   1.81     0.90   7.84    0.85    2.72    0.74
+      7         1.72   0.89   0.64   1.58   0.66   2.08     0.87   7.74    0.82    2.63    0.77
+      8         1.90   0.86   0.62   1.58   0.65   2.27     0.87   7.94    0.81    2.57    0.76
+                                            All Forecasts
+      1         0.16   0.40   0.40   0.91   0.48   0.13     0.11   1.90    0.55    1.56    0.81
+      2         0.41   0.74   0.61   1.35   0.69   0.56     0.39   7.67    0.75    2.31    0.76
+      3         0.72   0.95   0.63   1.68   0.75   0.94     0.59   8.01    0.85    2.83    0.75
+      4         1.04   1.01   0.62   1.72   0.73   1.30     0.68   7.93    0.88    2.87    0.76
+      5         1.33   0.98   0.63   1.67   0.70   1.65     0.78   7.76    0.86    2.79    0.74
+      6         1.58   0.92   0.63   1.60   0.68   1.95     0.86   7.77    0.84    2.69    0.74
+      7         1.79   0.88   0.64   1.57   0.66   2.20     0.86   7.85    0.81    2.59    0.73
+      8         1.96   0.86   0.63   1.56   0.65   2.39     0.89   7.87    0.80    2.58    0.77
+
+Notes: RMSEs for UNR (%), FF (annualized %), and TB (annualized %) refer to forecasts of levels. The
+remaining RMSEs refer to forecasts of quarter-on-quarter growth rates in percentages.
+Online Appendix                                                                                                                            A-11
+
+
+
+
+                               Figure C-1: Relative RMSEs of MF-VAR versus QF-AR2
+
+                                GDP Growth                                                                  Unemployment Rate
+                                                                                              20
+                 10
+                                                                                               0
+Relative RMSE
+
+
+
+
+                                                                             Relative RMSE
+                  0
+                                                                                             −20
+                −10
+                                                                                             −40
+                −20
+                                                      +0 Months                              −60                                     +0 Months
+                                                      +1 Months                                                                      +1 Months
+                −30                                   +2 Months                                                                      +2 Months
+                                                                                             −80
+                  1    2   3      4       5       6     7         8                             1   2   3       4       5        6     7         8
+                               Forecast Horizon                                                              Forecast Horizon
+
+                                   Inﬂation                                                                 Federal Funds Rate
+                  0                                                                            0
+                −10
+                                                                                             −20
+Relative RMSE
+
+
+
+
+                                                                      Relative RMSE
+
+
+
+
+                −20
+                −30                                                                          −40
+                −40
+                                                                                             −60
+                −50
+                                                      +0 Months                              −80                                     +0 Months
+                −60                                   +1 Months                                                                      +1 Months
+                −70                                   +2 Months                                                                      +2 Months
+                                                                                      −100
+                   1   2   3      4       5       6     7         8                       1         2   3       4       5        6     7         8
+                               Forecast Horizon                                                              Forecast Horizon
+Online Appendix                                                                                      A-12
+
+
+                                        Figure C-2: Convergence
+
+                                               Horizon 1
+                    GDP Growth                                           Unemployment Rate
+ 0.05                                                   0.05
+
+
+
+
+    0                                                       0
+
+
+
+
+−0.05                                                  −0.05
+    0.5k    2.5k       5k        7.5k         10k          0.5k   2.5k         5k             7.5k     10k
+
+
+                      Inﬂation                                           Federal Funds Rate
+ 0.05                                                   0.05
+
+
+
+
+    0                                                       0
+
+
+
+
+−0.05                                                  −0.05
+    0.5k    2.5k       5k        7.5k         10k          0.5k   2.5k         5k             7.5k     10k
+
+
+                                               Horizon 8
+                    GDP Growth                                           Unemployment Rate
+ 0.05                                                   0.05
+
+
+
+
+    0                                                       0
+
+
+
+
+−0.05                                                  −0.05
+    0.5k    2.5k       5k        7.5k         10k          0.5k   2.5k         5k             7.5k     10k
+
+
+                      Inﬂation                                           Federal Funds Rate
+ 0.05                                                      0.1
+
+
+                                                        0.05
+
+
+    0                                                       0
+
+
+                                                       −0.05
+
+
+−0.05                                                   −0.1
+    0.5k    2.5k       5k        7.5k         10k         0.5k    2.5k         5k             7.5k     10k
+
+
+
+Notes: The figure depicts recursive means of h = 1 and h = 8 step-ahead mean forecasts (setting future
+shocks equal to zero). Each hairline corresponds to a separate run of our MCMC algorithm. In each run,
+we generate 20,000 draws and discard the first 10,000 draws. We plot Monte Carlo averages based on the
+subsequent 500, 1,000, 1,500, . . ., 10,000 draws. The units on the y-axis are percentages.
+Online Appendix                                                                                                                         A-13
+
+
+                            Figure C-3: Relative RMSEs of 4-Variable MF-VAR versus QF-VAR
+
+                                    GDP Growth                                                           Unemployment Rate
+                                                                                            0
+                   0                                                                      −10
+ Relative RMSE
+
+
+
+
+                                                                          Relative RMSE
+                                                                                          −20
+                                                                                          −30
+                 −5
+                                                                                          −40
+                                                                                          −50
+                                                          +0 Months                                                               +0 Months
+                 −10                                      +1 Months                       −60                                     +1 Months
+                                                          +2 Months                                                               +2 Months
+                                                                                          −70
+                   1    2      3      4       5       6     7         8                      1   2   3       4       5        6     7         8
+                                   Forecast Horizon                                                       Forecast Horizon
+
+                                       Inﬂation                                                          Federal Funds Rate
+                                                                                            0
+
+                   0
+                                                                                          −20
+
+
+
+
+                                                                          Relative RMSE
+ Relative RMSE
+
+
+
+
+                 −20                                                                      −40
+
+                                                                                          −60
+                 −40
+                                                          +0 Months                       −80                                     +0 Months
+                 −60                                      +1 Months                                                               +1 Months
+                                                          +2 Months                                                               +2 Months
+                   1    2      3      4       5       6     7         8                     1    2   3       4       5        6     7         8
+                                   Forecast Horizon                                                       Forecast Horizon
+
+
+
+
+C.2                    RMSEs for 4-Variable MF VAR
+
+We also consider a four-variable MF-VAR based on one quarterly series and three monthly
+series. The three monthly series are the Consumer Price Index (CPI), Unemployment Rate
+(UNR), and Federal Funds Rate (FF). The quarterly series is Real GDP. Real GDP and CPI
+enter the MF-VAR in log levels, whereas UNR and FF are simply divided by 100 to make
+their scale comparable to the scale of the two other variables. As for the eleven-variable
+VAR, the number of lags is set to six.
+
+         Figure C-3 reports RMSE ratios for the four-variable MF-VAR versus a four-variable QF-
+VAR using the end-of-month sample. The results are qualitatively similar to the ones re-
+ported in Figure 2. In general, the within-quarter monthly information of the MF-VAR
+increases the forecast accuracy compared to the QF-VAR. However, for GDP growth and
+the federal funds rate, these improvements are not as long-lived as in the eleven-variable
+setting.
+Online Appendix                                                                           A-14
+
+
+C.3     11-Variable MF-VAR End-of-Month Density Forecasts
+
+The MF-VAR generates an entire predictive distribution for the future trajectories of the
+eleven macroeconomic variables.     While, strictly speaking, predictive distributions in a
+Bayesian framework are subjective, it is desirable that predicted probabilities are consis-
+tent with observed frequencies if the forecast procedure is applied in a sequential setting.
+To assess the MF-VAR density forecasts, we construct probability integral transformations
+(PITs) from (univariate) marginal predictive densities. The probability integral transforma-
+tion of an h-step ahead forecast of yi,t+h based on time t information is defined as
+                                      Z yi,t+h
+                             zi,h,t =            yi,t+h |Y1:t )de
+                                               p(e              yi,t+h .                (A-12)
+                                       −∞
+
+PITs, sometimes known as generalized residuals, are relatively easy to compute and facili-
+tate comparisons among elements of a sequence of predictive distributions, each of which is
+distinct in that it conditions on the information available at the time of the prediction. For
+h = 1 the zi,h,t ’s are independent across time and uniformly distributed: zi,h,t ∼ iidU[0, 1].
+For h > 1 the PITs remain uniformly distributed but are no longer independently distributed.
+
+  Figure C-4 displays histograms for the PITs based on density forecasts from the MF-
+VAR and the QF-VAR using the end-of-month sample. The PITs are computed from the
+empirical distribution of the simulated trajectories YT +1:T +H . To generate the histogram
+plots, the unit interval is divided into J = 5 equally sized subintervals, and we depict the
+fraction of PITs (measured in percent) that fall in each bin. Since, under the predictive
+distribution, the PITs are uniformly distributed on the unit interval, we also plot the 20%
+line. For h = 1 (nowcast) and h = 2 (forecast for next quarter) the frequency of MF-VAR
+PITs falling in each of the five bins is close to 20% for inflation, unemployment, and output
+growth, indicating that the predictive densities are well calibrated. The federal funds rate
+density forecasts, on the other hand, appear to be too diffuse, because of the small number
+of PITs falling into the 0-0.2 and 0.8-1 bins. Over longer horizons, specifically for h = 4 and
+h = 8, the deviations from uniformity become more pronounced for all the series. The federal
+funds rate density forecasts remain too diffuse, and the MF-VAR tends to overpredict GDP
+growth and underpredict unemployment. For the QF-VAR the deviations from uniformity
+generally tend to be larger than for the MF-VAR forecasts.
+Online Appendix                                                                                                                                                                                                     A-15
+
+
+
+
+                                                       Figure C-4: PIT Histograms for 11-Variable VARs
+                                                                                                               MF-VAR
+         100                                                            100                                                         100                                                 100
+1-step
+
+
+
+
+                                                               1-step
+
+
+
+
+                                                                                                                         1-step
+
+
+
+
+                                                                                                                                                                               1-step
+             50                                                            50                                                        50                                                  50
+
+
+
+              0                                                             0                                                         0                                                   0
+                  0       0.2    0.4     0.6    0.8    1                        0       0.2    0.4     0.6    0.8    1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                   INF                                                           UNR                                                      FF                                              GDP
+         100                                                            100                                                         100                                                 100
+2-step
+
+
+
+
+                                                               2-step
+
+
+
+
+                                                                                                                         2-step
+
+
+
+
+                                                                                                                                                                               2-step
+             50                                                            50                                                        50                                                  50
+
+
+
+              0                                                             0                                                         0                                                   0
+                  0       0.2    0.4     0.6    0.8    1                        0       0.2    0.4     0.6    0.8    1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                   INF                                                           UNR                                                      FF                                              GDP
+         100                                                            100                                                         100                                                 100
+4-step
+
+
+
+
+                                                               4-step
+
+
+
+
+                                                                                                                         4-step
+
+
+
+
+                                                                                                                                                                               4-step
+             50                                                            50                                                        50                                                  50
+
+
+
+              0                                                             0                                                         0                                                   0
+                  0       0.2    0.4     0.6    0.8    1                        0       0.2    0.4     0.6    0.8    1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                   INF                                                           UNR                                                      FF                                              GDP
+         100                                                            100                                                         100                                                 100
+8-step
+
+
+
+
+                                                               8-step
+
+
+
+
+                                                                                                                         8-step
+
+
+
+
+                                                                                                                                                                               8-step
+             50                                                            50                                                        50                                                  50
+
+
+
+              0                                                             0                                                         0                                                   0
+                  0       0.2    0.4     0.6    0.8    1                        0       0.2    0.4     0.6    0.8    1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                   INF                                                           UNR                                                      FF                                              GDP
+
+                                                                                                                QF-VAR
+             100                                                           100                                                      100                                                 100
+    1-step
+
+
+
+
+                                                                  1-step
+
+
+
+
+                                                                                                                           1-step
+
+
+
+
+                                                                                                                                                                               1-step
+              50                                                            50                                                       50                                                  50
+
+
+
+                  0                                                             0                                                     0                                                   0
+                      0    0.2    0.4     0.6    0.8       1                        0    0.2    0.4     0.6    0.8   1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                       INF                                                           UNR                                                  FF                                              GDP
+             100                                                           100                                                      100                                                 100
+    2-step
+
+
+
+
+                                                                  2-step
+
+
+
+
+                                                                                                                           2-step
+
+
+
+
+                                                                                                                                                                               2-step
+
+
+
+
+              50                                                            50                                                       50                                                  50
+
+
+
+                  0                                                             0                                                     0                                                   0
+                      0    0.2    0.4     0.6    0.8       1                        0    0.2    0.4     0.6    0.8   1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                       INF                                                           UNR                                                  FF                                              GDP
+             100                                                           100                                                      100                                                 100
+    4-step
+
+
+
+
+                                                                  4-step
+
+
+
+
+                                                                                                                           4-step
+
+
+
+
+                                                                                                                                                                               4-step
+
+
+
+
+              50                                                            50                                                       50                                                  50
+
+
+
+                  0                                                             0                                                     0                                                   0
+                      0    0.2    0.4     0.6    0.8       1                        0    0.2    0.4     0.6    0.8   1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                       INF                                                           UNR                                                  FF                                              GDP
+             100                                                           100                                                      100                                                 100
+    8-step
+
+
+
+
+                                                                  8-step
+
+
+
+
+                                                                                                                           8-step
+
+
+
+
+                                                                                                                                                                               8-step
+
+
+
+
+              50                                                            50                                                       50                                                  50
+
+
+
+                  0                                                             0                                                     0                                                   0
+                      0    0.2    0.4     0.6    0.8       1                        0    0.2    0.4     0.6    0.8   1                    0   0.2   0.4        0.6   0.8   1                  0   0.2   0.4   0.6   0.8   1
+                                       INF                                                           UNR                                                  FF                                              GDP
+
+
+Notes: Probability integral transformations for forecasts of inflation (INF), unemployment rate (UNR),
+federal funds rate (FF), and GDP growth (GDP). The bars represent the frequency of PITs falling in each
+bin. The solid line marks 20%.
+Online Appendix                                                                            A-16
+
+
+C.4     11-Variable MF-VAR Forecasts: Comparison with Green-
+        book Forecasts
+
+Data Set. We compare the MF-VAR forecasts to Greenbook forecasts, prepared by the
+staff of the Board of Governors for the FOMC meetings. Greenbook forecasts are publicly
+available with a five-year delay. The FOMC holds eight regularly scheduled meetings during
+the year and additional meetings as needed. Our comparison involves 63 Greenbook forecast
+dates from March 19, 1997, to December 8, 2004. Period t = 1 corresponds to 1968:M1. We
+construct the real-time data set for the Greenbook comparison as in Section 3.2 with one
+important exception. Financial variables are available in daily frequency, but typically their
+monthly averages are not yet available at the Greenbook publication dates. Since up-to-date
+information from the financial sector is potentially very important for short-run forecasting,
+we compute estimates for these variables based on weighted within-month averages of daily
+data up to the forecast origin. More specifically, we proceed as follows. Assume that there
+are four days in a month and denote the daily interest rate as rτ . Imagine that at the
+forecast origin, only r1 and r2 are available. We replace the missing monthly interest rate by
+the expected monthly average (r1 + 3r2 )/4 and include a measurement error with variance
+5σ̂r2 /16, where σ̂r2 is the sample variance of past rτ − rτ −1 ’s. We do not group the Greenbook
+publication dates based on the availability of within-quarter monthly observations when
+computing forecast error statistics.
+
+MF-VAR versus Greenbook Forecasts. We proceed by comparing the VAR forecasts to
+Greenbook forecasts. Results are plotted in Figure C-5, which depicts absolute RMSEs for
+quarter-on-quarter GDP growth (annualized), CPI inflation (annualized), and the unemploy-
+ment rate. We are pooling the forecast errors from all estimation samples. At the nowcast
+horizon h = 1, the Greenbook forecasts and the MF-VAR forecasts for GDP growth and
+the unemployment rate attain roughly the same RMSE. For horizons h ≥ 3, the MF-VAR
+produces more accurate output growth forecasts, while the Greenbook contains more precise
+unemployment rate predictions. In regard to inflation, the Greenbook forecasts dominate
+the MF-VAR forecasts at all horizons. As in the case of the end-of-month samples, the
+short-run forecasts from the MF-VAR attain a smaller RMSE than the QF-VAR forecasts.
+While the QF-VAR inflation forecasts slightly dominate the MF-VAR forecasts for horizons
+h = 4 and h = 5, the MF-VAR GDP growth and unemployment rate forecasts are more
+accurate than the QF-VAR forecasts at all horizons. A similar pattern also holds true for the
+remaining seven variables (not depicted in the figure). The MF-VAR forecasts are as good
+Online Appendix                                                                                                                         A-17
+
+
+                         Figure C-5: RMSEs of 11-Variable MF-VAR versus Greenbook
+
+                     GDP Growth                                       Inﬂation                                Unemployment Rate
+                                                         1.8                                           0.7
+       2.7
+
+                                                         1.6                                           0.6
+       2.6
+
+
+       2.5                                               1.4
+                                                                                                       0.5
+
+       2.4
+
+                                                  RMSE
+
+
+
+
+                                                                                                RMSE
+RMSE
+
+
+
+
+                                                         1.2
+                                                                                                       0.4
+       2.3
+                                                          1
+                                                                                                       0.3
+       2.2
+
+                                                         0.8
+       2.1                                                                                             0.2
+                                Greenbook                                     Greenbook                                       Greenbook
+                                MF-VAR(11)                                    MF-VAR(11)                                      MF-VAR(11)
+        2                       QF-VAR(11)+              0.6                  QF-VAR(11)+                                     QF-VAR(11)+
+                                QF-VAR(11)                                    QF-VAR(11)                                      QF-VAR(11)
+                                                                                                       0.1
+           1     2           3        4       5            1   2           3        4       5             1    2           3        4       5
+                     Forecast Horizon                              Forecast Horizon                                Forecast Horizon
+
+
+Notes: 22nd and 38th samples are eliminated because the vintages for PCE were incomplete.
+
+
+as the QF-VAR forecasts in the long run and substantially more accurate for short horizons.
+
+   As a low-brow alternative to the MF-VAR analysis, a forecaster with access to external
+nowcasts could simply condition the QF-VAR forecasts on these nowcasts to improve the
+short-horizon forecast performance of the QF-VAR. In the following experiment, we assume
+that the forecaster is able to utilize the Greenbook nowcasts for quarterly GDP growth,
+inflation, and unemployment.3 We refer to the resulting empirical model as QF-VAR+ and
+it is implemented as follows: when simulating T + 1 draws from the predictive distribution
+of the QF-VAR, the forecaster uses one iteration of the Kalman filter to condition the
+simulated trajectories treating the nowcasts as actual observations. A detailed discussion
+of this procedure in the context of dynamic stochastic general equilibrium (DSGE) model
+forecasts is provided in Del Negro and Schorfheide (2013). The RMSEs for the QF-VAR+
+are also plotted in Figure C-5. With respect to GDP growth and inflation, the benefit of
+including the external nowcast into the QF-VAR is short-lived. While for h = 1 the QF-
+VAR+ attains the Greenbook RMSE, for horizons > 1 the performance resembles that of
+the QF-VAR. For the unemployment forecasts, the improvement in forecast performance
+       3
+           We thank Jonathan Wright for suggesting this experiment to us. We do not update the posterior
+distribution of the QF-VAR parameters in view of the additional information.
+Online Appendix                                                                                                                                                               18
+
+
+                   Figure C-6: RMSEs of 11-Variable MF-VAR, QF-VAR, and QF-VAR+
+
+                 GDP Growth                                  INVFIX Growth                                GOV Growth                                   HRS Growth
+       2.8                                                                                      3.6
+                                                   7.5
+       2.6                                                                                                                                  2.5
+                                                    7                                           3.4
+RMSE
+
+
+
+
+                                                                                         RMSE
+                                            RMSE
+
+
+
+
+                                                                                                                                     RMSE
+       2.4                                         6.5
+                                                                                                3.2                                          2
+       2.2                                          6
+                                                   5.5                                                                                      1.5
+                                                                                                 3
+        2
+             2       4              6   8                2        4              6   8                2       4              6   8                2        4              6   8
+                 Forecast Horizon                             Forecast Horizon                            Forecast Horizon                             Forecast Horizon
+                  CPI Growth                                   IP Growth                                  PCE Growth                                  SP500 Growth
+       1.8                                                                                      2.6
+                                                                                                                                             25
+       1.6                                         4.5                                          2.4
+       1.4                                                                                                                                   20
+                                                                                                2.2
+                                            RMSE
+
+
+
+
+                                                                                                                                      RMSE
+RMSE
+
+
+
+
+                                                                                         RMSE
+                                                    4
+       1.2
+                                                                                                 2                                           15
+        1                                          3.5
+       0.8                                                                                      1.8                                          10
+                                                    3
+       0.6                                                                                      1.6
+             2       4              6   8                2        4              6   8                2       4              6   8                2        4              6   8
+                 Forecast Horizon                             Forecast Horizon                            Forecast Horizon                             Forecast Horizon
+                 Unemployment                                         FF                                          TB
+
+                                                    2                                           0.8
+       0.8
+                                                                                                                                                      MF-VAR(11)
+                                                   1.5
+RMSE
+
+
+
+
+                                            RMSE
+
+
+
+
+       0.6                                                                               RMSE   0.6
+                                                                                                                                                      QF-VAR(11)+
+                                                    1                                           0.4
+       0.4
+                                                                                                                                                      QF-VAR(11)
+                                                   0.5                                          0.2
+       0.2
+
+             2       4              6   8                2        4              6   8                2       4              6   8
+                 Forecast Horizon                             Forecast Horizon                            Forecast Horizon
+
+
+
+
+Notes: The MF-VAR aligns the information that was available to the staff of the Board of Governors.
+The recursive estimation of the MF-VAR is repeated 62 times. The 22nd sample is eliminated because the
+vintages for PCE were incomplete.
+
+
+extends to horizons h > 1. In fact, the RMSEs for the MF-VAR and the QF-VAR+ are
+quite similar. On balance, the MF-VAR compares well against a QF-VAR augmented by
+current-quarter nowcasts. A comparison for all 11 variables is provided in Figure C-6.
+

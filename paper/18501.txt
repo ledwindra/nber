@@ -1,0 +1,3243 @@
+                                  NBER WORKING PAPER SERIES
+
+
+
+
+MERGING SIMULATION AND PROJECTION APPROACHES TO SOLVE HIGH-DIMENSIONAL
+                              PROBLEMS
+
+                                             Kenneth L. Judd
+                                              Lilia Maliar
+                                             Serguei Maliar
+
+                                          Working Paper 18501
+                                  http://www.nber.org/papers/w18501
+
+
+                        NATIONAL BUREAU OF ECONOMIC RESEARCH
+                                 1050 Massachusetts Avenue
+                                   Cambridge, MA 02138
+                                      November 2012
+
+
+
+
+  This is a substantially revised version of the NBER working paper 15965 entitled "A Cluster-Grid
+  Projection Method: Solving Problems with High Dimensionality. The views expressed herein are those
+  of the authors and do not necessarily reflect the views of the National Bureau of Economic Research.
+
+  NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+  reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+  NBER publications.
+
+  © 2012 by Kenneth L. Judd, Lilia Maliar, and Serguei Maliar. All rights reserved. Short sections of
+  text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+  including © notice, is given to the source.
+Merging Simulation and Projection Approaches to Solve High-Dimensional Problems
+Kenneth L. Judd, Lilia Maliar, and Serguei Maliar
+NBER Working Paper No. 18501
+November 2012
+JEL No. C61,C63
+
+                                            ABSTRACT
+
+We introduce an algorithm for solving dynamic economic models that merges stochastic simulation
+and projection approaches: we use simulation to approximate the ergodic measure of the solution,
+we construct a fixed grid covering the support of the constructed ergodic measure, and we use projection
+techniques to accurately solve the model on that grid. The grid construction is the key novel piece
+of our analysis: we select an -distinguishable subset of simulated points that covers the support of
+the ergodic measure roughly uniformly. The proposed algorithm is tractable in problems with high
+dimensionality (hundreds of state variables) on a desktop computer. As an illustration, we solve one-
+and multicountry neoclassical growth models and a large-scale new Keynesian model with a zero lower
+bound on nominal interest rates.
+
+
+Kenneth L. Judd                                    Serguei Maliar
+Hoover Institution                                 Office T-24 Hoover Institution
+Stanford University                                Stanford University
+Stanford, CA 94305-6010                            CA 94305-6010, USA
+and NBER                                           maliars@stanford.edu
+kennethjudd@mac.com
+
+Lilia Maliar
+Office T-24 Hoover Institution
+Stanford University
+CA 94305-6010, USA
+maliarl@stanford.edu
+1     Introduction
+We introduce an algorithm for solving dynamic economic models that merges sto-
+chastic simulation and projection approaches: we use simulation to approximate the
+ergodic measure of the solution, we construct a fixed grid covering the support of the
+constructed ergodic measure, and we use projection techniques to accurately solve
+the model on that grid. The grid construction is the key novel piece of our analysis:
+we select an -distinguishable subset of simulated points that covers the support of
+the ergodic measure roughly uniformly. The proposed algorithm is tractable in prob-
+lems with high dimensionality (hundreds of state variables) on a desktop computer.
+As an illustration, we solve one- and multicountry neoclassical growth models and a
+large-scale new Keynesian model with a zero lower bound on nominal interest rates.
+    One stream of literature for solving dynamic economic models relies on stochastic
+simulation. This stream includes the methods for solving rational expectations mod-
+els, e.g., Fair and Taylor (1983), Marcet (1988), Smith (1993), Maliar and Maliar
+(2005), Judd, Maliar and Maliar (2011), as well as the literature on learning, e.g.,
+Marcet and Sargent (1989), Bertsekas and Tsitsiklis (1996), Pakes and McGuire
+(2001), Powell (2011). The key advantage of stochastic simulation methods is that
+the geometry of the set on which the solution is computed is adaptive. Namely, such
+methods solve economic models on a set of points realized in equilibrium which makes
+it possible to avoid the cost of finding the solution in areas of the state space that are
+eﬀectively never visited in equilibrium. However, a set of simulated points itself is
+not an eﬃcient choice either as a grid for approximating a solution (it contains many
+closely-located and hence, redundant points) or as a set of nodes for approximating
+expectation functions (the accuracy of the Monte Carlo integration method is low).
+    Another stream of literature for solving dynamic economic models relies on pro-
+jection techniques; see, e.g., Wright and Williams (1984), Judd (1992), Christiano
+and Fisher (2000) and Kruger and Kubler (2004). Projection methods use eﬃcient
+discretizations of the state space and eﬀective deterministic integration methods, and
+they deliver very accurate solutions. However, conventional projection methods are
+limited to fixed geometries such as a multidimensional hypercube. In order to capture
+all points that are visited in equilibrium, a hypercube must typically include large
+areas of the state space that have a low probability to happen in equilibrium. The
+size of the hypercube domain, on which projection methods operate, grows rapidly
+with the dimensionality of the problem.
+    We propose a solution method that combines the best features of stochastic simu-
+lation and projection methods, namely, it combines an adaptive geometry of stochas-
+tic simulation methods with eﬃcient discretization techniques of projection methods.
+
+
+                                            2
+The grid we construct covers the high-probability area of the state space roughly uni-
+formly. In Figure 1a and Figure 1b, we show a two-dimensional example of such a
+grid.
+
+
+
+
+The technique we use to construct the grid in the figure is called an -distinguishable
+set (EDS) technique, and it consists in constructing a set of points, which are situated
+at the distance at least  from one another, where   0 is a parameter. In this
+paper, we establish computational complexity, dispersion, cardinality and degree of
+uniformity of the EDS grid constructed on simulated series. Furthermore, we perform
+the worst-case analysis, and we relate our results to recent mathematical literature on
+covering problems (see, Temlyakov, 2011) and random sequential packing problems
+(see, Baryshnikov et al., 2008).
+    Our construction of the EDS grid relies on the assumption that a solution to
+the model is known. Since the solution is unknown in the beginning, we proceed
+iteratively: guess a solution, simulate the model, construct an EDS grid, solve the
+model on that grid using a projection method, and iterate on these steps until the
+grid converges.
+    We complement the eﬃcient EDS grid with other computational techniques suit-
+able for high-dimensional problems, namely, low-cost monomial integration rules and
+a fixed-point iteration method for finding parameters of the equilibrium rules. Taken
+together, these techniques make the EDS algorithm tractable in problems with high
+dimensionality — hundreds of state variables!
+    We first apply the EDS method to the standard neoclassical growth models with
+one and multiple agents (countries). The EDS method delivers accuracy levels com-
+parable to the best accuracy attained in the related literature. In particular, we are
+able to compute global quadratic solutions for equilibrium problems with up to 80
+state variables on a desktop computer using a serial Matlab software (the running
+
+                                           3
+time ranges from 30 seconds to 24 hours). The maximum unit-free approximation
+error on a stochastic simulation is always smaller than 001%.
+    Our second and more novel application is a new Keynesian model which includes
+a Taylor rule with a zero lower bound (ZLB) on nominal interest rates. This model
+has eight state variables and is characterized by a kink in equilibrium rules due to the
+ZLB. We parameterize the model using the estimates of Smets and Wouters (2003,
+2007), and Del Negro et al. (2007). The EDS method is tractable for polynomial
+degrees 2 and 3: the running time is less than 25 minutes in all cases considered. For
+comparison, we also assess the performance of perturbation solutions of orders 1 and
+2. We find that if the volatility of shocks is low and if we allow for negative nominal
+interest rate, both the EDS and perturbation methods deliver suﬃciently accurate
+solutions. However, if either the ZLB is imposed or the volatility of shocks increases,
+the perturbation method is significantly less accurate than the EDS method. In par-
+ticular, under some empirically relevant parameterizations, the perturbation methods
+of orders 1 and 2 produce errors that are as large as 25% and 38% on a stochastic
+simulation, while the corresponding errors for the EDS method are less than 5%. The
+diﬀerence between the EDS and perturbation solutions is economically significant.
+When the ZLB is imposed, the perturbation method considerably understates the
+duration of the ZLB episodes and the magnitude of the crises.
+    The EDS projection method can be used to accurately solve small-scale models
+that were previously studied using other global methods.1 However, a comparative
+advantage of the EDS algorithm is its ability to solve large-scale problems that
+other methods find intractable or expensive. The speed of the EDS algorithm also
+makes it potentially useful in estimation methods that solve economic models at
+many parameters vectors; see Fernández-Villaverde and Rubio-Ramírez (2007) for a
+discussion. Finally, the EDS grid can be used in applications unrelated to solution
+methods that require to produce a discrete approximation to the ergodic distribution
+of a stochastic process with a continuous density function.
+    The rest of the paper is as follows: In Section 2, we describe the construction of
+the EDS grid and establish its properties. In Section 3, we integrate the EDS grid
+into a projection method for solving dynamic economic models. In Section 4, we
+apply the EDS algorithm to solve one- and multi-agent neoclassical growth models.
+In Section 5, we compute a solution to a new Keynesian model with the ZLB. In
+Section 6, we conclude.
+  1
+    For reviews of methods for solving dynamic economic models, see Taylor and Uhlig (1990),
+Gaspar and Judd (1997), Judd (1998), Marimon and Scott (1999), Santos (1999), Christiano and
+Fisher (2000), Aruoba, Fernández-Villaverde and Rubio-Ramírez (2006), Den Haan (2010), and
+Kollmann, Maliar, Malin and Pichler (2011).
+
+
+                                             4
+2     A discrete approximation to the ergodic set
+In this section, we first introduce a technique that produces a discrete approximation
+to the ergodic set of a stochastic process with a continuous density function, we then
+establish properties of the proposed approximation, and we finally relate our results
+to mathematical literature. Later, we will use the resulting discrete approximation
+as a grid of a projection-style solution method.
+
+2.1    A class of stochastic processes
+We focus on a class of discrete-time stochastic processes that can be represented in
+the form
+                         +1 =  (  +1 )   = 0 1                   (1)
+where  ∈  ⊆ R is a vector of  independent and identically distributed shocks,
+and  ∈  ⊆ R is a vector of  (exogenous and endogenous) state variables. The
+distribution of shocks is given by a probability measure  defined on a measurable
+space ( E), and  is endowed with its relative Borel -algebra denoted by X.
+    Many dynamic economic models have equilibrium laws of motion for state vari-
+ables that can be represented by a stochastic system in the form (1). For example, the
+standard neoclassical growth model, described in Section 4, has the laws of motion for
+capital and productivity that are given by +1 =  (   ) and +1 =  exp (+1 ),
+respectively, where +1 ∼ N (0  2 ),   0 and  ∈ (−1 1); by setting  ≡ (   ),
+we arrive at (1).
+    To characterize the dynamics of (1), we use the following definitions.
+    Def 1. A transition probability is a function P :  ×  → [0 1] that has two
+properties: (i) for each measurable set A ∈ X, P (· A) is X-measurable function;
+and (ii) for each point  ∈ , P ( ·) is a probability measure on ( X).
+    Def 2. An (adjoint) RMarkov operator is a mapping M∗ :  →  such that
++1 (A) = (M∗  ) (A) ≡ P ( A)  ().
+    Def 3. An invariant probability measure  is a fixed point of the Markov operator
+M∗ satisfying  = M∗ .
+    Def 4. A set A is called invariant if P ( A) = 1 for all  ∈ A. An invariant
+set A∗ is called ergodic if it has no proper invariant subset A ⊂ A∗ .
+    Def 5. An invariant measure  is called ergodic if either  (A) = 0 or  (A) = 1
+for every invariant set A.
+    These definitions are standard to the literature on dynamic economic models; see
+Stokey, Lucas and Prescott (1989). P ( A) is the probability that the stochastic
+system (1) whose today’s state is  =  will move tomorrow to a state +1 ∈ A. The
+
+                                            5
+Markov operator M∗ maps today’s probability into tomorrow’s probability, namely,
+if  (A) is the probability that the system (1) is in A at , then (M∗  ) (A) is
+the probability that the system will remain in the same set at  + 1. Applying the
+operator M∗ iteratively, we can describe the evolution of the probability starting
+from a given 0 ∈ X. An invariant probability measure  is a steady state solution
+of the stochastic system (1). An invariant set A is the one that keeps the system
+(1) forever in A, and an ergodic set A∗ is an invariant set of the smallest possible
+size. Finally, an invariant probability measure is ergodic if all the probability is
+concentrated in just one of the invariant sets.
+    The dynamics of (1) produced by economic models can be very complex. In
+particular, the Markov process (1) may have no invariant measure or may have mul-
+tiple invariant measures. These cases represent challenges to numerical methods that
+approximate solutions to dynamic economic models. However, there is another chal-
+lenge that numerical methods face — the curse of dimensionality. The most regular
+problem with a unique, smooth and well-behaved solution can become intractable
+when the dimensionality of the state space gets large. The challenge of high di-
+mensionality is the focus of our analysis. We employ the simplest possible set of
+assumptions that allows us to expose and to test computational techniques that are
+tractable in high-dimensional applications.
+    Assumption 1. There exists a unique ergodic set A∗ and the associated ergodic
+measure .
+    Assumption 2. The ergodic measureR admits a representation in the form of
+a density function  :  → R+ such that A  ()  =  (A) for every A ⊆ X.
+    Let us comment on these assumptions. The existence of invariant probability
+measure  follows by Krylov-Bogolubov theorem under assumptions of a"tightness"
+and weak continuity (Feller property) of the operator (M∗ ); see Stachursky (2009,
+Theorem 11.2.5). The "tightness" assumption can be replaced with an assumption
+that  is compact; see Stokey, Lucas and Prescott (1989, Theorem 12.10). The
+existence and uniqueness of the ergodic probability measure require far more re-
+strictive assumptions such as Doeblin and strong "mixing" type of conditions; see
+Stokey, Lucas and Prescott (1989, Theorems 11.9 and 11.10, respectively). Finally,
+the existence of a density function is equivalent to the existence of Radon-Nykodim
+derivative of  with respect to the Lebesgue measure; see, e.g., Stachursky (2009,
+Theorem 9.1.18).
+
+
+
+
+                                         6
+2.2     A two-step EDS technique for approximating the er-
+        godic set
+We propose a two-step procedure for forming a discrete approximation to the ergodic
+set. First, we identify an area of the state space that contains nearly all the prob-
+ability mass. Second, we cover this area with a finite set of points that are roughly
+evenly spaced.
+
+2.2.1   An essentially ergodic set
+We define a high-probability area of the state space using the level set of the density
+function.
+   Def 6. A set A ⊆ A∗ is called a -level ergodic set if   0 and
+
+                              A ≡ { ∈  :  () ≥ } 
+                                                              R
+The mass of A under the density  () is equal to  () ≡ ()≥  () . If  () ≈ 1,
+then A contains all  except for points where the density is lowest, in which case
+A is called an essentially ergodic set.
+    By construction, the correspondence A : R+ ⇒ R maps  to a compact set. The
+correspondence A is upper semi-continuous but may be not lower semi-continuous
+(e.g., if  is drawn from a uniform distribution [0 1]). Furthermore, if  is multimodal,
+then for some values of , A may be disconnected (composed of disjoint areas).
+Finally, for   max { ()}, the set A is empty.
+                     
+    Our approximation to the essentially ergodic set builds on stochastic simulation
+and relies on the law of iterated logarithm. Formally, let  be a set of  independent
+random draws 1    ⊆ R generated with the distribution function  : R → R+ .
+For a given subset  ⊆ R , we define  ( ; ) as a characteristic function that counts
+the number of points from  in . Let J be a family generated by the intersection
+of all subintervals of R of the form Π=1 [−∞  ), where   0.
+
+Proposition 1 (Law of iterated logarithm). For every  and every continuous func-
+tion , we have
+                 (    ¯                   ¯ µ           ¶12 )
+                      ¯  ( ; )         ¯      2
+              lim sup ¯           −  ()¯¯ ·                  = 1, a.e.      (2)
+             →∞ ∈J ¯                       log log 
+
+Proof. See Kiefer (1961, Theorem 2).
+
+
+                                            7
+That is, the empirical distribution function b () ≡ (;) converges asymptotically
+to the true distribution function  () for every  ∈ J at the rate given in (2).
+    We use the following algorithm to select a subset of simulated points that belongs
+to an essentially ergodic set A .
+
+ (Algorithm A ): Selection of points within an essentially ergodic set.
+ Step 1. Simulate (1) for  periods.
+ Step 2. Select each th point to get a set  of  points 1    ∈  ⊆ R .
+ Step 3. Estimate the density function b ( ) ≈  ( ) for all  ∈  .
+ Step 4. Remove all points for which the density is below .
+In Step 2, we include in the sample  only each th observation to make random
+draws (approximately) independent. As concerning Step 3, there are various methods
+in statistics that can be used to estimate the density function from a given set of
+data; see Scott and Sain (2005) for a review. We use one of such methods, namely,
+a multivariate kernel algorithm with a normal kernel which estimates the density
+function in a point  as
+                                           X
+                                                ∙             ¸
+                                   1                 (  )
+                      b
+                       () =            
+                                              exp −      2                     (3)
+                               (2)2  =1         2
+
+where  is the bandwidth parameter, and  (  ) is the distance between  and  .
+The complexity of Algorithm A is  (2 ) because it requires to compute pairwise
+distances between all the sample points. Finally, in Step 3, we do not choose the
+density cutoﬀ
+           R  but a fraction of the sample to be removed, , which is related to 
+by  () = ()≥  ()  = 1 − . For example,  = 005 means that we remove 5%
+of the sample which has the lowest density.
+
+2.2.2   An -distinguishable set (EDS)
+Our next objective is to construct a uniformly-spaced set of points that covers the
+essentially ergodic set (to have a uniformly-spaced grid for a projection method).
+We proceed by selecting an -distinguishable subset of simulated points in which all
+points are situated at least on the distance  from one another. Simulated points are
+not uniformly-spaced but the EDS subset will be roughly uniform, as we will show
+in Section 2.3.
+     Def 7. Let ( ) be a bounded metric space. ¡A set ¢  consisting of points
+1    ∈  ⊆ R is called -distinguishable if       for all 1 ≤   ≤
+  
+
+ :  6= , where   0 is a parameter.
+
+                                            8
+   EDSs are used in mathematical literature that studies the entropy; see Temlyakov
+(2011) for a review. This literature focuses on a problem of constructing an EDS
+that covers a given subset of R (such as a multidimensional hypercube). We study
+a diﬀerent problem, namely, we construct an EDS for a given discrete set of points.
+To this purpose, we introduce the following algorithm.
+
+ (Algorithm   ): Construction of an EDS.
+ Let  be a set of  point 1    ∈  ⊆ R .
+ Let   begin as an empty set,   = {∅}.
+ Step 1. Select  ∈  . Compute  (   ) to all  in  .
+ Step 2. Eliminate from  all  for which  (   )  .
+ Step 3. Add  to   and eliminate it from  .
+ Iterate on Steps 1-3 until all points are eliminated from  .
+The cost of this algorithm is assessed below.
+
+Proposition 2 The complexity of Algorithm   is of order  ().
+
+Proof. Consider the worst-case scenario for the complexity. We take 1 ∈  ,
+compute  − 1 distances to all other points and obtain that all such distances are
+larger than  so that no point is eliminated. Further, we take 2 ∈  , compute  − 2
+distances to all other points and again, no point is eliminated. We proceed till  ∈
+ for which we compute  −  distances. Thus, the first  points are placed into
+  . Subsequently, we eliminate the remaining −
+                                                P points. Under this     scenario, the
+                                                                       (+1)
+complexity is ( − 1) + ( − 2)  + ( − ) = =1 ( − ) =  −         2
+                                                                               ≤ .
+
+
+When no points are eliminated from  , i.e.,  = , the complexity is quadratic,
+ (2 ). However, the number of points  in an EDS is bounded from above if 
+is bounded; see Proposition 4. This means that asymptotically, when  → ∞, the
+complexity of Algorithm   is linear,  ().
+
+2.2.3   Distance between points
+Both estimating the density function and constructing an EDS requires us to measure
+the distance between simulated points. Generally, variables in economic models have
+diﬀerent measurement units and are correlated. This aﬀects the distance between
+the simulated points and hence, aﬀects the resulting EDS. Therefore, prior to using
+Algorithm A and Algorithm   , we normalize and orthogonalize the simulated data.
+
+
+                                             9
+    To be specific, let  ∈ R× ¡be a set ¢of simulated data normalized to zero
+mean and unit variance. Let  ≡ 1    be an observation  = 1 (there are 
+                               ¡          ¢>
+observations), and let  ≡ 1    be a variable  (there are  variables), i.e.,
+     ¡          ¢
+ = 1    = (1    )> . We first compute the singular value decomposition
+of , i.e.,  =  > , where  ∈ R× and  ∈ R× are orthogonal matrices, and
+ ∈ R× is a diagonal matrix.¡We then perform   ¢   a linear transformation of  using
+PC≡  . The variables PC= PC1   PC ∈ R× are called principal components
+                                                         ³      ´>
+                                                             0
+(PCs) of , and are orthogonal (uncorrelated), i.e., PC            PC = 0 for any 0 6= .
+As a measure of distance between two observations  and  , we use the Euclidean
+                                                     hP ¡                 ¢ i12
+                                                                       2
+distance between their PCs, namely,  (   ) =       =1 PC   − PC         , where all
+principal components PC1  PC are normalized to unit variance.
+
+2.2.4    An illustration of the EDS technique
+In this section, we will illustrate the EDS technique described above by way of exam-
+ple. We consider the standard neoclassical growth model with a closed-form solution
+(see Section 4 for a description of this model). We simulate time series for capital
+and productivity level of length 1 000 000 periods, and we select a sample of 10 000
+observations by taking each 100th point (to make the draws independent); see Fig-
+ure 2a. We orthogonalize the data using principal component (PC) transformation,
+and we normalize the PCs to unit variance; see Figure 2b. We estimate the density
+function using the multivariate kernel algorithm with the standard bandwidth of
+ = −1(+4) , and we remove from the sample 5% of simulated points in which the
+density is the lowest; see Figure 2c. We construct an EDS; see Figure 2d. We plot
+such a set in the PC and original coordinates in Figure 2e and Figure 2f, respectively.
+As we see, the EDS technique delivers a set of points that covers the same area as
+does the set of simulated points but that is spaced roughly uniformly.2 In Section
+2.3, we will characterize the properties of the constructed EDS analytically.
+   2
+     Our two-step procedure produces an approximation not only to the ergodic set but also to the
+ergodic distribution (because in the first step, we estimate the density function in all simulated
+points including those that form an -distinguishable set). The density weights show what fraction
+of the sample each "representative" point represents, and can be used to construct weighted-average
+approximations. Given our purpose to construct a set of evenly-spaced points, we do not use the
+density weights, treating all points equally.
+
+
+
+
+                                                10
+2.2.5    Other procedures for approximating the ergodic set
+We have described one specific procedure for forming a discrete approximation to the
+essentially ergodic set of stochastic process (1). Below, we outline other procedures
+that can be used for this purpose.
+    First, our two-step procedure has a complexity of order  (2 ) because the kernel
+algorithm computes pairwise distances between all observations in the sample. This
+is not a problem for the size of applications we study in the present paper, however,
+it might be expensive for larger samples. In Appendix A, we describe a procedure
+that has a lower complexity, namely,  (). We specifically invert the steps in the
+two-step procedure: we first construct an EDS on all simulated points, and we then
+remove from the EDS those points where the density is low.
+    Second, we can use methods from cluster analysis to select a set of representative
+points from a given set of simulated points (instead of constructing an EDS). Namely,
+we partition the simulated data into clusters (groups of closely-located points), and
+we replace each cluster with one representative point. This technique is exposed
+in Appendix B using two clustering methods, an agglomerative hierarchical method
+and K-means method.3
+
+2.3     Properties of EDSs
+In this section, we characterize the dispersion of points, the number of points, and
+the degree of uniformity of the constructed EDS. Also, we discuss the relation of our
+results to recent mathematical literature.
+
+2.3.1    Dispersion of points in the EDS
+We borrow the notion of dispersion from the literature on quasi-Monte Carlo op-
+timization methods; see, e.g., Niederreiter (1992, p.148) for a review. Dispersion
+measures are used to characterize how dense is a given set of points in a given area
+of the state space.
+    Def 7. Let  be a set consisting of points 1    ∈  ⊆ R , and let ( ) be
+a bounded metric space. The dispersion of  in  is given by
+                               ( ; ) = sup inf  (  )                                  (4)
+                                             ∈ 1≤≤
+   3
+    The clustering methods were used to produce all the numerical results in the earlier versions of
+the paper, Judd et al. (2010, 2011). In the current version of the paper, we switch to EDSs because
+their properties are easier to characterize analytically and their construction has a lower cost. In
+our examples, projection methods operating on cluster grids and those operating on EDSs deliver
+comparable accuracy of solutions.
+
+                                                11
+where  is a (Euclidean) metric on .
+    Let  (; ) denote a ball with the center  and radius . Then,  ( ; ) is the
+smallest possible radius  such that the family of closed balls  (1 ; )    ( ; )
+covers .
+    Def 8. Let  be a sequence of elements on , and let 1    ∈  ⊆ R be the
+first  terms of . The sequence  is called low-dispersion if lim  (; ) = 0.
+                                                                 →∞
+    In other words, a sequence  is low-dispersion if it becomes increasingly dense
+when  → ∞. Below, we establish bounds on the dispersion of points in an EDS.
+Proposition 3 Let  be any set of  points 1    ∈  ⊆ R with a disper-
+sion  ( ; )  . Let ( ) be a bounded metric space, and let   be an EDS
+1    constructed by Algorithm   . Then, the dispersion of   is bounded by
+   (  ; )  2.
+Proof. The first equality follows
+                                ¡ because
+                                      ¢   for each  ∈   , Algorithm   removes
+                                    
+all points  ∈  such that      . To prove the second inequality, let us
+assume that  (  ; ) ≥ 2 toward a contradiction. ¡        ¢
+    (i) Then, there is a point  ∈  for which inf     ≥ 2, i.e., all points
+                                                      ∈
+           
+in EDS  are situated at the distance at least 2 from  (because we assumed
+ (  ; ) ≥ 2).
+    (ii) An open ball  (; ) contains at least one point ∗ ∈  . This is because
+ ( ; )   implies inf  (  )   for all , i.e., the distance between any point
+                         ∈
+ ∈  and its closest neighbor from  is smaller than .
+   (iii) Algorithm   does not eliminate ∗ . This algorithm eliminate only those
+points around all  ∈   that are situated on the distance smaller than , whereas
+any point inside  (; ) is situated
+                                 ¡ ∗ on  ¢ the distance larger than  from any  ∈   .
+             ∗                                       ∗
+   (iv) For  , we have inf       , i.e.,  is situated at the distance larger
+                           ∈
+than  from any   
+                 ∈ .     
+
+   Then,  must belong to EDS   . Since ∗ ∈  (; ), we have  ( ∗ )    2,
+           ∗
+
+a contradiction.
+
+Proposition 3 states that any  ∈  has a neighbor  ∈   which is situated at
+most at the distance 2. The dispersion of points in an EDS goes to zero as  → 0.
+
+2.3.2   Number of points in the EDS
+The number of points in an EDS is unknown a priory. It depends on the value of 
+and the order in which the points from  are processed. Temlyakov (2011, Theorem
+
+                                            12
+3.3 and Corollary 3.4) provides the bounds on the number of points in a specific class
+of EDSs, namely, those that cover a unit ball with balls of radius . We also confine
+our attention to a set  given by a ball, however, in our case, balls of radius  do
+not provide a covering of . The bounds for our case are established in the following
+proposition.
+
+Proposition 4 Let  be any set of  points 1    ∈  (0 ) ⊆ R with a disper-
+sion  ( ; )  . Then, the number of points in   constructed by Algorithm  
+               ¡  ¢       ¡     ¢
+is bounded by 2      ≤  ≤ 1 +  .
+
+Proof. To prove the first inequality, notice that, by Proposition 3, the balls  (1 ; 2)
+   ( ; 2) cover . Hence, we have  (2) ≥   , where  is the volume
+of a -dimensional unit ball. This gives the first inequality.
+      To prove the second inequality, we consider an EDS on  (0; ) that has the
+maximal cardinality  max . Around each point of such a set, we construct a balls
+with the radius . By definition, the distance between any two points in an EDS is
+larger than , so the balls  (1 ; )    ( ; ) are all disjoint. To obtain an upper
+bound on , we must construct a set that encloses all these balls. The ball  (0; )
+does not necessarily contain all the points from these balls, so we add an open ball
+ (0; ) to each point of  (0; ) in order to extend the frontier by . This gives us a
+set  (0;  + ) =  (0; )⊕ (0; ) ≡ { :  =  +   ∈  (0; )   ∈  (0; )}. Since
+the ball  (0;  + ) encloses the balls  (1 ; )    ( ; ) and since  ≤  max ,
+we have  () ≤  ( + ) . This yields the second inequality.
+      In some applications, we need to construct an EDS that has a given target number
+of points  (for example, in a projection method, we may need a grid with a certain
+number of grid points). To this purpose, we can use a simple bisection method. We
+fix 1 and 2 such that  (1 ) ≤  ≤  (2 ), take  = 1 +            2
+                                                                           2
+                                                                             , construct an EDS
+and find  (); if  ()  , then we set 1 =  and otherwise, we set 2 = ,
+and proceed iteratively until  () converges to some limit (which was close to the
+target value  in our experiments). To find the initial values of 1 and 2 , we
+                                                                                        −1
+use the ³  bounds established
+                       ´       in Proposition 4, namely, we set 1 = 051                  and
+             1      −1
+2 = 2  − 1         , where 1 and 2 are, respectively, the largest and smallest
+PCs of the simulated points (since the essentially ergodic set is not necessarily a
+hypersphere, as is assumed in Proposition 4, we take 1 and 2 to be the radii of
+the limiting hyperspheres that contain none and all PCs of the simulated points,
+respectively).
+
+
+
+                                              13
+2.3.3   Discrepancy
+We now analyze the degree of uniformity of EDSs. The standard notion of uniformity
+in the literature is discrepancy from the uniform distribution; see Niederreiter (1992,
+p. 14).
+    Def 10. Let  be a set consisting of points 1    ∈  ⊆ R , and let J
+be a family of Lebesgue-measurable
+                               ¯         subsets ¯of . The discrepancy of  under J
+                               ¯ ( ;)         ¯
+is given by D ( ; J ) = sup ¯  −  ()¯, where  ( ; ) counts the number of
+                           ∈J
+points from  in , and  () is a Lebesgue measure of .
+    D ( ; J ) measures the discrepancy between the fraction of points (;) con-
+tained in , and the fraction of space  () occupied by . If the discrepancy is low,
+D ( ; J ) ≈ 0, the distribution of points in  is close to uniform. The measure of
+discrepancy commonly used in the literature is the star discrepancy.
+    Def 11. The star discrepancy D∗ ( ; J ) is defined as the discrepancy of  over
+the family  generated by the intersection of all subintervals of R of the form
+Π=1 [−∞  ), where   0.
+    Let  be a sequence of elements on , and let 1    ∈  ⊆ R be the
+first  terms of . Niederreiter
+                               ³ (1992, p.´ 32) suggests to call a sequence  low-
+discrepancy if D (; J ) =  −1 (log ) , i.e., if the star discrepancy converges to
+                  ∗
+
+
+zero asymptotically at a rate at least of order −1 (log ) .
+    The star discrepancy of points which are randomly drawn from a uniform dis-
+tribution [0 1] converges to zero asymptotically, lim D∗ (; J ) = 0, a.e. The rate
+                                                         →∞
+of convergence follows directly from the law of iterated logarithm stated in Propo-
+sition 1, and it is (log log )12 (2)−12 ; see Niederreiter (1992, p. 166-168) for a
+general discussion on how to use Kiefer’s (1961) results for assessing the discrepancy
+of random sequences.
+    If a sequence is a low-discrepancy one, then it is also a low-dispersion one; see
+Niederreiter (1992, Theorem 6.6). Indeed, a sequence that covers  uniformly must
+become increasingly dense everywhere on  as  → ∞. However, the converse is not
+true. A sequence that becomes increasingly dense on  as  → ∞ does not need to
+become increasingly uniform since density may be distributed unevenly. Thus, the
+result of Proposition 3 that the dispersion of an EDS converges to zero in the limit
+does not mean that its discrepancy does so.
+    Nonetheless, we can show that for any density function , the discrepancy of an
+EDS is bounded on a multidimensional sphere.
+                                             
+    Def 12. The spherical discrepancy D       (  ; B) is defined as the discrepancy of 
+over the family  generated by the intersection of -dimensional open balls  (0; )
+
+                                            14
+centered at 0 with the radius  ≤ 1.
+Proposition 5 Let  be any set of  points 1    ∈  (0; 1) ⊆ R with a disper-
+sion  ( ; )  . Then, the discrepancy
+                                       √
+                                                of an EDS constructed by Algorithm  
+                                          
+under B is bounded by D
+                           (  ; B) ≤ √22 −1
+                                            +1
+                                               .
+
+Proof. Let  ≡  ( (0; )) =  ( (0; 1))  =  be a Lebesgue measure of  (0; ),
+              
+and let ( ;(0;))
+                
+                     be the fraction of points from   in the ball  (0; ). Consider the
+                                 
+case when  ( (0; )) ≥ ( ;(0;))
+                                   
+                                        and let us compute the maximum discrepancy
+  max
+D    (  ; B) across all possible EDSs using the results of Proposition 4,
+
+   max                                min (  ;  (0; ))
+  D   (  ; B) =  −                                                      ≤
+                   min (  ;  (0; )) +  max (  ;  (0 1) \ (0; ))
+                                   min (  ;  (0 ))
+           − min 
+              ( ;  (0; )) +  max (  ;  (0; 1)) −  max (  ;  (0; ))
+                                            ¡  ¢
+                               =  − ¡ ¢       ¡    ¢ ¡
+                                                           2
+                                                                ¢
+                                       
+                                         2
+                                              + 1 + 1 − 1 + 
+                                              ¡  ¢
+                                                                                      
+                             ≤  − ¡ ¢          2
+                                                  ¡ 1 ¢       ¡  ¢ =  −                     ≡  () 
+                                     
+                                              +            −                  2   −  [2 − 1]
+                                       2                      
+         min                    max    
+where  ( ; ) and        ( ; ) are respectively the minimum and maximum  √
+                                                                                 
+cardinality of an EDS  on . Maximizing  () with respect to  yields ∗ = √22+1
+                       
+               √
+                                                                                      (  ;(0;))
+and  (∗ ) = √22 −1
+                   +1
+                      , as is claimed. The case when  ( (0; )) ≤                          
+                                                                                                        leads to
+the same bound.
+
+2.4     Relation to mathematical literature
+We now compare our results to mathematical literature that focuses on related prob-
+lems.
+
+2.4.1   Existence results for a covering-number problem
+Temlyakov (2011) studies the problem of finding a covering number — a minimum
+number of balls of radius  which cover a given compact set (such as a -dimensional
+hypercube or hypershpere). In particular, he shows the following result. There exists
+an EDS   on a unit hypercube [0 1] whose star discrepancy is bounded by
+                        ∗
+                       D (  ; J ) ≤  · 32 [max {ln  ln }]12  −12                               (5)
+
+                                                    15
+where  is a constant; see Temlyakov (2011, Proposition 6.72). The discrepancy
+of such an EDS converges to 0 as  → ∞ (i.e.,  → 0). However, constructing
+an EDS with the property (5) is operationally diﬃcult and costly. Also, Temlyakov
+(2011) selects points from a compact subset of R , and his analysis cannot be directly
+applied to our problem of finding an -distinguishable subset of a given finite set of
+points.
+
+2.4.2    Probabilistic results for random sequential packing problems
+Probabilistic analysis of an EDS is non-trivial because points in such a set are spa-
+tially dependent: once we place a point in an EDS, it aﬀects the placement of all
+subsequent points.
+    Some related probabilistic results are obtained in the literature on a random
+sequential packing problem.4 Consider a bounded set  ⊆ R and a sequence of
+-dimensional balls whose centers are i.i.d. random vectors 1    ∈  with a
+given density function . A ball is packed if and only if it does not overlap with
+any ball which has already been packed. If not packed, the ball is discarded. At
+saturation, the centers of accepted balls constitute an EDS. A well-known unidimen-
+sional example of this general problem is a car-parking model of Rényi (1958). Cars
+of a length  park at random locations along the roadside of a length 1 subject to
+a non-overlap with the previously parked cars. When cars arrive at uniform ran-
+dom positions, Rényi (1958) shows that they occupy about 75% of the roadside at
+jamming (namely, the expected value is lim []  ≈ 0748).
+                                             →0
+    For a multidimensional case, Baryshnikov et al. (2008) show that the sequential
+packing measure, induced by the accepted balls centers, satisfies the law of iterated
+logarithm (under some additional assumptions). This fact implies that the discrep-
+ancy of EDS converges to 0 asymptotically if the density of points in an EDS is
+uniform in the limit  → 0. However, the density of points in an EDS depends on
+the density function  of the stochastic process (1) used to produce the data (below,
+we illustrate this dependence by way of examples). Hence, we have the following neg-
+ative conclusion: an EDS needs not be uniform in the limit even in the probabilistic
+sense (unless the density function is uniform).
+  4
+    This problem arises in spacial birth-growth models, germ-grain models, percolation models,
+spacial-graphs models; see, e.g., Baryshnikov et al. (2008) for a review.
+
+
+
+
+                                             16
+2.4.3    Our best- and worst-case scenarios
+One-dimensional versions of our Propositions 4 and 5 have implications for Rényi’s
+(1958) car parking model. Namely, Proposition 4 implies that the cars occupy be-
+tween 50% and 100% of the roadside ( 12 ≤ lim ≤ 1). These are the best- and
+                                                →0
+worst-case scenarios in which the cars are parked on the distances  and 0 from each
+other, respectively. (In the former case, evil drivers park their cars to leave as little
+parking space to other drivers as possible, and in the latter case, a police oﬃcer di-
+rects the cars to park in a socially eﬃcient way). The density functions that support
+the worst- and best-scenarios are the ones that contain the Dirac point masses on
+the distances 2 and , respectively.
+    Proposition 5 yields√
+                           the worst-case scenario for discrepancy in√ Rényi’s (1958)
+model, D ( ; B) ≤ √2+1 ≈ 017, which is obtained under ∗ = √2+1
+                       2−1                                             2
+                                                                           . This bound
+is attainable. Indeed, consider an EDS on [0 1] such that on the interval [0 ∗ ],
+all points are situated on a distance , and on [∗  1], all points are situated on the
+                                              ∗          ∗
+distance 2. In the first interval, we have 2 ≤  ≤ 2 + 1 points and in the second
+                       ∗
+                                   1−∗
+interval, we have ∙1−
+                     
+                         ≤ ≤ ¸      
+                                        + 1 points. On the first interval, the limiting
+                               ∗           √
+discrepancy is lim ∗ −    ∗
+                               2
+                              + 1−
+                                    ∗   =   √2−1
+                                             2+1
+                                                   ≈ 017, which is the same value as implied
+               →0         2     
+by Proposition 5. To support this scenario, we assume that  has the Dirac point
+masses on the distances  and 2 in the intervals [0 ∗ ] and [∗  1], respectively.
+    When the dimensionality increases, our bounds become loose. Proposition 4
+          ¡ ¢
+implies 12 ≤ lim ≤ 1 which means that  can diﬀer by a factor of 2 under
+                  →0
+the worst- and best-case scenarios; for example, when  = 10,  can diﬀer by a
+                                                                             
+factor
+√
+         of 1024. Furthermore, when  = 10, Proposition 5 implies that D       (  ; B) ≤
+   10
+√2 −1 ≈ 094, which is almost uninformative since D  (  ; B) ≤ 1 by definition.
+  210 +1                                                  
+However, we cannot improve upon the general results of Propositions 4 and 5: our
+examples with Dirac point masses show that there exist density functions  under
+which the established bounds are attained.
+
+
+3       Incorporating the EDS grid into projection meth-
+        ods
+We refer to the set of points produced by the two-step procedure of Section 2.2 as
+an EDS grid. In this section, we incorporate the EDS grid into projection methods
+for solving dynamic economic models, namely, we use the EDS grid as a set of points
+
+
+                                               17
+on which the solution is approximated.
+
+3.1       Comparison of the EDS grid with other grids in the
+          literature
+Let us first compare the EDS grid to other grids used in the literature for solv-
+ing dynamic economic models. We must make a distinction between a geometry
+of the set on which the solution is computed and a specific discretization of this
+set. A commonly-used geometry in the related literature is a fixed multidimensional
+hypercube. Figures 3a-3d plot 4 diﬀerent discretizations of the hypercube: a tensor-
+product Chebyshev grid, a low-discrpancy Sobol grid, a sparse Smolyak grid and
+a monomial grid, respectively (in particular, these grids were used in Judd (1992),
+Rust (1998), Krueger and Kubler (2004), and Pichler (2011), respectively).
+    An adaptive geometry is an alternative used by stochastic simulation methods;
+see Marcet (1988), Smith (1993), Maliar and Maliar (2005), Judd et al. (2011) for
+examples of methods that compute solutions on simulated series.5 Focusing on the
+right geometry can be critical for the cost, as the following example shows.
+
+Example. Consider a vector of uncorrelated random variables  ∈ R drawn from
+a multivariate Normal distribution  ∼ N (0  ), where  is an identity matrix. An
+essentially ergodic set A has the shape of a hypersphere. Let us surround such a
+hypersphere with a hypercube of a minimum size. For dimensions 2, 3, 4, 5, 10, 30
+and 100, the ratio of the volume of a hypersphere to the volume of the hypercube
+is equal to 079, 052, 031, 016, 3 · 10−3 , 2 · 10−14 and 2 · 10−70 , respectively. These
+numbers suggest that an enormous savings in cost are possible by focusing on an
+essentially ergodic set instead of the standard multidimensional hypercube.
+
+However, a stochastic simulation is not an eﬃcient discretization of the high-probability
+set: a grid of simulated points is unevenly spaced, has many closely-located, redun-
+dant points and contains some points in low-density regions.
+    The EDS grid is designed to combine the best feature of the existing grids. It
+combines an adaptive geometry (similar to the one used by stochastic simulation
+methods) with an eﬃcient discretization (similar to that produced by low-discrepancy
+methods on a hypercube). In Figure 3e, we show an example of a cloud of simulated
+points of irregular shape, and in Figure 3f, we plot the EDS grid delivered by the
+two-step procedure of Section 2.2. As we can see, the EDS grid appears to cover the
+high-probability set uniformly.
+  5
+      For a detailed description of Marcet’s (1988) method, see Marcet and Lorenzoni (1999).
+
+                                                18
+    Tauchen and Hussey (1991) propose a related discretization technique that deliv-
+ers an approximation to a continuous density function of a given stochastic process.
+Their key idea is to approximate a Markov process with a finite-state Markov chain.
+This discretization technique requires to specify the distribution function of the
+Markov process explicitly and is primarily useful for forming discrete approxima-
+tions of density functions of exogenous variables. In contrast, the EDS discretization
+technique builds on stochastic simulation and does not require to known the distri-
+bution function. It can be applied to both exogenous and endogenous variables.
+    There are cases in which the EDS grid is a good choice. First, focusing on a
+high-probability set may not have advantages relatively to a hypercube; for example,
+if a vector  ∈ R is drawn from a multivariate uniform distribution,  ∼ [0 1] ,
+then an essentially ergodic set coincides with the hypercube [0 1] , and no saving
+in cost is possible. Second, in some applications, one may need to know a solution
+outside the high-probability set, for example, when analyzing a transition path of
+a developing economy with a low initial endowment. Finally, there are scenarios in
+which EDSs have large discrepancy as shows the worse-case analysis of Section 2. We
+did not observe the worst-case outcomes in our experiments. However, if the density
+of simulated points is highly uneven (e.g., Dirac point masses), the distribution of
+points in an EDS may be also uneven. If we know that we are in those cases, we
+may opt for other grids such as a grid on a multidimensional hypercube.
+
+3.2     General description of the EDS algorithm
+In this section, we develop a projection algorithm that uses the EDS grid for solving
+equilibrium problems. It is also possible to use the EDS grid in the context of
+dynamic-programming problems (we show an application in Section 4.3).
+
+3.2.1   An equilibrium problem
+We study an equilibrium problem in which a solution is characterized by the set of
+equilibrium conditions for  = 0 1     ∞,
+
+                          [ (      +1  +1  +1 )] = 0            (6)
+                                   +1 =  (  +1 )                            (7)
+
+where (0  0 ) is given;  denotes the expectations operator conditional on informa-
+tion available at ;  ∈ R is a vector of endogenous state variables at ;  ∈ R is
+a vector of exogenous (random) state variables at ;  ∈ R is a vector of non-state
+variables — prices, consumption, labor supply, etc. — also called non-predetermined
+
+                                               19
+variables;  is a continuously diﬀerentiable vector function; +1 ∈ R is a vector of
+shocks. A solution is given by a set of equilibrium functions +1 =  (   )  and
+ =  (   ) that satisfy (6), (7) in the relevant area of the state space. In terms
+of notations of Section 2.1, we have  = (  ),  = (   ) and  =  +  . The
+solution (  ) is assumed to satisfy the assumptions of Section 2.1.
+
+3.2.2     A projection algorithm based on the EDS grid
+Our construction of the EDS grid in Section 2.2 is based on the assumption that the
+stochastic process (1) for the state variables is known. However, the law of motion for
+endogenous state variables is unknown before the model is solved: it is precisely our
+goal to approximate this law of motion numerically. We therefore proceed iteratively:
+guess a solution, simulate the model, construct an EDS grid, solve the model on that
+grid using a projection method, and iterate on these steps until the grid converges.
+Below, we elaborate a description of this procedure for the equilibrium problem (6),
+(7).
+
+ (EDS algorithm): A projection algorithm for equilibrium problems.
+ Step 0. Initialization.
+   a. Choose (0  0 ) and simulation length,  .
+   b. Draw {+1 }=0 −1 . Compute and fix {+1 }=0 −1 using (7).
+   c. Choose approximating functions  ≈ b (·;  ) and  ≈ b (·;  ).
+   d. Make an initial guess on  and  .
+   e. Choose integration nodes,  , and weights,   ,  = 1  .
+ Step 1. Construction of an EDS grid.
+   a. Use b (·;  ) to simulate {+1 }=0 −1 .
+   b. Construct an EDS grid, Γ ≡ {   }=1 .
+ Step 2. Computation of a solution on EDS grid using a projection method.
+   a. At iteration , for  = 1  , compute
+   —  ≡ b (³   ;  ), ´0 ≡ b (   ;  ), 
+                                                           0   ≡  (   );
+   — 0      b      0   0
+          ≡     ;  ;     
+                       
+       
+       X            ³                              ´
+   —           ·        0  
+                                           0  0
+                                                 = 0
+       =1
+    b. Find  and  that solve the system in Step 2a.
+ Iterate on Steps 1, 2 until convergence of the EDS grid.
+
+
+
+
+                                                    20
+3.2.3   Choices related to the construction of the EDS grid
+We construct the EDS grid as described in Section 2.2. We guess the equilibrium rule
+b simulate the solution for  periods, construct a sample of  points by selecting
+,
+each th observation, estimate the density function, remove a fraction  of the sample
+with the lowest density, and construct an EDS grid with a target number of points
+ using a bisection method. Below, we discuss some of the choices related to the
+construction of the EDS grids.
+
+Initial guess on  . To insure that the EDS grid covers the right area of the
+state space, we need a suﬃciently accurate initial guess about the equilibrium rules.
+Furthermore, the equilibrium rules used must lead to nonexplosive simulated series.
+For many problems in economics, linear solutions can be used as an initial guess; they
+are suﬃciently accurate, numerically stable and readily available from automated
+perturbation software (we use Dynare solutions; see Adjemian et al., 2011).
+
+The choices of  and  . Our construction of an EDS relies on the assumption
+that simulated points are suﬃciently dense on the essentially ergodic set. Namely,
+in Proposition 2, we assume that each ball  (; ) inside A contains at least one
+simulated point. The probability Pr (0) of having no points
+                                                          R in a ball  (; ) inside
+                                           
+A after  draws satisfies Pr (0) ≤ (1 −  ) where  ≡ (;)  ≈    and 
+is the volume of a -dimensional unit ball. (Note that on the boundary of A where
+ = , we have Pr (0) = (1 −  ) ). Thus, given  and , we must choose  and
+ =  so that Pr (0) is suﬃciently small. We use  = 100 000 and  = 10, so that
+our sample has  = 10 000 points, and we choose  to remove 1% of points with the
+lowest density.
+
+The choices of  and . We need to have at least as many grid points in the EDS
+as the parameters  and  in b and b (to identify these parameters). Conventional
+projection methods rely on collocation, when the number of grid points is the same
+as the number of the parameters to identify. The collocation is a useful technique in
+the context of orthogonal polynomial constructions but is not applicable to our case
+(because our bisection method does not guarantee that the number of grid points is
+exactly equal to the target number ). Hence, we target slightly more points than
+the parameters, which also helps to increase both accuracy and numerical stability.
+
+Convergence of the EDS grid. Under Assumptions 1 and 2, the convergence of
+the equilibrium rules implies the convergence of the time-series solution; see Peralta-
+
+                                          21
+Alva and Santos (2005). Therefore, we are left to check that the EDS grid©constructed
+                                                                                 ª
+on the simulated series also converges. Let Γ0 ≡ {0 }=1 0 and Γ00 ≡ 00 =1 00
+be the EDS grids constructed ¡on two¢ diﬀerent sets of simulated points. Our criteria
+of convergence is sup inf
+                        0   0
+                               0  00  2. That is, each grid point of Γ00 has a grid
+                    00  00  ∈Γ
+                      ∈Γ
+
+point of Γ0 at the distance smaller than 2 (this value is used because it matches
+the maximum distance between the grid points on the essentially ergodic set; see
+Proposition 3).
+
+3.2.4    Other choices in the EDS algorithm
+The innovative feature of the projection algorithm of Section 3.2.2 is the EDS grid.
+The rest of the choices (such as a family of approximating functions, integration
+method, fitting method, etc.) should be made in a way that is suitable for a specific
+application. In making these choices, we must take into account the trade-oﬀ between
+accuracy, computational cost, numerical stability and programming eﬀorts. Below,
+we identify several techniques that are particularly eﬀective for high-dimensional ap-
+plications (in conjunction with the EDS grid) and that are very simple to implement.
+    First, we approximate the unknown equilibrium rules using standard ordinary
+polynomials. Such polynomials are cheap to construct and can be fitted to the data
+using simple and reliable linear approximation methods.
+    Second, we rely on deterministic integration methods such as the Gauss-Hermite
+quadrature and monomial integration methods. Deterministic methods dominate
+in accuracy the Monte Carlo method by orders of magnitude in the context of the
+studied numerical examples; see Judd et al. (2011) for comparison results.6 The
+cost of Gaussian product rules is prohibitive but monomial formulas are tractable
+in problems with very high dimensionality (even in models with hundreds of state
+variables). In particular, we use monomial formulas whose cost grows only linearly
+or quadratically with the number of shocks.
+    Finally, we solve the system of equations in Step 2 using a fixed-point iteration
+method, namely, we find the parameters vector in approximating functions on itera-
+tion  + 1 as (+1) = b() + (1 − ) () , where b() and () are the parameters vectors
+   6
+    For example, assume that a Monte Carlo method is used to approximate   ³ an expectation
+                                                                                 ´          of
+                                                           P                 
+ ∼ N (0  ) with  random draws. The distribution of  = =1  is  ∼ N 0  . If  = 1%
+                                                                              √
+                                                         
+and  = 10 000, we have approximation errors of order √ = 10−4 . To bring the error to the level
+of 10−8 , which we attain using quadrature methods, we need to have  = 1012 . That is, a slow
+√
+  -rate of convergence makes it very expensive to obtain highly accurate solutions using stochastic
+simulation.
+
+
+
+                                                22
+in the beginning and the end of iteration  and  ∈ (0 1]. For a fixed EDS grid, we
+consider the solution as being converged when the diﬀerence between the approxi-
+mating functions on two consecutive iterations is smaller then a given value. The
+cost of fixed-point iteration does not practically increase with the dimensionality of
+the problem.
+
+3.2.5     Evaluating the accuracy of solutions
+Provided that the EDS algorithm succeeds in producing a candidate solution, we
+subject such a solution to a tight accuracy check. We specifically generate a set of
+points within the domain on which we want the solution to be accurate, and we
+compute residuals in all equilibrium conditions.
+
+ (Evaluation of accuracy): Residuals in equilibrium conditions
+ a. Choose a set of points {   } =1T te st for evaluating the accuracy.
+ b. For  = 1  T test , compute the size of the residuals:
+                  test
+                 X             h ³                             ´i
+  R (   ) ≡        test
+                             ·          0  0  0
+                                                            
+                  =1
+ where  = b (³   ;  ),´ 0 = b (³  ;  ), ´
+        0 =    test , 0 = b    0 ;  ,
+                                             
+      test
+           and  test
+                      are the integration nodes and weights.
+ c. Find a mean and/or maximum of the residuals R (   ).
+If the quality of a candidate solution is economically inacceptable, we modify the
+choices made in the EDS algorithm (i.e., simulation length, number of grid points,
+approximating functions, integration method) and recompute the solution. In the
+paper, we evaluate the accuracy on a set of simulated points. This new set of points is
+diﬀerent from that used in the solution procedure: it is constructed under a diﬀerent
+sequence of shocks. Other possible accuracy checks include an evaluation of residuals
+in the model’s equations on a given set of points in the state space (Judd, 1992), and
+testing the orthogonality of residuals in the optimality conditions (Den Haan and
+Marcet, 1994); see Santos (2000) for a discussion.
+
+3.2.6     Potential problems
+An EDS grid is an eﬀective grid for high-dimensional problems, however, the EDS al-
+gorithm shares the limitations of projection methods. In particular, the combination
+of computational techniques described above does not guarantee the convergence;
+and even if the algorithm converges, there is no guarantee that it converges to the
+
+                                                     23
+true solution. Below, we outline some problems that may arise in applications and
+discuss how these problems can be addressed.
+    First, stochastic simulation can produce explosive time series under high-degree
+polynomials. To restore the numerical stability, we may try to use other better
+behaved families of approximating functions or to restrict the equilibrium rules to
+satisfy certain growth limits (e.g., concavity, monotonicity, non-negativity).
+    Second, local perturbation solutions may be not a suﬃciently accurate initial
+guess, and the resulting EDS grid may not represent correctly the essentially ergodic
+set. Finding a suﬃciently good initial guess can be a non-trivial issue in some
+applications, and techniques from learning literature can be useful here; see Bertsekas
+and Tsitsiklis (1996) for a discussion.
+    Third, fixed-point iteration may fail to converge. Newton methods are more
+reliable in the given context but they also do not guarantee finding a solution. Global-
+search techniques are a useful but expensive alternative.
+    Finally, small residuals in the equilibrium conditions do not necessarily mean that
+we found the solution. For certain models, equilibrium may fail to exist; see Santos
+(2002) for examples. Furthermore, a candidate solution may be a minimum or just
+a regular point rather than a maximum, and the analysis of second-order conditions
+may be needed. Also, there could be multiple equilibria; see Feng et al. (2009) for
+related examples and their treatment.
+    In all our examples, the projection method based on the EDS grid was highly
+accurate and reliable, however, the reader must be aware of the existence of the
+above potential problems and must be ready to detect and to address such problems
+if they arise in applications.
+
+
+4    Neoclassical stochastic growth model
+In this section, we use the EDS approach to solve the standard neoclassical stochas-
+tic growth model. We discuss some relevant computational choices and assess the
+performance of the algorithm in one- and multi-agent setups.
+
+
+
+
+                                          24
+4.1    The set up
+The representative agent solves
+                                                         X
+                                                         ∞
+                                   max              0            ( )         (8)
+                             {+1  }=0∞
+                                                         =0
+                        s.t.  + +1 = (1 − )  +   ( )                 (9)
+                                                            ¡       ¢
+                    ln +1 =  ln  + +1     +1 ∼ N 0 2                 (10)
+
+where (0  0 ) is given;  is the expectation operator conditional on information at
+time ;  ,  and  are consumption, capital and productivity level, respectively;
+ ∈ (0 1);  ∈ (0 1];   0;  ∈ (−1 1);  ≥ 0;  and  are the utility and
+production functions, respectively, both of which are strictly increasing, continuously
+diﬀerentiable and concave. Under our assumptions, this model has a unique solution;
+see, e.g., Stokey and Lucas with Prescott (1989, p. 392). In particular, under
+ () = ln (),  = 1 and  () =  , the model admits a closed-form solution
++1 =   (this solution was used to produce Figures 1 and 2).
+
+4.2    An EDS algorithm iterating on the Euler equation
+We describe an example of the EDS method that iterates on the Euler equation. For
+the model (8)—(10), the Euler equation is
+
+                      1 () =  [1 (0 ) (1 −  + 0 1 (0 ))]              (11)
+
+where primes on variables denote next-period values, and  denotes a first-order
+derivative of a function  with respect the th argument. Under the Euler equation
+approach, we must solve for equilibrium rules  =  ( ) and  0 =  ( ) that
+satisfy (9)—(11).
+    In Table 1, we provide the results for the Euler equation EDS algorithm under
+the target number of grid points  = 25 points.
+    The accuracy of solutions delivered by the EDS algorithm is comparable to the
+highest accuracy attained in the related literature. The residuals in the optimality
+conditions decrease with each polynomial degree by one or more orders of magnitude.
+For the fifth-degree polynomials, the largest unit-free residual corresponding to our
+least accurate solution is still less than 10−6 (see the experiment with a high degree
+of risk aversion  = 5). Most of the cost of the EDS algorithm comes from the
+construction of the EDS grid (the time for constructing the EDS grids is included in
+Table 1: Accuracy and speed of the Euler-equation EDSA algorithm in the one-agent
+model.
+         Polynomial           = 15                  =1                    =5
+           degree            () = 21               () = 27              () = 25
+                        L1     L∞     CPU       L1     L∞     CPU      L1     L∞     CPU
+             1st       -4.74 -3.81     25.5    -4.29 -3.31     24.7   -3.29 -2.35     23.6
+             2nd       -6.35 -5.26      1.8    -5.94 -4.87      0.8   -4.77 -3.60      0.4
+             3rd       -7.93 -6.50      1.9    -7.26 -6.04      0.9   -5.97 -4.47      0.4
+             4th       -9.37 -7.60      2.0    -8.65 -7.32      0.9   -7.05 -5.26      0.4
+             5th       -9.82 -8.60 14.25       -9.47 -8.24      5.5   -7.89 -6.46      2.8
+
+
+ Notes: L1 and L∞ are, repectively, the average and maximum of absolute residuals across opti-
+mality condition and test points (in log10 units) on a stochastic simulation of 10,000 observations;
+CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient of risk aversion;
+M() is the realized number of points in the EDS grid (the target number of grid points is M=25).
+
+
+the total time for computing the polynomial solution of degree 1). Computing high-
+degree polynomial solutions is relatively fast (a few seconds) for a given grid. We
+perform sensitivity experiments in which we vary the target number of grid points
+and find that the results are robust to the modifications considered. We also vary the
+number of nodes in the Gauss-Hermite quadrature rule, and we find that even the 2-
+node rule leads to essentially the same accuracy levels as the 10-node rule (except the
+fourth and fifth-degree polynomials under which the accuracy is somewhat lower).
+This result is in line with the finding of Judd (1992) that in the context of the
+standard growth model, even few quadrature nodes lead to very accurate solutions.
+
+Autocorrection of the EDS grid. Suppose our initial guess about the essentially
+ergodic set is poor. To check whether the EDS grid is autocorrecting, we perform the
+following experiment. We scale up the time-series solution for capital by a factor of
+10, and use the resulting series for constructing the first EDS grid (thus, the capital
+values in this grid are spread around 10 instead of 1). We solve the model on this grid
+and use the solution to construct the second EDS grid. We repeat this procedure
+two more times. Figure 3 shows that the EDS grid converges rapidly.
+
+
+
+
+                                                 26
+    We tried out various initial guesses away from the essentially ergodic set, and
+we observed autocorrection of the EDS grid in all the experiments performed. Fur-
+thermore, the EDS grid approach was autocorrecting in our challenging applications
+such as a multi-agent neoclassical growth model and a new Keynesian model with a
+zero lower bound on nominal interest rates. Note that the property of autocorrection
+of the grid is a distinctive feature of the EDS algorithm. Conventional projection
+methods operate on fixed domains and have no built-in mechanism for correcting
+their domains if the choices of their domains are inadequate.
+
+EDS grid versus Smolyak grid. Krueger and Kubler (2004), and Malin, Krueger
+and Kubler (2011) develop a projection method that relies on a Smolyak sparse grid.
+Like conventional projection methods, Smolyak’s method operates on a hypercube
+domain (and, hence, the size of the domain grows exponentially with the dimension-
+ality of the state space). However, it uses a specific discretization of the hypercube
+domain which yields a sparse grid of carefully selected points (the number of points
+in the Smolyak grid grows only polynomially with the dimensionality of the state
+space).
+    We now compare the accuracy of solutions under the Smolyak and EDS grids.7
+We construct the Smolyak grid as described in Malin et al. (2011), namely, we use the
+   7
+    Also, the Smolyak and EDS methods diﬀer in the number of grid points (collocation versus
+overidentification), the polynomial family (a subset of complete Chebyshev polynomials versus a
+set of complete ordinary polynomials), the interpolation procedure (Smolyak interpolation versus
+polynomial interpolation) and the procedure for finding fixed-point coeﬃcients (time iteration versus
+fixed-point iteration). These diﬀerences are important; for example, time iteration is more expensive
+than fixed-point iteration, the collocation is less robust and stable than overidentification.
+
+                                                 27
+Table 2: Accuracy and speed in the one-agent model: Smolyak grid versus EDS
+grid.
+            Polynomial       Accuracy on   a simulation      Accuracy on   a hypercube
+              degree       Smolyak grid       EDS grid     Smolyak grid       EDS grid
+                            L1     L∞         L1     L∞     L1     L∞        L1     L∞
+                1st        -3.31   -2.94    -4.23 -3.31    -3.25   -2.54    -3.26 -2.38
+                2nd        -4.74   -4.17    -5.89 -4.87    -4.32   -3.80    -4.41 -3.25
+                3rd        -5.27   -5.13    -7.19 -6.16    -5.39   -4.78    -5.44 -4.11
+
+
+ Notes: L1 and L∞ are, repectively, the average and maximum of absolute residuals across opti-
+mality condition and test points (in log10 units) on a stochastic simulation of 10,000 observations;
+CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient of risk aversion;
+M() is the realized number of points in the EDS grid (the target number of grid points is M=25).
+
+                                                                 h   ³       ´      ³ ´i
+                                                                         08          08
+interval for capital [08 12] and the interval for productivity exp − 1−     exp 1−  .
+The Smolyak grid has 13 points (see Figure 3c), so we use the same target number
+of points in the EDS grid. With 13 grid points, we can identify the coeﬃcients in
+ordinary polynomials up to degree 3. In this case, we evaluate the accuracy of solu-
+tions not only on a stochastic simulation but also on a set of 100 × 100 points which
+are uniformly spaced on the same domain as the one used by the Smolyak method
+for finding a solution. The results are shown in Table 2.
+     In the test on a stochastic simulation, the EDS grid leads to considerably more
+accurate solutions than the Smolyak grid. This is because under the EDS grid, we
+fit a polynomial directly in the essentially ergodic set, while under the Smolyak grid,
+we fit a polynomial in a larger rectangular domain and face a trade-oﬀ between the
+fit inside and outside the ergodic set. However, in the test on the rectangular do-
+main, however, the Smolyak grid produces significantly smaller maximum residuals
+than the EDS grid. This is because the EDS algorithm is designed to be accurate
+in the essentially ergodic set and its accuracy decreases more rapidly away from the
+essentially ergodic set than the accuracy of methods operating on larger hypercube
+domains. We repeated this experiment by varying the intervals for capital and pro-
+ductivity in the Smolyak grid, and we have the same regularities. These regularities
+are also observed in high-dimensional applications.8
+    8
+     Kollmann et al. (2011) compare the accuracy of solutions produced by several solution methods,
+including the cluster-grid algorithm (CGA) introduced in the earlier version of the present paper
+and the Smolyak algorithm of Krueger and Kubler (2004) (see Maliar et al., 2011, and Malin et
+al., 2011, for implementation details of the respective methods in the context of those models).
+Their comparison is performed using a collection of 30 real-business cycle models with up to 10
+4.3     An EDS algorithm iterating on the Bellman equation
+We can also characterize a solution to the model (8)—(10) by using dynamic program-
+ming approach. We must solve for value function  ( ) that satisfies the Bellman
+equation,
+
+                          ( ) = max
+                                     0
+                                        { () +  [ (0  0 )]}                          (12)
+                                       
+
+                           s.t. 0 = (1 − )  +  () −                                 (13)
+                                                           ¡    ¢
+                             ln 0 =  ln  + 0   0 ∼ N 0 2                            (14)
+
+where  [ (0  0 )] ≡  [ (0  0 ) | ] is an expectation of  (0  0 ) conditional on
+state ( ).
+    The results for the Bellman equation EDS algorithm are provided in Table 3.
+
+Table 3: Accuracy and speed of Bellman equation EDSA algorithm in the one-agent
+model.
+         Polynomial           = 15                =1                    =5
+           degree            () = 21             () = 27              () = 25
+                        L1     L∞     CPU     L1     L∞     CPU      L1     L∞     CPU
+             1st         -      -      -       -      -      -        -      -      -
+             2nd       -4.39 -3.51     0.2   -3.98 -3.11     0.5    -2.69 -2.12     1.3
+             3rd       -5.70 -4.52     0.2   -5.15 -4.17     0.4    -3.80 -2.75     0.7
+             4th       -6.79 -5.49     0.2   -6.26 -5.12     0.4    -4.64 -3.36     0.7
+             5th       -7.12 -5.45     0.2   -7.42 -5.93     0.4    -5.44 -3.94     1.0
+
+
+  Notes: L1 and L∞ are, repectively, the average and maximum of absolute approximation errors
+across optimality condition and test points (in log10 units) on a stochastic simulation of 10,000
+observations; CPU is the time necessary for computing a solution (in seconds);  is the coeﬃcient
+of risk aversion; M() is the realized number of points in the EDS grid (the target number of grid
+points is M=25)
+
+    The EDS algorithm iterating on the Bellman equation is successful in finding
+polynomial solutions of degrees 2—5 (the polynomial solutions of degree 1 imply a
+degenerate case when the equilibrium rules are constant).
+    The comparison with Table 2 shows that the Bellman equation algorithm pro-
+duces much larger approximation errors (of order 10−4 − 10−6 ) than the Euler equa-
+tion algorithm. The accuracy of the Bellman equation method is lower because it
+heterogeneous agents. Their findings are the same as ours: on a stochastic simulation and near
+the steady state, the CGA solutions are more accurate than the Smolyak solutions whereas the
+situation reverses for large deviations from the steady state.
+parameterizes the value function (while the Euler equation method parameterizes the
+derivative of the value function) and eﬀectively, loses one polynomial degree. Also,
+the Bellman equation is much faster.
+
+4.4    EDS algorithm in problems with high dimensionality
+We now explore the tractability of the EDS algorithm in problems with high dimen-
+sionality. We extend the one-agent model (8)—(10) to include multiple agents, which
+is a simple way to expand and to control the size of the problem. There are  agents,
+interpreted as countries, which diﬀer in initial capital endowment and productivity
+levels. The countries’ productivity levels are aﬀected by both country-specific and
+worldwide shocks. We study the social planner’s problem. We do not make use of
+the symmetric structure of the economy and approximate the planner’s solution in
+the form of  capital equilibrium rules, each of which depends on 2 state variables
+( capital stocks and  productivity levels). For each country, we use essentially
+the same computational procedure as that used in the representative-agent case. For
+a description of the multicountry model and details of the computational procedure,
+see Appendix D.
+
+Determinants of cost in problems with high dimensionality. The cost of
+finding numerical solutions increases with the dimensionality of the problem for var-
+ious reasons. There are more equations to solve and more equilibrium rules to ap-
+proximate. The number of terms in an approximating polynomial function increases,
+and we need to increase the number of grid points to identify the polynomial coef-
+ficients. The number of nodes in integration formulas increases. Finally, operating
+with large data sets can slow down computations or can lead to a memory conges-
+tion. If a solution method relies on product-rule constructions (of grids, integration
+nodes, derivatives, etc.), the cost increases exponentially (curse of dimensionality) as
+is in the case of conventional projection methods such as a Galerkin method of Judd
+(1992). Below, we show that the cost of the EDS algorithm grows at a relatively
+moderate rate.
+
+Accuracy and cost of solutions. We solve the model with  ranging from 2
+to 200. The results about the accuracy and cost of solutions are provided in Table
+4. We consider four alternative integration rules such as the Gauss-Hermite product
+rule with 2 nodes, denoted by  (2), the monomial rule with 2 2 +1 nodes, denoted
+by 2, the monomial rule with 2 nodes, denoted by 1, (see Judd, 1998, formulas
+7.5.9—7.5.11), and the Gauss-Hermite rule with one node, denoted by  (1).
+
+                                          30
+                                                                                                                 a
+Table 4. Accuracy and speed in the multicountry model depending on the integration method used.
+
+Number                                                                                                Integration Method
+              Polyn.     Number                                   N                          2
+of Coun-                           b   M      M(ε)           2        nodes            2N       1  nodes            2 N nodes                 1 node
+              Degree    of Coef.
+  tries                                                L1              L∞    CPU      L1          L∞     CPU       L1     L∞    CPU      L1       L∞     CPU
+                  st
+                1           5                   292   -4.70           -3.17    0.6   -4.70       -3.17     0.9   -4.70   -3.17    0.7   -4.68   -3.18     0.8
+    N=2                                300
+                2nd         15                  317   -6.01           -4.06    1.8   -6.01       -4.06     2.5   -6.01   -4.06    1.9   -5.74   -4.04     1.4
+                1st         9                   291   -4.73           -3.12    1.1   -4.73       -3.12     2.0   -4.73   -3.12    0.8   -4.71   -3.13     0.7
+    N=4                                300
+                2nd         45                  300   -6.03           -4.19    4.8   -6.03       -4.19     8.6   -6.03   -4.19    3.4   -5.58   -4.34     1.5
+                1st         13                  290   -4.73           -3.05    3.7   -4.73       -3.05     3.9   -4.73   -3.05    1.1   -4.71   -3.06     0.7
+    N=6                                300
+                2nd         91                  300   -6.00           -4.15     21   -6.00       -4.15      24   -6.00   -4.15    5.0   -5.53   -4.27     1.6
+                1st         17                  283   -4.74           -3.02     16   -4.74       -3.02     7.8   -4.74   -3.02    1.9   -4.72   -3.03     0.7
+    N=8                                300
+                2nd        153                  322   -5,99           -4,24   159    -5,99       -4,24      63   -5,99   -4,24    7,0   -5,49   -4,23     1,8
+                1st         21                  398     -               -     -      -4,76       -3,05      18   -4,76   -3,05    3,0   -4,74   -3,06     1,0
+    N = 10                             400
+                2nd        231                  407     -               -     -      -5,94       -4,30    208    -5,94   -4,30     16   -5,53   -4,18     3,2
+                1st         25                  398     -               -     -      -4,76       -3,06      23   -4,76   -3,06    3,9   -4,75   -3,07     1,1
+    N = 12                             400
+                2nd        325                  405     -               -     -      -5,84       -4,27   1150    -5,84   -4,27     22   -5,52   -4,22     3,8
+                1st         33                 1006     -               -     -        -           -      -      -4,78   -3,05     14   -4,77   -3,06     2,9
+    N = 16                             1000
+                2nd        561                  973     -               -     -        -           -      -      -6,03   -4,34   113    -5,51   -4,35      18
+                1st         41                 1006     -               -     -        -           -      -      -4,76   -3,05     21   -4,77   -3,06     3,1
+    N = 20                             1000
+                2nd        861                  987     -               -     -        -           -      -      -5,88   -4,14   282    -5,50   -4,14      32
+                1st         61                 4000     -               -     -        -           -      -        -       -     -      -4,79   -3,11      59
+    N = 30                             4000
+                2nd        1891                4030     -               -     -        -           -      -        -       -     -      -5,50   -4,16     605
+                1st         81                 4000     -               -     -        -           -      -        -       -     -      -4.79   -3.09      89
+    N = 40                             4000
+                2nd        3321                3997     -               -     -        -           -      -        -       -     -      -5.48   -4.13    1463
+    N=100       1st        201         1000    1005     -               -     -        -           -      -        -       -     -      -4.74   -2.95      36
+    N=200       1st        401         1000     981     -               -     -        -           -      -        -       -     -      -4.66   -2.90     105
+a
+   L1 and L∞ are, respectively, the average and maximum absolute unit-free Euler equation residuals (in log10 units) on a stochastic simulation of
+10,000 observations; CPU is the time necessary for computing a solution (in minutes); M and M(ε) are the target and realized numbers of points in
+the EDS grid, respectively; and 2 N , 2N 2  1, 2 N and 1 are the Gauss-Hermite product rule with 2 nodes for each shock, quadratic and linear
+monomial rules and 1-node rule, respectively;
+b
+    In the equilibrium rule of each country.
+    The accuracy of solutions here is similar to that we have for the one-agent model.
+For the polynomial approximations of degrees 1 and 2, the residuals are typically
+smaller than 01% and 001%, respectively. A specific integration method used plays
+only a minor role in the accuracy of solutions. For the polynomial approximation
+of degree 1, all the integration methods considered lead to virtually the same accu-
+racy. For the polynomial approximation of degree 2,  (2), 2 and 1 lead to the
+residuals which are identical up to the fourth digit, while  (1) yields the residuals
+which are 5 − 10% larger. These regularities are robust to variations in the model’s
+parameters such as the volatility and persistence of shocks and the degrees of risk
+aversion (see Table 8 in Judd, Maliar and Maliar, 2010, a working-paper version of
+the present paper).
+    The running time ranges from 36 seconds to 24 hours depending on the number of
+countries, the polynomial degree and the integration technique used. In particular,
+the EDS algorithm is able to compute quadratic solutions to the models with up to
+40 countries and linear solutions to the models with up to 200 countries when using
+inexpensive (monomial and one-node quadrature) integration rules. Thus, the EDS
+algorithm is tractable in much larger problems than those studied in the related lit-
+erature. A proper coordination between the choices of approximating function and
+integration technique is critical in problems with high dimensionality. An exam-
+ple of such a coordination is a combination of a flexible second-degree polynomial
+with a cheap one-node Gauss-Hermite quadrature rule (as opposed to an ineﬃcient
+combination of a rigid first-degree polynomial with expensive product integration
+formulas).
+
+
+5       New Keynesian model with the ZLB
+In this section, we use the EDS algorithm to solve a stylized new Keynesian model
+with Calvo-type price frictions and a Taylor (1993) rule.9 Our setup builds on the
+models considered in Christiano, Eichenbaum and Evans (2005), Smets and Wouters
+(2003, 2007), Del Negro, Schorfheide, Smets and Wouters (2007). This literature
+estimates their models using the data on actual economies, while we use their pa-
+rameter estimates and compute solutions numerically. We solve two versions of the
+model, one in which we allow for negative nominal interest rates and the other in
+which we impose a zero lower bound (ZLB) on nominal interest rates.10 The studied
+    9
+     In an earlier version of the present paper, Judd et al. (2011) use a cluster-grid algorithm (CGA)
+to solve a new Keynesian model which is identical to the one studied here except of parameterization.
+  10
+     For the neoclassical growth model studied in Section 4, it would be also intersting to explore
+the case with occasionally binding borrowing constraints. Christiano and Fisher (2000) show how
+
+                                                 31
+model has eight state variables and is large-scale in the sense that it is expensive
+or even intractable under conventional global solution methods that rely on product
+rules.
+    The literature that finds numerical solutions to new Keynesian models typi-
+cally relies on local perturbation solution methods or applies expensive global so-
+lution methods to low-dimensional problems. As for perturbation, most papers com-
+pute linear approximations, and some papers compute quadratic approximations
+(e.g., Kollmann, 2002, and Schmitt-Grohé and Uribe, 2007) or cubic approxima-
+tions (e.g., Rudebusch and Swanson, 2008). Few papers use global solution meth-
+ods; see, e.g., Adam and Billi (2006), Anderson, Kim and Yun (2010), and Ad-
+jemian and Juillard (2011). The above papers have at most 4 state variables and
+employ simplifying assumptions.11 A recent paper of Fernández-Villaverde, Gor-
+don, Guerrón-Quintana, and Rubio-Ramírez (2012) uses a global solution method
+(namely, Smolyak’s method) to study the predictions of a model similar to ours, and
+it provides an extensive analysis of the economic significance of the ZLB.
+
+5.1     The set up
+The economy is populated by households, final-good firms, intermediate-good firms,
+monetary authority and government; see Galí (2008, Chapter 3) for a detailed de-
+scription of the baseline new Keynesian model.
+
+Households. The representative household solves
+                               X∞           ∙                       ¸
+                                   
+                                     ¡ ¢ 1− − 1      ¡ ¢ 1+
+                                                                −1
+              max            0  exp          − exp                                     (15)
+      {   }=0∞
+                               =0
+                                              1−             1+
+                                       
+                    s.t.   +       ¡   ¢   +  = −1 +   + Π                         (16)
+                                   exp  
+        ¡                     ¢
+where 0   0  0  0 is given;  ,  , and  are consumption, labor and nom-
+inal bond holdings, respectively;  ,  and  are the commodity price, nominal
+wage and (gross) nominal interest rate, respectively;   and  are exogenous pref-
+erence shocks to the overall momentary utility and disutility of labor, respectively;
+ is an exogenous premium in the return to bonds;  is lump-sum taxes; Π is the
+projection methods could be used to solve such a model.
+  11
+     In particular, Adam and Billi (2006) linearize all the first-order conditions except for the non-
+negativity constraint for nominal interest rates, and Adjemian and Juillard (2011) assume perfect
+foresight to implement an extended path method of Fair and Taylor (1984).
+
+                                                 32
+profit of intermediate-good firms;  ∈ (0 1) is the discount factor;   0 and   0
+are the utility-function parameters. The processes for shocks are
+                                                            ¡      ¢
+                     +1 =    + +1  +1 ∼ N 0 2             (17)
+                                                             ¡      ¢
+                     +1 =   + +1   +1 ∼ N 0 2             (18)
+                                                             ¡     2
+                                                                     ¢
+                    +1 =   + +1    +1 ∼ N 0               (19)
+
+where      ∈ (−1 1), and        ≥ 0.
+
+Final-good firms. Perfectly competitive final-good firms produce final goods us-
+ing intermediate goods. A final-good firm buys  () of an intermediate good  ∈ [0 1]
+at price  () and sells  of the final good at price  in a perfectly competitive mar-
+ket. The profit-maximization problem is
+                                             Z 1
+                              max   −         ()  ()                      (20)
+                                ()               0
+                                          µZ    1                    ¶ −1
+                                                                        
+                                                             −1
+                              s.t.  =              ()                       (21)
+                                            0
+
+where (21) is a Dixit-Stiglitz aggregator function with  ≥ 1.
+
+Intermediate-good firms. Monopolistic intermediate-good firms produce inter-
+mediate goods using labor and are subject to sticky prices. The firm  produces
+the intermediate good . To choose labor in each period , the firm  minimizes the
+nominal total cost, TC (net of government subsidy ),
+
+                            min TC ( ()) = (1 − )   ()                      (22)
+                             ()
+                                                   ¡ ¢
+                                  s.t.  () = exp    ()                    (23)
+                                                                   ¡   ¢
+                      +1 =   + +1      +1 ∼ N 0 2             (24)
+                                              ¡ ¢
+where  () is the labor input; exp   is the productivity level;  ∈ (−1 1),
+and   ≥ 0. The firms are subject to Calvo-type price setting: a fraction 1 −  of
+the firms sets prices optimally,  () = e , for  ∈ [0 1], and the fraction  is not
+allowed to change the price and maintains the same price as in the previous period,
+ () = −1 (), for  ∈ [0 1]. A reoptimizing firm  ∈ [0 1] maximizes the current
+
+
+
+
+                                                    33
+value of profit over the time when e remains eﬀective,
+                   X
+                   ∞          n    h                                  io
+               max       Λ+ e + () − + mc+ + ()                 (25)
+                
+                      =0
+                                                  µ            ¶−
+                                                       ()
+                               s.t.  () =                                        (26)
+                                                       
+
+where (26) is the demand for an intermediate good  (follows from the first-order
+condition of (20), (21)); Λ+ is the Lagrange multiplier on the household’s budget
+constraint (16); mc+ is the real marginal cost of output at time  +  (which is
+identical across the firms).
+
+Government. Government finances a stochastic stream of public consumption by
+levying lump-sum taxes and by issuing nominal debt. The government budget con-
+straint is
+                                        
+                +     ¡  ¢    =      ¡     ¢ + −1 +          (27)
+                    exp         exp  
+where  is the steady-state share of government spending in output;   is the
+subsidy to the intermediate-good firms;  is a government-spending shock,
+                                                          ¡      ¢
+                   +1 =   + +1   +1 ∼ N 0 2           (28)
+
+where  ∈ (−1 1) and  ≥ 0.
+
+Monetary authority. The monetary authority follows a Taylor rule. When the
+ZLB is imposed on the net interest rate, this rule is  = max {1 Φ } with Φ being
+defined as
+                      µ      ¶ "µ ¶ µ           ¶ #1−
+                        −1                               ¡    ¢
+             Φ ≡ ∗                                        exp             (29)
+                         ∗         ∗        
+where  and ∗ are the gross nominal interest rate at  and its long-run value,
+respectively;  ∗ is the target inflation;  is the natural level of output; and   is
+a monetary shock,
+                                                                ¡     ¢
+                     +1 =   + +1     +1 ∼ N 0 2                (30)
+
+where  ∈ (−1 1) and  ≥ 0. . When the ZLB is not imposed, the Taylor rule is
+ = Φ .
+
+                                            34
+Natural level of output. The natural level of output  is the level of output
+in an otherwise identical economy but without distortions. It is a solution to the
+following planner’s problem
+                               X∞              ∙                            ¸
+                                    
+                                         ¡ ¢ 1− − 1          ¡ ¢ 1+
+                                                                        −1
+                max          0  exp                 − exp           (31)
+          {  }=0∞
+                               =0
+                                                  1−                 1+
+                                                 ¡ ¢
+                                   s.t.  = exp   −                 (32)
+                
+where  ≡   exp(  )
+                           is given, and  +1 , +1 , +1 , and  follow the processes
+(17), (18), (24), and (28), respectively. The FOCs of the problem (31), (32) imply
+that  depends only on exogenous shocks,
+                               "          ¡ ¢1+         # +
+                                                            1
+
+                                      exp 
+                        = £      ¡    ¢¤−    ¡ ¢                         (33)
+                                 exp       exp  
+
+5.2    Summary of equilibrium conditions
+We summarize the equilibrium conditions below (the derivation of the first-order
+conditions is provided in Appendix E):
+                                 ¡            ¢
+                             exp   +             ©        ª
+                         =        ¡ ¢   +   +1 +1                            (34)
+                                exp 
+                                ¡ ¢                  ©          ª
+                         = exp   −  +   −1
+                                                        +1 +1                            (35)
+
+                                  ∙           ¸ 1−
+                                                 1
+                                1 −  −1
+                                         
+                           =                                                                (36)
+                                  1−
+                                "          ∙           ¸               #−1
+                                             1 − −1 −1         
+                        ∆    = (1 − )                      +                             (37)
+                                               1−               ∆−1
+                                      ¡      ¢        " −       ¡       ¢#
+                                 exp            +1 exp +1
+                    −      =        ¡ ¢                                                (38)
+                                   exp                    +1
+                                          ¡ ¢
+                                   = exp   ∆                                       (39)
+                                       Ã                !
+                                                
+                                   =   1−     ¡     ¢                                   (40)
+                                            exp 
+
+                                                 35
+                                         = max {1 Φ }                                        (41)
+where Φ is given by (29); the variables  and  are introduced for a compact
+representation of the profit-maximization condition of the intermediate-good firm and
+are defined recursively;  +1 ≡ +1           
+                                                     is the gross inflation rate between  and  + 1; ∆
+is a measure of price dispersion across firms (also referred to as eﬃciency distortion).
+The conditions (34)—(40) correspond, respectively, to (E17), (E18), (E23), (E33) and
+(E3) in Appendix E.
+    An interior equilibrium is described by 8 equilibrium conditions (34)—(41), and
+6 processes for exogenous shocks, (17)—(19), (24), (30) and (28). The system of
+equations must be solved with respect to 8 unknowns {         ∆       }.
+There ©are 2 endogenous state variables,           ª        {∆−1  −1 }, and 6 exogenous state vari-
+ables,                .
+
+5.3     Numerical analysis
+Methodology. We use the estimates of Smets and Wouters (2003, 2007) and
+Del Negro et al. (2007) to assign values to the parameters. We approximate nu-
+                                                                              −
+merically
+      © the equilibrium rules  =  ( ),ª =  ( ) and  =MU( ) with
+ = ∆−1  −1              using the Euler equations (34), (35)
+and (38), respectively. We solve for the other variables analytically using the re-
+maining equilibrium conditions. We compute the polynomial solutions of degrees 2
+and 3, referred to as EDS2 and EDS3, respectively. For comparison, we also com-
+pute first- and second-order perturbation solutions, referred to as PER1 and PER2,
+respectively (we use Dynare 4.2.1 software). When solving the model with the ZLB
+by the EDS algorithm, we impose the ZLB both in the solution procedure and in
+subsequent simulations (accuracy checks). Perturbation methods do not allow us to
+impose the ZLB in the solution procedure. The conventional approach in the litera-
+ture is to disregard the ZLB when computing perturbation solutions and to impose
+the ZLB in simulations when running accuracy checks (that is, whenever  happens
+to be smaller than 1 in simulation, we set it to 1). A detailed description of the
+methodology of our numerical analysis is provided in Appendix E. We illustrate the
+EDS grid for the model with the ZLB in Figure 5 where we plot the time-series    ¡       ¡ solu-
+                                                                                             ¢¢
+tion and the grids in two-dimensional spaces, namely, (  ∆ ) and   exp   .
+We see that many points happen to be on the bound  = 1 and that the essentially
+ergodic set in the two figures is shaped roughly as a circle.
+
+
+
+
+                                                  36
+Accuracy and cost of solutions. Two parameters that play a special role in
+our analysis are the volatility of labor shocks  and the target inflation rate  ∗ .
+Concerning   , Del Negro et al. (2007) finds that shocks to labor must be as large
+as 40% to match the data, namely, they estimate the interval   ∈ [01821, 06408]
+with the average of  = 04054. Concerning  ∗ , Del Negro et al. (2007) estimate
+the interval  ∗ ∈ [10461 10738] with the average of  ∗ = 10598, while Smets and
+Wouters (2003) use the value  ∗ = 1. The inflation rate aﬀects the incidence of the
+ZLB: a negative net nominal interest rate is more likely to occur in a low- than a
+high-inflation economy.12
+    In Table 5, we show how the parameters  and  ∗ aﬀect the quality of numerical
+solutions. In the first experiment, we assume   = 01821 (which is the lower
+bound of the interval estimated by Smets and Wouters, 2003), set  ∗ = 1 and allow
+for a negative net interest rate. Both the perturbation and EDS methods deliver
+reasonably accurate solutions. The maximum size of residuals in the equilibrium
+conditions is about 6% and 2% for PER1 and PER2, respectively (10−121 and 10−164
+in the table), and it is less than 1% and 02% for EDS2 and EDS2, respectively
+(10−202 and 10−273 in the table). We also report the minimum and maximum values
+of  on a stochastic simulation, as well as a percentage number of periods in which
+  1. Here,  falls up to 09916, and the frequency of   1 is about 2%.
+  12
+     Chung, Laforte, Reifschneider, and Williams (2011) provide estimates of the incidence of the
+ZLB in the US economy. Christiano, Eichenbaum and Rebelo (2009) study the economic significance
+of the ZLB in the context of a similar model. Also, Mertens and Ravn (2011) analyze the incidence
+of the ZLB in a model with sunspot equilibria.
+
+
+                                               37
+                                                                                           a
+Table 5. The new Keynesian model: the EDS algorithm versus perturbation algorithm.
+
+                           * = 1 and    L  0.1821                * = 1.0598 and    L  0.4054          * = 1 and    L  0.1821     with ZLB
+                   PER1       PER2        EDS2      EDS3       PER1      PER2         EDS2     EDS3      PER1          PER2      EDS2        EDS3
+      M(ε)           -          -          496       496         -         -           496      496        -             -        494         494
+ Running time
+    CPU                  0.15               24.3        4.4          0.15               22.1     12.0           0.15               21.4        3.58
+ Absolute errors across optimality conditions
+      L1            -3.03     -3.77       -3.99        -4.86    -2.52       -2.90      -3.43    -4.00     -3.02         -3.72     -3.57       -3.65
+      L∞            -1.21     -1.64       -2.02        -2.73    -0.59       -0.42      -1.31    -1.91     -1.21         -1.34     -1.58       -1.81
+ Properties of the interest rate
+     Rmin           0.9916 0.9929         0.9931    0.9927     1.0014    1.0065       1.0060   1.0060    1.0000        1.0000    1.0000      1.0000
+     Rmax           1.0340 1.0364         1.0356    1.0358     1.0615    1.0694       1.0653   1.0660    1.0340        1.0364    1.0348      1.0374
+ Freq(R≤1).%           2.07      1.43        1.69      1.68         0         0            0        0       1.76          1.19      2.46        2.23
+ Difference between time series produced by the method in the given column and EDS3
+    dif(R), %       0.17      0.09      0.05        0       0.63      0.39     0.25                  0       0.33        0.34      0.34              0
+   dif(  ), %      1.03      0.16      0.04        0       4.59      0.73     0.49                  0       1.07        0.44      0.34              0
+    dif(S), %       5.45      1.14      0.75        0      17.94      5.83     4.15                  0       5.60        9.87      5.04              0
+    dif(F), %       1.37      0.40      0.15        0       9.51      2.25     1.73                  0       3.21        4.05      2.32              0
+ R dif(C), %        1.00      0.19      0.12        0       6.57      1.49     0.72                  0       4.31        3.65      2.26              0
+ e
+    dif(Y), %       1.00      0.19      0.12        0       6.57      1.48     0.72                  0       4.33        3.65      2.26              0
+ m
+    dif(L), %       0.65      0.33      0.16        0       3.16      1.30     0.54                  0       3.37        3.17      2.45              0
+ A
+   dif(  ), %      0.30      0.16      0.11        0       1.05      0.79     0.60                  0       1.17        1.39      0.79              0
+
+a
+   L1 and L∞ are, respectively, the average and maximum absolute percentage residuals (in log10 units) across all equilibrium conditions on
+a stochastic simulation of 10,000 observations; CPU is the time necessary for computing a solution (in minutes); M(ε) is the realized number
+of points in the EDS grid (the target number of grid points is M =500); PER1 and PER2 are the 1st- and 2nd-order perturbation solutions,
+respectively; EDS2 and EDS3 are 2nd- and 3d-degree EDA polynomial solutions, respectively; Rmin and Rmax are, respectively, the minimum
+and maximum gross nominal interest rates across 10,000 simulated periods; Freq(R≤1) is a percentage number of periods in which R≤1;
+dif(X),% is the maximum absolute percentage difference between time series for variable X produced by the method in the given column and
+EDS3.
+    We design the next two experiments to separate the eﬀect of the volatility of
+labor shocks   and the inflation rate  ∗ = 1 on the quality of numerical solutions.
+In the second experiment, we consider a higher volatility of labor  = 04054,
+and we set  ∗ = 10598, which is suﬃcient to preclude net nominal interest rates
+from being negative. The performance of the perturbation methods worsens dra-
+matically. The residuals in the equilibrium conditions for the PER1 solution are
+as large as 25% (10−059 ), and they are even larger for the PER2 solution, namely,
+38% (10−042 ). Thus, increasing the order of perturbation does not help increase the
+quality of approximation. The accuracy of the EDS solutions also decreases but less
+dramatically: the corresponding residuals for the EDS2 and EDS3 methods are less
+than 5% (10−131 ) and 1.2% (10−191 ), respectively. For the EDS method, high-degree
+polynomials do help increase the quality of approximation.
+    Finally, in the third experiment, we concentrate on the eﬀect of the ZLB on
+equilibrium by setting  ∗ = 1 and by imposing the restriction  ≥ 1 under the
+low-volatility   = 01821 of labor shocks assumed in the first experiment. Again,
+we observe that the accuracy of the perturbation solutions decreases more than the
+accuracy of the global EDS solutions. In particular, the maximum residual for the
+PER2 solution is about 5%, while the corresponding residuals for the EDS2 and
+EDS3 solutions are less than 2.7% (10−158 ) and 1.6% (10−181 ), respectively.
+    To appreciate how much the equilibrium quantities diﬀer across the methods,
+we report the maximum percentage diﬀerences between variables produced by EDS3
+and those produced by the other methods on a simulation of 10,000 observations.
+The regularities are similar to those we observed for the residuals. The diﬀerence
+between the series produced by PER1 and EDS3 can be as large as 17%; the diﬀerence
+between the series produced by PER2 and EDS3 depends on the model: it is about
+1% when the ZLB is not imposed in the model with   = 01821 but can reach 10%
+when the ZLB is imposed; and finally, the diﬀerence between the series produced
+by EDS2 and EDS3 is smaller in all cases (504% at most for the model in which
+the ZLB is imposed). Generally, the supplementary variables  and  diﬀer more
+across methods than such economically relevant variables as  ,  and  .
+
+Economic importance of the ZLB. Figures 6a and 6b plot fragments of a sto-
+chastic simulation when the ZLB is not imposed and imposed, respectively, for the
+model parameterized by  = 01821 and  ∗ = 1. When the ZLB is not imposed,
+both the perturbation and EDS methods predict 5 periods of negative (net) interest
+rates (see periods 4, 6-9 in Figure 6a). When the ZLB is imposed, The EDS method,
+EDS2 and EDS3, predict a zero interest rate in those 5 periods, while the pertur-
+bation methods, PER1 and PER2, predict a zero interest rate just in 3 periods (see
+
+                                         38
+periods 4, 6 and 7 in Figure 6b).
+
+
+
+
+   The way we deal with the ZLB in the perturbation solution misleads the agents
+about the true state of the economy. To be specific, when we chop the interest rate
+at zero in the simulation procedure, agents perceive the drop in the interest rate
+as being small and respond by an immediate recovery. In contrast, under the EDS
+algorithm, agents accurately perceive the drop in the interest rate as being large and
+respond by 5 periods of a zero net interest rate (which correspond to 5 periods of
+negative net interest rates predicted in the case when the ZLB is not imposed). The
+output diﬀerences between PER2 and EDS3 are relatively small when the ZLB is
+not imposed but they become quantitatively important when the ZLB is imposed
+and can be as large as 2%.
+
+
+
+                                         39
+Lessons. The studied new Keynesian model is a challenging application for any
+numerical method. First, the dimensionality of the state space is large; second, the
+volatility of exogenous variables is high; and finally, there is a kink in the equilibrium
+rules due to the ZLB. We choose this application in order to subject the EDS method
+to a tight test that makes it possible to see its limitations.
+    Our results indicate that the EDS method is able to confront the above challenges.
+First, the running time for the EDS method ranges from 4 to 25 minutes; the EDS
+method would be tractable in much larger applications, as our results for the multi-
+country model suggest. Second, the EDS method produces very accurate solutions
+if the volatility of shocks is not excessively high, and its accuracy can be increased
+using polynomial functions of higher degrees, unlike the accuracy of the perturbation
+methods. Finally, in the presence of the ZLB, the perturbation and EDS methods
+may produce qualitatively diﬀerent results. The accuracy of both the EDS and
+perturbation methods is limited by their use of polynomials, which are not well
+suitable for approximating equilibrium rules with kinks. The EDS algorithm may
+do better in terms of accuracy if we use functional families that can accommodate
+kinks. However, this lies beyond the scope of the present paper.
+
+
+6     Conclusion
+We introduce a projection algorithm that operates on a high-probability area of the
+ergodic set of an economic model. The EDS algorithm is tractable in problems with
+much higher dimensionality than those studied in the related literature. In particular,
+we are able to compute accurate quadratic solutions to a multicountry growth model
+with up to 80 state variables. Furthermore, we are able to compute an accurate
+global solution to a new Keynesian model. This model is of particular interest to the
+literature as it is used by governments and financial institutions all over the world
+for the policy analysis. We find that perturbation methods are not reliable in the
+context of new Keynesian models, and we show examples where perturbation and
+global solution methods produce qualitatively diﬀerent predictions. We emphasize
+that all the numerical results in the paper are obtained using a standard desktop
+computer and serial MATLAB software. The speed of the EDS algorithm can be
+increased by far using more powerful hardware and software, as well as parallelization
+techniques.
+
+
+
+
+                                           40
+References
+ [1] Adam, K. and R. Billi, (2006). Optimal monetary policy under commitment
+     with a zero bound on nominal interest rates. Journal of Money, Credit, and
+     Banking 38 (7), 1877-1905.
+
+ [2] Adjemian, S., H. Bastani, M. Juillard, F. Mihoubi, G. Perendia, M. Ratto and
+     S. Villemot, (2011). Dynare: Reference Manual, Version 4. Dynare Working
+     Papers 1, CEPREMAP.
+
+ [3] Adjemian, S. and M. Juillard, (2011). Accuracy of the extended path simulation
+     method in a new Keynesian model with zero lower bound on the nominal interest
+     rate. Manuscript.
+
+ [4] Anderson, G., J. Kim and T. Yun, (2010). Using a projection method to analyze
+     inflation bias in a micro-founded model. Journal of Economic Dynamics and
+     Control 34 (9), 1572-1581.
+
+ [5] Aruoba, S., J. Fernández-Villaverde and J. Rubio-Ramírez, (2006). Compar-
+     ing solution methods for dynamic equilibrium economies. Journal of Economic
+     Dynamics and Control 30, 2477-2508.
+
+ [6] Baryshnikov, Yu., Eichelbacker, P., Schreiber, T., and J.E. Yukich, (2008). Mod-
+     erate deviations for some point measures in geometric probability. Annales de
+     l’Institut Henri Poincaré - Probabilités et Statistiques 44, 422-446.
+
+ [7] Bertsekas, D. and J. Tsitsiklis (1996). Neuro-Dynamic Programming. Opti-
+     mization and Neural Computation Series. Athena Scientific: Belmont, Massa-
+     chusetts.
+
+ [8] Christiano, L., M. Eichenbaum and C. Evans, (2005). Nominal rigidities and
+     the dynamic eﬀects of a shock to monetary policy. Journal of Political Economy
+     113/1, 1-45.
+
+ [9] Christiano, L., M. Eichenbaum, and S. Rebelo, (2011). When is the government
+     spending multiplier large? Journal of Political Economy 119(1), 78-121.
+
+[10] Christiano, L. and D. Fisher, (2000). Algorithms for solving dynamic models
+     with occasionally binding constraints. Journal of Economic Dynamics and Con-
+     trol 24, 1179-1232.
+
+
+
+                                         41
+[11] Chung, H., J.-P. Laforte, D. Reifschneider and J. Williams, (2011). Have we
+     underestimated the probability of hitting the zero lower bound? Federal Reserve
+     Bank of San Francisco. Working paper 2011-01.
+
+[12] Collard, F., and M. Juillard, (2001). Accuracy of stochastic perturbation meth-
+     ods: the case of asset pricing models, Journal of Economic Dynamics and Con-
+     trol, 25, 979-999.
+
+[13] Del Negro, M., F. Schorfheide, F. Smets and R. Wouters, (2007). On the fit
+     of new Keynesian models. Journal of Business and Economic Statistics 25 (2),
+     123-143.
+
+[14] Den Haan, W. and A. Marcet, (1990). Solving the stochastic growth model
+     by parameterized expectations. Journal of Business and Economic Statistics 8,
+     31-34.
+
+[15] Den Haan, W., and A. Marcet (1994). Accuracy in Simulations. Review of Eco-
+     nomic Studies 61, 3—18.
+
+[16] Den Haan, W., (2010), Comparison of solutions to the incomplete markets model
+     with aggregate uncertainty. Journal of Economic Dynamics and Control 34, 4—
+     27.
+
+[17] Fair, R. and J. Taylor, (1983). Solution and maximum likelihood estimation of
+     dynamic nonlinear rational expectation models. Econometrica 51, 1169-1185.
+
+[18] Feng, Z., J. Miao, A. Peralta-Alva, and M. Santos, (2009). Numerical simulation
+     of nonoptimal dynamic equilibrium models. Working papers Federal Reserve
+     Bank of St. Louis 018.
+
+[19] Fernández-Villaverde, J., G. Gordon, P. Guerrón-Quintana, and J. Rubio-
+     Ramírez, (2012). Nonlinear adventures at the zero lower bound. NBER working
+     paper 18058.
+
+[20] Fernández-Villaverde, J. and J. Rubio-Ramírez, (2007). Estimating macroeco-
+     nomic models: A likelihood approach. Review of Economic Studies 74, 1059-
+     1087.
+
+[21] Fudenberg D. ad D. Levine, (1993). Self-confirming equilibrium. Econometrica
+     61, 523-545.
+
+
+
+                                        42
+[22] Galí, J., (2008). Monetary Policy, Inflation and the Business Cycles: An Intro-
+     duction to the New Keynesian Framework. Princeton University Press: Prince-
+     ton, New Jersey.
+
+[23] Gaspar, J. and K. Judd, (1997). Solving large-scale rational-expectations mod-
+     els. Macroeconomic Dynamics 1, 45-75.
+
+[24] Judd, K., (1992). Projection methods for solving aggregate growth models. Jour-
+     nal of Economic Theory 58, 410-452.
+
+[25] Judd, K., (1998). Numerical Methods in Economics. Cambridge, MA: MIT
+     Press.
+
+[26] Judd, K. and S. Guu, (1993). Perturbation solution methods for economic
+     growth models, in: H. Varian, (Eds.), Economic and Financial Modeling with
+     Mathematica, Springer Verlag, pp. 80-103.
+
+[27] Judd, K., L. Maliar and S. Maliar, (2010). A cluster-grid projection method:
+     solving problems with high dimensionality. NBER working paper 15965.
+
+[28] Judd, K., L. Maliar and S. Maliar, (2011). A cluster-grid projection algo-
+     rithm: solving problems with high dimensionality. Manuscript available at
+     http://stanford.edu/~maliars.
+
+[29] Judd, K., L. Maliar and S. Maliar, (2011). Numerically stable and accurate sto-
+     chastic simulation approaches for solving dynamic models. Quantitative Eco-
+     nomics 2, 173-210.
+
+[30] Juillard, M. and S. Villemot, (2011). Multi-country real business cycle models:
+     Accuracy tests and testing bench. Journal of Economic Dynamics and Control
+     35, 178—185.
+
+[31] Kiefer, J., (1961). On large deviations of the empiric D.F. of vector change
+     variables and a law of the iterated logarithm. Pacific Journal of Mathematics
+     11, 649-660.
+
+[32] Kollmann, R., (2002). Monetary policy rules in the open economy: eﬀects on
+     welfare and business cycles. Journal of Monetary Economics 49, 989-1015.
+
+[33] Kollmann, R., S. Kim and J. Kim, (2011a). Solving the multi-country real busi-
+     ness cycle model using a perturbation method. Journal of Economic Dynamics
+     and Control 35, 203-206.
+
+                                        43
+[34] Kollmann, R., S. Maliar, B. Malin and P. Pichler, (2011). Comparison of so-
+     lutions to the multi-country real business cycle model. Journal of Economic
+     Dynamics and Control 35, 186-202.
+
+[35] Krueger, D. and F. Kubler, (2004). Computing equilibrium in OLG models with
+     production. Journal of Economic Dynamics and Control 28, 1411-1436.
+
+[36] Maliar, L. and S. Maliar, (2005). Solving nonlinear stochastic growth models:
+     iterating on value function by simulations. Economics Letters 87, 135-140.
+
+[37] Maliar, S., L. Maliar and K. Judd, (2011). Solving the multi-country real busi-
+     ness cycle model using ergodic set methods. Journal of Economic Dynamic and
+     Control 35, 207—228.
+
+[38] Malin, B., D. Krueger and F. Kubler, (2011). Solving the multi-country real
+     business cycle model using a Smolyak-collocation method. Journal of Economic
+     Dynamics and Control 35, 229-239.
+
+[39] Marcet, A. (1988), Solving non-linear models by parameterizing expectations.
+     Unpublished manuscript, Carnegie Mellon University, Graduate School of In-
+     dustrial Administration.
+
+[40] Marcet, A., and G. Lorenzoni, (1999). The parameterized expectation approach:
+     some practical issues. in: R. Marimon and A. Scott (Eds.), Computational Meth-
+     ods for Study of Dynamic Economies, Oxford University Press, New York, pp.
+     143-171.
+
+[41] Marcet, A. and T. Sargent, (1989). Convergence of least-squares learning in
+     environments with hidden state variables and private information. Journal of
+     Political Economy 97, 1306-1322.
+
+[42] Marimon, R. and A. Scott, (1999). Computational Methods for Study of Dy-
+     namic Economies, Oxford University Press, New York.
+
+[43] Mertens, K. and M. Ravn, (2011). Credit channels in a liquidity trap. CEPR
+     discussion paper 8322.
+
+[44] Niederreiter, H., (1992). Random Number Generation and Quasi-Monte Carlo
+     Methods. Society for Industrial and Applied Mathematics, Philadelphia, Penn-
+     sylvania.
+
+
+
+                                        44
+[45] Pakes, A. and P. McGuire, (2001). Stochastic algorithms, symmetric Markov
+     perfect equilibria, and the ’curse’ of dimensionality. Econometrica 69, 1261-1281.
+
+[46] Peralta-Alva, A. and M. Santos, (2005). Accuracy of simulations for stochastic
+     dynamic models. Econometrica 73, 1939-1976.
+
+[47] Pichler, P., (2010). Solving the multi-country real business cycle model using a
+     monomial rule Galerkin method. Journal of Economic Dynamics and Control
+     35, 240-251.
+
+[48] Powell W., (2011). Approximate Dynamic Programming. Wiley: Hoboken, New
+     Jersey.
+
+[49] Rényi, A., (1958). On a one-dimensional space-filling problem. Publication of
+     the Mathematical Institute of the Hungarian Academy of Sciences 3, 109-127.
+
+[50] Rudebusch, G. and E. Swanson, (2008). Examining the bond premium puzzle
+     with a DSGE model. Journal of Monetary Economics 55, S111-S126.
+
+[51] Rust, J., (1996). Numerical dynamic programming in economics, in: H. Am-
+     man, D. Kendrick and J. Rust (Eds.), Handbook of Computational Economics,
+     Amsterdam: Elsevier Science, 619-722.
+
+[52] Rust, J., (1997). Using randomization to break the curse of dimensionality.
+     Econometrica 65, 487-516.
+
+[53] Santos, M., (1999). Numerical solution of dynamic economic models, in: J.
+     Taylor and M. Woodford (Eds.), Handbook of Macroeconomics, Amsterdam:
+     Elsevier Science, pp. 312-382.
+
+[54] Santos, M., (2000). Accuracy of numerical solutions using the Euler equation
+     residuals. Econometrica 68, 1377-1402.
+
+[55] Santos, M., (2002). On non-existance of Markov equilibria in competitive market
+     economies. Journal of Economic Theory 105, 73-98.
+
+[56] Schmitt-Grohé S. and M. Uribe, (2007). Optimal simple and implementable
+     monetary fiscal rules. Journal of Monetary Economics 54, 1702-1725.
+
+[57] Scott, D. and S. Sain, (2005). Multidimensional density estimation, in: C. Rao,
+     E. Wegman and J. Solka (Eds.), Handbook of Statistics, vol. 24, Amsterdam:
+     Elsevier B. V, pp. 229-261.
+
+                                          45
+[58] Smets, F. and R. Wouters, (2003). An estimated dynamic stochastic general
+     equilibrium model of the Euro area. Journal of the European Economic Associ-
+     ation 1(5), 1123-1175.
+
+[59] Smets, F. and R. Wouters, (2007). Shocks and frictions in US business cycles:
+     a Bayesian DSGE approach. American Economic Review 97 (3), 586-606.
+
+[60] Smith, A., (1993). Estimating nonlinear time-series models using simulated vec-
+     tor autoregressions. Journal of Applied Econometrics 8, S63-S84.
+
+[61] Stachursky, J., (2009). Economic Dynamics: Theory and Computations. Cam-
+     bridge, MA: MIT Press.
+
+[62] Stokey, N. L. and R. E. Lucas Jr. with E. Prescott, (1989). Recursive Methods
+     in Economic Dynamics. Cambridge, MA: Harvard University Press.
+
+[63] Tauchen, G. and R. Hussey, (1991). Quadrature-based methods for obtaining
+     approximate solutions to nonlinear asset pricing models. Econometrica 59, 371-
+     396.
+
+[64] Taylor, J. and H. Uhlig, (1990). Solving nonlinear stochastic growth models: a
+     comparison of alternative solution methods. Journal of Business and Economic
+     Statistics 8, 1-17.
+
+[65] Taylor, J., (1993). Discretion versus policy rules in practice. Carnegie-Rochester
+     Conference Series on Public Policy 39, 195-214.
+
+[66] Temlyakov, V., (2011). Greedy approximation. Cambridge University Press,
+     Cambridge.
+
+[67] Tsitsiklis, J., (1994). Asynchronous stochastic approximation and Q-Learning,
+     Machine Learning 16, 185-202.
+
+[68] Wright, B. and J. Williams, (1984). The welfare eﬀects of the introduction of
+     storage. Quarterly Journal of Economics 99, 169-192.
+
+
+
+
+                                          46
+    Supplement to "Merging Simulation and
+Projection Approaches to Solve High-Dimensional
+            Problems": Appendices
+                                    Kenneth L. Judd
+                                      Lilia Maliar
+                                     Serguei Maliar
+
+
+
+
+Appendix A. A cheaper version of the EDS tech-
+nique
+We show a version of the EDS technique which is cheaper than that described in
+Section 2.2. The idea is to invert Steps 1 and 2: we first use Algorithm   to
+construct an EDS on all simulated points, and we then use Algorithm A to remove
+from the EDS the low-density points. To be more specific, in Step 1, we produce a
+set  of  points 1    ∈  ⊆ R by simulation of (1) and select an EDS  
+of  points, 1    ; and in Step 2, we estimate density function b
+                                                                           ( ) ≈  ( )
+for all  ∈   and remove from   a subset of points that represents a fraction of
+the sample  which has the lowest density. To control the fraction of the sample
+removed, we use the estimated density function b      . Note that when eliminating a
+                                  
+                                   (
+                                        )
+point  ∈   , we remove    of the original sample. We therefore can proceed
+                                      
+
+                                 =1 (  )
+with eliminations of points from the EDS one by one until their cumulative mass
+reaches the target value .
+    An advantage of this version of the EDS technique compared to the baseline one
+is its lower cost. In our baseline version, the kernel algorithm computes pairwise
+distances between all  simulated points which has the cost of order  (2 ). In
+the modified version, the kernel algorithm estimates the density function only in 
+points contained in the EDS, and thus it computes the distances from  points to
+ points with the cost of order  (). If  ¿ , this may be far smaller than
+ (2 ), the complexity of the baseline two-step procedure of Section 2.2.
+
+An illustration of the cheaper version of the EDS technique. To illustrate
+the application of the cheaper version of the EDS technique, we use the example of
+
+
+                                             47
+the neoclassical growth model with a closed-form solution studied in Section 2.2.4;
+see Figures 7a-7f. We first compute the normalized PCs of the original sample; see
+Figure 7b (this step in the same as in Figure 2b). We compute an EDS   on
+the normalized PCs; see Figure 7c. We then estimate the density function in all
+points of   using the kernel density algorithm. We finally removed from   a set
+of points that has the lowest density function and that represents 5% of the sample.
+The removed points are represented with crosses in Figure 7d. The resulting EDS
+is shown in Figure 7e. Finally, we plot the EDS grid in the original coordinates in
+Figure 7f.
+
+
+Appendix B. Clustering algorithms
+Instead of the EDS technique, we can use methods from cluster analysis to construct
+a grid for our projection algorithm; see Everitt et al. (2011) for a review of clustering
+methods. In this case, we partition the simulated data into clusters (groups of closely-
+located points), and we replace each cluster with just one representative point. In
+Figures 8a-8c, we show an example in which we partition a set of simulated points
+into 4 clusters and construct 4 representative points. A representative point is the
+closest point to the cluster center (computed as the average of all observations in the
+given cluster).
+
+
+
+
+    In this section, we discuss two clustering methods that can be used in the context
+of our analysis, an agglomerative hierarchical and K-means ones. The advantage of
+clustering methods is that we can control the number of grid points directly (while the
+number of points in an EDS depends ¡on ). The drawbacks
+                                                    ¢         are that their complexity
+                              3          +1
+is higher (it is of order  ( ) and         log  for the agglomerative hierarchical
+and K-means algorithms, respectively), and that the properties of grids produced by
+clustering methods are hard to characterize analytically.
+
+                                           48
+    As is in the case of the EDS technique, two versions of the clustering technique
+can be constructed: we can first remove the low-density points and then construct
+representative points using clustering methods (this is parallel to the basic two-step
+EDS procedure of Section 2.2), or we can first construct clusters and then eliminate
+representative points in which the density function is the lowest (this is parallel
+to the cheap version of the two-step procedure described in Appendix A). Prior to
+an application of clustering methods, we preprocess the data by constructing the
+normalized PCs as we do when constructing an EDS grid in Section 2.2.
+
+Appendix B1. Hierarchical clustering algorithm
+A hierarchical agglomerative clustering algorithm which begins from individual ob-
+jects (observations) and agglomerates them iteratively into larger objects — clusters.
+
+Distance between groups of observations. As a measure of distance between
+two groups of observations (clusters),  ≡ {1    } and  ≡ {1    }, we
+use Ward’s measure of distance.13 This measure shows how much the dispersion of
+observations changes when clusters  and  are merged together compared to the
+case when  and  are separate clusters.
+    Formally, we proceed as follows:                                   ¡           ¢
+    Step 1. Consider the cluster . Compute the cluster’s center  ≡ 1   L as
+                                             P
+a simple average of the observations,  ≡ 1 =1  .
+    Step 2. For each  ∈ , compute distance  (  ) to its own cluster’s center.
+    Step 3. Compute the dispersion of observations in cluster  as a squared sum of
+                                             P
+distances to its own center, i.e.,  () ≡    [ (  )]2 .
+                                                       =1
+   Repeat Steps 1-3 for cluster  and for the cluster obtained by merging clusters
+ and  into a single cluster  ∪ .
+   Ward’s measure of distance between  and  is defined as
+                    e ( ) =  ( ∪ ) − [ () +  ()] 
+                                                                                                 (B1)
+
+This measure is known to lead to spherical clusters of a similar size, see, e.g., Everitt
+et al. (2011, p. 79). This is in line with our goal of constructing a uniformly spaced
+grid that covers the essentially ergodic set. In our experiments, Ward’s measure
+  13
+     If a measure of distance between groups of observations does not fulfill the triangular inequality,
+it is not a distance in the conventional sense and is referred to in the literature as dissimilarity.
+
+
+
+
+                                                  49
+yielded somewhat more accurate solutions than the other measures of distance con-
+sidered, such as the nearest neighbor, furthest neighbor, group average; see, e.g.,
+Romesburg (1984) and Everitt et al. (2011) for reviews.
+
+Steps of the agglomerative hierarchical clustering algorithm. The zero-
+order partition P (0) is the set of singletons — each observation represents a cluster.
+   Step 0. Choose measures of distance between observations and clusters. Choose
+, the number of clusters to be created.
+   Step 1. On iteration , compute all pairwise distances between the clusters in
+partition P () .
+   Step 2. Merge a pair of clusters with the smallest distance into a new cluster.
+The resulting partition is P (+1) .
+   Iterate on Steps 1 and 2. Stop when the number of clusters in the partition is
+. Represent each cluster with a simulated point which is closest to the cluster’s
+center. Below we illustrate the operation of this algorithm by way of example.
+
+A numerical example of implementing the agglomerative hierarchical clus-
+tering algorithm. We provide a numerical example that illustrates the construc-
+tion of clusters under the agglomerative hierarchical algorithm. The sample data
+contains 5 observations for 2 variables, 1 and 2 :
+
+                    Observation       Variable 1     Variable 2
+                         1                 1              05
+                         2                 2               3
+                         3                05             05
+                         4                 3              16
+                         5                 3               1
+
+We will consider two alternative measures of distance between clusters, the nearest-
+neighbor (or single) and Ward’s ones. Both measures lead to an identical set of
+clusters shown in Figure 9. On iteration 1, we merge observations 1 and 3 into a
+cluster {1 3}; on iteration 2, we merge observations 4 and 5 into a cluster {4 5}; on
+iteration 3, we merge observations 2 and {4 5} into a cluster {2 4 5}; and finally,
+on iteration 4, we merge clusters {1 3} and {2 4 5} into one cluster that contains
+all observations {1 2 3 4 5}. Below, we describe computations performed by the
+clustering algorithm. We first consider the nearest-neighbor measure of distance
+which is simpler to understand (because the distance between clusters can be inferred
+from the distance between observations without additional computations). We then
+
+
+                                          50
+show how to construct clusters using the Ward’s distance measure, which is our
+preferred choice in numerical analysis.
+
+
+
+
+Nearest-neighbor measure of distance. The nearest-neighbor measure of dis-
+tance between the clusters  and  is the distance between the closest pair of
+observations  ∈  and  ∈ , i.e.,  e ( ) = min  (   ). Let  (   ) =
+                                                    ∈  ∈
+h¡         ¢   ¡        ¢  i12
+            2            2
+  1 − 1 + 2 − 2         ≡  be the Euclidean distance.
+   Let us compute a matrix of distances between singleton clusters in which each
+entry  corresponds to  ,
+                                  ⎛                             ⎞
+                                1     0
+                                2 ⎜
+                                  ⎜ 27 0
+                                                                ⎟
+                                                                ⎟
+                         1 = 3 ⎜ ⎜   05  29   0              ⎟
+                                                                ⎟
+                                4 ⎝ 23 17 27 0               ⎠
+                                5     21 22 25 06 0
+
+The smallest non-zero distance for the five observations in 1 is 13 = 05. Thus, we
+merge observations (singleton clusters) 1 and 3 into one cluster and call the obtained
+cluster {1 3}. The distances for the four resulting clusters {1 3}, 2, 4, and 5, are
+
+                                          51
+shown in a matrix 2 ,
+                                     ⎛                         ⎞
+                              {1 3}    0
+                                2    ⎜                         ⎟
+                         2 =        ⎜ 27 0                   ⎟
+                                4    ⎝ 23 17 0               ⎠
+                                5      21 22 06 0
+
+where  e ({1 3}  2) = min {12  32 } = 27, 
+                                                 e ({1 3}  4) = min {14  34 } = 23,
+     e
+and  ({1 3}  5) = min {15  35 } = 21. Given that     e (4 5) = 45 = 06 is the
+smallest non-zero entry in 2 , we merge singleton clusters 4 and 5 into a new cluster
+{4 5}. The distances for three clusters {1 3}, {4 5} and 2 are given in 3 ,
+                                           ⎛                ⎞
+                                   {1 3}      0
+                            3 = {4 5} ⎝ 21 0             ⎠
+                                     2        27 17 0
+
+where   e ({1 3}  2) = min {12  32 } = 27,  e ({4 5}  2) = min {42  52 } = 17
+and  e ({1 3}  {4 5}) = min {14  15  34  35 } = 21. Hence, the smallest non-
+zero distance in 3 is   e ({4 5}  2), so we merge clusters 2 and {4 5} into a cluster
+{2 4 5}. The only two clusters left not merged are {1 3} and {2 4 5}, so that the
+last step is to merge those two to obtain the cluster {1 2 3 4 5}. The procedure of
+constructing clusters is summarized below:
+         Iteration          Cluster                  Clusters           Shortest
+                            Created                   Merged            Distance
+             1                {1 3}               1        3              05
+             2                {4 5}               4        5              06
+             3              {2 4 5}              2      {4 5}           17
+             4            {1 2 3 4 5}        {1 3} {2 4 5}          21
+    The algorithm starts from 5 singleton clusters, and after 4 iterations, it merges
+all observations into a single cluster (thus, the number of clusters existing, e.g., on
+iteration 2 is 5 − 2 = 3).
+
+Ward’s measure of distance. We now construct clusters using Ward’s measure
+of distance (B1). As an example, consider the distance between the singleton
+                                                                     ³          clusters
+                                                                                     ´
+                e                                                      1        2
+1 and 2, i.e.,  (1 2). The center of the cluster {1 2} is {12} = {12}  {12} =
+(15 175), and  (1) =  (2) = 0. Thus, we have:
+e (1 2) =  ({1 2}) = (1−15)2 +(2 − 15)2 +(05 − 175)2 +(3 − 175)2 = 3625
+
+
+                                            52
+In this manner, we obtain the following matrix of distances between singleton clusters
+on iteration 1                 ⎛                               ⎞
+                            1      0
+                            2 ⎜⎜ 3625    0                    ⎟
+                                                               ⎟
+                               ⎜
+                    1 = 3 ⎜ 0125 425           0            ⎟
+                                                               ⎟
+                            4 ⎝ 2605 148 373 0              ⎠
+                            5      2125 25 325 18 0
+Given that   e (1 3) = 0125 is the smallest non-zero distance in 1 , we merge sin-
+gleton clusters 1 and 3 into cluster {1 3}.
+    In the beginning of iteration 2, we have clusters (13), 2, 4 and 5. To illustrate the
+computation of distances between clusters that are not singletons, let us compute
+e ({1 3}  2). The center of cluster {1 3} is
+
+                                   ¡                ¢
+                          {13} = 1{13}  2{13} = (075 05) 
+
+and that of cluster {1 2 3} is
+                                  ¡                     ¢
+                        {123} = 1{123}  2{123} = (76 43) 
+
+We have
+
+   ({1 3}) = (1 − 075)2 + (05 − 075)2 + (05 − 05)2 + (05 − 05)2 = 0125
+
+
+                ({1 2 3}) = (1 − 76)2 + (2 − 76)2 + (05 − 76)2
+                  + (05 − 43)2 + (3 − 43)2 + (05 − 43)2 = 163
+
+and  (2) = 0. Thus, we obtain
+
+e ({1 3}  2) =  ({1 2 3}) − [ ({1 3}) +  (2)] = 163 − 0125 = 52083
+
+
+The distances obtained on iteration 2 are summarized in the matrix of distances 2 :
+                                  ⎛                          ⎞
+                           {1 3}        0
+                             2    ⎜ 52083    0              ⎟
+                    2 =          ⎜                          ⎟
+                             4    ⎝ 41817 148      0       ⎠
+                             5        35417 25 018 0
+
+Given that  e ({4 5}) = 018 is the smallest non-zero distance in 2 , we merge
+singleton clusters 4 and 5 into cluster {4 5}.
+
+                                              53
+   On iteration 3, the matrix of distances is
+                                     ⎛                  ⎞
+                             {1 3}        0
+                      3 = {4 5} ⎝ 57025        0     ⎠
+                               2        52083 25933 0
+
+which implies that clusters {4 5} and 2 must be merged into {2 4 5}.
+    On the last iteration, {1 3} and {2 4 5} are merged into {1 2 3 4 5}. As we
+see, Ward’s measure of distance leads to the same clusters as the nearest-neighbor
+measure of distance. Finally, in practice, it might be easier to use an equivalent
+representation of Ward’s measure of distance in terms of the clusters’ centers,
+
+                                             X¡  L
+                                                         ¢2
+                            e ( ) =  · 
+                                                 −   
+                                        +  =1
+                                                       P                         P
+where  ≡ {1    },  ≡ {1    },  ≡ 1 =1  and   ≡   1
+                                                                                 =1    . For
+         e (1 2) on iteration 1 can be computed as
+example, 
+                                  £                    ¤
+                     e (1 2) = 1 (1 − 2)2 + (05 − 3)2 = 3625
+                     
+                                2
+where the centers of singleton clusters 1 and 2 are the observations themselves.
+
+An illustration of the clustering techniques. In Figures 10a, 10b and 10c, we
+draw, respectively, 4, 10 and 100 clusters on the normalized PCs shown in Figure
+2b. The constructed cluster grid is less uniform than the EDS grids: the density of
+points in the cluster grid depends on the density of simulated points.
+
+
+
+
+                                            54
+6.1    Appendix B2. K-means clustering algorithm
+A K-means clustering algorithm obtains a single partition of data instead of a cluster
+tree generated by a hierarchical algorithm. The algorithm starts with  random
+clusters, and then moves objects between those clusters with the goal to minimize
+variability within clusters and to maximize variability between clusters. The basic
+K-means algorithm proceeds as follows:
+    Step 0. Choose , the number of clusters. Generate randomly  clusters to
+obtain initial partition P (0) .
+    Step
+     ¡ 1 1. On ¢ iteration , for each cluster  ∈ P () , determinePthe cluster’s center
+ ≡    L as a simple average of the observations,  ≡ 1 =1  .
+    Step 2. For each  , compute the distance  (  ) to all clusters’ center.
+    Step 3. Assign each  to the nearest cluster center. Recompute the centers of
+the new  clusters. The resulting partition is P (+1) .
+    Iterate on Steps 1—3 until convergence.
+    Unlike the hierarchical clustering algorithm, the K-means algorithm can give
+diﬀerent results with each run. This is because the K-means algorithm is sensitive
+to initial random assignments of observations into clusters. In this respect, K-means
+algorithm is similar to Algorithm   that can produce diﬀerent EDSs depending on
+the order in which points are processed.
+
+
+Appendix C. Neoclassical stochastic growth model
+In this section, we present the two algorithms based on the EDS grid for solving
+the neoclassical growth model considered in Section 4, one iterating on the Euler
+equation and the other iterating on the Bellman equation.
+
+An EDS algorithm iterating on the Euler equation. We parameterize 
+with a flexible functional form  b (·; ) that depends on a coeﬃcients vector . Our
+                             b ≈  on the EDS grid given the functional form 
+goal is to find  that finds                                                  b (·; ).
+                                                                        b
+We compute  using fixed-point iteration (FPI). To implement FPI on , we rewrite
+(11) in the form                ∙                                  ¸
+                          0       1 (0 )           0      0    0
+                          =             (1 −  +  1 ( ))                 (C2)
+                                  1 ()
+In the true solution, 0 on both sides of (C2) takes the same values and thus, cancels
+out. In the FPI iterative process, 0 on two sides of (C2) takes diﬀerent values,
+
+
+
+                                           55
+namely, we substitute 0 =  b (·; ) in the right side of (C2), and we compute the left
+side of (C2); the FPI iterations on  are performed until the two sides coincide.
+
+    (Algorithm EE): An algorithm iterating on the Euler equation
+    Step 0. Initialization.
+      a. Choose (0  0 ) and  .
+      b. Draw {+1 }=0 −1 . Compute and fix {+1 }=0 −1 using (10).
+      c. Choose an approximating function  ≈             b (· ).
+      d. Make an initial guess on .
+      e. Choose integration nodes,  , and weights,   ,  = 1  .
+    Step 1. Construction of an EDS grid.
+      a. Use b (· ) to simulate {+1 }
+                                            =0 −1 .
+      b. Construct an EDS grid Γ = {   }=1 .
+    Step 2. Computation of a solution for .
+      a. At iteration , for  = 1   , compute
+                 ¡             ¢
+         0 =
+      —      b    ; () and 0 =  exp ( ) for all ;
+                   ³                ´ 
+      — 00      b    0   0
+             =     ;      ()  for all ;
+                        
+       —  = (1 − )  +   ( ) −   0 ;
+          0              0                      0 ) −  00
+       —  = (1 − )  +  exp ( )  (          for all ;
+                 X      ∙                                                  ¸
+                           1 (0 )
+       —b0 ≡       · 1 (
+                                 )
+                                    [1 −  +  
+                                                exp ( )  1 (
+                                                                   0 )]  0
+                                                                          
+                  =1
+       b. Find  that solve the system in Step 2a.  °                           °
+                                              P     °b0        b (   ; )°
+       — Run a regression to get: b ≡ arg min =1 °    −                   °.
+                                          
+       — Use damping to compute (+1) = (1 − ) () + b.
+                                                  ¯
+                                                 X                           ¯
+                                              1      ¯ (
+                                                         0 )(+1) −( 0 )() ¯
+       — Check for convergence: end Step 2 if       ¯         0  ()
+                                                                      
+                                                                  ( )
+                                                                             ¯  .
+                                                       =1
+    Iterate on Steps 1, 2 until convergence of the EDS grid.
+
+
+An EDS algorithm iterating on the Bellman equation. The envelope con-
+dition of (12)—(14) is
+
+                            1 ( ) = 1 () [1 −  + 1 ()]                    (C1)
+
+We parameterize  with a flexible functional form b (·; ), that depends on a coeﬃ-
+cients vector , and we solve for  using FPI.
+
+
+
+                                                56
+     (Algorithm BE): An algorithm iterating on the Bellman equation
+     Step 0. Initialization.
+       a. Choose (0  0 ) and  .
+       b. Draw {+1 }=0 −1 . Compute and fix {+1 }=0 −1 using (10).
+       c. Choose an approximating function b (·; ) ≈  .
+       d. Make an initial guess on .
+       e. Choose integration nodes,  , and weights,   ,  = 1  .
+     Step 1. Construction of an EDS grid.
+       a. Find b corresponding to b (·; ) to simulate {+1 }
+                                                                  =0 −1 .
+       b. Construct an EDS grid Γ = {   }=1 .
+     Step 2. Computation of a solution for  .
+       a. At iteration
+                    ∙ , for  = 1¸  , compute
+                       1 (  ;() )
+       —  ≡ −1
+                1     1−+ 1 ( ) ;
+       — 0 = (1 − )  +   ( ) −  ;
+                                               
+                  
+       — 0
+            ³ 0=   exp   (
+                             ´ ) for all ;
+       — b   0 ; () for all ;
+                              X          ³ 0               ´
+       —  ≡  ( ) +            · b   0 ; () ;
+                              =1
+       b. Find  that solve the system in Step 2a.  °                           °
+                                              P     °          b (   ; )°
+       — Run a regression to get: b ≡ arg min =1 °    −                   °.
+                                          
+       — Use damping to compute (+1) = (1 − ) () + b.
+                                                  ¯
+                                                 X                           ¯
+                                              1      ¯ (
+                                                         0 )(+1) −( 0 )() ¯
+       — Check for convergence: end Step 2 if       ¯         0 ()
+                                                                     
+                                                                 ( )
+                                                                             ¯  .
+                                                           =1
+     Iterate on Steps 1, 2 until convergence of the EDS grid.
+
+
+Computational© choices.    ª    We parameterize the model (8)—(10) by assuming  () =
+1− −1            1
+  1−
+        with   ∈  5
+                      1 5  and  () =  with  = 036. We set  = 099,  = 0025,
+ = 095 and  = 001. We normalize the steady state of capital to one by as-
+suming  = 1−(1−)
+                   
+                          . The simulation length is  = 100 000, and we pick each
+10th point so that  = 10 000. The damping parameter is  = 01, and the con-
+vergence parameter is  = 10−11 . In Algorithm EE and Algorithm BE, we para-
+meterize the capital equilibrium rule and value function, respectively, using com-
+plete ordinary polynomials of degrees up to 5. For example, for degree 2, we have
+b ( ; ) = 0 + 1  + 2  + 3 2 + 4  + 5 2 , where  ≡ (0  5 ). We approx-
+imate conditional expectations with a 10-node Gauss-Hermite quadrature rule. We
+
+
+                                                    57
+compute the vector of coeﬃcients  using an LS method based on QR factorization.
+To construct an initial EDS grid, we simulate the model under an (arbitrary) initial
+guess 0 = 095 + 005 (this guess matches the steady state level of capital equal
+to one).
+    After the solution was computed, we evaluate the quality of the obtained ap-
+proximations on a stochastic simulation. We generate a new random draw of 10 200
+points and discard the first 200 points. At each point (   ), we compute an Euler-
+equation residual in a unit-free form by using a 10-node Gauss-Hermite quadrature
+rule,
+                        test         "     ¡ 0 ¢                                     #
+                      X
+                      
+                                        1    £         
+                                                                 ¡      ¢           ¤
+       R (   ) ≡         test
+                                   ·             1 −  +  exp test
+                                                                         1 (0 ) − 1
+                      =1
+                                         1 ( )
+
+where  and 0 are defined similarly to  and 0 in Step 2a of Algorithm EE,
+respectively; test
+                   and test
+                             are integration nodes and weights, respectively. We report
+the mean and maximum of absolute value of R (   ).
+    Our code is written in MATLAB, version 7.6.0.324 (R2008a), and we run experi-
+ments using a desktop computer ASUS with Intel(R) Core(TM)2 Quad CPU Q9400
+(2.66 GHz), RAM 4MB.
+
+
+Appendix D. Multicountry model
+In this section, we describe the multicountry model studied in Section 4.4 and elab-
+orate a description of the numerical method used to solve this model.
+
+The set up. We describe the multicountry model studied in Section 4.4. A so-
+cial planner maximizes a weighted sum of expected lifetime utilities of  agents
+(countries),                                      "∞               #
+                                             X
+                                                  X         ¡    ¢
+                            max           0                      (D1)
+                                =1
+                     { +1 }=0∞ =1
+                          
+                                                   =0
+
+subject to the aggregate resource constraint,
+                 X
+                                X
+                                                 X
+                                                                         X
+                                                                          
+                                                                                        ¡ ¢
+                          +          
+                                       +1   =            (1 − ) +                (D2)
+                 =1             =1              =1                     =1
+          ©     ª=1
+where 0  0            is given;  is the operator of conditional expectation;  ,
+ ,  and  are, respectively, consumption, capital, productivity level and welfare
+
+                                                         58
+weight of a country  ∈ {1  };  ∈ (0 1) is the discount factor;  ∈ (0 1] is
+the depreciation rate;  is the normalizing constant in the production function. The
+utility and production functions,  and   , respectively, are increasing, concave and
+continuously diﬀerentiable. The process for the productivity level of country  is
+given by
+                               ln +1 =  ln  + +1 ,                        (D3)
+where  is the autocorrelation coeﬃcient; +1 ≡  +1 +  +1 where  +1 ∼N(0  2 ) is
+specific to each country and  +1 ∼ N (0 2 ) is identical for all countries.
+    We restrict our attention to the case in which the countries are characterized
+by identical preferences,  = , and identical production technologies,   =  , for
+all . The former implies that the planner assigns identical weights,  = 1, and
+consequently, identical consumption  =  to all agents. If an interior solution
+exists, it satisfies  Euler equations,
+                                  ©          £                 ¡  ¢¤ª
+                    0 ( ) =  1 (+1 ) 1 −  + +1 1 +1                (D4)
+
+where 1 and 1 denote the derivatives of  and , respectively. Thus, the planner’s
+solution is determined by the process for shocks (D3), the resource constraint (D2),
+and the set of Euler equations (D4).
+
+Solution procedure.
+           ³©               Our ´ objective is to approximate  capital equilibrium rules,
+ 
+                     ª=1
++1 =                  ,  = 1  . Since the countries are identical in their
+fundamentals (preferences and technology), their optimal equilibrium rules are also
+identical. We could have used the symmetry to simplify the solution procedure,
+however, we do not do so. Instead, we compute a separate equilibrium rule for each
+country, thus, treating the countries as completely heterogeneous. This approach
+allows us to assess the cost of finding solutions in general multidimensional setups in
+which countries have heterogeneous preferences and technology.
+    To solve the model, we parameterize the capital equilibrium rule of each country
+with a flexible functional form
+                      ³©         ª=1 ´      ³©        ª              ´
+                                     ≈b     =1 ;  
+
+where  is a vector of coeﬃcients. We rewrite the Euler equation (D4) as
+                          ½ 0                                    ¾
+                            (+1 ) £              0
+                                                        ¡  ¢¤ 
+                +1 =   0          1 −  + +1  +1 +1                     (D5)
+                               ( )
+
+
+                                            59
+For each country  ∈ {1  }, we need to compute       ³©a vector    such that,´ given the
+                                                                      ª=1
+functional form of    b  , the resulting function    b                ;  is the best
+                                   ³©       ª=1 ´
+possible approximation of                       on the relevant domain.
+     The steps of the EDS algorithm here are similar to those described of Algorithm
+EE described in Appendix C for the one-agent model. However, we now iterate on
+ equilibrium rules of the heterogeneous countries instead of just one equilibrium
+rule of the representative agent. That is, we make an initial guess on  coeﬃcients
+         © ª=1
+vectors             , approximate  conditional expectations in Step 2a and run 
+                                                             ¡ ¢(+1)                 ¡ ¢()
+regressions in Step 2b. The damping parameter in                      = (1 − )          + b
+                                                                 −8
+is  = 01, and the convergence parameter is  = 10 . In the accuracy check,
+we evaluate the size of Euler equation residuals on a stochastic simulation of length
+ test = 10 200 (we discard the first 200 observations to eliminate the eﬀect of initial
+condition). To test the accuracy of solutions, we use the Gauss-Hermite quadrature
+product rule  (2) for  up to 12, use the monomial rule 2 for  from 12 to 20,
+and use the monomial rule 1 for  larger than 20. We use the same values of the
+parameters in the multicountry model as in the one-agent model; in particular, we
+assume  = 1.
+
+
+Appendix E. New Keynesian model with the ZLB
+In this section, we derive the first-order conditions (FOCs) and describe the details
+of our numerical analysis for the new Keynesian economy studied in Section 5.
+
+Households. The FOCs of the household’s problem (15)—(19) with respect to  ,
+ and  are
+                                           ¡ ¢
+                                      exp   −
+                               Λ =                                       (E1)
+                                              
+                               ¡             ¢
+                            exp   +    = Λ                  (E2)
+                                                   "    ¡         ¢ − #
+                 ¡ ¢                  ¡     ¢        exp  +1 +1
+              exp   − =  exp                              (E3)
+                                                             +1
+where Λ is the Lagrange multiplier associated with the household’s budget constraint
+(16). After combining (E1) and (E2), we get
+                                   ¡ ¢             
+                               exp     =                             (E4)
+                                                   
+
+                                                60
+Final-good producers. The FOC of the final-good producer’s problem (20), (21)
+with respect to  () yields the demand for the th intermediate good
+                                            µ        ¶−
+                                               ()
+                                 () =                             (E5)
+                                               
+Substituting the condition (E5) into (21), we obtain
+                                        µZ    1                   ¶ 1−
+                                                                     1
+
+                                                        1−
+                                  =              ()                             (E6)
+                                          0
+
+
+Intermediate-good producers. The FOC of the cost-minimization problem (22)—
+(24) with respect to  () is
+                                    (1 − ) 
+                               Θ =     ¡ ¢                          (E7)
+                                     exp 
+where Θ is the Lagrange multiplier associated with (23). The derivative of the total
+cost in (22) is the nominal marginal cost, MC (),
+                                              TC ( ())
+                                MC () ≡                  = Θ                        (E8)
+                                                 ()
+Conditions (E7) and (E8) taken together imply that the real marginal cost is the
+same for all firms,
+                                  (1 − ) 
+                        mc () =            ·   = mc                     (E9)
+                                  exp (  ) 
+   The FOC of the reoptimizing intermediate-good firm with respect to e is
+                                          "                 #
+                 X∞
+                         
+                                             e
+                                                  
+                                      +1
+                   () Λ+ + +        −      mc+ = 0             (E10)
+                 =0
+                                            +  − 1
+
+From the household’s FOC (E1), we have
+                                      ¡      ¢ −
+                                  exp + +
+                           Λ+ =                                                     (E11)
+                                        +
+Substituting (E11) into (E10), we get
+                                                           "                   #
+            X
+            ∞
+                           ¡       ¢ −                         e   
+                () exp  + +        
+                                         + +                  −     mc+ = 0   (E12)
+            =0
+                                                               +  − 1
+
+                                                   61
+Let us define  such that
+                                               ½
+                                                   1 if  = 0
+                                       ≡                     1
+                                                                               if  ≥ 1               (E13)
+                                                        + ·+−1 ···+1
+
+                                   1
+Then  = +1−1 ·           +1
+                                        for   0. Therefore, (E12) becomes
+
+             X
+             ∞                                   ∙                                          ¸
+                           ¡
+                                 ¢ −        − e                                  
+                 () exp + + +  e  −                           mc+ = 0      (E14)
+             =0
+                                                                                   −1
+
+              
+where e
+      e ≡   
+                  .   We express e
+                                 e from (E14) as follows
+
+                                X
+                                ∞
+                                               ¡       ¢ −
+                                    () exp  + + + −   
+                                                                    −1 mc+
+                   e            =0                                                             
+                   e =                                                                    ≡         (E15)
+                                        X
+                                        ∞
+                                                     ¡      ¢ −                               
+                                            () exp + + + 1−
+                                                                         
+                                        =0
+
+   Let us find recursive representations for  and  . For  , we have
+                                  X
+                                  ∞
+                                        ¡      ¢ −                
+                       ≡  () exp + +  + −        mc+
+                          =0
+                                                                  −  1
+                                           ¡ ¢
+                               =       exp  −  mc
+              (∞                  −1                                                  )
+                 X                                   µ             ¶−
+                                   ¡      ¢             +1−1            
+      +           ()−1 exp  + +
+                                             −
+                                                +                             mc+
+                 =1
+                                                           +1           −   1
+                                           ¡ ¢
+                               =       exp  −  mc
+             (                    −1                                                   )
+                  1   X∞
+                                     ¡        ¢                           
+     +                 () exp +1+ +1+
+                                                 −
+                                                       +1+ − +1        mc+1+
+                 −
+                  +1 =0                                               −1
+                                           ¡ ¢
+                               =       exp  −  mc
+        (              Ã∞         −1                                                      !)
+            1           X              ¡        ¢                             
+  +         +1         () exp  +1+ +1+
+                                                    −
+                                                          +1+ − +1         mc+1+
+           −
+            +1          =0
+                                                                            −   1
+                                ¡ ¢                       ©             ª
+                   =         exp  −  mc +  +1 +1 
+                      −1
+
+                                                                62
+Substituting mc from (9) into the above recursive formula for  , we have
+                     ¡ ¢            (1 − )         ©           ª
+         =       exp  −      ¡ ¢·     +   +1 +1                              (E16)
+               −1                  exp   
+               
+Substituting   
+                    from (E4) into (E16), we get
+
+                  ¡ ¢       (1 − )     ¡ ¢              ©           ª
+      =       exp       ¡ ¢ · exp    +   +1 +1                           (E17)
+            −1             exp 
+For  , the corresponding recursive formula is
+                               ¡ ¢                ©          ª
+                       = exp  −  +   −1
+                                                     +1 +1                                    (E18)
+
+Aggregate price relationship. Condition (E6) can be rewritten as
+                                          µZ      1                    ¶ 1−
+                                                                          1
+
+                                                               1−
+                                   =                 ()               =
+                                              0
+                      ∙Z                                  Z                             ¸ 1−
+                                                                                           1
+                                       1−                                      1−
+                                  ()       +                        ()                 (E19)
+                        reopt.                            non-reopt.
+
+where "reopt." and "non-reopt." denote, respectively, the firms that reoptimize and
+do not reoptimize
+                R their prices1−at . R 1
+    Note that non-reopt.  ()  = 0  ()1−  −1 () , where  −1 () is the
+measure of non-reoptimizers at  that had the price  () at  − 1. Furthermore,
+ −1 () =  −1 (), where −1 () is the measure of firms with the price  () in
+ − 1, which implies
+                Z                        Z 1
+                                 1−
+                            ()  =        ()1−  −1 ()  = −1
+                                                                         1−
+                                                                                 (E20)
+                non-reopt.                            0
+
+
+Substituting (E20) into (E19) and using the fact that all reoptimizers set e1− , we
+get
+                              h                     i 1
+                                      e 1−
+                          = (1 − )  + −1 1− 1−
+                                                                              (E21)
+We divide both sides of (E21) by  ,
+                                   "                               µ        ¶1− # 1−
+                                                                                    1
+
+                                                  1−                  1
+                             1 = (1 −        ) e
+                                                e           +                         
+                                                                       
+
+                                                          63
+and express e
+            e
+                                                   ∙                   ¸ 1−
+                                                                          1
+
+                                        e     1 −  −1
+                                                     
+                                        e =                                                            (E22)
+                                                1−
+Combining (E22) and (E15), we obtain
+                                             ∙            ¸ 1−
+                                                             1
+                                             1 −  −1
+                                                      
+                                           =                                                             (E23)
+                                               1−
+
+Aggregate output. Let us define aggregate output
+                Z 1             Z 1
+                                       ¡ ¢                  ¡ ¢
+            ≡      ()  =     exp   ()  = exp                                       (E24)
+                      0                        0
+           R1
+where  = 0  ()  follows by the labor-market clearing condition. We substitute
+demand for  () from (E5) into (E24) to get
+                          Z    1        µ            ¶−                       Z       1
+                                             ()
+                    =                                   =                        ()−    (E25)
+                           0                                                     0
+
+
+Let us introduce a new variable   ,
+                                                       Z
+                                        ¡ ¢−                  1
+                                            ≡                     ()−                            (E26)
+                                                           0
+
+Substituting (E24) and (E26) into (E25) gives us
+                                 µ ¶
+                                            ¡ ¢
+                         ≡          = exp   ∆                                                 (E27)
+                                  
+
+where ∆ is a measure of price dispersion across firms, defined by
+                                        µ ¶
+                                          
+                                   ∆ ≡                                                                  (E28)
+                                           
+
+Note that if  () =  (0 ) for all  and 0 ∈ [0 1], then ∆ = 1, that is, there is no
+price dispersion across firms.
+
+
+
+
+                                                       64
+Law of motion for price dispersion ∆ . By analogy with (E21), the variable
+  , defined in (E26), satisfies
+                                         h                 ¡      ¢− i− 1
+                                      = (1 − ) e− +   −1                                      (E29)
+
+Using (E29) in (E28), we get
+                                 ⎛h                ¡    ¢− i− 1 ⎞
+                                           e −
+                                 ⎜ (1 − )  +   −1           ⎟
+                            ∆ = ⎝                                ⎠                                    (E30)
+                                                
+
+This implies
+                                      "            Ã         !−        µ           ¶− #− 1
+                                1                      e                   −1
+                            ∆ = (1 − )
+                                
+                                                                   +                                  (E31)
+                                                                           
+                    
+In terms of e
+            e ≡   
+                        ,   condition (E31) can be written as
+                                          "                         −
+                                                                                     #−1
+                                                                         −
+                                                     −           −1 −1
+                                ∆ = (1 −       ) e
+                                                   e        +  − · −                              (E32)
+                                                                     −1
+
+By substituting e
+                e from (E22) into (E32), we obtain the law of motion for ∆ ,
+                                     "         ∙                   ¸− 1−
+                                                                                          #−1
+                                     1 −  −1
+                                                                               
+                        ∆ = (1 − )                                         +                       (E33)
+                                       1−                                     ∆−1
+
+Aggregate resource constraint. Combining the household’s budget constraint
+(16) with the government budget constraint (27), we have the aggregate resource
+constraint
+                                  
+                      +      ¡    ¢ = (1 − )   + Π           (E34)
+                               exp 
+Note that the th intermediate-good firm’s profit at  is Π () ≡  ()  () −
+(1 − )   (). Consequently,
+      Z 1             Z 1                               Z 1
+Π =      Π ()  =      ()  ()  − (1 − )       ()  =   − (1 − )   
+       0                    0                                                0
+
+
+
+
+                                                             65
+               R1
+where   = 0  ()  ()  follows by a zero-profit condition of the final-good
+firms. Hence, (E34) can be rewritten as
+
+                                           
+                             +       ¡     ¢  =                   (E35)
+                                        exp 
+
+In real terms, the aggregate resource constraint (E35) becomes
+                                  Ã                !
+                                            
+                              = 1 −       ¡     ¢                         (E36)
+                                        exp 
+
+Equilibrium conditions. Condition (34) in the main text follows from (E17) un-
+                                 
+der the additional assumption −1   (1 − ) = 1 which ensures that the model admits
+a deterministic steady state (this assumption is commonly used in the related lit-
+erature; see, e.g., Christiano et al. 2009). Conditions (35)—(40) in the main text
+correspond to conditions (E18), (E23), (E33), (E3), (E27) and (E36) in the present
+appendix.
+
+Steady state. The steady state is determined by the following system of equations
+(written in the order we use to solve for the steady state values):
+                       £     ¡ ¢¤ 
+                 ∗ = exp  + 
+                  ∗ = ∗ 
+                                 "               µ                #−1
+                                                              ¶ −1
+                                                 1 −  −1
+                                                         ∗
+                  ∆∗ =     (1 −  ∗ ) (1 − )                          
+                                                     1−
+                           ¡       ¢
+                  ∗ =      1 −  ∗ 
+                  ∗ =     ∗− ∗ +  −1
+                                          ∗ ∗ 
+                           ¡       ¢−1
+                             1−        ∗
+                  ∗ =                     +  ∗ ∗ 
+                                 ∆∗
+                  ∗ =     ∗ 
+
+where ∗ (the target inflation) and  (the steady-state share of government spending
+in output) are given.
+
+Calibration procedure. Most of the parameters are calibrated using the esti-
+mates of Del Negro et al. (2007, Table 1, column "DSGE posterior"); namely, we
+
+                                            66
+assume  = 1 and  = 209 in the utility function (15);  = 007,  = 221, and
+ = 082 in the Taylor rule (41);  = 445 in the production function of the final-
+good firm (21);  = 083 (the fraction of the intermediate-good firms aﬀected by
+price stickiness);  = 023 in the government budget constraint (27); and  = 092,
+ = 095,  = 025,   = 054%,   = 038%,   = 1821% (the latter is a
+lower estimate of Del Negro et al., 2007, Table 1, column "DSGE posterior"), and
+ = 4054% (an average estimate of Del Negro et al., 2007) in the processes for
+shocks (17), (28) and (18). From Smets and Wouters (2007), we take the values of
+ = 095,  = 022,  = 015,  = 045%,  = 023% and   = 028% in the
+processes for shocks (24), (19) and (30). We set the discount factor at  = 099. To
+parameterize the Taylor rule (41), we use the steady-state interest rate ∗ = ∗ , and
+we consider two alternative values of the target inflation,  ∗ = 1 (a zero net inflation
+target) and  ∗ = 10598 (this estimate comes from Del Negro et al., 2007).
+
+Solution procedure. The EDS method for the new Keynesian model is similar
+to the one described in Section 4.2 for the neoclassical growth model. We describe
+the algorithm below.
+    To approximate the equilibrium rules, we use the family of ordinary polynomials.
+To compute the conditional expectations in the Euler equations (34), (35) and (40),
+we use monomial formula 1 with 2 nodes.
+    We use the first-order perturbation solution delivered by Dynare as an initial guess
+(both for the coeﬃcients of the equilibrium rules and for constructing an initial EDS
+grid). After the solution on the initial EDS solution is computed, we reconstruct
+the EDS grid and repeat the solution procedure (we checked that the subsequent
+reconstructions of the EDS grid do not improve the accuracy of solutions).
+    The simulation length is  = 100 000, and we pick each 10th point so that
+ = 10 000. The target number of grid points is  = 1000. In Step 2b, the
+damping parameter is set at  = 01, and the convergence parameter is set at
+ = 10−7 . We compute residuals on a stochastic simulation of 10 200 observa-
+tions (we eliminate the first 200 observations). In the test, we use monomial rule
+2 with 2 · 62 + 1 nodes which is more accurate than monomial rule 1 used
+in the solution procedure. Dynare does not evaluate the accuracy of perturbation
+solutions itself. We wrote a MATLAB routine that simulates the perturbation so-
+lutions and evaluates their accuracy using the Dynare’s representation of the state
+space which includes the current©            endogenous state variables {∆−1ª −1 }, the past
+exogenous state variables  −1   −1  −1  −1   −1  −1 and the current
+disturbances {           }.
+
+
+
+                                              67
+(Algorithm EE-NK): An algorithm iterating on the Euler equation
+Step 0. Initialization.
+             ¡                                                             ¢
+  a. Choose ∆−1  −1   0   0   0   0   0   0 and  .
+           ©                                                            ª
+  b. Draw +1  +1  +1  +1  +1  +1                              .
+                       ©                                                    =0 −1ª
+     Compute and fix  +1   +1   +1   +1   +1   +1                              .
+                                                   ¡ ¢                 ¡ ¢                  =0
+                                                                                                   ¡ −1       ¢
+                                                 b
+  c. Choose approximating functions  ≈ ·;  ,  ≈ ·;  , MU ≈MU   b                         c ·;     MU
+                                                                                                                .
+  d. Make initial guesses on  ,  , MU .
+                                  ©                                            ª
+  e. Choose integration nodes,                                    and weights, {  }=1 .
+                                                                                =1
+Step 1. Construction of an EDS grid.                                 n                     o
+            ¡      ¢ ¡           ¢       ¡          ¢
+  a. Use b ·;  , b ·;  , MU   c ·; MU to simulate       −                                    .
+                                                                                     
+                       ©                                                                    ª=0 −1
+  b. Construct Γ = ∆                                                        ≡ { }=1 .
+                                                                                               =1
+Step 2. Computation of a solution for ,  , MU.
+  a. At iteration , for  = 1   , compute
+                ¡           ¢              ¡             ¢          £ ¡                    ¢¤−1
+   —  = b  ;  ,  = b  ;  ,  = MU                     c  ; MU                       ;
+                        h           i   1                    ∙          h               i                ¸−1
+                         1− −1   1−              0                   1− −1       −1         
+   —   from  =            1−
+                                 
+                                             and ∆ = (1 − )                 1−
+                                                                                 
+                                                                                                + ∆            ;
+             µ                     ¶−1
+                                                                     £        ¡       ¢         ¤−1
+   —  = 1 − exp                           , and  =  exp   ∆0                           ;
+                           ( )
+                ∙                   1+
+                                                  ¸     1
+                         exp(  )                +
+   —  =                      −                        ;
+                  [exp( )] exp( )
+                                               ³ ´ ∙³ ´ ³                        ´ ¸1−              ¡          ¢
+      0                                                                    
+  —  = max {1 Φ }, Φ = ∗ ∗                                ∗                            exp   ;
+              ³                                                                                 ´
+  — 0 = ∆0        0  0        0         0         0      0
+                                     for all  ;
+                                                                                   0
+               ³             ´                 ³               ´             h ³                       ´i−1
+      0 =
+  —      b 0 ;  ,  0 = b 0 ;  ,  0 = MU                           c 0 ; MU                       ;
+                                                           
+                            "  0 −1 # 1
+                                                   1−
+                     0
+                          1− 
+  —  0   from    0
+                     =           1−                 ;
+
+            exp(                         P         n³       ´       o
+                     +     )
+   — b = exp    +   ·  0                 0      
+                   (  )                =1
+                                                   ½  ³ 0 ´−1            ¾
+                  ¡       ¢ −           P
+   — b = exp             +  ·                      0
+                                                                         
+                                         =1
+                                      ∙ 0 −                     ¸
+        −  exp(  ) P
+                           0           ( ) exp(0 )
+   — b   = exp                 ·                              
+                    (  ) =1                    0
+
+   b. Find  ,  , MU that solve the system in Step 2a .
+                           P      °            ¡          ¢°
+                                  °b                      °. Similarly, get b
+   — Get: b ≡ argmin       =1 °    −  b      ;   °                   and bMU .
+                                                                         ³              ´
+   — Use damping to compute (+1) = (1 − ) () +b, where  ≡ b  b  bMU .
+   — Check for convergence: end Step 2 if
+           (                                                                                        )
+              X ¯¯ ( )(+1) −( )() ¯¯ X  ¯
+                                              ¯ ( )(+1)
+                                                          −( )
+                                                                   ¯  ¯
+                                                               () ¯ X ¯
+                                                                           (MU  )(+1)
+                                                                                        −(MU  )
+                                                                                                    ¯
+                                                                                                () ¯
+   1
+    max           ¯  ( )()  ¯           ¯68 ( )()  ¯          ¯        (MU  )()
+                                                                                                    ¯                        .
+                                                      
+             =1                          =1                        =1
+Iterate on Steps 1, 2 until convergence of the EDS grid.
+References
+[1] Christiano, L., M. Eichenbaum, and S. Rebelo, (2011). When is the government
+   spending multiplier large? Journal of Political Economy 119 (1), 78-121.
+
+[2] Del Negro, M., F. Schorfheide, F. Smets, and R. Wouters, (2007). On the fit
+   of new Keynesian models. Journal of Business and Economic Statistics 25 (2),
+   123-143.
+
+[3] Everitt, B., S. Landau, M. Leese and D. Stahl, (2011). Cluster Analysis. Wiley
+   Series in Probability and Statistics. Wiley: Chichester, United Kingdom.
+
+[4] Romesburg, C., (1984). Cluster Analysis for Researchers. Lifetime Learning Pub-
+   lications: Belmont, California.
+
+[5] Smets, F. and R. Wouters, (2003). An estimated dynamic stochastic general
+   equilibrium model of the Euro area. Journal of the European Economic Association
+   1 (5), 1123-1175.
+
+[6] Smets, F. and R. Wouters, (2007). Shocks and frictions in US business cycles: a
+   Bayesian DSGE approach. American Economic Review 97, 586-606.
+
+
+
+
+                                        69
+

@@ -1,0 +1,2894 @@
+                                 NBER WORKING PAPER SERIES
+
+
+
+
+             MARKOV PERFECT INDUSTRY DYNAMICS WITH MANY FIRMS
+
+                                          Gabriel Weintraub
+                                          C. Lanier Benkard
+                                            Ben Van Roy
+
+                                         Working Paper 11900
+                                 http://www.nber.org/papers/w11900
+
+
+                       NATIONAL BUREAU OF ECONOMIC RESEARCH
+                                1050 Massachusetts Avenue
+                                  Cambridge, MA 02138
+                                     December 2005
+
+
+
+
+We have had very helpful conversations with Herman Bennett, Jos e Blanchet, Uli Doraszelski, Liran Einav,
+Hugo Hopenhayn, Crist obal Huneeus, Ken Judd, Jon Levin, and Ariel Pakes, as well as seminar participants
+at Berkeley Haas, NYU Stern, SITE, Stanford IO Workshop, UCLA, Univ. of Chile, Univ. of Minnesota, and
+Yale. This research was supported by the Federal Reserve Bank of San Francisco, General Motors, the Lillie
+Fund, the National Science Foundation, and the Office of Naval Research. Correspondence:
+gweintra@stanford.edu; lanierb@stanford.edu; bvr@stanford.edu. The views expressed herein are those of
+the author(s) and do not necessarily reflect the views of the National Bureau of Economic Research.
+
+©2005 by Gabriel Weintraub, C. Lanier Benkard, and Ben Van Roy. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+Markov Perfect Industry Dynamics with Many Firms
+Gabriel Weintraub, C. Lanier Benkard, and Ben Van Roy
+NBER Working Paper No. 11900
+December 2005
+JEL No. C63, C73, L11, L13
+
+                                           ABSTRACT
+
+We propose an approximation method for analyzing Ericson and Pakes (1995)-style dynamic models
+of imperfect competition. We develop a simple algorithm for computing an ``oblivious equilibrium,''
+in which each firm is assumed to make decisions based only on its own state and knowledge of the
+long run average industry state, but where firms ignore current information about competitors' states.
+We prove that, as the market becomes large, if the equilibrium distribution of firm states obeys a
+certain ``light-tail'' condition, then oblivious equilibria closely approximate Markov perfect
+equilibria. We develop bounds that can be computed to assess the accuracy of the approximation for
+any given applied problem. Through computational experiments, we find that the method often
+generates useful approximations for industries with hundreds of firms and in some cases even tens
+of firms.
+
+Gabriel Weintraub
+Stanford University
+gweintra@stanford.edu
+
+C. Lanier Benkard
+Graduate School of Business
+Stanford University
+518 Memorial Way
+Stanford, CA 94305-5015
+and NBER
+lanierb@stanford.edu
+
+Ben Van Roy
+Stanford University
+bvr@stanford.edu
+1        Introduction
+
+Ericson and Pakes (1995) (hereafter EP) introduced an approach to modeling industry dynamics in which
+entry, exit, and investment, together with idiosyncratic shocks, result in heterogeneity among firms. The
+analysis of such models — which we will refer to as EP-type models — relies on computation of Markov
+perfect equilibria (MPE) using dynamic programming algorithms (e.g., Pakes and McGuire (1994)). A great
+advantage of the EP framework is that it is easily extended to cover many important dynamic phenomena.1
+A major shortcoming, however, is the computational complexity of solving for MPE. Methods that acceler-
+ate these computations have been proposed (Judd (1998), Pakes and McGuire (2001) and Doraszelski and
+Judd (2003)). However, in practice computational concerns have typically limited the analysis to industries
+with just a few firms. Such limitations have made it difficult to construct realistic empirical models, and
+application of the EP framework to empirical problems has been rare (exceptions include Gowrisankaran
+and Town (1997), Benkard (2004), Jenkins, Liu, Matzkin, and McFadden (2004), and Ryan (2005)). More
+generally, model details are often dictated as much by computational concerns as economic ones.
+        In an EP-type model, at each time, each firm has a state variable that captures its competitive advantage.
+Though more general state spaces can be considered, we focus on the simple case where the firm state is an
+integer. The value of this integer can represent, for example, a measure of product quality, the firm’s current
+productivity level, or its capacity. Each firm’s state evolves over time based on investments and random
+shocks. The industry state is a vector representing the number of firms with each possible value of the firm
+state variable. Even if firms are restricted to symmetric strategies, the number of relevant industry states (and
+thus, the compute time and memory required for computing a MPE) becomes enormous very quickly. For
+example, most industries contain more than 20 firms, but it would require more than 20 million gigabytes
+of computer memory to store the policy function for an industry with just 20 firms and 40 firm states. As a
+result, it seems unlikely that exact computation of equilibria will ever be possible in many applied problems
+of interest.
+        With this motivation, in this paper we instead propose an approximation method, one that dramatically
+reduces the computational complexity of EP-type models in industries with many firms. The intuition behind
+our approach is as follows. Consider an EP-type model in which firm shocks are idiosyncratic. In each
+period, some firms receive positive shocks and some receive negative shocks. Now suppose there are a large
+number of firms. It is natural to think that changes in individual firms’ states average out at the industry
+    1
+     See, for example, Berry and Pakes (1993), Gowrisankaran (1999), Fershtman and Pakes (2000), de Roos (2002), Judd, Schmed-
+ders, and Yeltekin (2002), Doraszelski and Markovich (2003), Langohr (2003), Song (2003), Markovich (2003), Benkard (2004),
+Besanko and Doraszelski (2004), Goettler, Parlour, and Rajan (2004), Jenkins, Liu, Matzkin, and McFadden (2004), and Besanko,
+Doraszelski, Kryukov, and Satterthwaite (2005), as well as Pakes (2000) for a survey.
+
+
+                                                              1
+level, such that the industry state does not change much over time. In that case, each firm could make near-
+optimal decisions knowing only its own firm state and the long run average industry state. We call oblivious
+strategies, strategies for which a firm considers only its own state and the long run average industry state, and
+we will define a new solution concept, called oblivious equilibrium, in which firms use oblivious strategies.
+Computing an oblivious equilibrium is simple because dynamic programming algorithms that optimize over
+oblivious strategies require compute time and memory that scale only with the number of firm states, and
+not with the number of firms. Indeed, it is easy to compute oblivious equilibria for industries with thousands
+of firms and hundreds of firm states.
+    To formalize the intuition above, we prove an asymptotic result that provides sufficient conditions for
+oblivious equilibria to closely approximate MPE as the market size grows. It may seem that this would be
+true provided that the average number of firms in the industry grows to infinity as the market size grows.
+However, this is not sufficient. If the market is highly concentrated — for example, as is the case with
+Microsoft in the software industry — then the approximation is unlikely to be accurate. A strategy that does
+not keep track of the dominant firm’s state will not perform well. Instead, we show that, alongside some
+technical requirements, a sufficient condition for oblivious equilibria to well approximate MPE asymptoti-
+cally is that they generate a firm size distribution that is “light-tailed,” in a sense that we will make precise.
+For example, if the demand system is given by a logit model and the spot market equilibrium is Nash in
+prices, then the condition holds if the average firm size is uniformly bounded for all market sizes.
+    We provide an algorithm based on dynamic programming that computes oblivious equilibria. The algo-
+rithm is computationally light, often terminating within a couple minutes of run time on a common laptop
+computer even for industries with thousands of firms. It is also easy to implement, requiring, typically,
+fewer than two hundred lines of Matlab code. This represents a considerable savings over existing algo-
+rithms. Another distinguishing feature of the algorithm is that it places no a priori restrictions on the number
+of firms or the number of firm states. Instead, these are determined endogenously and computed alongside
+the oblivious equilibrium.
+    Our asymptotic result provides a condition under which the approximation is accurate for large markets.
+We also derive bounds on the approximation error that can be efficiently computed for any given applied
+problem. Despite the practical importance of such error bounds, there are very few cases in the approximate
+dynamic programming literature where researchers have been able to provide useful bounding techniques for
+high-dimensional stochastic control problems. Possibly the only relevant examples involve optimal stopping
+(Haugh, Kogan, and Wang 2004) and portfolio optimization (Haugh, Kogan, and Wang 2005). As such, our
+bounding technique represents a significant contribution. We show that these error bounds can be derived
+
+
+                                                        2
+quite generally; they do not require many of our modeling assumptions. Furthermore, while it is important
+that there be no aggregate shocks for the asymptotic results to hold, we are able to derive error bounds
+even for models that incorporate aggregate shocks. Using this bounding algorithm, we find that oblivious
+equilibria often offer accurate approximations for industries involving hundreds of firms, and in some cases
+even tens of firms.
+       These results suggest that, by using oblivious equilibria to approximate MPE, it is possible to greatly
+increase the set of problems that can be analyzed using EP-type models. Still, there remains a set of problems
+where exact computation is beyond reach but the approximation is not likely to work well. Such problems
+would likely involve industries with moderate to large numbers of firms that still remain highly concentrated.
+Our hope is that, by including more information in the approximation, the concept of oblivious equilibrium
+can also serve as a basis for approximations for these cases. For example, extending the approximation so
+that firms track not just their own state, but also the states of several of the largest firms in the industry,
+and/or the total number of firms in the industry, may yield better approximations.2 Deriving bounds on the
+approximation error for such cases is not a trivial extension of the proofs in this paper, and thus will be a
+topic of future research.
+       Though our emphasis is on the use of oblivious equilibrium as an approximation of MPE, oblivious
+equilibrium can also be motivated as a behavioral model in its own right. If observing the industry state and
+designing strategies that keep track of it are costly, and do not lead to significant increases in profit, firms
+may be better off using oblivious strategies.
+       The concept of oblivious equilibrium is closely related to Hopenhayn (1992). Hopenhayn models an
+industry that hosts an infinite number of firms, each of which garners an infinitesimal fraction of the market.
+His model is tractable because it assumes that the industry state is constant over time, implicitly assuming a
+law of large number holds. This assumption is based on the same intuition that motivates our consideration
+of oblivious equilibrium. However, our goal is to analyze models that closely reflect real world industries
+that have finite numbers of firms. Also, our EP-type model is more general because the transitional dynamics
+resulting from firms’ investment strategies are generated by equilibrium behavior that is explicitly modeled.
+Hopenhayn abstracts from this aspect of the model and instead assumes that firms’ state trajectories (their
+productivities) follow exogenous Markov processes.3
+       Our approach also has similarities to a number of other past literatures. The light-tail condition we
+consider is analogous to notions of diffuse industry structure in large markets associated with Sutton (1991)’s
+   2
+     Note also that related approaches have been used in the past, most notably to solve stochastic growth models (Krusell and
+A. A. Smith (1998)).
+   3
+     Note that Klette and Kortum (2003) and Melitz (2003) model investment explicitly in Hopenhayn-style models.
+
+
+                                                              3
+exogenous sunk cost model. Though our goals are different, our asymptotic results are close in spirit to the
+work of Novshek and Sonnenschein (1978) who, in a static setting, provide conditions under which Cournot-
+Nash equilibrium converges to Walras competitive equilibrium when there is free entry. The notion that,
+for asymptotically large markets, strategies can remain effective while ignoring information and strategic
+behavior also appears in Vives (2002), in the context of Cournot models. Finally, Jovanovic and Rosenthal
+(1988) consider sequential equilibria in a model where equilibrium strategies can often be represented as
+simple functions of summary statistics of the distribution of firm states. This differs from our context, where
+equilibrium strategies are in reality very complex, but can sometimes be well approximated using simple
+functions.
+    There are a variety of relevant economic issues that can be studied using our methods. As an example,
+we briefly explore an important question in industrial organization: what features of an industry determine
+whether an industry becomes fragmented or remains concentrated as the market grows in size? Sutton (1991)
+sought to identify simple features of an industry that distinguish models that lead to these two outcomes. In
+our model, through computational experiments, we show that an arbitrarily small increase in a single model
+parameter that identifies the extent of vertical product differentiation, can turn an asymptotically fragmented
+market into an asymptotically concentrated one. These results show that the predictions of Sutton (1991)
+may sometimes be quite sensitive. For example, they imply that very different market structures might
+be observed in the same industry across markets that are the same size and that have indistinguishable
+characteristics. Note that our results remain broadly consistent with Sutton (1991) since the extent of vertical
+product differentiation impacts the returns to investment. Consistent with Sutton (1991), industries with
+higher returns to investment (even if the difference may be arbitrarily small) tend to be more concentrated.
+    The paper is organized as follows. In Section 2 we outline the dynamic industry model. In Section 3 we
+introduce the concept of oblivious strategies and oblivious equilibrium. In Section 4 we provide conditions
+under which oblivious strategies approximate MPE strategies asymptotically as the market size grows. In
+Section 5 we provide methods for computing oblivious equilibria and error bounds. In Section 6 we report
+results from computational experiments. Finally, Section 7 presents conclusions and a discussion of future
+research directions.
+
+
+
+
+                                                       4
+2      A Dynamic Model of Imperfect Competition
+
+In this section we formulate a model of an industry in which firms compete in a single-good market. Our
+model is close in spirit to that of Ericson and Pakes (1995), but with some differences. Most notably, we
+modify the entry and exit processes in Ericson and Pakes (1995) so as to make them more realistic when
+there are a large number of firms. Additionally, our asymptotic results do not hold with aggregate industry
+shocks so our model includes only idiosyncratic shocks.
+
+
+2.1       Model and Notation
+
+The industry evolves over discrete time periods and an infinite horizon. We index time periods with non-
+negative integers t ∈ N (N = {0, 1, 2, . . .}). All random variables are defined on a probability space
+(Ω, F, P) equipped with a filtration {Ft : t ≥ 0}. We adopt a convention of indexing by t variables that are
+Ft -measurable.
+      Each firm that enters the industry is assigned a unique positive integer-valued index. The set of indices
+of incumbent firms at time t is denoted by St . At each time t ∈ N, we denote the number of incumbent firms
+as nt .
+      Firm heterogeneity is reflected through firm states. To fix an interpretation, we will refer to a firm’s state
+as its quality level. However, firm states might more generally reflect productivity, capacity, the size of its
+consumer network, or any other aspect of the firm that affects its profits. At time t, the quality level of firm
+i ∈ St is denoted by xit ∈ N.
+      We define the industry state st to be a vector over quality levels that specifies, for each quality level
+x ∈ N, the number of incumbent firms at quality level x in period t. We define the state space S =
+n          P∞               o
+  s ∈ N∞      x=0 s(x) < ∞   . Though in principle there are a countable number of industry states, we will
+                                          n           P∞               o
+also consider an extended state space S = s ∈ <∞  +      x=0 s(x) <  ∞   . This will allow us, for example,
+to consider derivatives of functions with respect to the industry state. For each i ∈ St , we define s−i,t ∈ S
+to be the state of the competitors of firm i; that is, s−i,t (x) = st (x) − 1 if xit = x, and s−i,t (x) = st (x),
+otherwise. Similarly, n−i,t denotes to the number of competitors of firm i.
+      In each period, each incumbent firm earns profits on a spot market. A firm’s single period expected
+profit π(xit , s−i,t ) depends on its quality level xit and its competitors’ state s−i,t .
+      The model also allows for entry and exit. In each period, each incumbent firm i ∈ St observes a positive
+real-valued sell-off value φit that is private information to the firm. If the sell-off value exceeds the value of
+continuing in the industry then the firm may choose to exit, in which case it earns the sell-off value and then
+
+
+                                                          5
+ceases operations permanently.
+      If the firm instead decides to remain in the industry, then it can invest to improve its quality level. If a
+firm invests ιit ∈ <+ , then the firm’s state at time t + 1 is given by,
+
+
+                                          xi,t+1 = xit + w(ιit , ζi,t+1 ),
+
+
+where the function w captures the impact of investment on quality and ζi,t+1 reflects uncertainty in the
+outcome of investment. Uncertainty may arise, for example, due to the risk associated with a research and
+development endeavor or a marketing campaign. We denote the unit cost of investment by d.
+      In each period new firms can enter the industry by paying a setup cost κ. Entrants do not earn profits in
+the period that they enter. They appear in the following period at state xe ∈ N and can earn profits thereafter.
+      Each firm aims to maximize expected net present value. The interest rate is assumed to be positive and
+constant over time, resulting in a constant discount factor of β ∈ (0, 1) per time period.
+      In each period, events occur in the following order:
+
+   1. Each incumbent firms observes its sell-off value and then makes exit and investment decisions.
+
+   2. The number of entering firms is determined and each entrant pays an entry cost of κ.
+
+   3. Incumbent firms compete in the spot market and receive profits.
+
+   4. Exiting firms exit and receive their sell-off values.
+
+   5. Investment outcomes are determined, new entrants enter, and the industry takes on a new state st+1 .
+
+
+
+
+2.2     Model Primitives
+
+The model as specified is general enough to encompass numerous applied problems in economics. Indeed,
+similar models have been applied to advertising, auctions, collusion, consumer learning, environmental
+policy, international trade policy, learning-by-doing, limit order markets, mergers, network externalities,
+and other applied problems. To study any particular applied problem it is necessary to further specify the
+primitives of the model, including:
+
+
+
+
+                                                         6
+                                               profit function                         π
+                                         sell-off value distribution                ∼ φit
+                                        investment impact function                     w
+                                    investment uncertainty distribution              ∼ ζit
+                                            unit investment cost                       d
+                                                 entry cost                            κ
+                                             discount factor               β
+       Note that in most applied problems the profit function would not be specified directly, but would instead
+result from a deeper set of primitives that specify a demand function, a cost function, and a static equilibrium
+concept. An important parameter of the demand function, that we will focus on below, is the size of the
+relevant market, which we will denote as m.
+
+
+2.3       Assumptions
+
+We make several assumptions about the model primitives, beginning with the profit function. An industry
+state s ∈ S is said to dominate s0 ∈ S if for all x ∈ N, z≥x s(z) ≥ z≥x s0 (z). We will denote this
+                                                        P            P
+
+relation by s  s0 . Intuitively, competition associated with s is no weaker than competition associated with
+s0 .
+
+Assumption 2.1.
+
+       1. For all s ∈ S, π(x, s) is increasing in x.
+
+       2. For all x ∈ N and s, s0 ∈ S, if s  s0 then π(x, s) ≤ π(x, s0 ).
+
+       3. For all x ∈ N and s ∈ S, π(x, s) > 0, and supx,s π(x, s) < ∞.
+
+       4. For all x ∈ N, y ∈ N, and s ∈ S, π(x, s) is differentiable with respect to s(y). Further, for any
+          x ∈ N, y ∈ N, s ∈ S, and h ∈ S such that s + γh ∈ S for γ > 0 sufficiently small, if
+                                               X            ∂ ln π(x, s)
+                                                     h(y)                < ∞,
+                                                               ∂s(y)
+                                               y∈N
+
+          then
+                                      d ln π(x, s + γh)               X            ∂ ln π(x, s)
+                                                                  =         h(y)                .
+                                             dγ             γ=0                       ∂s(y)
+                                                                      y∈N
+       The assumptions are natural. Assumption 2.1.1 ensures that increases in quality lead to increases in
+profit. Assumption 2.1.2 states that strengthened competition cannot result in increased profit. Assumption
+2.1.3 ensures that profits are positive and bounded. The first part of Assumption 2.1.4 requires partial
+differentiability of the profit function with respect to each s(y). Profit functions that are “smooth”, such
+
+
+                                                            7
+as ones arising from random utility demand models like the logit model, will satisfy this assumption. The
+second part of Assumption 2.1.4 is technical and essentially requires that the profit function is Fréchet
+differentiable.
+    We also make assumptions about investment and the distributions of the private shocks:
+
+Assumption 2.2.
+
+   1. The variables {φit |t ≥ 0, i ≥ 1} are i.i.d. and have finite expectations and well-defined density
+      functions with support <+ .
+
+   2. The random variables {ζit |t ≥ 0, i ≥ 1} are i.i.d. and independent of {φit |t ≥ 0, i ≥ 1}.
+
+   3. For all ζ, w(ι, ζ) is nondecreasing in ι.
+
+   4. For all ι > 0, P[w(ι, ζi,t+1 ) > 0] > 0.
+
+   5. For all ι > 0, P[w(ι, ζi,t+1 ) = 0] > 0.
+
+   6. There exists a positive constant w ∈ N such that |w(ι, ζ)| ≤ w, for all (ι, ζ). There exists a positive
+      constant ι such that ιit < ι, ∀i, ∀t.
+
+   7. For all k ∈ {−w, . . . , w}, P[w(ι, ζi,t+1 ) = k] is continuous in ι.
+
+   8. The transitions generated by w(ι, ζ) are unique investment choice admissible .
+
+    Assumptions 2.2.1 and 2.2.2 imply that investment and exit outcomes are idiosyncratic conditional on
+the state. Assumption 2.2.3 and 2.2.4 imply that investment is productive. Assumption 2.2.5 is used to
+ensure the Markov chain that describes the industry evolution admits an invariant distribution (in particular,
+to ensure it is aperiodic). Assumption 2.2.6 places a finite bound on how much progress can be made or lost
+in a single period through investment. Assumption 2.2.7 ensures that the impact of investment on transition
+probabilities is continuous. Assumption 2.2.8 is an assumption introduced by Doraszelski and Satterthwaite
+(2003) that ensures a unique solution to the firms’ investment decision problem. It is used to guarantee
+existence of an equilibrium in pure strategies, and is satisfied by many of the commonly used specifications
+in the literature.
+    We assume that there are a large number of potential entrants who play a symmetric mixed entry strategy.
+In that case the number of actual entrants is well approximated by the Poisson distribution (see appendix for
+a derivation of this result). This leads to the following assumptions:
+
+Assumption 2.3.
+
+   1. The number of firms entering during period t is a Poisson random variable that is conditionally
+      independent of {φit , ζit |t ≥ 0, i ≥ 1}, conditioned on st .
+
+   2. κ > β · φ̄, where φ̄ is the expected net present value of entering the market, investing zero each period,
+      and then exiting at an optimal stopping time.
+
+
+                                                       8
+      We denote the expected number of firms entering at industry state st , by λ(st ). This state-dependent
+entry rate will be endogenously determined, and our solution concept will require that it satisfies a zero
+expected profit condition. Modeling the number of entrants as a Poisson random variable has the advantage
+that it leads to more elegant asymptotic results. Assumption 2.3.2 ensures that the sell-off value by itself is
+not sufficient reason to enter the industry.
+
+
+2.4     Equilibrium
+
+As a model of industry behavior we focus on pure strategy Markov perfect equilibrium (MPE), in the sense
+of Maskin and Tirole (1988). We further assume that equilibrium is symmetric, such that all firms use a
+common stationary investment/exit strategy. In particular, there is a function ι such that at each time t,
+each incumbent firm i ∈ St invests an amount ιit = ι(xit , s−i,t ). Similarly, each firm follows an exit
+strategy that takes the form of a cutoff rule: there is a real-valued function ρ such that an incumbent firm
+i ∈ St exits at time t if and only if φit ≥ ρ(xit , s−i,t ). In the appendix we show that there always exists
+an optimal exit strategy of this form even among very general classes of exit strategies. Let M denote
+the set of exit/investment strategies such that an element µ ∈ M is a pair of functions µ = (ι, ρ), where
+ι : N × S → <+ is an investment strategy and ρ : N × S → <+ is an exit strategy. Similarly, we denote the
+set of entry rate functions by Λ, where an element of Λ is a function λ : S → <+ .
+      We define the value function V (x, s|µ0 , µ, λ) to be the expected net present value for a firm at state x
+when its competitors’ state is s, given that its competitors each follows a common strategy µ ∈ M, the entry
+rate function is λ ∈ Λ, and the firm itself follows strategy µ0 ∈ M. In particular,
+
+                                             τi
+                                         "                                                                          #
+                                             X
+         V (x, s|µ0 , µ, λ) = Eµ0 ,µ,λ             β k−t (π(xik , s−i,k ) − dιik ) + β τi −t φi,τi xit = x, s−i,t = s ,
+                                             k=t
+
+
+where i is taken to be the index of a firm at quality level x at time t, τi is a random variable representing the
+time at which firm i exits the industry, and the subscripts of the expectation indicate the strategy followed
+by firm i, the strategy followed by its competitors, and the entry rate function. In an abuse of notation, we
+will use the shorthand, V (x, s|µ, λ) ≡ V (x, s|µ, µ, λ), to refer to the expected discounted value of profits
+when firm i follows the same strategy µ as its competitors.
+      An equilibrium to our model comprises an investment/exit strategy µ = (ι, ρ) ∈ M, and an entry rate
+function λ ∈ Λ that satisfy the following conditions:
+
+
+
+
+                                                                  9
+    1. Incumbent firm strategies represent a MPE:
+
+
+           (2.1)                     sup V (x, s|µ0 , µ, λ) = V (x, s|µ, λ)             ∀x ∈ N, ∀s ∈ S.
+                                    µ0 ∈M
+
+
+    2. At each state, either entrants have zero expected profits or the entry rate is zero (or both):
+
+
+                                        λ(s) (βEµ,λ [V (xe , s−i,t+1 |µ, λ)|st = s] − κ) = 0
+                               P
+                                  s∈S
+
+                                        βEµ,λ [V (xe , s−i,t+1 |µ, λ)|st = s] − κ ≤ 0                    ∀s ∈ S
+                                                             λ(s) ≥ 0                                   ∀s ∈ S.
+
+
+In the appendix, we show that the supremum in part 1 of the definition above can always be attained simul-
+taneously for all x and s by a common strategy µ0 .
+        Doraszelski and Satterthwaite (2003) establish existence of an equilibrium in pure strategies for a closely
+related model. We do not provide an existence proof here because it is long and cumbersome and would
+replicate this previous work. With respect to uniqueness, in general we presume that our model may have
+multiple equilibria.4
+        Dynamic programming algorithms can be used to optimize firm strategies, and equilibria to our model
+can be computed via their iterative application. However, these algorithms require compute time and mem-
+ory that grow proportionately with the number of relevant industry states, which is often intractable in
+contexts of practical interest. This difficulty motivates our alternative approach.
+
+
+
+
+3        Oblivious Equilibrium
+
+We will propose a method for approximating MPE based on the idea that when there are a large number
+of firms, simultaneous changes in individual firm quality levels can average out such that the normalized
+industry state remains roughly constant over time. In this setting, each firm can potentially make near-
+optimal decisions based only on its own quality level and the long run average industry state. With this
+motivation, we consider restricting firm strategies so that each firm’s decisions depend only on the firm’s
+quality level. We call such restricted strategies oblivious since they involve decisions made without full
+knowledge of the circumstances — in particular, the state of the industry.
+    4
+        Doraszelski and Satterthwaite (2003) also provide an example of multiple equilibria in their closely related model.
+
+
+
+
+                                                                   10
+3.1     Oblivious Strategies and Entry Rate Functions
+
+Let M̃ ⊂ M and Λ̃ ⊂ Λ denote the set of oblivious strategies and the set of oblivious entry rate functions.
+Since each strategy µ = (ι, ρ) ∈ M̃ generates decisions ι(x, s) and ρ(x, s) that do not depend on s, with
+some abuse of notation, we will often drop the second argument and write ι(x) and ρ(x). Similarly, for an
+entry rate function λ ∈ Λ̃, we will denote by λ the real-valued entry rate that persists for all industry states.
+
+
+3.2     Oblivious Equilibrium
+
+Note that if all firms use a common strategy µ ∈ M̃, the quality level of each evolves as an independent tran-
+sient Markov chain. Let the k-period transition sub-probabilities of this transient Markov chain be denoted
+by Pµk (x, y). Then, the expected time that a firm spends at a quality level x is given by ∞    k e
+                                                                                          P
+                                                                                           k=0 Pµ (x , x), and
+
+the expected lifespan of a firm is ∞                k e
+                                    P     P
+                                      k=0     x∈N Pµ (x , x). Denote the expected number of firms at quality
+
+level x at time t by s̃t (x) = E[st (x)]. The following result offers an expression for the long-run expected
+industry state when dynamics are governed by oblivious strategies and entry rate functions.
+
+Lemma 3.1. Let Assumption 2.2 hold. If firms make decisions according to an oblivious strategy µ ∈ M̃
+and enter according to an oblivious entry rate function λ ∈ Λ̃, and the expected time that a firm spends in
+the industry is finite, then
+
+                                                                    ∞
+                                                                    X
+(3.1)                                         lim s̃t (x) = λ              Pµk (xe , x),
+                                             t→∞
+                                                                     k=0
+
+
+for all x ∈ N.
+
+      We omit the proof, which is straightforward. To abbreviate notation, we let s̃µ,λ (x) = limt→∞ s̃t (x) for
+µ ∈ M̃, λ ∈ Λ̃, and x ∈ N. For an oblivious strategy µ ∈ M̃ and an oblivious entry rate function λ ∈ Λ̃
+we define an oblivious value function
+
+                                             τi
+                                         "                                                                       #
+                                             X
+                        0                              k−t                                   τi −t
+                 Ṽ (x|µ , µ, λ) = Eµ0             β         (π(xik , s̃µ,λ ) − dιik ) + β           φi,τi xit = x .
+                                             k=t
+
+
+This value function should be interpreted as the expected net present value of a firm that is at quality level
+x and follows oblivious strategy µ0 , under the assumption that its competitors’ state will be s̃µ,λ for all
+time. Note that only the firm’s own strategy µ0 influences the firm’s state trajectory because neither the
+profit function nor the strategy µ0 depends on the industry state. Hence, the subscript in the expectation
+only reflects this dependence. Importantly, however, the oblivious value function remains a function of
+
+
+                                                                   11
+the competitors’ strategy µ and the entry rate λ through the expected industry state s̃µ,λ . Again, we abuse
+notation by using Ṽ (x|µ, λ) ≡ Ṽ (x|µ, µ, λ) to refer to the oblivious value function when firm i follows the
+same strategy µ as its competitors.
+       We now define a new solution concept: an oblivious equilibrium consists of a strategy µ ∈ M̃ and an
+entry rate function λ ∈ Λ̃ that satisfy the following conditions:
+
+   1. Firm strategies optimize an oblivious value function:
+
+
+         (3.2)                           sup Ṽ (x|µ0 , µ, λ) = Ṽ (x|µ, λ),            ∀x ∈ N.
+                                        µ0 ∈M̃
+
+
+
+   2. Either the oblivious expected value of entry is zero or the entry rate is zero (or both):
+
+                                                                         
+                                                     λ β Ṽ (xe |µ, λ) − κ = 0
+                                                        β Ṽ (xe |µ, λ) − κ ≤ 0
+                                                                 λ ≥ 0.
+
+
+       It is straightforward to show that an oblivious equilibrium exists under mild technical conditions. Fur-
+thermore, if the entry cost is not prohibitively high then an oblivious equilibrium with a positive entry rate
+exists. We omit the proof of this for brevity. With respect to uniqueness, we have been unable to find mul-
+tiple oblivious equilibria in any of the applied problems we have considered, but similarly with the case of
+MPE, we have no reason to believe that in general there is a unique oblivious equilibrium.5
+       Note that we assume that, even if firms are using oblivious strategies, the sequence of single-period
+profits received are the ones associated with Nash, and not oblivious, static behavior. For example, if single-
+period profits are derived from a game in which firms compete in prices, we assume firms price according to
+Nash equilibrium strategies, and are not oblivious with respect to pricing behavior. We make this assumption
+because we are interested in the dynamic behavior of the industry, and we believe that assuming oblivious
+pricing behavior, which would be cumbersome, would not change our conclusions in that respect.
+       We will later explore situations where the number of firms is large and oblivious equilibria approximate
+MPE, in a sense that we will define precisely. First, we analyze the long-run behavior of an industry where
+strategies and the entry rate function are oblivious.
+   5
+     However, since oblivious strategies rule out strategies that are dependent on competitors’ states, there are likely to be fewer
+oblivious equilibria than there are MPE.
+
+
+
+
+                                                                12
+3.3     The Invariant Industry Distribution
+
+In Lemma 3.1, we characterized the long-run expected industry state. Our next result characterizes the
+long-run distribution. The symbol ⇒ denotes weak convergence as t → ∞.
+
+Lemma 3.2. Let Assumptions 2.2 and 2.3 hold. Assume that firms follow a common oblivious strategy
+µ ∈ M̃, the expected entry rate is λ ∈ Λ̃, and the expected time that each firm spends in the industry is finite.
+Let {Zx : x ∈ N} be a sequence of independent Poisson random variables with means {s̃µ,λ (x) : x ∈ N},
+                                                P
+and let Z be a Poisson random variable with mean x∈N s̃µ,λ (x). Then,
+(a) {st : t ≥ 0} is an irreducible, aperiodic and positive recurrent Markov chain;
+(b) the invariant distribution of st is a product form of Poisson random variables;
+(c) for all x, st (x) ⇒ Zx ;
+(d) nt ⇒ Z.
+
+      To conclude this section we state an important result for later use. First note that
+
+                                                 X                    nt
+                                                                      X
+                                      st (x) =          1{xit =x} =         1{x(j)t =x} ,
+                                                 i∈St                 j=1
+
+
+where 1A denotes the indicator of event A. Hence, for example, 1{xit =x} = 1 if xit = x, and 1{xit =x} = 0,
+otherwise. {x(j)t : j = 1, . . . , nt } is a random permutation of {xit : i ∈ St }. That is, we randomly pick a
+firm from St and assign to it the index j = 1; from the remaining firms we randomly pick another firm and
+assign to it the index j = 2, and so on.
+
+Lemma 3.3. Let Assumptions 2.2 and 2.3 hold. Assume that firms follow a common oblivious strategy
+µ ∈ M̃, the expected entry rate is λ ∈ Λ̃, and the expected time that each firm spends in the industry is
+finite. Let {Yn : n ∈ N} be a sequence of integer-valued i.i.d. random variables, each distributed according
+             P
+to s̃µ,λ (·)/ x∈N s̃µ,λ (x). Then, for all n ∈ N,
+
+                                                                   
+                                      x(1)t , . . . , x(nt )t nt = n ⇒ (Y1 , . . . , Yn ).
+
+
+      Proofs of Lemmas 3.2 and 3.3 can be found in the appendix. The Poisson entry process is key to
+proving these results. Lemma 3.3 ensures that if we sample a firm randomly from those firms currently
+in the industry and the industry state is distributed according to the invariant distribution, the firm’s state
+will be distributed according to the normalized expected industry state. Further, each subsequent time we
+sample without replacement we get an independent sample from the same distribution. For brevity, when
+
+
+                                                             13
+we consider sampling a random firm from among those currently in the industry and the industry state is
+distributed according to the invariant distribution, we will say that we are sampling a firm from the industry’s
+invariant distribution.
+    It is straightforward to show that if per-period profit is bounded, say by some quantity π, then the
+expected time a firm spends in the industry is finite for any oblivious strategy µ ∈ M̃ that comprises
+an oblivious equilibrium. This follows from the fact that the sell-off value has support in <+ and the
+                                                               π
+continuation value from every state is bounded above by       1−β    + φ. Hence, the probability of exiting in each
+period is bounded below by a positive constant. This implies that the previous lemmas apply when firms use
+oblivious equilibrium strategies.
+
+
+
+
+4    Asymptotic Results
+
+In this section, we establish asymptotic results that provide conditions under which oblivious equilibria offer
+close approximations to MPE as the market size grows. As specified above, our model does not explicitly
+depend on market size. However, market size would typically enter the profit function, π(xit , s−i,t ), through
+the underlying demand system; in particular, profit for a firm at a given state (x, s) would typically increase
+with market size. Therefore, in this section we consider a sequence of markets indexed by market sizes
+m ∈ <+ . All other model primitives are assumed to remain constant within this sequence except for the
+profit function, which depends on m. To convey this dependence, we denote profit functions by πm .
+    We index functions and random variables associated with market size m with a superscript (m). From
+this point onward we let (µ̃(m) , λ̃(m) ) denote an oblivious equilibrium for market size m. Let V (m) and Ṽ (m)
+represent the value function and oblivious value function, respectively, when the market size is m. To further
+abbreviate notation we denote the expected industry state associated with (µ̃(m) , λ̃(m) ) by s̃(m) ≡ s̃µ̃(m) ,λ̃(m) .
+                             (m)
+    The random variable st         denotes the industry state at time t when every firm uses strategy µ̃(m) and
+                                                                          (m)
+the entry rate is λ̃(m) . We denote the invariant distribution of {st           : t ≥ 0} by q (m) . In order to simplify
+                                                           (m)                                        (m)
+our analysis, we assume that the initial industry state s0        is sampled from q (m) . Hence, st         is a stationary
+          (m)
+process; st     is distributed according to q (m) for all t ≥ 0. Note that this assumption does not affect long-run
+asymptotic results since for any initial condition the process approaches stationarity as time progresses.
+                                          (m)                 (m)          (m) (m)             (m)
+    It will be helpful to decompose st          according to st      = ft     nt ,    where ft       is the random vec-
+                                                                    (m)
+tor that represents the fraction of firms in each state and nt            is the total number of firms, respectively.
+                          (m)                                                                    (m)
+Similarly, let f˜(m) ≡ E[ft ] denote the expected fraction of firms in each state and ñ(m) ≡ E[nt ] =
+
+
+
+                                                         14
+                                                                                                                         s̃(m)
+         (m) (x) denote the expected number of firms.         Using Lemma 3.3, it is easy to check that f˜(m) =
+P
+   x∈N s̃                                                                                                                ñ(m)
+                                                                                                                               .
+With some abuse of notation, we define πm (xit , f−i,t , n−i,t ) ≡ πm (xit , n−i,t · f−i,t ).
+
+
+4.1       Assumptions about the Sequence of Profit Functions
+
+In addition to Assumption 2.1, which applies to individual profit functions, we will make the following
+                                                                                 P
+assumptions, which apply to sequences of profit functions. Let S1 = {f ∈ S| x∈N f (x) = 1} and
+S1,z = {f ∈ S1 |∀x > z, f (x) = 0}.
+
+Assumption 4.1.
+
+    1. supx∈N,s∈S πm (x, s) = O(m).          6
+
+
+    2. For all increasing sequences {mk ∈ N|k ∈ N}, n : N 7→ N with n(mk ) = o(mk ), x, z ∈ N with
+       x > z, and f ∈ S1,z , limk→∞ πmk (x, f, n(mk )) = ∞.
+
+    3.
+                                                                   d ln πm (x, f, n)
+                                                  sup                                < ∞.
+                                        m∈<+ ,x∈N,f ∈S1 ,n>0             d ln n
+        The assumptions are again natural. Assumption 4.1.1, which states that profits increase at most linearly
+with market size, should hold for virtually all relevant classes of profit functions. It is satisfied, for example,
+if the total disposable income of the consumer population grows linearly in market size.7 Assumption 4.1.2
+is also natural. It states that if the number of firms grows slower than the market size then the largest firm’s
+profit becomes arbitrarily large as the market grows. Assumption 4.1.3 requires that profits are “smooth”
+with respect to the number of firms and, in particular, states that the relative rate of change of profit with
+respect to relative changes in the number of firms is uniformly bounded. To provide a concrete example,
+we show in Section 4.5 that these assumptions are satisfied by a single-period profit function derived from a
+demand system given by a logit model and where the spot market equilibrium is Nash in prices.
+
+
+4.2       Asymptotic Markov Equilibrium
+
+Our aim is to establish that, under certain conditions, oblivious equilibria well-approximate MPE as the
+market size grows. We define the following concept to formalize the sense in which this approximation
+becomes exact.
+
+Definition 4.1. A sequence (µ̃(m) , λ̃(m) ) ∈ M × Λ possesses the asymptotic Markov equilibrium (AME)
+    In this notation, f (m) = O(m) denotes lim supm f (m)
+    6
+                                                          m
+                                                               < ∞. f (m) = o(m) denotes lim supm f (m)
+                                                                                                      m
+                                                                                                           = 0.
+    7
+    For example, if each consumer has income that is less than some upper bound Ȳ then total disposable income of the consumer
+population (an upper bound to firm profits) is always less than m · Ȳ .
+
+
+
+
+                                                              15
+property if for all x ∈ N,
+                                 "                                                                                 #
+                                                        (m)                                       (m)
+             lim Eµ̃(m) ,λ̃(m)       sup V   (m)
+                                                   (x, st |µ0 , µ̃(m) , λ̃(m) )   −V   (m)
+                                                                                             (x, st |µ̃(m) , λ̃(m) )   =0.
+            m→∞                      µ0 ∈M
+
+
+       Recall that the process st is taken to be stationary, and therefore, this expectation does not depend on t.
+The definition of AME assesses approximation error at each firm state x in terms of the amount by which
+a firm at state x can increase its expected net present value by deviating from the oblivious equilibrium
+strategy µ̃(m) , and instead following an optimal (non-oblivious) best response that keeps track of the true
+industry state. Recall that a MPE requires that the expression in square brackets equals zero for all states
+(x, s). In that sense, the notion of AME relates to the more common notion that -equilibria approximate
+true equilibria in games as  → 0 (Fudenberg and Levine 1986).
+       Note that standard MPE solution algorithms (e.g., Pakes and McGuire (1994)) aim to compute point-
+wise -equilibria; that is, where a firm cannot improve its net present value by more than  starting from
+any state (x, s). The AME property instead considers the benefit of deviating to an optimal strategy starting
+from each firm state x, averaged over the invariant distribution of industry states. It would not be possible
+to obtain our results point-wise. This is because in an oblivious equilibrium firms may be making poor
+decisions in states that are far from the expected state. Offsetting this effect is the fact that these states have
+very low probability of occurrence, so they have a small impact on expected discounted profits.8
+       If a sequence of oblivious equilibria has the AME property then, as m grows, supµ0 ∈M V (m) (x, s|µ0 , µ̃(m) , λ̃(m) ) ≈
+V (m) (x, s|µ̃(m) , λ̃(m) ) for states s that have significant probability of occurrence. This implies that, asymp-
+totically, µ̃(m) is a near optimal strategy (so it approximately satisfies the MPE equation) when the industry
+starts in any state that has significant probability of occurrence. Additionally, one can show that when the
+sequence of oblivious equilibria has the AME property then it is also the case that
+                    h                                                         i
+                                  (m)
+limm→∞ Eµ̃(m) ,λ̃(m) V (m) (xe , st |µ̃(m) , λ̃(m) ) − Ṽ (xe |µ̃(m) , λ̃(m) ) = 0. Since β Ṽ (xe |µ̃(m) , λ̃(m) ) =
+κ for all m, asymptotically, βV (m) (xe , s|µ̃(m) , λ̃(m) ) ≈ κ for states s that have significant probability of
+occurrence. Hence, asymptotically, λ̃(m) satisfies the zero profit condition at such states. In summary, if
+             h                                                                           i
+                                  (m)                                  (m)
+Eµ̃(m) ,λ̃(m) supµ0 ∈M V (m) (x, st |µ0 , µ̃(m) , λ̃(m) ) − V (m) (x, st |µ̃(m) , λ̃(m) ) is small, MPE strategies
+and entry rates at relevant states should be well approximated by oblivious ones. We will later present
+computational results that support this point.9
+   8
+    Note that Pakes and McGuire (2001) use a similar concept as a stopping rule in their stochastic algorithm.
+   9
+    One might attempt to formalize this argument by following a similar line of reasoning as Fudenberg and Levine (1986) or
+Altman, Pourtallier, Haurie, and Moresino (2000), who provide conditions under which, if a sequence of restricted games, Gm ,
+converges to a game of interest, G, in an appropriate way, then any convergent sequence of m −equilibria of Gm with m → 0
+converges to an equilibrium of G. Our model does not have a well defined limit game, which makes it hard to apply this argument.
+
+
+
+                                                                   16
+4.3     Uniform Law of Large Numbers
+
+The following theorem establishes that when the number of firms is large, the industry state becomes approx-
+                             (m)
+imately constant (i.e., st          ≈ s̃(m) ) with high probability. We use →p to denote convergence in probability
+as m → ∞.
+
+Theorem 4.1. If limm→∞ ñ(m) = ∞ then
+
+                                                     (m)
+                                                     st (x) s̃(m) (x)
+                                               sup          −         →p 0.
+                                               x∈N    ñ(m)   ñ(m)
+
+      The theorem can be proved by invoking a uniform law of large numbers (Vapnik and Chervonenkis
+(1971)) and using Lemma 3.3. It suggests that when the expected number of firms is large, using an oblivious
+strategy might be close to optimal, and that a sequence of oblivious equilibria possesses the AME property.
+However, for this to be the case it turns out that additional conditions are required.
+
+
+4.4     A Light-Tail Condition Implies AME
+
+Even when there are a large number of firms, if the market tends to be concentrated — for example, if the
+market is usually dominated by a single firm — the AME property is unlikely to hold. To ensure the AME
+property, we need to impose a “light-tail” condition that rules out this kind of market concentration.
+                  d ln πm (y,f,n)
+      Note that        df (x)       is the semi-elasticity of one period profits with respect to the fraction of firms in
+state x. We define the maximal absolute semi-elasticity function:
+
+                                                                       d ln πm (y, f, n)
+                                       g(x) =          max                               .
+                                                m∈<+ ,y∈N,f ∈S1 ,n>0         df (x)
+
+For each x, g(x) is the maximum rate of relative change of any firm’s single-period profit that could result
+from a small change in the fraction of firms at quality level x. Since larger competitors tend to have greater
+influence on firm profits, g(x) typically increases with x, and can be unbounded.
+      Finally, we introduce our light-tail condition. For each m, let x̃(m) ∼ f˜(m) , that is, x̃(m) is a random
+variable with probability mass function f˜(m) . According to Lemma 3.3, x̃(m) can be interpreted as the
+quality level of a firm that is randomly sampled from among all incumbents while the industry state is
+distributed according to its invariant distribution.
+
+Assumption 4.2. For all quality levels x, g(x) < ∞. For all  > 0, there exists a quality level z such that
+
+                                                  h                    i
+                                                 E g(x̃(m) )1{x̃(m) >z} ≤ ,
+
+                                                               17
+for all market sizes m.
+
+    Put simply, the light tail condition requires that states where a small change in the fraction of firms has
+a large impact on the profits of other firms, must have a small probability under the invariant distribution.
+In practice this typically means that very large firms (and hence high concentration) rarely occur under the
+invariant distribution.
+    Recall that g(x) is the maximum rate of relative change of any firm’s single-period profit that could
+result from a small change in the fraction of firms at quality level x. The first part of the assumption requires
+that for any x, this quantity is finite. If this condition is not satisfied, a small change in the number of firms
+at quality level x can have an arbitrarily large impact on other firms’ profits as the market size grows. It
+is unlikely that an oblivious equilibrium will provide a good approximation in this situation. Note that the
+assumption imposes that g(x) is finite for each x, but allows g(x) to grow arbitrarily large as x grows.
+    To interpret the second part of the assumption it is helpful to first understand a weaker condition:
+E[g(x̃(m) )] < ∞. This weaker condition ensures that the expected impact of a randomly sampled incumbent
+is finite. It can be viewed as a “light tail” condition, since it requires that the probability of sampling firms at
+large quality levels dies off sufficiently quickly so that the expected impact remains finite. For any x and z,
+the product g(x)1{x>z} is equal to 0 if x ≤ z but otherwise is equal to g(x). Hence, E[g(x̃(m) )1{x̃(m) >z} ]
+is similar to E[g(x̃(m) )] but ignores the impact of any sampled firm if its quality level is z or lower. Con-
+sequently, E[g(x̃(m) )1{x̃(m) >z} ] bounds the expected impact of the presence of a randomly sampled firm if
+the impact of any firm with quality level z or lower is ignored.
+    It is easy to see that the condition E[g(x̃(m) )] < ∞ is equivalent to a condition that, for any  > 0, there
+exists a quality level z such that E[g(x̃(m) )1{x̃(m) >z} ] ≤ . This is because increasing z sufficiently will
+result in ignoring a larger and larger fraction of firms in computing the expected impact and the expected im-
+pact when none of the firms is ignored is finite. Assumption 4.2 poses a stronger condition in that it requires
+                                                  h                  i
+that a quality level z can be chosen such that E g(x̃(m) )1{x̃(m) >z} ≤  for all market sizes m simultane-
+ously. This is like the “light tail condition” E[g(x̃(m) )1{x̃(m) >z} ] ≤ , or equivalently E[g(x̃(m) )] < ∞,
+which applies to a fixed market size, but it precludes the possibility that the tail becomes arbitrarily “fat”
+as the market size increases. In a sense, it requires that the tails of quality distributions f˜(m) are uniformly
+“light” over market sizes m.
+    As an alternative motivation for the light-tail condition, we note that if g(x) is increasing and unbounded,
+                                                        1+γ
+then if there exists γ > 0, such that, supm E[g x̃(m)        ] < ∞, Assumption 4.2 is satisfied. The condition
+is slightly stronger than requiring uniformly bounded first moments of g(x̃(m) ).
+    The following theorem establishes that, asymptotically, the average number of firms grows at least
+
+                                                        18
+linearly in the market size.
+
+Theorem 4.2. Under Assumptions 2.1, 2.2, 2.3, 4.1.2, and 4.2, ñ(m) = Ω(m) 10 .
+
+       The proof can be found in the appendix. The intuition behind the result is simple. If the number of firms
+were to grow slower than the market size, profits would blow up and the zero profit condition at the entry
+state would not be met.
+   The next result, which is also proved in the appendix, establishes a stronger form of convergence than
+                                       P
+Theorem 4.1. First, we define kf k1,g = x |f (x)|g(x).
+
+                                                                                                        (m)
+Theorem 4.3. Let Assumptions 2.1, 2.2, 2.3, 4.1.2, and 4.2, hold. Then, as m grows, nt                        /ñ(m) →p 1 and
+   (m)
+kft      − f˜(m) k1,g →p 0.
+
+       This new form of convergence allows us to ensure the AME property, which leads to the main result of
+this section.
+
+Theorem 4.4. Under Assumptions 2.1, 2.2, 2.3, 4.1, and 4.2, the sequence {µ̃(m) , λ̃(m) } of oblivious equi-
+libria possesses the AME property.
+
+       This result is proved in the appendix.
+
+
+4.5      Example: Logit Demand System with Price Competition
+
+To provide a concrete example of the conditions required for the asymptotic results above, we consider a
+model where the single-period profit function is derived from a demand system given by a logit model, and
+where the spot market equilibrium is Nash in prices. The model is described in detail in Subsection 6.1,
+where we use it for our computational simulations.
+       In the appendix we show that the single period profit function implied by this model satisfies Assump-
+tions 2.1 and 4.1. Furthermore, we show that, in this model, the function g(x̃(m) ) takes a very simple form,
+
+
+                                                   g(x̃(m) ) ≈ (x̃(m) )θ1 ,
+
+
+where θ1 is the parameter on quality in the logit demand model. Therefore, the light tail condition amounts
+to a simple condition on the equilibrium distribution of firm states. (Under our assumptions, such a condition
+is equivalent to a condition on the equilibrium size distribution of firms.)
+  10
+     In this notation, f (m) = Ω(m) implies that lim inf m f (m)
+                                                             m
+                                                                   > 0. With an additional technical regularity condition, it is
+straightforward to show that ñ(m) = O(m). Hence, it must be that, asymptotically, ñ(m) grows linearly in m.
+
+
+                                                              19
+                                                                                                    h     θ1         i
+    The light tail condition requires that for all  > 0, there exists a quality level z such that E x̃(m) 1{x̃(m) >z} ≤
+, for all market sizes m. If θ1 < 1 then the light-tail condition is satisfied if supm E x̃(m) < ∞, i.e., if
+                                                                                                    
+
+the average firm quality level remains uniformly bounded over all market sizes. This condition allows for
+relatively “fat-tailed” distributions. For example, if x̃(m) converges in distribution to a log-normal distribu-
+tion, then the light-tail condition is satisfied. On the other hand, if x̃(m) converges to a Pareto distribution
+with parameter one (which does not have a finite first moment), then the light-tail condition would not be
+satisfied.
+
+
+
+
+5      Algorithm and Bounds
+
+In this section we propose an algorithm that computes oblivious equilibria for a particular set of model
+primitives. We then derive expressions that bound the approximation error associated with a particular
+oblivious equilibrium. While the asymptotic results from Section 4 provide conditions under which the
+approximation will work well as the market size grows, the error bound can be used to evaluate the oblivious
+equilibrium as an approximation for MPE for a particular set of model primitives.
+
+
+5.1     Computing Oblivious Equilibria
+
+Algorithm 1 (below) is designed to compute an oblivious equilibrium. It starts with two extreme entry rates:
+                                    
+                   supx,s π(x,s)
+λ = 0 and λ = κ1        1−β      + φ̄  . Under mild assumptions, any oblivious equilibrium entry rate must
+lie between these two extremes. The algorithm searches over entry rates between these two extremes for one
+that leads to an oblivious equilibrium.11 For each candidate entry rate λ, an inner loop (lines 5-8) computes
+an oblivious equilibrium firm strategy for that fixed entry rate. If the termination conditions of both the inner
+and outer loops are satisfied with 1 = 2 = 0, we have an oblivious equilibrium. Small values of 1 and 2
+allow for small errors associated with limitations of numerical precision.
+      The algorithm is easy to program and computationally efficient. In each iteration of the inner loop, the
+optimization problem to be solved is a one dimensional dynamic program. The state space in this dynamic
+program is the set of quality levels a firm can achieve. In principle, there could be an infinite number of
+them. However, beyond a certain quality level the optimal strategy for a firm is not to invest, so its quality
+cannot increase to beyond that level. In the numerical experiments we present in Section 6, the state space
+  11
+     Note that there are potentially many alternative methods for searching over entry rates for an oblivious equilibrium. For
+example, one alternative would be to start at an arbitrary entry rate and then implement small increments and decrements to the
+entry rate until an entry rate is found that leads to an oblivious equilibrium.
+
+
+
+                                                              20
+Algorithm 1 Oblivious Equilibrium Solver
+ 1:    λ := 0; λ := supx,s π(x, s)/κ
+ 2:    µ(x) := 0 for all x
+ 3:    repeat
+ 4:      λ := (λ + λ)/2
+ 5:      repeat
+ 6:         µ0 := µ
+ 7:         Choose µ ∈ M̃ to maximize Ṽ (x|µ, µ0 , λ) simultaneously for all x ∈ N
+ 8:      until kµ − µ0 k∞ ≤ 1
+ 9:      if β Ṽ (xe |µ, λ) − κ ≥ 0 then
+10:         λ := λ
+11:      else
+12:         λ := λ
+13:      end if
+14:    until |β Ṽ (xe |µ, λ) − κ| ≤ 2
+
+
+never had more than two hundred states per firm. The exact number of states is determined during execution
+of the algorithm.
+       Whether this algorithm is guaranteed to terminate in a finite number of iterations remains an open issue.
+However, in over 90% of the numerical experiments we present in the next section, it converged in less than
+five minutes (and often much less than this). In the rest, it converged in less than fifteen minutes.12
+
+
+5.2      Error Bounds
+
+To bound approximation error, we first need to define what is meant by approximation error. Consider an
+oblivious strategy and entry rate function (µ̃, λ̃) ∈ M̃ × Λ̃. We will quantify approximation error at each
+firm state x ∈ N by                   "                                               #
+                                  E       sup V (x, st |µ0 , µ̃, λ̃) − V (x, st |µ̃, λ̃) .
+                                          µ0 ∈M
+
+The expectation is over the invariant distribution of st . Hence, approximation error is the amount by which
+a firm at state x ∈ N can improve its expected net present value by unilaterally deviating from the oblivious
+equilibrium strategy µ̃, and instead following an optimal (non-oblivious) best response, averaged over com-
+petitor states drawn from the invariant industry state distribution. Recall that the AME property required
+that the approximation error converge to zero as market size grows.
+       The next theorem provides two bounds on the approximation error. Recall that s̃ is the long run expected
+state in oblivious equilibrium (E[st ]). Let ax (y) be the expected discounted sum of an indicator of visits to
+  12
+    The algorithm was programmed in Matlab. The experiments were executed on two UNIX shared machines. A Sun Enterprise
+6500, Solaris 2.8, with 16 GB RAM, 12 GB swap, and 18 GB tmp; and a Sun Enterprise 5500, Solaris 8, with 4 GB RAM, 4 GB
+swap, and 8.7 GB tmp.
+
+
+                                                             21
+state y for a firm starting at state x that uses strategy µ̃ .
+
+Theorem 5.1. Let Assumptions 2.1, 2.2, and 2.3 hold. Then, for any oblivious equilibrium (µ̃, λ̃) and firm
+state x ∈ N,
+                            "                                              #
+                                                                                    2
+(5.1)                   E       sup V (x, st |µ0 , µ̃, λ̃) − V (x, st |µ̃, λ̃) ≤       E[∆|π|(st )],
+                                µ0 ∈M                                              1−β
+
+where ∆|π|(s) = maxy∈N |π(y, s) − π(y, s̃)|, and
+(5.2)"                                                #
+                                                             1               X
+  E      sup V (x, st |µ0 , µ̃, λ̃) − V (x, st |µ̃, λ̃) ≤       E[∆π(st )] +   ax (y) (π(y, s̃) − E [π(y, st )]) ,
+         µ0 ∈M                                              1−β
+                                                                                    y∈N
+
+
+where ∆π(s) = maxy∈N (π(y, s) − π(y, s̃)).
+
+    The derivation of these bounds can be found in the appendix. It is worth mentioning that the result can
+be generalized a great deal. In particular, most of the prior assumptions can be dropped; for instance, most
+alternative entry processes will not change the result. In the next subsection we show that the bounds can be
+obtained even for models that incorporate common aggregate shocks to profits.
+    The first bound is simpler so we will use it to build the intuition behind the bounds. According to the
+first bound, if one period profits when the state is sampled from the invariant distribution are close to one
+period profits evaluated at the expected state, then the oblivious equilibrium offers a close approximation.
+This is because, in that case, firms cannot improve their expected discounted profits much by unilaterally
+deviating from the oblivious strategy and keeping track of the industry state.
+    The second bound is more involved. We provide it because it is much tighter. Note that the right-hand-
+side of the second bound depends on the initial firm state x, whereas the right-hand-side of the first bound
+does not.
+    Both bounds can be easily estimated via simulation algorithms. Computing the bounds involves com-
+puting an expectation over the industry state st . Once the oblivious equilibrium has been computed, the
+industry state has a known distribution, namely, the product form of Poisson random variables with mean
+s̃ (by Lemma 3.2). In particular, note that the bounds are not a function of the true MPE or even of the
+optimal non-oblivious best response strategy. Computing either of these strategies could require solving a
+high-dimensional dynamic program.
+    In our computational experiments, we also make use of a stronger bound that applies when the quality
+level of a firm can change by at most one unit per time period (w̄ = 1), a common feature of EP-type models.
+
+
+                                                               22
+Theorem 5.2. Let Assumptions 2.1, 2.2, and 2.3 hold. Further, assume that the quality level of any firm can
+change by at most one unit per time period. Then, for any oblivious equilibrium (µ̃, λ̃), firm state x ∈ N,
+and a ∈ N,
+            "                                               #
+                                 0                                  1 
+                                                                         E[∆A π(st )] + β a−x E[∆Ac π(st )] +
+                                                                                                           
+        E       sup V (x, st |µ , µ̃, λ̃) − V (x, st |µ̃, λ̃)    ≤
+                µ0 ∈M                                              1−β
+                                                                   X
+(5.3)                                                            +   ax (y) (π(y, s̃) − E [π(y, st )]) .
+                                                                       y∈N
+
+
+where ∆A π(s) = maxy∈A (π(y, s) − π(y, s̃)), A = {0, . . . , a − 1} and x ∈ A.
+
+       The proof of this result is similar to that of Theorem 5.1 and is omitted. In general, E [π(y, s)] −
+π(y, s̃) ≥ 0 and is increasing in y. Therefore, E [maxy∈A (π(y, s) − π(y, s̃))] increases as the set A in-
+creases, making the first term of our previous bound (5.2) large. In this new bound (5.3), the term that
+involves maxy∈Ac is the larger one because it involves the maximum over the larger states. However, this
+is offset by the factor of β a−x . The term β a−x appears because it takes at least a − x periods to transition
+from state x to any state in Ac . When using this bound in the computational experiments, we choose the set
+A to minimize the right-hand-side.
+
+
+5.3       Error Bounds in a Model with Aggregate Profit Shocks
+
+Because the model above contains only idiosyncratic shocks, it is limited in its ability to capture the kind
+of industry wide business cycles that are often observed in real world industries. To address this issue, in
+this subsection we extend the error bounds to a model with a profit shock, zt , that is common to all firms in
+the industry. zt might represent a common demand shock, a common shock to input prices, or a common
+technology shock. These common shocks will serve to generate periods over which profits are high (or low)
+for all firms in the industry simultaneously. Note that these shocks will result in an industry that experiences
+some variation even if the number of firms becomes large. Therefore, the asymptotic results in the previous
+section will not hold in this model. However, we can still obtain bounds on the approximation error for any
+given set of model primitives, and it may be that these bounds are small, such that the approximation would
+still be useful in practice.
+       The following assumption defines the aggregate shock process and restates the assumptions on the profit
+function.13
+
+  13
+       Note that for simplicity we model the aggregate shock as an integer. However, it does not change anything to make zt a vector.
+
+
+
+
+                                                                  23
+Assumption 5.1. Let Z = {zt ∈ N : t ≥ 0} be a stationary Markov process with a well defined invariant
+distribution. Single-period profits for firm i at time t are given by π(xit , s−i,t , zt ). For all z, π(x, s, z)
+satisfies Assumption 2.1. Additionally, supx,s,z π(x, s, z) < ∞.
+
+    In this model, a strategy is a function µ(x, s, z) that depends on the firm’s own state, the competi-
+tors’ state and the level of the aggregate shock. An entry rate is a function, λ(s, z), that depends on
+the industry state and the level of the aggregate shock. To formalize these notions, let Mz denote the
+set of exit/investment strategies such that an element µ ∈ Mz is a pair of functions µ = (ι, ρ), where
+ι : N × S × N → <+ is an investment strategy and ρ : N × S × N → <+ is an exit strategy. We denote the
+set of entry rate functions by Λz , where an element of Λ is a function λ : S × N → <+ .
+    Define the value function, V (x, s, z|µ0 , µ, λ), to be the expected net present value for a firm at state x
+when its competitors’ state is s, and the value of the aggregate shock is z, given that its competitors each
+follow a common strategy µ ∈ Mz , the entry rate function is λ ∈ Λz , and the firm itself follows strategy
+µ0 ∈ Mz . Because this definition is analogous to the one in section 2.4, we omit the details here for brevity.
+An equilibrium in this model comprises an investment/exit strategy µ = (ι, ρ) ∈ Mz , and an entry rate
+function λ ∈ Λz such that:
+
+   1. Incumbent firm strategies represent a MPE:
+
+
+                      sup V (x, s, z|µ0 , µ, λ) = V (x, s, z|µ, λ)      ∀x ∈ N, ∀s ∈ S, ∀z ∈ N.
+                    µ0 ∈Mz
+
+
+   2. At each state, either entrants have zero expected profits or the entry rate is zero (or both):
+
+
+                                        (xe , s−i,t+1 , zt+1 |µ, λ)|st = s, zt = z] − κ) = 0
+        P
+           s∈S, z∈N λ(s, z) (βEµ,λ [V
+
+                   βEµ,λ [V (xe , s−i,t+1 , zt+1 |µ, λ)|st = s, zt = z] − κ ≤ 0                ∀s ∈ S, ∀z ∈ N
+                                            λ(s, z) ≥ 0                                        ∀s ∈ S, ∀z ∈ N.
+
+
+Because the aggregate shocks are likely to be of first order importance to strategies, in extending the notion
+of oblivious strategies to this model it makes sense to make strategies a function of the current value of the
+shock. Thus, an oblivious strategy in this model will be a function µ ∈ Mz such that, for all x, z ∈ N and
+s, s0 ∈ S, µ(x, s, z) = µ(x, s0 , z). That is, firms’ strategies are functions only of their own state and the
+level of the aggregate shock. Similarly, an oblivious entry rate in this model is a function λ ∈ Λz such that,
+for all z ∈ N and s, s0 ∈ S, λ(s, z) = λ(s0 , z). That is, the oblivious entry rate is a function only of the level
+of the aggregate shock. Let M̃z ⊂ Mz and Λ̃z ⊂ Λz denote the set of oblivious strategies and the set of
+
+
+                                                        24
+oblivious entry rate functions respectively.
+    Let s̃µ,λ be the long-run expected industry state when dynamics are governed by oblivious strategy µ
+and oblivious entry rate function λ. We define an oblivious value function as,
+
+                                            τi
+                                        "                                                                            #
+                                            X
+          Ṽ (x, z|µ0 , µ, λ) = Eµ0               β k−t (π(xik , s̃µ,λ , zk ) − dιik ) + β τi −t φi,τi xit = x, zt = z .
+                                            k=t
+
+
+This value function should be interpreted as the expected net present value of a firm that is at quality level x
+when the aggregate shock has value z and the firm follows oblivious strategy µ0 , under the assumption that
+its competitors’ state will be s̃µ,λ for all time.
+    An oblivious equilibrium consists of a strategy µ ∈ M̃z and an entry rate function λ ∈ Λ̃z that satisfy
+the following conditions:
+
+   1. Firm strategies optimize an oblivious value function:
+
+
+                                   sup Ṽ (x, z|µ0 , µ, λ) = Ṽ (x, z|µ, λ),           ∀x ∈ N, ∀z ∈ N.
+                                  µ0 ∈M̃z
+
+
+
+   2. Either the oblivious expected value of entry is zero or the entry rate is zero (or both):
+
+                                                       h                        i   
+                                                βEµ,λ Ṽ (xe , zt+1 |µ, λ) zt = z − κ = 0,
+                                    P
+                                       z∈N λ(z)
+                                           h                           i
+                                      βEµ,λ Ṽ (xe , zt+1 |µ, λ) zt = z − κ ≤ 0, ∀z ∈ N
+                                                            λ(z) ≥ 0,     ∀z ∈ N.
+
+
+    We now introduce the error bound for this model,
+
+Corollary 5.1. Let Assumption 5.1, 2.2, and 2.3 hold. Then, for any oblivious equilibrium (µ̃, λ̃), and firm
+state x ∈ N,
+                      "                                                         #
+                                                                                        2
+                  E       sup V (x, st , zt |µ0 , µ̃, λ̃) − V (x, st , zt |µ̃, λ̃) ≤       E[∆|π̃|(st , zt )],
+                          µ0 ∈M                                                        1−β
+
+where ∆|π̃|(s, z) = maxy∈N |π(y, s, z) − π(y, s̃µ̃,λ̃ , z)|, and the expectations is taken over the invariant
+distribution of (st , zt ).
+
+    The proof is analogous to Theorem 5.1 and is therefore omitted. In addition, as above, this bound is
+quite general and does not rely on many of the detailed modeling assumptions. Finally, as in Theorems 5.1
+and 5.2 tighter versions of the bound can be obtained.
+
+                                                                   25
+6       Computational Experiments
+
+In this section we conduct some computational experiments to evaluate how oblivious equilibrium performs
+in practice, and also to demonstrate the range of applications that are possible using our methods. We begin
+with the model to be analyzed. The model is similar to Pakes and McGuire (1994). However, it differs in
+the entry and exit processes, in the demand system, and in that we do not consider a common shock.
+
+
+6.1     The Computational Model
+
+S INGLE - PERIOD    PROFIT FUNCTION .        We consider an industry with differentiated products, where each
+firm’s state variable represents the quality of its product. There are m consumers in the market. In period t,
+consumer j receives utility uijt from consuming the good produced by firm i given by:
+
+                                     xit
+                     uijt = θ1 ln(       + 1) + θ2 ln(Y − pit ) + νijt , i ∈ St , j = 1, . . . , m,
+                                     ψ
+
+where Y is the consumer’s income, pit is the price of the good produced by firm i, and ψ is a scaling
+factor. νijt are i.i.d. random variables distributed Gumbel that represent unobserved characteristics for
+each consumer-good pair. There is also an outside good that provides consumers zero utility. We assume
+consumers buy at most one product each period and that they choose the product that maximizes utility.
+Under these assumptions our demand system is a classical logit model.
+      Let N (xit , pit ) = exp(θ1 ln( xψit + 1) + θ2 ln(Y − pit )). Then, the expected market share of each firm is
+given by:
+                                                           N (xit , pit )
+                              σ(xit , s−i,t , pt ) =      P                    , ∀i ∈ St .
+                                                       1 + j∈St N (xjt , pjt )
+
+We assume that firms set prices in the spot market. If there is a constant marginal cost c, the Nash equilibrium
+of the pricing game satisfies the first-order conditions,
+
+
+(6.1)                      Y − pit + θ2 (pit − c)(σ(xit , s−i,t , pt ) − 1) = 0 , ∀i ∈ St .
+
+
+There is a unique Nash equilibrium in pure strategies, denoted p∗t (Caplin and Nalebuff (1991)). Expected
+profits are given by:
+                             πm (xit , s−i,t ) = mσ(xit , s−i,t , p∗t )(p∗it − c) , ∀i ∈ St .
+
+S ELL - OFF PRICE . φit are i.i.d. exponential random variables with mean K.
+                                                                                         aι
+T RANSITION DYNAMICS . A firm’s investment is successful with probability               1+aι ,   in which case the quality
+
+
+                                                             26
+of its product increases by one level. The firm’s product depreciates one quality level with probability δ,
+independently each period. Note that our model differs from Pakes and McGuire (1994) here because the
+depreciation shocks in our model are idiosyncratic. Combining the investment and depreciation processes,
+it follows that the transition probabilities for a firm in state x that invests ι are given by:
+                                                          
+                                                            (1−δ)aι
+                                                                          if y = x + 1
+                                                          
+                                                          
+                                                          
+                                                          
+                                                            1+aι
+                             h                      i     
+                           P xi,t+1   = y xit = x, ι =        (1−δ)+δaι
+                                                               1+aι        if y = x
+                                                          
+                                                          
+                                                              δ
+                                                                      if y = x − 1 .
+                                                          
+                                                          
+                                                              1+aι
+
+
+6.2     Numerical Results: Behavior of the Bound
+
+Our first set of results investigate the behavior of the approximation error bound under several different
+model specifications. A wide range of parameters for our model could reasonably represent different real
+world industries of interest. In practice the parameters would either be estimated using data from a particular
+industry or chosen to reflect an industry under study. We begin by investigating a particular set of represen-
+tative parameter values. Following Pakes and McGuire (1994) we fix a = 3 and δ = 0.7. Additionally, we
+fix marginal cost at c = 0.5, income at Y = 1, θ2 = 0.5, and ψ = 1. The discount factor is β = 0.95. The
+entry cost is κ = 35 and the entry state is xe = 10. The average sell-off value is K = 10. In this case,
+β · φ < κ, so the sell-off value by itself is not sufficient reason to enter the industry (assumption 2.3.2).
+Additionally, both sell-off values and entry costs are substantially larger than marginal costs, consistent with
+empirical evidence.
+      In our computational experiments we found that the most important parameter affecting the approxima-
+tion error bounds was θ1 , which determines the importance that consumers place on product quality. If θ1 is
+small, the degree of vertical differentiation between products is small. This reduces the impact of changes
+in the industry state on profits, making the MPE strategies less sensitive to the industry state. Additionally,
+when θ1 is small it turns out that the invariant distribution s̃ is very “light-tailed”. Oblivious strategies work
+well in this case, and the approximation error bound is small. If θ1 is large, we get the reverse implications
+and the approximation error bound is larger.
+      Based on these experiments, here we consider two different values of θ1 and the investment cost d:
+(θ1 , d): (0.1, 0.1) and (0.5, 0.5). The former (“Low”) is a situation where the level of vertical differentiation
+is low and it is inexpensive to invest to improve quality. The latter (“High”) is the opposite. As a point of
+comparison, if a firm increases its state from x = 10 to x = 20, its single-period profits increase by 7% and
+40% respectively in the two cases (holding competitors constant).
+
+
+                                                        27
+       For each set of parameters, we use the approximation error bound in Theorem 5.2 to compute an upper
+                                                                   E[supµ0 ∈M V (x,s|µ0 ,µ̃,λ̃)−V (x,s|µ̃,λ̃)]
+bound on the percentage error in the value function,                            E [V (x,s|µ̃,λ̃)]]
+                                                                                                                 , where (µ̃, λ̃) are the
+OE strategy and entry rate, respectively, and the expectations are taken with respect to s. We estimate the
+expectations using simulation.14 We compute the previously mentioned percentage approximation error
+bound for different market sizes. As the market size increases, the expected number of firms increases and
+the approximation error bound decreases.
+       In Figure 1 we present the percentage approximation error bound as a function of the expected number
+of firms for the two levels of vertical differentiation (the two curves are obtained by varying the market size).
+For the low vertical differentiation case it takes around 60 firms to bring the bound down to 2%, and 250
+firms to bring it below 1%. For the high case it takes around 250 firms to bring the bound to 5% and 1000
+firms to bring it near 2%.
+       When the level of vertical differentiation is high, the number of firms required to have a good approxi-
+mation is large, requiring hundreds and even thousands of firms. The approximation would be better if the
+industry state s were always close to its mean, s̃. One aspect of the model that interferes with this is the
+Poisson entry process, which leads to a large amount of variability in the number of firms inside the industry.
+Recall that we chose to model the entry process this way because it facilitated the asymptotic arguments in
+Section 4. However, the expressions for the approximation error bounds remain correct for a wide range
+of entry models. To investigate this issue further, as an alternative, we tried using an entry process where
+the number of entrants each period is deterministic, but still satisfies a zero profits condition.15 This entry
+process implies a smaller variability in the number of firms.
+       Figure 2 presents the results with the new entry process. In the case of low vertical differentiation, the
+approximation error bound is less than 2% with just 30 firms and it is around 1% with 100 firms. When the
+level of vertical differentiation is high the approximation error bound is around 5% when there are 120 firms
+and around 2% for 700 firms.
+       Going one step further in reducing the variability of the industry dynamics, we tried shutting down entry
+and exit altogether and considered an industry with a fixed number of firms. This situation can be viewed as
+a particular case of the model presented in Section 2, with a constant sell-off value equal to zero and a very
+  14
+      The expected value function is estimated with a relative precision of 1% and a confidence level of 99%. The bound is estimated
+with a relative precision of at most 10% and a confidence level of 99% (in cases where the bound is very small it is difficult to
+achieve better precision than this). Note that the percentage approximation error bound depends on the state x so for the purposes of
+this section we consider the percentage bound evaluated at the entry state. For the computations we took the maximum achievable
+state, x̃max , to be a state such that the expected number of visits of a firm using µ̃ was at most 10−5 . In computing the bounds, we
+conservatively assumed that the maximum achievable state under the best response (non-oblivious) strategy was 2x̃max .
+   15
+      Note that the zero profits condition typically requires a fractional number of entrants to be satisfied exactly, so to accommodate
+this we instead randomized the number of entrants between the two neighboring integers. For example, if the equilibrium entry rate
+is 2.5, then the number of entrants is 2 or 3 with probability 0.5. Allowing for fractional numbers ensures existence of equilibrium.
+
+
+                                                                  28
+high entry cost. See Figure 3 for the results.16 For the low case the approximation error bound is less than
+0.5% with just 5 firms, while for the high case it is 5% for 5 firms, less than 3% with 40 firms, and less than
+1% with 400 firms.
+       Most economic applications would involve from less than ten to several hundred firms. These results
+show that the approximation error bound may sometimes be small (<2%) in these cases, though this would
+depend on the model and parameter values for the industry under study.
+
+
+6.3       Closeness to Markov Perfect Equilibrium
+
+Having gained some insight into what features of the model lead to low values of the approximation error
+bound, the question arises as to what value of the error bounds is required to obtain a good approximation.
+To shed light on this issue we compare long-run statistics for the same industry primitives under oblivious
+equilibrium and MPE strategies. A major constraint on this exercise is that it requires the ability to actually
+compute the MPE. With the current algorithms we are able to compute MPE for industries with a maximum
+of five to ten firms. Because we require the ability to compute equilibria for many different parameter values,
+to keep computation manageable we use four firms here. We therefore limit our analysis to the case of a
+fixed number of firms (no entry and exit), because only for that case were the approximation error bounds
+small under oblivious strategies (with only four firms). We use the same parameter specifications as in
+the previous subsection. Because of computational constraints in computing the MPE, we also impose a
+maximum state that a firm can reach of xmax = 15, at which point investment is assumed to have no further
+effect. The market size is fixed, m = 30.17
+       Recall that under oblivious equilibrium strategies, the industry state is described by an ergodic Markov
+chain (Lemma 3.2). Under our assumptions, this is also true under MPE strategies (see also Ericson and
+Pakes (1995)). Therefore, both systems have a well defined invariant distribution that describes their long-
+run behavior. We compare the average values of several economic statistics of interest under the oblivious
+equilibrium and the MPE invariant distributions. The quantities compared are: average investment, average
+producer surplus, average consumer surplus, average share of the largest firm (C1), and average share of the
+largest two firms (C2). Table 1 reports these statistics for a wide range of parameters. The table also reports
+the maximum value (across all states) and weighted average value of the approximation error bound, as well
+as the maximum and weighted average of the actual benefit from deviating and keeping track of the industry
+                                   E[supµ0 ∈M V (x,s|µ0 ,µ̃,λ̃)−V (x,s|µ̃,λ̃)]
+state (the actual difference                    E [V (x,s|µ̃,λ̃)]]
+                                                                                 ). Note that the the latter quantity should always
+
+  16
+       Since now there is no entry state, we report the percentage error bound evaluated at the most visited state.
+  17
+       The code used to compute MPE was generously provided by Uli Doraszelski.
+
+
+
+                                                                     29
+be smaller than the approximation error bound. In the results below we concentrate on the maximum values
+of these quantities.
+      The table is separated into two groups. The first five rows correspond to industries with a relatively
+low cost of investment (low value of d relative to θ1 ). In these industries the industry state tends to have
+a symmetric distribution (see Figure 4) reflecting a rich investment process. The last five rows of the table
+correspond to industries with a relatively high cost of investment. In these industries the industry state tends
+to be skewed (see Figure 5), reflecting low levels of investment.
+      From the computational experiments we conclude the following:
+
+   1. When the bound is less than 1% the long-run quantities estimated under oblivious equilibrium and
+        MPE strategies are very close.
+
+   2. Performance of the approximation depends on the richness of the equilibrium investment process.
+        When the bound is between 1-20% and there is a rich investment process, the long-run quantities
+        estimated under oblivious equilibrium and MPE strategies are still quite close. When the bound is
+        above 1% and there is little investment, the long-run quantities can be quite different on a percentage
+        basis (5% to 20%), but still remain fairly close in absolute terms (see Table 2).
+
+   3. The performance bound is not tight. For a wide range of parameters the performance bound is as
+        much as 10 to 20 times larger than the actual benefit from deviating.
+
+      The previous results suggest that MPE dynamics are well-approximated by oblivious equilibrium strate-
+gies when the approximation error bound is small (less than 1-2% and in some cases even up to 20 %). These
+results, together with those from Subsection 6.2, demonstrate that the oblivious equilibrium approximation
+significantly expands the range of applied problems that can be analyzed computationally.
+
+
+6.4     Example: The Evolution of Industry Structure as Market Size Increases
+
+An important question in industrial organization is to understand what features of an industry are most
+critical to determining the industry’s structure. Of particular interest (Sutton 1991) is whether a market
+becomes fragmented, or remains concentrated, as the market grows in size. Sutton (1991) and Shaked and
+Sutton (1987) suggest that the presence of “endogenous” sunk costs imposes a lower bound to concentration.
+Our model is a dynamic model of endogenous sunk costs because, while entrants pay the same cost of
+entry regardless of market size (an “exogenous” sunk cost), in larger markets they may need to invest large
+amounts to become as large as the incumbent firms (an “endogenous” sunk cost). In what follows we show
+
+                                                       30
+that under slightly different parameterizations of our model we get two extremely different outcomes: a
+fragmented and a very concentrated industry.
+         We use the same parameter specifications as in Subsection 6.2 with the only difference that now we
+consider ψ = 7 in the utility of the consumers. This specification makes it easier to obtain the two different
+situations. We fix d = 0.5 and we compute the oblivious equilibrium for θ1 = 0.9 and θ1 = 1.2. In Figures
+6 and 7 (see also Table 3) we present the average industry states obtained for different market sizes in the
+two cases. For θ1 = 0.9, as the market size grows the industry becomes fragmented. The number of firms
+grows but firms do not grow in size, so the market share for every firm converges to zero. When θ1 = 1.2
+the entry rate decreases and firms grow larger as market size grows. In this second case, the industry state is
+heavy-tailed.18
+         These results have a clear intuition: when θ1 > 1 consumers care more about quality and this increases
+the returns to investment. What results is a quality race between firms, so there are a small number of
+firms in the industry that become ever larger with the market size. When θ1 < 1 returns to investment are
+lower and investment is not worthwhile above a certain point regardless of the market size. (Our simulations
+suggest that for all θ1 < 1 the industry fragments, whereas for θ1 > 1 the industry remains concentrated as
+market size increases.)
+         These results contradict Sutton (1991) in one sense because Sutton (1991) sought predictions about
+market structure that are robust across a wide class of models. Here, different market structures result from
+the same model through an arbitrarily small change in a single parameter. An implication of this result is that
+the same industry might be observed with very different market structures across markets that are the same
+size and that have indistinguishable characteristics. However, our results remain broadly consistent with
+Sutton’s predictions because the parameter that determines market structure in our model pertains directly
+to the returns to investment. Consistent with the predictions of Sutton (1991), industries with higher returns
+to investment tend to be concentrated. Our results show, however, that this relationship can be very fragile.
+
+
+
+
+7         Conclusions and Future Research
+
+The goal of this paper has been to increase the set of applied economic problems that can be addressed using
+Ericson and Pakes (1995)-style dynamic models of imperfect competition. Due to the curse of dimension-
+    18
+     To show the results more clearly, we forced the highest quality level to be 80. This leads the industry state to have a mass of
+firms near 80 for the larger market sizes. Without this arbitrary cutoff firms would grow even larger and it becomes difficult to solve
+for the oblivious equilibrium (because the expected lifespan of a firm tends to infinity and the industry state is heavy-tailed) as well
+as to show the results graphically.
+
+
+
+                                                                  31
+ality, existing dynamic programming methods have limited application of these models to industries with
+a small number of firms and a small number of states per firm. Even with accelerated methods (e.g., Judd
+(1998), Pakes and McGuire (2001) and Doraszelski and Judd (2003)), it seems likely that it will never be
+possible to solve for an MPE exactly in many problems of interest. As an alternative, we proposed a method
+for approximating MPE behavior using an oblivious equilibrium, where firms make decisions only based on
+their own state and the long run average industry state.
+    We began by showing that the approximation works well asymptotically, where asymptotics were taken
+in the market size. A sufficient condition for an oblivious equilibrium to well approximate a MPE asymp-
+totically is that the sequence of industry states generated by the oblivious equilibria is “light-tailed” (as
+described by Assumption 4.2). This condition is also sufficient to establish that a model of the type intro-
+duced in Hopenhayn (1992) yields a good approximation of a finite industry. We also introduced a simple
+algorithm to compute an oblivious equilibrium. A nice feature of the algorithm is that there is no need to
+place a’ priori restrictions on the number of firms in the industry or the set of states that a firm can reach. As
+a result, computational considerations place very few constraints on model details.
+    To facilitate using oblivious equilibrium in practice, we derived approximation error bounds that indicate
+how good the approximation is in any particular problem under study. These approximation error bounds
+are quite general and thus can be used in a wide class of models. We believe them to be the first bounds of
+this type in this literature. Through computational experiments, we showed that oblivious equilibrium often
+yields a good approximation of MPE behavior for industries with a couple hundred firms, and sometimes
+even with just tens of firms.
+    We have considered very simple strategies that are functions only of a firm’s own state and the long run
+average industry state. While our results show that these simple strategies work well in many cases, there
+remains a set of problems where exact computation is not possible and yet our approximation will not work
+well either. Such cases would likely involve industries with moderate to large numbers of firms that still
+remain highly concentrated. For such cases, we hope is that our methods will serve as a basis for developing
+better approximations that use additional information, such as the total number of firms in the industry, or
+the states of the largest firm (or firms). Solving for equilibria of this type would be more difficult than
+solving for oblivious equilibria, but is still likely to be computationally feasible. Since showing that such an
+approach would provide a good approximation is not a simple extension of our results, this will be a subject
+of future research.
+
+
+
+
+                                                       32
+A       Proofs and Mathematical Arguments
+
+A.1     Proofs and Mathematical Arguments for Section 2
+
+A.1.1    The Poisson Entry Model
+
+Suppose there are N potential entrants. Each potential entrant enters if the setup cost κ is less than the
+expected present value of future cash flows upon entry. Let vN (i) be the expected present value of future
+cash flows for each entering firm if i firms enter simultaneously. vN (i) is non-increasing in i. One can then
+pose the problem faced by potential entrants as a game in which each entrant employs a mixed strategy and
+enters with some probability pN . If we assume that every potential entrant employs the same strategy, the
+condition for a mixed strategy Nash equilibrium when κ ∈ [vN (N ), vN (1)] can be written as
+
+                           N −1           
+                           X        N −1
+(A.1)                                          piN (1 − pN )N −1−i vN (i + 1) − κ = 0,
+                                      i
+                            i=0
+
+
+which is solved by a unique pN ∈ [0, 1]. If κ < vN (N ), the equilibrium is a pure strategy with pN = 1,
+whereas if κ > vN (1), the equilibrium is given by pN = 0. The following result, which we state without
+proof, establishes that our Poisson entry model can be viewed as a limiting case as the number of potential
+entrants N grows large.
+
+Lemma A.1. Let the following conditions hold:
+
+    1. vN (i) is non-increasing in i, ∀N , and non-increasing in N , ∀i;
+
+    2. there exists a positive number M such that |vN (i)| < M, ∀N, ∀i;
+
+    3. there exists N , such that ∀N > N , vN (i) − κ changes sign in {1, N − 1};
+
+    4. there exists a function v(i) such that limN →∞ supi∈N |vN (i) − v(i)| = 0.
+
+Then,
+
+    1. for each N > N , Equation (A.1) has a unique solution p∗N ∈ (0, 1);
+
+    2. the limit λ = limN →∞ N p∗N exists, and if YN is a binomial random variable with parameters (N, p∗N )
+        and Z is a Poisson random variable with mean λ, then YN ⇒ Z.
+
+    The result states that if the number of potential entrants grows to infinity then the entry process converges
+to a Poisson random variable. Hence, Poisson entry can be understood as the result of a large population of
+potential entrants, each one playing a mixed strategy and entering the industry with a very small probability.
+
+                                                         33
+A.1.2     Bellman’s Equation and Exit Cutoff Strategy
+
+We define a dynamic programming operator:
+                                                                                                         
+(Tµ,λ V )(x, s) = π(x, s)+E max φit , sup (−dι + βEµ,λ [V (xi,t+1 , s−i,t+1 )|xit = x, s−i,t = s, ιit = ι]) ,
+                                              ι≥0
+
+
+for all x ∈ N and s ∈ S.
+                                                            µ        0
+      To simplify the notation in this section we will let Vµ,λ ≡ V (·|µ0 , µ, λ).
+
+Lemma A.2. Let Assumptions 2.1 and 2.2 hold. Then, for all µ ∈ M and λ ∈ Λ, there exists µ∗ ∈ M,
+such that:
+                                           µ ∗        µ          0µ        ∗
+                                          Vµ,λ = sup Vµ,λ = Tµ,λ Vµ,λ .
+                                                    µ0 ∈M
+
+          µ   ∗
+Further, Vµ,λ is the unique fixed point of Tµ,λ within the class of bounded functions.
+
+                                                                          π
+Proof. Investment is bounded. Additionally, βφ ≤ ρ(x, s) ≤               1−β   + φ, ∀x ∈ N, ∀s ∈ S. Therefore the
+action space for each state is compact.
+      For a given state (x, s), expected one period profits including investment and sell-off value can be written
+as:
+                    π(x, s) − dι(x, s)P[φ < ρ(x, s)] + E[φ | φ ≥ ρ(x, s)]P[φ ≥ ρ(x, s)] .
+
+Note that π(x, s) < π, investment is bounded, and φ has finite expectation. Therefore, expected one period
+profits including investment and the sell-off value are uniformly bounded for all states (x, s). The result
+follows by Propositions 1.2.2 and 3.1.7 in Bertsekas (2001).
+
+      By the lemma and the definition of the dynamic programming operator we observe that there exists an
+optimal exit strategy that has the form of a cutoff value.
+
+
+
+A.2      Proofs and Mathematical Arguments for Section 3
+
+Lemma 3.2. Let Assumptions 2.2 and 2.3 hold. Assume that firms follow a common oblivious strategy
+µ ∈ M̃, the expected entry rate is λ ∈ Λ̃, and the expected time that each firm spends in the industry is finite.
+Let {Zx : x ∈ N} be a sequence of independent Poisson random variables with means {s̃µ,λ (x) : x ∈ N},
+                                                P
+and let Z be a Poisson random variable with mean x∈N s̃µ,λ (x). Then,
+(a) {st : t ≥ 0} is an irreducible, aperiodic and positive recurrent Markov chain;
+(b) the invariant distribution of st is a product form of Poisson random variables;
+
+                                                            34
+(c) for all x, st (x) ⇒ Zx ;
+(d) nt ⇒ Z.
+
+Proof. If every firm uses a strategy µ ∈ M̃ and entry is according to an entry rate function λ ∈ Λ̃, then
+X ≡ {st : t ≥ 0} is clearly an irreducible Markov chain. All states reach the state ∅ = {0, 0, . . .} with
+positive probability and all states can be reached from ∅ as well. Now, take any state s ∈ S. There is a
+positive probability that there is no entry, no exit and no firms’ state transitions. Therefore, for all s ∈ S,
+P[st+1 = s st = s] > 0, so X is aperiodic. Moreover X is positive recurrent because the expected time to
+come back from state ∅ to itself is finite (see Kleinrock (1975)).
+    Now, let us write:
+
+                                                       Wτ
+                                                     t X
+                                                     X
+(A.2)                                     st (x) =              1{Xi,t−τ =x} ,
+                                                     τ =0 i=1
+
+
+where Wτ are i.i.d. Poisson random variables with mean λ, the first sum is taken over all periods previous
+to (and including) t, the second sum is taken over the firms that entered the industry in each period, and
+for each τ , Xi,t−τ are random variables that represent the state of firm i after t − τ periods inside the
+industry when using strategy µ. Since firms use oblivious strategy µ ∈ M̃ and shocks are idiosyncratic
+their state evolutions are independent, so 1{Xi,t−τ =x} are i.i.d. across i. It follows that W
+                                                                                            P τ
+                                                                                             i=1 1{Xi,t−τ =x} is
+
+a filtered Poisson random variable, so it is a Poisson random variable. Thus st (x), as a sum of independent
+Poisson random variables, is also Poisson. Given that the expected time a firm spends inside the industry is
+finite, using characteristic functions it is straightforward to show that st (x) ⇒ Zx , ∀x ∈ N. To show that
+{Zx : x ∈ N} is a sequence of independent random variables note that by the filtering property of Poisson
+random variables (Durrett (1996)), for all t, {st (x) : x ∈ N} is a sequence of independent random variables.
+By summing over x ∈ N, we can show that nt ⇒ Z.
+
+Lemma 3.3. Let Assumptions 2.2 and 2.3 hold. Assume that firms follow a common oblivious strategy
+µ ∈ M̃, the expected entry rate is λ ∈ Λ̃, and the expected time that each firm spends in the industry is
+finite. Let {Yn : n ∈ N} be a sequence of integer-valued i.i.d. random variables, each distributed according
+             P
+to s̃µ,λ (·)/ x∈N s̃µ,λ (x). Then, for all n ∈ N,
+
+                                                                 
+                                    x(1)t , . . . , x(nt )t nt = n ⇒ (Y1 , . . . , Yn ).
+
+
+Proof. The proof is rather involved, but relies on a simple idea. For a Poisson process, conditional on
+n arrivals on an interval [0, T ], the unordered arrival times have the same distribution as n i.i.d. uniform
+
+                                                           35
+random variables in [0, T ].
+    Let us condition on nt = n. {x(j)t : j = 1, . . . , n} are the random variables that represent the
+state of each of the n firms in the industry when they are sampled randomly. The expected time a firm
+spends inside the industry is finite, so the time a firm spends inside the industry is finite with proba-
+bility one. Recall that a firm can increase its quality level by at most w states each period. There-
+                                                                                                                  
+fore, ∀ > 0, there exists a state z, such that for all j ∈ 1, . . . , n, ∀t, P[x(j)t > z] <                      n.   That
+is, the probability of observing a firm in a very large state is negligible, because firms “do not have
+                                 hS                           i
+                                    n
+time” to get that far. Hence, P     j=1 {x(j)t > z} | n t = n   <  , ∀t, so the sequence of random vec-
+tors {(x(1)t , . . . , x(nt )t | nt = n) : t ≥ 0} is tight. By Theorem 9.1 in Durrett (1996) and the tightness
+previously established, to prove the lemma it is enough to show that for all n, for all (z1 , . . . , zn ):
+
+                                 h                                    i Yn
+(A.3)                       lim P x(j)t = zj , j = 1, . . . , n nt = n =   p(zj ) ,
+                            t→∞
+                                                                                  j=1
+
+                                   P
+where p(·) is the PMF s̃µ,λ (·)/     x∈N s̃µ,λ (x).   Let T̃j be the entry date of firm (j) and Tj = t − T̃j be its
+age. Then we can write:
+
+ h                                    i               X
+P x(j)t = zj , j = 1, . . . , n nt = n =                       P[x(j)t = zj , j = 1, . . . , n | T1 = t1 , . . . , Tn = tn , nt = n] ·
+                                                0≤t1 <∞,...,
+                                                 0≤tn <∞
+
+                                             P [T1 = t1 , . . . , Tn = tn | nt = n]
+                                                X Y      n
+                                                                                   
+                                           =                  P x(j)t = zj | Tj = tj ·
+                                                0≤t1 <∞,...,   j=1
+                                                 0≤tn <∞
+
+         (A.4)                                  P [T1 = t1 , . . . , Tn = tn | nt = n] ,
+
+
+The last equation follows because the evolution of firms is independent across firms. Note that if any tj has
+                              h                                i
+a value greater than t, then P T1 = t1 , . . . , Tn = tn nt = n = 0. We can write
+
+                                                                                      
+                               h                      i         P x(j)t = zj , Tj = tj
+                            P x(j)t = zj Tj = tj          =
+                                                                      P [Tj = tj ]
+                                                                                      
+                                                                P Tj = tj , Xj,tj = zj
+                                                          =
+                                                                      P [Tj = tj ]
+                                                                P[Tj = tj ]P[Xj, tj = zj ]
+                                                          =
+                                                                      P [Tj = tj ]
+(A.5)                                                     =     P[Xj,tj = zj ] ,
+
+
+where, similarly to above, Xj,tj is a random variable that represents a firm’s state after tj periods conditional
+
+                                                          36
+on having stayed in the industry. Note that for all k, {Xj,k : j ≥ 1} are i.i.d. The second to last equation
+follows because the evolution of a firm is independent of its entry time.
+    Now we show that
+
+                                                                              n
+                                                                              Y
+                             lim P [T1 = t1 , . . . , Tn = tn | nt = n] =           u[tj ] ,
+                            t→∞
+                                                                              j=1
+
+
+for some probability mass function u. This equation can be derived directly. However, it is easier to invoke
+the relationship between nt and a Poisson process and show that the equation holds using known results for
+Poisson processes.
+    Similarly to equation (A.2), we can write:
+
+                                                    Wτ
+                                                  t X
+                                                  X
+                                        nt =                 1{Ai,t−τ =1} ,
+                                                  τ =0 i=1
+
+
+where, for each τ , Ai,t−τ are i.i.d. Bernoulli random variables that equal one if the firm is still in the
+industry after t − τ periods when using strategy µ. Since Ai,t−τ are i.i.d., nt,τ ≡ W
+                                                                                   P τ
+                                                                                      i=1 1{Ai,t−τ =1} is a
+
+filtered Poisson random variable, and is therefore Poisson. Call its mean αt,τ . It follows that nt is a sum of
+independent Poisson random variables, so it is Poisson with mean tτ =0 αt,τ .
+                                                                    P
+
+   Consider {N (t) : t ≥ 0}, a homogeneous Poisson process on the real line with rate 1. Note that N (t)
+and nt are equivalent in the sense that we can construct nt using the process N (s) : 0 ≤ s ≤ tτ =0 αt,τ
+                                                                                            P
+
+in the following way: for each 0 ≤ τ ≤ t, consider the events in the interval [αt,τ −1 , αt,τ −1 + αt,τ ], where
+αt,−1 = 0. Assign those events to firms that are still in the industry at time t and entered at period τ ,
+nt,τ . Note that: i) N (αt,τ ) and nt,τ are both Poisson with mean αt,τ ; ii) N (t) has independent increments
+and nt,τ are independent, for all τ ; iii) N ( tτ =0 αt,τ ) and nt are both sum of independent Poisson random
+                                              P
+
+variables with mean tτ =0 αt,τ .
+                      P
+
+     Suppose N ( tτ =0 αt,τ ) = n. Conditional on that event, the unordered arrival times of N (t) have the
+                  P
+
+same distribution as n i.i.d. uniform random variables in [0, tτ =0 αt,τ ] (Durrett (1996)). By the equivalence
+                                                                P
+
+argument described above, conditional on nt = n, the unordered arrival times of the n firms are i.i.d. discrete
+random variables with PMF:
+                                                   αt,τ
+                                       vt (τ ) = Pt        ,0 ≤ τ ≤ t .
+                                                  j=0 αt,j
+
+Recall that αt,τ is the expected number of firms that entered at time τ and are still inside the industry at time
+t. Since the entry rate is the same every period, every firm uses the same strategy which is independent of
+every other firm, and shocks are idiosyncratic, αt,τ = α̃t−τ , where α̃t−τ is the expected number of firms
+
+                                                       37
+that entered the industry at time s, for any s, and are still inside the industry at time s + t − τ . This suggests
+making a change of variable and defining:
+
+                                                   α̃k
+                                        ut (k) = Pt             ,0 ≤ k ≤ t .
+                                                      j=0 α̃j
+
+
+ut (k) is the probability a random sampled firm from the industry at time t entered k periods ago, conditional
+on nt = n. Taking the limit as t tends to infinity, we get that:
+
+                                                      α̃k
+                                 lim ut (k) ≡ u(k) = P∞                 , 0≤k<∞ ,
+                                                              j=0 α̃j
+                                t→∞
+
+                                   P∞
+provided that limt→∞ E[nt ] =        j=0 α̃j   < ∞, which is true by assumption. u(k) is the probability a ran-
+dom sampled firm from the industry at time t  0 entered k periods before the sampling period. Therefore
+
+                                                                               n
+                                                                               Y
+                              lim P [T1 = t1 , . . . , Tn = tn | nt = n] =           u[tj ] .
+                             t→∞
+                                                                               j=1
+
+
+Replacing the previous equation and equation (A.5) in equation (A.4) we obtain:
+
+                                                               n
+                                                               Y X
+                                                           
+                lim P x(j)t = zj , j = 1, . . . , n | nt = n =     P[Xj,t = zj ]u(t)
+               t→∞
+                                                                         j=1 0≤t<∞
+
+
+where the interchange between the infinite sum and the limit follows by dominated convergence. The sum
+yields the PMF p(·). The previous equation proves that Y1 , . . . , Yn are i.i.d. with PMF p(·) which does not
+depend on n.
+    To finish, consider t  0. More formally, suppose that s0 is sampled from the invariant distribution,
+which is well defined by Lemma 3.2. In this case, st is a stationary process; st is distributed according to
+the invariant distribution for all t ≥ 0.
+                                                                           
+                                                            Xnt
+                                 s̃µ,λ (x) = E[st (x)] = E     1{x(j)t =x}  .
+                                                                 j=1
+
+
+Conditioning on nt , and considering that we already proved that {x(j)t : j = 1, . . . , n} are i.i.d. with PMF
+                                   P
+p(·), we get that p(·) = s̃µ,λ (·)/ x∈N s̃µ,λ (x).
+
+
+
+
+                                                         38
+A.3     Proofs and Mathematical Arguments for Section 4
+
+A.3.1    Preliminary Lemmas
+
+Lemma A.3. Under Assumptions 2.1, 2.2, and 2.3, for all x,
+
+
+                                           sup Ṽ (m) (x|µ̃(m) , λ̃(m) ) < ∞.
+                                              m
+
+
+Proof. We will assume that x ≥ xe ; the case of x < xe is trivial. Assume for contradiction that
+supm Ṽ (m) (x|µ̃(m) , λ̃(m) ) = ∞. We will argue that this contradicts the zero profit condition for entering
+firms. If a firm invests ι > 0, there is a probability p(ι) > 0 that the firm will increase its quality level by at
+least one unit. Let τ be the time a firm takes to transition from state xe to state x. If a firm invests ι > 0 in
+each period, by a geometric trials argument, E[τ ] < ∞. Therefore, there exists an investment strategy for
+which the expected time and cost to transition from xe to x are uniformly bounded above over m. It follows
+that supm Ṽ (m) (xe |µ̃(m) , λ̃(m) ) = ∞. This contradicts the zero profit condition.
+
+    Let `1,g = {f ∈ <∞
+                     + | kf k1,g < ∞}. With some abuse of notation, let S1,g = S1 ∩ `1,g .
+
+
+Lemma A.4. Let Assumptions 2.1, 2.2, and 2.3, hold. Then, for all x,
+
+                                          ∞
+                                      "                                                                   #
+                                          X
+                       sup sup Eµ               β k−t sup πm (xik , f, ñ(m) ) xit = x < ∞.
+                        m µ∈M                             f ∈S1
+                                          k=t
+
+
+Proof. Let all expectations in this proof be conditioned on xit = x. First note that
+
+                                                          ∞
+                                                      "                                       #
+                                                          X
+                                                                    k−t                 (m)
+(A.6)                              sup sup Eµ                   β         πm (xik , s̃        ) <∞.
+                                   m µ∈M
+                                                          k=t
+
+
+                                                                                                                   ι
+If not, supm Ṽ (m) (x|µ̃(m) , λ̃(m) ) = ∞, because total investment cost is bounded by                           1−β ,   violating Lemma
+A.3.
+    By Assumption 2.1.4, for any y ∈ N, f, f 0 ∈ S1,g , n ∈ <+ , and m ∈ N,
+
+                                                      1
+                                                                                                  ∂ ln πm (y, f 0 + γ(f − f 0 ), n)
+                                                  Z         X                                                                        
+                               0                                                    0
+                                                                                   
+ ln πm (y, f, n) − ln πm (y, f , n)       =                           f (x) − f (x)                                                       dγ
+                                                      γ=0 x∈N                                                  ∂f (x)
+                                                  Z   1    X
+                                                                     |f (x) − f 0 (x)| g(x)dγ
+                                                                                      
+                                          ≤
+                                                  γ=0 x∈N
+
+                                          = kf − f 0 k1,g
+
+                                          < ∞.
+
+                                                                     39
+Letting f = (1, 0, 0, . . .), using Assumption 4.2, it follows that supx∈N,m∈N |πm (x, f , ñ(m) )−πm (x, s̃(m) )| ≡
+C < ∞. By Assumption 2.1.2, for all m ∈ <+ , x ∈ N, and f ∈ S1 , πm (x, f, ñ(m) ) ≤ πm (x, f , ñ(m) ) ≤
+πm (x, s̃(m) ) + C. The result then follows from (A.6).
+
+
+A.4     Proof of Theorem 4.2
+
+Theorem 4.2. Under Assumptions 2.1, 2.2, 2.3, 4.1.2, and 4.2, ñ(m) = Ω(m).
+
+                                                        ñ(m)
+Proof. Assume for contradiction that lim inf m            m     = 0. Then there exists an increasing sequence mk
+                  ñ(mk )
+such that limk      mk      = 0, and by Assumption 4.1.2, for all x, z ∈ N with x > z, and f ∈ S1,z ,
+limk→∞ πmk (x, f, ñ(mk ) ) = ∞.
+    Note that for any h ∈ S, y ∈ N, f ∈ S1,g , and n ∈ <+ ,
+
+                                       X            ∂ ln πm (y, f, n)
+                                             h(x)                     ≤ khk1,g .
+                                                         ∂f (x)
+                                       x∈N
+
+
+It follows from Assumptions 2.1.4 and 4.2 that
+
+
+                       lim sup inf sup ln πm (x, f˜(m) , ñ(m) ) − ln πm (x, fˆ, ñ(m) ) = 0.
+                      z→∞ m fˆ∈S        x
+                                 1,z
+
+
+
+It follows that
+                                                         πm (x, f˜(m) , ñ(m) )
+                                 lim sup inf sup                                − 1 = 0,
+                                z→∞ m fˆ∈S
+                                           1,z      x     πm (x, fˆ, ñ(m) )
+
+and therefore,
+                                 πm (x, f˜(m) , ñ(m) ) ≥ (1 − )πm (x, fˆ(m) , ñ(m) ),
+
+for a sequence fˆ(m) ∈ S1,z with sufficiently large z, and for all x and m. This implies that for all x > z,
+limk→∞ πmk (x, f˜(mk ) , ñ(mk ) ) = ∞, which contradicts Lemma A.3. It follows that ñ(m) = Ω(m).
+
+
+A.4.1    Proof of Theorem 4.3
+
+Lemma A.5. Let Assumptions 2.1, 2.2, 2.3, 4.1.2, and 4.2, hold. Then, for any δ > 0,
+                                             "                #
+                                                   (m)
+                                                 nt
+                                         P             − 1 ≥ δ ≤ e−Ω(m) .
+                                                 ñ(m)
+
+Proof. By a simple analysis of the Poisson distribution, it is easy to show that if n is a Poisson random
+
+
+
+
+                                                            40
+variable with mean ñ,
+                                                      h n         i
+                                                  P        − 1 ≥ δ ≤ e−Θ(ñ) .
+                                                        ñ
+                      (m)
+By Lemma 3.2, nt            is a Poisson random variable with mean ñ(m) . By Theorem 4.2, ñ(m) = Ω(m). The
+result follows.
+
+                                                                                                               (m)
+Theorem 4.3. Let Assumptions 2.1, 2.2, 2.3, 4.1.2, and 4.2, hold. Then, as m grows, nt                               /ñ(m) →p 1 and
+  (m)
+kft     − f˜(m) k1,g →p 0.
+
+                               (m)
+Proof. Convergence of nt             /ñ(m) follows from Lemma A.5. To complete the proof, we will establish
+                      (m)
+convergence of kft          − f˜(m) k1,g . Note that for any z ∈ N,
+
+         (m)                                             (m)                                    (m)
+                                                                                    X                         X
+       kft     − f˜(m) k1,g ≤ z max g(x)|ft                    (x) − f˜(m) (x)| +         g(x)ft      (x) +         g(x)f˜(m) (x)
+                                       x≤z
+                                                                                    x>z                       x>z
+
+                               ≡     A(m)
+                                      z      +   Bz(m)   +   Cz(m) .
+
+                                     (m)
+We will show that for any z, Az            converges in probability to zero, that for any δ > 0, for sufficiently large z,
+          (m)                                                                                                                       (m)
+limm→∞ P[Cz           ≥ δ] = 0, and that for any δ > 0 and  > 0, for sufficiently large z, lim supm→∞ P[Bz                               ≥
+                               (m)
+δ] ≤ /δ. The assertion that kft − f˜(m) k1,g →p 0 follows from these facts.
+                                (m)      (m)
+    By Lemma 3.3, for any x, (ft (x) | nt = n) is distributed as the empirical mean of n i.i.d.                             Bernoulli
+                                                                           (m)
+random variables with expectation f˜(m) (x). It follows that for any x, (|ft (x) − f˜(m) (x)| |                              nt = n)
+                                                                                                                            (m)
+converges in probability to zero uniformly over m as n grows. By Theorem 4.2 and the fact that nt                                 /ñ(m)
+                                                                         (m)                                                         (m)
+converges in probability to 1, for any n, limm→∞ P[nt                          ≤ n] = 0. It follows that for any z, Az
+converges in probability to zero.
+                                                                                                         (m)
+      By Assumption 4.2, for any δ > 0, for sufficiently large z, lim supm→∞ Cz                                < δ, and therefore,
+                (m)                                                       (m)          (m)
+limm→∞ P[Cz           ≥ δ] = 0. By Tonelli’s Theorem, E[Bz                      ] = Cz       . Invoking Markov’s inequality, for
+                                                                                 (m)
+any δ > 0 and  > 0, for sufficiently large z, lim supm→∞ P[Bz                         ≥ δ] ≤ /δ. The result follows.
+
+
+A.4.2    Proof of Theorem 4.4
+
+The following technical lemma follows immediately from Assumption 4.1.3. We omit the proof.
+
+Lemma A.6. Let Assumptions 2.1.3 and 4.1.3 hold. Then, for all  > 0 there exists δ > 0 such that for all
+n, n̂ ∈ <+ satisfying |n/n̂ − 1| < δ,
+
+                                                           πm (x, f, n) − πm (x, f, n̂)
+                                           sup                                          < .
+                                   m∈<+ ,x∈N,f ∈S1                πm (x, f, n̂)
+
+
+                                                                    41
+Lemma A.7. Let Assumptions 2.1, 2.2, 2.3, 4.1, and 4.2 hold. Then, for all sequences {µ(m) ∈ M},
+
+                                       τi
+                                   "                                                                                                       #
+                                                               (m)                        (m)                            (m)
+                                       X
+    lim Eµ(m) ,µ̃(m) ,λ̃(m)                  β k−t |πm (xik , s−i,k )      −   πm (xik , f−i,k , ñ(m) )|    xit =   x, s−i,t   ∼ q (m) = 0.
+   m→∞
+                                       k=t
+
+
+Proof. For the purpose of this proof, we will assume that all expectations are conditioned on xit = x and
+ (m)                                     (m)                                                                                                   (m)
+s−i,t ∼ q (m) . Note that if s−i,t is distributed according to q (m) , then the marginal distribution of s−i,k is
+                                             (m)                     (m)                      (m)
+also q (m) , for all k > t. Let ∆it                  = |πm (xit , s−i,t ) − πm (xit , f−i,t , ñ(m) )|. Fix  > 0 and let δ > 0 satisfy
+                                                                                      (m)
+the assertion of Lemma A.6. Let Z (m) denote the event nt                                   /ñ(m) − 1 ≥ δ. Applying Tonelli’s Theorem,
+we obtain
+
+                          τi                                ∞
+                      "                          #
+                                                                                           h     i
+                                         (m)                                                 (m)
+                          X                                 X
+Eµ(m) ,µ̃(m) ,λ̃(m)             β k−t ∆ik              ≤          β k−t Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik
+                          k=t                               k=t
+                                                             ∞                            h           i                     h           i
+                                                                                             (m)                               (m)
+                                                            X
+                                                       =          β k−t Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik 1¬Z (m) + Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik 1Z (m)
+                                                            k=t
+                                                            ∞                              h                         i               
+                                                                                                        (m)
+                                                            X
+                                                       ≤          β k−t Eµ(m) ,µ̃(m) ,λ̃(m) πm (xik , f−i,k , ñ(m) ) + O(m)P[Z (m) ]
+                                                            k=t
+                                                                                      ∞
+                                                                                  "                                         #
+                                                                                      X                                           O(m)P[Z (m) ]
+                                                       ≤ Eµ(m) ,µ̃(m) ,λ̃(m)               β k−t sup πm (xik , f, ñ(m) ) +                    ,
+                                                                                                 f ∈S1                               1−β
+                                                                                      k=t
+
+
+where the second to last inequality follows from Lemma A.6 and Assumption 4.1.1. Since  is arbitrary, the
+expected sum is finite (by Lemma A.4), and P[Z (m) ] ≤ e−Ω(m) (by Lemma A.5), the result follows.
+
+    The following technical lemma follows immediately from assumptions on the profit function. We omit
+the proof.
+
+Lemma A.8. Let Assumptions 2.1.3 and 2.1.4 hold. Then, for all  > 0 there exists δ > 0 such that for
+f, fˆ ∈ S1,g satisfying kf − fˆk1,g < δ,
+
+                                                                    πm (x, f, n) − πm (x, fˆ, n)
+                                                     sup                                         < .
+                                         m∈<+ ,x∈N,n∈<+                    πm (x, fˆ, n)
+
+Lemma A.9. Let Assumptions 2.1, 2.2, 2.3, 4.1, and 4.2 hold. Then, for all sequences {µ(m) ∈ M},
+
+                                       τi
+                                   "                                                                                                       #
+                                                                   (m)                                                   (m)
+                                       X
+                                                 k−t
+    lim Eµ(m) ,µ̃(m) ,λ̃(m)                  β         |πm (xik , f−i,k , ñ(m) )   − πm (xik , s̃  (m)
+                                                                                                          )| xit =   x, s−i,t   ∼q   (m)
+                                                                                                                                               = 0.
+   m→∞
+                                       k=t
+
+
+Proof. For the purpose of this proof, we will assume that all expectations are conditioned on xit = x and
+
+
+                                                                            42
+ (m)                        (m)                          (m)
+s−i,t ∼ q (m) . Let ∆it              = |πm (xit , f−i,t , ñ(m) ) − πm (xit , s̃(m) )|. Fix  > 0 and let δ satisfy the assertion
+                                           (m)
+of Lemma A.8. Let Z (m) denote the event kf−i,k − f˜(m) k1,g ≥ δ. Applying Tonelli’s Theorem, we obtain
+
+                          τi                                 ∞
+                      "                          #
+                                                                                            h     i
+                                           (m)                                                (m)
+                          X                                  X
+                                    k−t
+Eµ(m) ,µ̃(m) ,λ̃(m)             β         ∆ik        ≤             β k−t Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik
+                          k=t                                k=t
+                                                             ∞                              h           i                     h           i
+                                                                                              (m)                               (m)
+                                                             X
+                                                     =             β k−t Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik 1¬Z (m) + Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik 1Z (m)
+                                                             k=t
+                                                                           ∞
+                                                              C   X                          h
+                                                                                                (m)
+                                                                                                         i
+                                                     ≤           +   β k−t Eµ(m) ,µ̃(m) ,λ̃(m) ∆ik 1Z (m) ,
+                                                             1−β
+                                                                           k=t
+
+
+for some constant C > 0. The inequality follows from Lemmas A.4 and A.8.
+                      (m)
+      Note that ∆ik ≤ 2 supf ∈S1 πm (xik , f, ñ(m) ). Hence,
+
+∞                                                                    ∞
+                                                                                                       "                                         #
+                                      h                  i
+                                           (m)
+X                                                                    X
+       β k−t Eµ(m) ,µ̃(m) ,λ̃(m)          ∆ik 1Z (m)           ≤           β k−t Eµ(m) ,µ̃(m) ,λ̃(m) 2 sup πm (xik , f, ñ(m) )1Z (m)
+k=t                                                                  k=t                                    f ∈S1
+                                                                                                 ∞
+                                                                                             "                                                       #
+                                                                                                 X
+                                                                                                           k−t                         (m)
+                                                               ≤ 2 sup Eµ,µ̃(m) ,λ̃(m)                 β         sup πm (xik , f, ñ         )1Z (m) ,
+                                                                       µ∈M                       k=t             f ∈S1
+                                                                                                 ∞
+                                                                                             "                                               #
+                                                                                                 X
+                                                               = 2P[Z (m) ] sup Eµ                     β k−t sup πm (xik , f, ñ(m) ) ,
+                                                                                    µ∈M          k=t          f ∈S1
+
+
+                                                                                       (m)                                              (m)
+because supµ∈M is attained by an oblivious strategy, so f−i,k evolves independently from xik . Since 
+is arbitrary, P[Z (m) ] → 0 (by Theorem 4.3), and the expected sum is uniformly bounded over all m (by
+Lemma A.4), the result follows.
+
+Theorem 4.4. Under Assumptions 2.1, 2.2, 2.3, 4.1, and 4.2, the sequence {µ̃(m) , λ̃(m) } of oblivious equi-
+libria possesses the AME property.
+
+Proof. Let µ∗(m) be an optimal (non-oblivious) best response to (µ̃(m) , λ̃(m) ); in particular,
+
+
+                                V (m) (x, s|µ∗(m) , µ̃(m) , λ̃(m) ) = sup V (m) (x, s|µ, µ̃(m) , λ̃(m) ).
+                                                                                 µ∈M
+
+
+Let
+                      V̂ (m) (x, s) = V (m) (x, s|µ∗(m) , µ̃(m) , λ̃(m) ) − V (m) (x, s|µ̃(m) , λ̃(m) ) ≥ 0.
+
+                                                                                                                                                         (m)
+The AME property, which we set out to establish, asserts that for all x ∈ N, limm→∞ Eµ̃(m) ,λ̃(m) [V̂ (m) (x, st                                               )] =
+0.
+
+
+
+                                                                               43
+       For any m, because µ̃(m) and λ̃(m) attain an oblivious equilibrium, for all x,
+
+
+                Ṽ (m) (x|µ̃(m) , λ̃(m) ) = sup Ṽ (m) (x|µ̃, µ̃(m) , λ̃(m) ) = sup Ṽ (m) (x|µ̃, µ̃(m) , λ̃(m) ),
+                                                 µ̃∈M̃                                         µ̃∈M
+
+
+where the last equation follows because there will always be an optimal oblivious strategy when optimizing
+an oblivious value function even if we consider more general strategies. It follows that
+
+                                                                                                        
+                     V̂ (m) (x, s) =      V (m) (x, s|µ∗(m) , µ̃(m) , λ̃(m) ) − Ṽ (m) (x|µ̃(m) , λ̃(m) )
+                                                                                                   
+                                        + Ṽ (m) (x|µ̃(m) , λ̃(m) ) − V (m) (x, s|µ̃(m) , λ̃(m) )
+                                                                                                                
+                                      ≤   V (m) (x, s|µ∗(m) , µ̃(m) , λ̃(m) ) − Ṽ (m) (x|µ∗(m) , µ̃(m) , λ̃(m) )
+                                                                                                   
+                                              (m)      (m) (m)            (m)          (m) (m)
+                                        + Ṽ      (x|µ̃ , λ̃ ) − V             (x, s|µ̃ , λ̃ )
+
+                                      ≡ A(m) (x, s) + B (m) (x, s).
+
+                                                                                               (m)                                    (m)
+To complete the proof, we will establish that Eµ̃(m) ,λ̃(m) [A(m) (x, st                             )] and Eµ̃(m) ,λ̃(m) [B (m) (x, st       )] con-
+verge to zero.
+                                                                        (m)                        (m)
+       Let τi be the time at which firm i exits, and let ∆it                  = |πm (xit , s−i,t ) − πm (xit , s̃(m) )|. It is easy to see
+that
+
+                                                                            τi
+                                                                        "                                                 #
+                                                                                             (m)                 (m)
+                                                                            X
+                         A(m) (x, s) ≤ Eµ∗(m) ,µ̃(m) ,λ̃(m)                       β k−t ∆ik          xit = x, s−i,t = s
+                                                                            k=t
+                                                                  τi
+                                                              "                                                      #
+                                                                                   (m)                    (m)
+                                                                  X
+                             (m)                                            k−t
+                         B         (x, s) ≤ Eµ̃(m) ,λ̃(m)               β         ∆ik        xit =    x, s−i,t   =s ,
+                                                                  k=t
+
+
+                                                                  (m)
+and letting q (m) be the invariant distribution of st                   with the oblivious strategy µ̃(m) and the oblivious entry
+rate λ̃(m) ,
+
+                                                                                       τi
+                                                                                   "                                                      #
+                           h                     i
+                                         (m)                                                        (m)                  (m)
+                                                                                       X
+           Eµ̃(m) ,λ̃(m)       A(m) (x, st )         ≤ Eµ∗(m) ,µ̃(m) ,λ̃(m)                  β k−t ∆ik       xit =   x, s−i,t   ∼ q (m)
+                                                                                       k=t
+                                                          " τ                                  #
+                           h              i                  i
+                                      (m)                       k−t (m)           (m)
+                                                           X
+                                (m)                                                        (m)
+          Eµ̃(m) ,λ̃(m)        B (x, st ) ≤ Eµ̃(m) ,λ̃(m)      β ∆ik    xit = x, s−i,t ∼ q       .
+                                                                             k=t
+
+
+By the triangle inequality,
+
+               (m)                     (m)                   (m)                                      (m)
+           ∆ik ≤ |πm (xik , s−i,k ) − πm (xik , f−i,k , ñ(m) )| + |πm (xik , f−i,k , ñ(m) ) − πm (xik , s̃(m) )|.
+
+
+
+                                                                        44
+The result therefore follows from Lemmas A.7 and A.9.
+
+
+A.4.3    Derivations for the Logit Demand Model Outlined in Subsection 6.1
+
+It is direct to check that Assumptions 2.1, 4.1.1, and 4.1.2 are satisfied. Now, we show that Assumption
+4.1.3 is satisfied. Let ψ = 1. Note that
+
+     d ln πm (x, f, n)         ∂ ln πm (x, f, n) ∂ ln πm (x, f, n) ∂px     X ∂ ln πm (x, f, n) ∂pi
+(A.7)                     =                     +                        +                           ,
+           d ln n                    ∂ ln n            ∂px        ∂ ln n           ∂pi        ∂ ln n
+                                                                                     i∈S
+
+
+where S is the set of firms in state s = f n, and px is the price charged by the firm in state x. The first term
+takes into account the direct change in profits due to the change on the number of firms keeping prices fixed.
+The second and third terms consider the change in profits implied by the change of prices. Now,
+
+                                             n z∈N f (z)(1 + z)θ1 (Y − pz )θ2
+                                                P
+             ∂ ln πm (x, f, n)
+                               =−                                                              .
+                                  1 + n z∈N f (z)(1 + z)θ1 (Y − pz )θ2 + (1 + x)θ1 (Y − px )θ2
+                                       P
+                   ∂ ln n
+
+                                      ∂ ln πm (x,f,n)
+Therefore, supm∈<+ ,x∈N,f ∈S1 ,n>0         ∂ ln n      = 1. Similarly, it is     possible to show that if θ2 ≤ 12 ,
+                        ∂ ln πm (x,f,n) ∂px       P      ∂ ln πm (x,f,n) ∂pi
+supm∈<+ ,x∈N,f ∈S1 ,n>0       ∂px       ∂ ln n +     i∈S       ∂pi      ∂ ln n    < ∞. The complete derivation is
+long and algebraically cumbersome so it is omitted. However, we note a couple of important points. To
+compute ∂∂p i
+          ln n we use equation (6.1) together with the implicit function theorem. Each term in the sum is
+
+Θ n1 , hence the sum, even if it includes an infinite number of terms, remains bounded.
+    
+
+    Now we derive the maximal absolute semi-elasticity function, g(x). Similarly to equation (A.7) we have
+
+     d ln πm (y, f, n)         ∂ ln πm (y, f, n) ∂ ln πm (y, f, n) ∂py     X ∂ ln πm (y, f, n) ∂pi
+(A.8)                     =                     +                        +                           .
+           df (x)                   ∂f (x)             ∂py        ∂f (x)           ∂pi        ∂f (x)
+                                                                                     i∈S
+
+
+Now,
+             ∂ ln πm (y, f, n)                     n(1 + x)θ1 (Y − px )θ2
+                               =−
+                                  1 + n z∈N f (z)(1 + z)θ1 (Y − pz )θ2 + (1 + y)θ1 (Y − py )θ2
+                                       P
+                  ∂f (x)
+
+Therefore,
+
+                                                      ∂ ln πm (y, f, n)     
+(A.9)                                  max                              = O xθ1 .
+                               m∈<+ ,y∈N,f ∈S1 ,n∈N        ∂f (x)
+
+The second and third terms in equation (A.8) can be bound in a similar way to (A.7). The result follows.
+
+
+
+
+                                                           45
+A.5      Proofs and Mathematical Arguments for Section 5
+
+A.5.1      Proof of Theorem 5.1
+
+Theorem 5.1. Let Assumptions 2.1, 2.2, and 2.3 hold. Then, for any oblivious equilibrium (µ̃, λ̃) and firm
+state x ∈ N,
+                            "                                                       #
+                                                0                                          2
+(A.10)                  E       sup V (x, st |µ , µ̃, λ̃) − V (x, st |µ̃, λ̃) ≤               E[∆|π|(s)],
+                                µ0 ∈M                                                     1−β
+
+where ∆|π|(s) = maxy∈N |π(y, s) − π(y, s̃)|, and
+(A.11)"                                                  #
+                                                                    1             X
+   E      sup V (x, st |µ0 , µ̃, λ̃) − V (x, st |µ̃, λ̃) ≤             E[∆π(s)] +   ax (y) (π(y, s̃) − E [π(y, s)]) ,
+          µ0 ∈M                                                    1−β
+                                                                                            y∈N
+
+
+where ∆π(s) = maxy∈N (π(y, s) − π(y, s̃)).
+
+Proof. We derive the second bound, beginning with the following proposition. Let µ∗ be an optimal (non-
+oblivious) best response to an oblivious equilibrium (µ̃, λ̃) for a firm that is keeping track of the industry
+state.
+
+Proposition A.1.
+
+                                                                               1
+                          E[V (x, s|µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃)] ≤               E[∆π(s)] , ∀x ∈ N .
+                                                                              1−β
+
+Proof. By a similar argument to the one at the beginning of the proof of Theorem 4.4, we have that
+(A.12)
+                                                            τi
+                                                        "                                                                      #
+                                                            X
+    V (x, s|µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃) ≤ Eµ∗ ,µ̃,λ̃             β k−t (π(xik , s−i,k ) − π(xik , s̃)) xit = x, s−i,t = s .
+                                                            k=t
+
+
+    The equation can be rewritten as:
+
+                                                ∞
+                                                X                 X
+    V (x, s|µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃) ≤              β k−t             Pµ∗ ,µ̃,λ̃ [xik = y, s−i,k = s0 | xit = x, s−i,t = s] ·
+                                                k=t               y∈N
+                                                                  s0 ∈S
+
+                                                    π(y, s0 ) − π(y, s̃) ,
+                                                                        
+(A.13)
+
+
+where Pµ∗ ,µ̃,λ̃ [xik = y, s−i,k = s0 | xit = x, s−i,t = s] is the probability firm i, currently in state x with
+competitors in state s, will be in state y and s0 , respectively, k − t periods from now.
+
+
+
+                                                                      46
+    We can write:
+
+
+ Pµ∗ ,µ̃,λ̃ [xik = y, s−i,k = s0 | xit = x, s−i,t = s] = Pµ∗ ,µ̃,λ̃ [xik = y | s−i,k = s0 , xit = x, s−i,t = s] ·
+
+                                                                       Pµ∗ ,µ̃,λ̃ [s−i,k = s0 | xit = x, s−i,t = s]
+
+                                                                 = Pµ∗ ,µ̃,λ̃ [xik = y | s−i,k = s0 , xit = x, s−i,t = s] ·
+
+                                                                       Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s].
+
+
+The last equation follows because rival firms use strategy µ̃, which only depends on their own state, and the
+entry rate is λ̃ independent of the industry state. Substituting into equation (A.13) gives:
+
+                                         ∞
+                                         X             X
+V (x, s|µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃) ≤         β k−t           Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s]
+                                         k=t           s0 ∈S
+                                         X
+                                               Pµ∗ ,µ̃,λ̃ [xik = y | s−i,k = s0 , xit = x, s−i,t = s] π(y, s0 ) − π(y, s̃)
+                                                                                                                          
+
+                                         y∈N
+                                         X∞            X
+                                               β k−t           Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s] max π(y, s0 ) − π(y, s̃) ,
+                                                                                                                       
+ (A.14)                            ≤
+                                                                                                        y∈N
+                                         k=t           s0 ∈S
+
+
+    Recall that q(s) is the invariant distribution of {st : t ≥ 0}, where st is the industry state at time t when
+every firms uses strategy µ̃ and the entry rate is λ̃. Therefore, for any k ≥ t:
+
+                                               X
+(A.15)                             q(s0 ) =          q(s)Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s]
+                                               s∈S
+
+
+Multiplying equations (A.14) by q(s) and summing over all s ∈ S we obtain:
+
+    X                                               X      ∞
+                                                             X       X
+                          ∗
+          q(s) V (x, s|µ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃)  ≤   q(s)   β k−t   Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s] ·
+    s∈S                                                         s∈S            k=t             s0 ∈S
+                                                                                     0
+                                                                                       
+                                                                max π(y, s ) − π(y, s̃)
+                                                                y∈N
+                                                                ∞
+                                                                X              XX
+                                                         =             β k−t                   q(s)Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s] ·
+                                                                 k=t           s0 ∈S     s∈S
+                                                                                     0
+                                                                                       
+                                                                max π(y, s ) − π(y, s̃)
+                                                                 y∈N
+                                                                ∞
+                                                                X              X
+                                                                       β k−t             q(s0 ) max π(y, s0 ) − π(y, s̃)
+                                                                                                                        
+(A.16)                                                   =
+                                                                                                 y∈N
+                                                                 k=t           s0 ∈S
+
+
+The first equation follows by Fubini and the second one by equation (A.15). The previous argument is valid
+
+
+
+
+                                                                 47
+for any x ∈ N, therefore:
+
+                                                                         1
+                       E[V (x, st |µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃)] ≤          E[∆π(st )] , ∀x ∈ N ,
+                                                                        1−β
+
+where st is a random vector distributed according to q.
+
+    Returning to the derivation of the bound, we have that:
+(A.17)
+  E[V (x, s|µ∗ , µ̃, λ̃) − V (x, s|µ̃, λ̃)] = E[V (x, s|µ∗ , µ̃, λ̃) − Ṽ (x|µ̃, λ̃)] + E[Ṽ (x|µ̃, λ̃) − V (x, s|µ̃, λ̃)]
+
+
+The first term is bounded by the previous proposition. Let us analyze the second term:
+
+                                                       τi
+                                                   "                                                                  #
+                                                       X
+      Ṽ (x|µ̃, λ̃) − V (x, s|µ̃, λ̃) = Eµ̃,λ̃               β k−t (π(xik , s̃) − π(xik , s−i,k )) xit = x, s−i,t = s
+                                                       k=t
+                                           ∞
+                                           X             X
+                                      =          β k−t           Pµ̃,λ̃ [s−i,k = s0 | s−i,t = s] ·
+                                           k=t           s0 ∈S
+                                           X
+                                                 Pµ̃ [xik = y | xit = x] π(y, s̃) − π(y, s0 ) .
+                                                                                             
+(A.18)
+                                           y∈N
+
+
+The last equation follows because under oblivious strategies firms’ trajectories are independent. Multiplying
+each term by q(s), summing over all s ∈ S and interchanging sums in the right hand side using Fubini we
+obtain:
+
+                                                   ∞
+                                                   X             X
+(A.19)    E[Ṽ (x|µ̃, λ̃) − V (x, st |µ̃, λ̃)] =         β k−t         Pµ̃ [xik = y | xit = x] (π(y, s̃) − E [π(y, st )]) ,
+                                                   k=t           y∈N
+
+
+Finally, interchanging the sums
+
+                                                                 X
+(A.20)               E[Ṽ (x|µ̃, λ̃) − V (x, st |µ̃, λ̃)] =            ax (y) (π(y, s̃) − E [π(y, st )]) .
+                                                                 y∈N
+
+
+The second bound follows by equations (A.17), (A.20), and the proposition. The first one follows by a
+similar argument, but with the difference that we take maxy∈N in equation (A.18) and we take absolute
+value of the difference of one period profits in equations (A.14) and (A.18).
+
+
+
+
+                                                                 48
+References
+
+ Altman, E., O. Pourtallier, A. Haurie, and F. Moresino (2000). Approximating Nash equilibria in nonzero-
+    sum games. International Game Theory Review 2(2), 155 – 172.
+
+ Benkard, C. L. (2004). A dynamic analysis of the market for wide-bodied commercial aircraft. Review of
+    Economic Studies 71(3), 581 – 611.
+
+ Berry, S. and A. Pakes (1993). Some applications and limitations of recent advances in empirical indus-
+    trial organization: Merger analysis. American Economic Review 83(2), 247 – 252.
+
+ Bertsekas, D. P. (2001). Dynamic Programming and Optimal Control, Vol. 2 (Second ed.). Athena Scien-
+    tific.
+
+ Besanko, D. and U. Doraszelski (2004). Capacity dynamics and endogenous asymmetries in firm size.
+    RAND Journal of Economics 35(1), 23 – 49.
+
+ Besanko, D., U. Doraszelski, Y. Kryukov, and M. Satterthwaite (2005). Learning-by-doing, organiza-
+    tional forgetting, and industry dynamics. Working Paper Kellogg University.
+
+ Caplin, A. and B. Nalebuff (1991). Aggregation and imperfect competition - on the existence of equilib-
+    rium. Econometrica 59(1), 25 – 59.
+
+ de Roos, N. (2002). A model of collusion timing. Working Paper Yale University.
+
+ Doraszelski, U. and K. Judd (2003). Continuous-time stochastic games with discrete states. Working
+    Paper Hoover Institution.
+
+ Doraszelski, U. and S. Markovich (2003). Advertising dynamics and competitive advantage. Working
+    Paper Hoover Institution.
+
+ Doraszelski, U. and M. Satterthwaite (2003). Foundations of Markov-perfect industry dynamics: Exis-
+    tence, purification, and multiplicity. Working Paper, Hoover Institution.
+
+ Durrett, R. (1996). Probability: Theory and Examples (Second ed.). Duxbury Press.
+
+ Ericson, R. and A. Pakes (1995). Markov-perfect industry dynamics: A framework for empirical work.
+    Review of Economic Studies 62(1), 53 – 82.
+
+ Fershtman, C. and A. Pakes (2000). A dynamic oligopoly with collusion and price wars. RAND Journal
+    of Economics 31(2), 207 – 236.
+
+ Fudenberg, D. and D. Levine (1986). Limit games and limit equilibria. Journal of Economic Theory 38(2),
+    261 – 279.
+
+                                                  49
+Goettler, R. L., C. A. Parlour, and U. Rajan (2004). Equilibrium in a dynamic limit order market. Forth-
+   coming, Journal of Finance.
+
+Gowrisankaran, G. (1999). A dynamic model of endogenous horizontal mergers. RAND Journal of Eco-
+   nomics 30(1), 56 – 83.
+
+Gowrisankaran, G. and R. Town (1997). Dynamic equilibrium in the hospital industry. Journal of Eco-
+   nomics and Management Strategy 6(1), 45 – 74.
+
+Haugh, M. B., L. Kogan, and J. Wang (2004). Pricing american options: A duality approach. Operations
+   Research 52(2), 258–270.
+
+Haugh, M. B., L. Kogan, and J. Wang (2005). Portfolio evaluation: A duality approach. In Press, Opera-
+   tions Research.
+
+Hopenhayn, H. A. (1992). Entry, exit and firm dynamics in long run equilibrium. Econometrica 60(5),
+   1127 – 1150.
+
+Jenkins, M., P. Liu, R. L. Matzkin, and D. L. McFadden (2004). The browser war - econometric analysis
+   of Markov perfect equilibrium in markets with network effects. Working Paper.
+
+Jovanovic, B. and R. W. Rosenthal (1988). Anonymous sequential games. Journal of Mathematical Eco-
+   nomics 17(1), 77 – 87.
+
+Judd, K. (1998). Numerical Methods in Economics. MIT Press.
+
+Judd, K. L., K. Schmedders, and S. Yeltekin (2002). Optimal rules for patent races. Working Paper,
+   Hoover Institution.
+
+Kleinrock, L. (1975). Queueing Systems, Volume 1: Theory (First ed.). Wiley-Interscience.
+
+Klette, T. J. and S. Kortum (2003). Innovating firms and aggregate innovation. In Press, Journal of Polit-
+   ical Economy.
+
+Krusell, P. and J. A. A. Smith (1998). Income and wealth heterogeneity in the macroeconomy. Journal of
+   Political Economy 106(5), 867 – 896.
+
+Langohr, P. (2003). Competitive convergence and divergence: Capability and position dynamics. Working
+   Paper Northwestern University.
+
+Markovich, S. (2003). Rolling vs. melting: The snowball-effect in a dynamic oligopoly model with
+   network externalities. Working Paper Tel-Aviv University.
+
+Maskin, E. and J. Tirole (1988). A theory of dynamic oligopoly, I and II. Econometrica 56(3), 549 – 570.
+
+                                                  50
+Melitz, M. J. (2003). The impact of trade on intra-industry reallocations and aggregate industry produc-
+   tivity. Econometrica 71(6), 1695 – 1725.
+
+Novshek, W. and H. Sonnenschein (1978). Cournot and walras equilibrium. Journal of Economic The-
+   ory 19, 223 – 266.
+
+Pakes, A. (2000). A framework for applied dynamic analysis in i.o. NBER Working Paper 8024.
+
+Pakes, A. and P. McGuire (1994). Computing Markov-perfect Nash equilibria: Numerical implications
+   of a dynamic differentiated product model. RAND Journal of Economics 25(4), 555 – 589.
+
+Pakes, A. and P. McGuire (2001). Stochastic algorithms, symmetric Markov perfect equilibrium, and the
+   ‘curse’ of dimensionality. Econometrica 69(5), 1261 – 1281.
+
+Ryan, S. (2005). The costs of environmental regulation in a concentrated industry. MIT, Mimeo.
+
+Shaked, A. and J. Sutton (1987). Product differentiation and industrial structure. Journal of Industrial
+   Economics 36(2), 131 – 146.
+
+Song, M. (2003). A dynamic model of cooperative research in the semiconductor industry. Working Paper
+   Harvard University.
+
+Sutton, J. (1991). Sunk Costs and Market Structure (First ed.). MIT Press.
+
+Vapnik, V. N. and A. Y. Chervonenkis (1971). On the uniform convergence of relative frequencies of
+   events to their probabilities. Theory of Probability and its Applications 16(2), 264–280.
+
+Vives, X. (2002). Private information, strategic behavior, and efficiency in cournot markets. RAND Jour-
+   nal of Economics 33(3), 361 – 376.
+
+
+
+
+                                                 51
+B    Tables and Figures
+
+
+           Table 1: Comparison of MPE and OE strategies (4 firms, no entry and exit)
+
+    Parameters             Long Run Statistics (% Diff)           Perf Bound (% Diff)      Actual (% Diff)
+                             Prod     Cons                         Max      Weighted      Max     Weighted
+  θ1       d         Inv.    Surp     Surp      C1        C2       Diff        Avg        Diff       Avg
+  0.10    0.10 −0.26 −0.01 −0.02                 0.03     0.03      0.14        0.13       0.08       0.07
+  0.30    0.30 −0.13          0.06     0.08      0.08     0.16      1.67        1.22       0.04       0.01
+  0.50    0.50 −0.11          0.20     0.28      0.18     0.50      6.64        3.61       0.21       0.06
+  0.70    0.70 −2.21          0.40     0.15      1.08     2.09 18.85            8.35       1.60       0.67
+  0.85    0.70 −2.19          0.23 −0.28         1.37     2.10 30.80            9.64       1.80       0.20
+  0.15    0.27        3.54    0.14     0.2       1.22     0.46      0.36        0.35       0.1        0.1
+  0.20    0.35        4.18    0.29     0.42      1.93     1.03      0.81        0.77     −0.09      −0.05
+  0.30    0.55        9.28    0.93     1.31      5.10     2.45      1.96        1.85       0.26       0.25
+  0.40    0.80 21.02          2.10     2.93 11.58         4.12      3.01        2.92       0.30       0.29
+  0.50    1.00 18.62          3.30     4.33 15.69         5.94      6.29        5.86       0.32       0.30
+Long run statistics and value functions simulated with a relative precision of 1.0% and a confidence level of
+99%. Error bound simulated with a relative precision of at most 10% and a confidence level of 99%.
+
+
+
+
+                                                   52
+          Table 2: Comparison of MPE and OE Investment (4 firms, no entry and exit)
+                            Parameters          Investment
+                            θ1       d       MPE          OE        % Diff
+                            0.10    0.10      0.752        0.754 −0.26
+                            0.30    0.30      0.754        0.755 −0.13
+                            0.50    0.50      0.741        0.742 −0.11
+                            0.70    0.70      0.694        0.709 −2.21
+                            0.85    0.70      0.748        0.765 −2.19
+                            0.15    0.27      0.192        0.185      3.54
+                            0.20    0.35      0.261        0.250      4.18
+                            0.30    0.55      0.238        0.216      9.28
+                            0.40    0.80      0.168        0.133     21.02
+                            0.50    1.00      0.195        0.158     18.62
+                          Investment simulated with a relative precision of
+                          1.0% and a confidence level of 99%.
+
+
+
+
+Table 3: Percentage approximation error bounds evaluated at the entry state for industries in Fig-
+ures 6 and 7
+
+                             Parameters                    Error
+                           θ1         m                    Bound
+                           0.9     100                     13.5
+                                   400                      5.7
+                                  1600                      2.4
+                           1.2     100                     57.9
+                                   400                     56.4
+                                  1600                     23.9
+                          Error bound and value functions simulated with
+                          a relative precision of at most 10% and 1.0%, re-
+                          spectively, and a confidence level of 99%.
+
+
+
+
+                                                 53
+Figure 1: Percentage approximation error bound for Poisson entry process for different market
+sizes.
+
+
+                   20
+                                                                               Low
+                   18
+                                                                               High
+                   16
+
+                   14
+         % Bound
+
+
+
+
+                   12
+
+                   10
+
+                    8
+
+                    6
+
+                    4
+
+                    2
+
+                    0
+                        30   60    120     250         500     1000    1800         2600
+
+                                   Expected Number of Firms
+
+
+
+
+Figure 2: Percentage approximation error bound for deterministic entry process for different mar-
+ket sizes.
+
+
+                   12
+                                                                             Low
+                                                                             High
+                   10
+
+
+                    8
+         % Bound
+
+
+
+
+                    6
+
+
+                    4
+
+
+                    2
+
+
+                    0
+                        30    60     120         250         500      1000      1800
+                                   Expected Number of Firms
+
+
+
+
+                                                 54
+           Figure 3: Percentage approximation error bound for fixed number of firms.
+
+                        5
+                                                                                                                       Low
+                                                                                                                       High
+                        4
+% Bound
+
+
+
+
+                        3
+
+
+
+                        2
+
+
+
+                        1
+
+
+
+                        0
+                                       5       10       20       40       80       120          190   380       500    750      1000
+                                                                      Number of Firms
+
+
+
+
+                                           Figure 4: Average industry state for θ1 = 0.5 and d = 0.5.
+
+                                0.12
+     Expected Number of Firms
+
+
+
+
+                                 0.1
+
+
+                                0.08
+
+
+                                0.06
+
+
+                                0.04
+
+
+                                0.02
+
+
+                                  0
+                                           1    2   3        4   5    6        7   8        9    10   11   12   13    14   15
+
+                                                                          Quality Level
+
+
+
+
+                                                                                       55
+                                                           Figure 5: Average industry state for θ1 = 0.4 and d = 0.8.
+
+                                              0.9
+
+                                              0.8
+                   Expected Number of Firms
+
+
+
+
+                                              0.7
+
+                                              0.6
+
+                                              0.5
+
+                                              0.4
+
+                                              0.3
+
+                                              0.2
+
+                                              0.1
+
+                                                   0
+                                                           1   2   3   4   5   6     7   8    9    10    11   12     13   14   15
+
+                                                                                   Quality Level
+
+
+
+
+                                              Figure 6: Average industry state for different market sizes for θ1 = 0.9.
+
+                                100
+                                                                                                        M=100
+                                              90
+                                                                                                        M=400
+                                              80
+Expected Number of Firms
+
+
+
+
+                                                                                                        M=1600
+                                              70
+
+                                              60
+
+                                              50
+
+                                              40
+
+                                              30
+
+                                              20
+
+                                              10
+
+                                               0
+                                                       1                                                        21
+                                                                                    Quality Level
+
+
+
+
+                                                                                             56
+                               Figure 7: Average industry state for different market sizes for θ1 = 1.2.
+
+                           8
+                                                                           M=100
+                           7
+                                                                           M=400
+Expected Number of Firms
+
+
+
+
+                           6                                               M=1600
+
+                           5
+
+                           4
+
+                           3
+
+                           2
+
+                           1
+
+                           0
+                                1               21               41                 61
+                                                           Quality Level
+
+
+
+
+                                                                  57
+

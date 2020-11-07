@@ -27,10 +27,10 @@ If you don't want to run this locally and just want to get straight to the data,
 |issue_date|date|Paper's issuance date|
 |revision_date|date|Paper's revision date|
 |topics|string|Paper topic(s). Can be more tan one. Hence it is stored as an array|
-|program|Paper program(s). Can be more tan one. Hence it is stored as an array|
-|projects|Paper project(s). Can be more tan one. Hence it is stored as an array|
-|working_groups|Paper working group(s). Can be more tan one. Hence it is stored as an array|
-|abstract|string|Paper abstract|
+|program|string|Paper program(s). Can be more tan one. Hence it is stored as an array|
+|projects|string|Paper project(s). Can be more tan one. Hence it is stored as an array|
+|working_groups|string|Paper working group(s). Can be more tan one. Hence it is stored as an array|
+|abstract|string|string|Paper abstract|
 |acknowledgement|string|Paper's acknowledgement (in paragraph)|
 
 2. [<strong>NBER citations (from RePEc)</strong>](https://github.com/ledwindra/nber/raw/main/data/repec.csv)

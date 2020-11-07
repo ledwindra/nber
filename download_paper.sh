@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 export START=$1
 export END=$2

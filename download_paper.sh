@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 export START=$1
 export END=$2
@@ -33,3 +33,6 @@ do
     rm -rf "${DIRECTORY}/${NBER_ID}.pdf"
     START=$(($START + 1))
 done
+
+# remove unwanted file
+rm -rf =

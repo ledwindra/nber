@@ -16,7 +16,8 @@ This won't include the .git directory and you can play around with the programs 
 # Download data
 If you don't want to run this locally and just want to get straight to the data, just chill, relax and, download them Enjoy! 🌞 ⛱ 🥥 🌴 😎.
 
-1. [<strong>NBER</strong>](https://github.com/ledwindra/nber/raw/master/data/nber.zip)
+1. [<strong>NBER</strong>](https://github.com/ledwindra/nber/raw/main/data/nber.csv)
+
 |column_name|data_type|description|
 |-|-|-|
 |id|integer|NBER working paper ID|
@@ -26,13 +27,14 @@ If you don't want to run this locally and just want to get straight to the data,
 |issue_date|date|Paper's issuance date|
 |revision_date|date|Paper's revision date|
 |topics|string|Paper topic(s). Can be more tan one. Hence it is stored as an array|
-|program|Paper program(s). Can be more tan one. Hence it is stored as an array|
-|projects|Paper project(s). Can be more tan one. Hence it is stored as an array|
-|working_groups|Paper working group(s). Can be more tan one. Hence it is stored as an array|
-|abstract|string|Paper abstract|
+|program|string|Paper program(s). Can be more tan one. Hence it is stored as an array|
+|projects|string|Paper project(s). Can be more tan one. Hence it is stored as an array|
+|working_groups|string|Paper working group(s). Can be more tan one. Hence it is stored as an array|
+|abstract|string|string|Paper abstract|
 |acknowledgement|string|Paper's acknowledgement (in paragraph)|
 
-2. [<strong>NBER citations (from RePEc)</strong>](https://github.com/ledwindra/nber/raw/master/data/repec.zip)
+2. [<strong>NBER citations (from RePEc)</strong>](https://github.com/ledwindra/nber/raw/main/data/repec.csv)
+
 |column_name|data_type|description|
 |-|-|-|
 |id|integer|NBER working paper ID|
@@ -49,13 +51,13 @@ What can be done from this dataset? Well, let's take a look at `index.ipynb`. �
 
 # Permission
 1. NBER
-Check its [<strong>`robots.txt`</strong>](http://data.nber.org/robots.txt). Everybody is not disallowed to get `/papers/` tag.
+Check its [<strong>robots.txt</strong>](http://data.nber.org/robots.txt). Everybody is not disallowed to get `/papers/` tag.
 
 2. RePEc
-Coming from its open API: http://citec.repec.org/api.html
+Coming from its open API: <strong>http://citec.repec.org/api.html</strong>
 
 3. Wikipedia
-Check [robots.txt](https://en.wikipedia.org/robots.txt):
+Check [<strong>robots.txt</strong>](https://en.wikipedia.org/robots.txt):
 
 ```
 User-agent: *
@@ -73,7 +75,7 @@ Disallow: /wiki/Spezial%3A
 Disallow: /wiki/Spesial%3A
 ```
 
-We're using `https://en.wikipedia.org/wiki/` so it's safe.
+We're using <strong>https://en.wikipedia.org/wiki/</strong> so it's safe.
 
 # Closing
 If you have read up to this line, thank you for bearing with me. Hope this is useful for your purpose! 😎 🍻

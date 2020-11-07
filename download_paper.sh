@@ -17,6 +17,8 @@ get_nber_id () {
         NBER_ID="00${START}"
     elif (( $START >= 100 && $START < 1000 )); then
         NBER_ID="0${START}"
+    else
+        NBER_ID=${START}
     fi
 }
 
@@ -28,6 +30,7 @@ while (( $START < $END ))
 do
     get_nber_id
     URL="https://www.nber.org/system/files/working_papers/w${NBER_ID}/w${NBER_ID}.pdf"
+    echo $URL
     wget $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
     pdftotext -layout "${DIRECTORY}/${NBER_ID}.pdf" "${DIRECTORY}/${NBER_ID}.txt"
     rm -rf "${DIRECTORY}/${NBER_ID}.pdf"

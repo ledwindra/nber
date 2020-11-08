@@ -1,0 +1,2012 @@
+                             NBER WORKING PAPER SERIES
+
+
+
+
+               THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS
+
+                                        Dominic Coey
+                                        Bradley Larsen
+                                        Kane Sweeney
+                                        Caio Waisman
+
+                                     Working Paper 24698
+                             http://www.nber.org/papers/w24698
+
+
+                    NATIONAL BUREAU OF ECONOMIC RESEARCH
+                             1050 Massachusetts Avenue
+                               Cambridge, MA 02138
+                                    June 2018
+
+
+
+
+We thank Isa Chaves, Han Hong, Dan Quint, Evan Storms, and Anthony Zhang for helpful
+comments. Coey and Sweeney were employees of eBay Research Labs while working on this
+project, and Larsen was a part-time consultant for eBay Research Labs when the project was
+started. eBay had the right to review the paper before it was circulated, but did not attempt to
+influence the research in any way. The views expressed herein are those of the authors and do
+not necessarily reflect the views of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+
+© 2018 by Dominic Coey, Bradley Larsen, Kane Sweeney, and Caio Waisman. All rights
+reserved. Short sections of text, not to exceed two paragraphs, may be quoted without explicit
+permission provided that full credit, including © notice, is given to the source.
+The Simple Empirics of Optimal Online Auctions
+Dominic Coey, Bradley Larsen, Kane Sweeney, and Caio Waisman
+NBER Working Paper No. 24698
+June 2018
+JEL No. C10,C55,D44,L10
+
+                                          ABSTRACT
+
+We study reserve prices computed to maximize the expected profit of the seller based on
+historical observations of incomplete bid data typically available to the auction designer in online
+auctions for advertising or e-commerce. This direct approach to computing reserve prices
+circumvents the need to fully recover distributions of bidder valuations. We derive asymptotic
+results and also provide a new bound, based on the empirical Rademacher complexity, for the
+number of historical auction observations needed in order for revenue under the estimated reserve
+price to approximate revenue under the optimal reserve arbitrarily closely. This simple approach
+to estimating reserves may be particularly useful for auction design in Big Data settings, where
+traditional empirical auctions methods may be costly to implement. We illustrate the approach
+with e-commerce auction data from eBay. We also demonstrate how this idea can be extended to
+estimate all objects necessary to implement the Myerson (1981) optimal auction.
+
+
+Dominic Coey                                     Kane Sweeney
+dominic.coey@gmail.com                           Uber, Marketplace Optimization
+                                                 1455 Market St #400
+Bradley Larsen                                   San Francisco, CA 94103
+Department of Economics                          kanesweeney@gmail.com
+Stanford University
+579 Serra Mall                                   Caio Waisman
+Stanford, CA 94305                               Department of Economics
+and NBER                                         Stanford University
+bjlarsen@stanford.edu                            579 Serra Mall
+                                                 Stanford, CA 94305
+                                                 cwaisman@stanford.edu
+2                       COEY, LARSEN, SWEENEY, AND WAISMAN
+
+                                1. I NTRODUCTION
+
+    Auctions are one of the main selling mechanisms used online. Not only are
+they employed to sell physical goods through sites such as eBay, but also to offer
+advertisement space online, such as through Google’s DoubleClick. Display and
+banner ads have become a common tool to target consumers, which is conducted
+via real-time bidding, in which impressions are commonly sold via second-price,
+sealed-bid auctions that last a fraction of a second. It is estimated that over $20
+billion dollars are sold via real-time bidding per year (eMarketer 2016), providing
+an abundance of data on bidding activity and reflecting the relevance and poten-
+tial revenue gains from implementing the best auctions possible. Traditional ap-
+proaches to empirical auctions would analyze such data by estimating underlying
+distributions of bidder valuations and then computing counterfactual mechanisms
+of interest, such as optimal reserve prices or other instruments of auction design.
+These approaches, however, can be computationally demanding, in particular in
+large data settings, and are unlikely to be implemented in real-time by online plat-
+forms interested in optimal auction design. We provide a more direct approach to
+obtaining the information required for optimal reserve prices in these online auc-
+tions. The primary virtue of the approach is that it is simple to execute—a practical
+approach to computing optimal reserve prices in certain environments without the
+effort necessary to fully estimate distributions of bidder valuations.
+
+    The online auction environments we are interested in studying typically follow
+a second-price-like format, where, unlike traditional ascending auctions, the high-
+est bid is recorded. We show that this opens up a new and more direct approach
+to obtaining the information required for computing optimal reserve prices. Our
+starting point is the observation that seller profit is a simple-to-compute function
+of the reserve price and the two highest bids—and thus profit can be computed
+even with incomplete bidding data (i.e. where not all bids are observed) and with-
+out observing the number of bidders. Although it is true that, in theory, complex
+                    THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                               3
+
+auction design may be optimal—such as the Myerson (1981) auction for asym-
+metric independent private values (IPV) settings—in practice, the seller’s primary
+instrument of auction design in the real world is typically a single reserve price.
+We demonstrate that the optimal single reserve price can be computed using only
+historical observations of data on the two highest bids by simply maximizing the
+seller profit function with respect to the reserve price.
+
+    We derive several properties of estimated reserve prices. We prove consistency,
+demonstrate that the asymptotic distribution of the estimator of the optimal re-
+serve price is non-normal, and derive its asymptotic distribution. Our interest in
+deriving these results is not theoretical but is instead practical: we wish to provide
+a clear notion of how many previous transactions the practicioneer needs to observe
+in order for it be the case that designing an auction based on estimated reserves is
+a good idea. In this spirit, we then provide a type of result that is relatively new
+to the empirical auctions literature: we derive an explicit lower bound, based on
+the empirical Rademacher complexity, for the number of auctions one would need
+to observe in order to guarantee that the revenue based on the estimated reserve
+price approximates the true optimal revenue arbitrarily closely.
+
+    All of our results allow for the number of bidders in each auction to be un-
+known, a data complication which has precluded nearly all previous empirical
+auction methods. When the number of bidders is unobserved, approaches relying
+on inverting order statistic distributions (Haile and Tamer 2003; Athey and Haile
+2007; Aradillas-López et al. 2013) cannot be applied. This has particularly been an
+issue for online auctions, where the number of bidders is often unobserved to the
+econometrician.1 Exceptions in the literature allowing for an unobserved number
+of bidders in second-price-like/ascending auction cases include Song (2004), Kim
+and Lee (2014), Platt (2017), and Freyberger and Larsen (2017), which each focus
+on symmetric independent (or conditionally independent) private values settings.
+Relative to our method, these approaches have the advantage of yielding estimates
+1
+ For example, on eBay, if a bidder intends to bid in an auction but sees that the price has already
+exceeded her valuation, her bid will not be recorded, leading to a situation in which the number of
+bidders placing bids differs from the true number of bidders.
+4                        COEY, LARSEN, SWEENEY, AND WAISMAN
+
+of the underlying valuation distributions, but at a higher computational cost. Our
+method circumvents the need for estimating valuation distributions and instead
+directly estimates the optimal reserve price. Also, it is important to emphasize
+that the specific information environments and data requirements we consider
+(asymmetric, possibly correlated, private values where the number of bidders is
+unobserved to the econometrician and bidding data is incomplete) are settings for
+which no identification results exist in the auction literature for obtaining distribu-
+tions of valuations even if that were the desired object of interest.
+
+    The computational simplicity of this approach can be particularly attractive given
+the recent advent of Big Data. Specifically, auctions for online advertising or e-
+commerce often contain too many records to be feasibly analyzed using traditional
+structural methods, which would typically involve 1) restricting to a sample of
+data in a flat file which can be analyzed in standard statistical software; 2) fully re-
+covering the underlying distribution of buyer valuations through maximum like-
+lihood estimation or other approaches, which often require searching over multi-
+dimensional parameter spaces; and 3) computing optimal reserve prices (e.g. Paarsch
+1997; Bajari and Hortaçsu 2003). In contrast, our approach requires only searching
+over a single dimension at once and can be performed with a simple grid search,
+raising the possibility of computing optimal reserve prices directly on data stor-
+age platforms (e.g. Teradata, Hadoop, Spark) without bringing the data into more
+traditional analysis packages (e.g. Matlab, R, etc.).
+
+    We apply our approach to a sample of popular smartphone products sold through
+eBay auctions. We find that implementing the optimal reserve price in these set-
+tings would raise expected profit between 0.11–0.86% compared to an auction with
+a reserve price equal to the seller’s value, depending on the product. In the data
+we find that a history of at least 7–25 auctions are required in order for an auction
+using the estimated reserve price to outperform an auction with the reserve price
+set to the seller’s value.
+                      THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                  5
+
+    We also demonstrate an interesting extension of our methodology to the setting
+of the Myerson (1981) optimal auction. If, in addition to the two highest bids, the
+highest bidder’s identity is also known, we show how to recover bidder-specific
+marginal revenue curves (as defined by Bulow and Roberts 1989) in asymmetric
+IPV settings, enabling the Myerson (1981) optimal auction to be implemented. We
+use simulated data to illustrate this approach and quantify the revenue gain from
+optimal auction design. While the Myerson (1981) auction is not widely used in
+practice, auctions with “soft floors” have been used explicitly to deal with poten-
+tial asymmetry between bidders.2 However, as Zeithammer (2017) demonstrated,
+this auction format can actually be detrimental to sellers, in which case implement-
+ing the Myerson (1981) auction might be a preferred alternative. When there are
+concerns about discriminating bidders, recovering marginal revenue curves allows
+one to implement the symmetric auction proposed by Deb and Pai (2017), which
+yields the same expected revenue to the seller as the original Myerson (1981) auc-
+tion.
+
+    Our approach is related to a theoretical literature at the intersection of econom-
+ics and computer science that examines approximately optimal auctions in a variety
+of cases, as surveyed by Roughgarden (2014). In particular, several studies in this
+literature employed the same tools from statistical learning theory we use to de-
+rive our finite sample bound on the difference between the optimal expected rev-
+enue and the one accrued from an auction using an estimated reserve price. For
+example, Cole and Roughgarden (2014) derive the number of auctions needed to
+approximate the optimal expected revenue as a function the number of bidders un-
+der the asymmetric IPV setting of Myerson (1981); under the same paradigm, but
+assuming that the number of bidders is either observed or drawn from a known
+distribution, Cesa-Bianchi et al. (2015) introduce a regret minimization algorithm
+to choose the reserve price; Alaei et al. (2013) extend the environment to allow for
+2
+ A soft floor is a threshold that effectively determines the auction format. If the highest bid is below
+it, the winner pays her own bid, thereby characterizing a first-price auction. On the other hand, if at
+least one bid is above the soft floor, the wininng bidder’s payment will be equal to the maximum of
+the soft floor and the second highest bid, which constitutes a second-price auction. Reserve prices
+in soft floor auctions are also known as “hard floors”.
+6                        COEY, LARSEN, SWEENEY, AND WAISMAN
+
+richer bidder preferences, including multi-dimensional types; Morgenstern and
+Roughgarden (2015) allow for several units being auctioned at the same time;
+Roughgarden and Wang (2016) consider the problem of choosing bidder-specific
+reserve prices; Kanoria and Nazerzadeh (2017) consider a dynamic environment
+of repeated auctions and how strategic bidder account for a seller using their past
+bids to learn the distribution of valuation; and Balcan et al. (2018) extend the anal-
+ysis to mechanisms other than auctions. Unlike these papers, we do not require
+bidder valuations to be independent, nor do we impose any restrictions on the
+number of bidders or the process behind which it is drawn. On the other hand, we
+do not consider regret minimization, implementation algorithms, multiple units
+or reserves, dynamics, or more general bidder preferences. Within this literature,
+the paper to which ours is most closely related is Mohri and Medina (2016), who
+introduced several results we leverage in this study. We reinterpret their learning
+framework as a sample size-dependent implementation decision from the vantage
+point of the seller.
+
+    Our paper also contributes to a literature in economics that provides direct in-
+ference about reserve prices or other objects of interest to auction design rather
+than attempting to estimate the full distribution of valuations, such as Li et al.
+(2003), Haile and Tamer (2003), Tang (2011), Aradillas-López et al. (2013), Coey
+et al. (2014), Chawla et al. (2014), and Coey et al. (2017). We also relate to other
+work empirical focusing on online e-commerce auctions, such as Song (2004) or
+Platt (2017), and online ad auctions. In this paper, we consider only private values
+settings; in theory work, Abraham et al. (2016) model ad auctions with common
+values. In extending our approach to address the Myerson auction empirically,
+we also relate to Celis et al. (2014), which addresses non-regular distributions and
+Myerson’s ironing in ad auctions, while we focus only on regular distributions. Fi-
+nally, our work is related to the work of Ostrovsky and Schwarz (2016), where the
+authors experimentally varied reserve prices in position ad auctions to measure
+the improvement in profits from choosing different reserve prices.
+                     THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                 7
+
+                                2. O PTIMAL R ESERVE P RICES
+
+  We consider private value, second-price auctions. Values are independent and
+identically distributed across auctions, but within auctions we allow for arbitrary
+correlation in bidders’ values and asymmetric valuation distributions among bid-
+ders. Let N be a random variable representing the number of potential bidders for
+a given auction. Let V pkq represent the kth highest value among these N bidders.3
+
+  As in the entry model of Samuelson (1985), in a given auction each potential
+entrant observes the realization of her value and enters if her value exceeds the
+reserve price r. We assume that bidders do not bid above their values, and that
+if either of the two potential entrants with the highest values enter, they bid their
+values.4 This implies that the two highest bids, if they exist, are V p1q and V p2q .5 We
+will not require that the econometrician observe the number of potential or actual
+entrants.
+
+  Each potential entrant i has a type t            P t1, . . . , Tu. In the most general case, each
+bidder has his own type. All potential entrants with type t have values that are
+continuously distributed on some finite interval r0, ωt s, with ω̄                   maxt ωt . Let
+Ft denote this distribution, and f t the corresponding density. We use F and f to
+denote the joint distribution and density of all potential entrants’ values.
+
+
+
+
+3As in Song (2004), we use this notation, rather than the traditional notation V n:n , V n1:n , etc.,
+because in our case the order statistics come from samples of varying sizes. That is, V pkq is the kth
+highest bid among N bidders, unconditional on the realization of the random variable N, and is
+thus a draw from the distribution
+                                FV pkq pvq 
+                                               ¸ PrpN  nqF               pvq
+                                                            V nk   1:n                            (1)
+                                               n
+
+where FV nk 1:n is the distribution of the kth highest bid conditional on n, the realization of N.
+4This is an implication of the dynamic bidding model in Song (2004). Athey and Haile (2002) also
+argue, “...for many ascending auctions, a plausible ... hypothesis is that bids V n2:n and below do
+not always reflect the full willingness to pay of losing bidders, although V n1:n does (since only
+two bidders are active when that bid is placed).”
+5This may not be true for other entry models. In Levin and Smith (1994), where bidders do not
+observe their values before entering, the two highest value bidders need not enter even if their
+values exceed the reserve price.
+8                              COEY, LARSEN, SWEENEY, AND WAISMAN
+
+
+    Let j   P t1, ..., J u index a particular auction, and Vjp1q and Vjp2q represent the two
+highest bids in auction j. We will follow the convention and denote random vari-
+ables with upper case letters and realizations of random variables with lower case
+letters. Let v0      ¥ 0 represent the seller’s fixed value from keeping the good.
+    We assume the researcher observes the top two bids from auctions without a
+reserve price. The seller’s revenue from setting a reserve price r in auction j is
+given by the following:6
+
+            p1q    p2q
+    π pVj , Vj , v0 , rq  r1pVj
+                                      p2q     r   ¤ Vjp1qq     p2q
+                                                              Vj 1pr   ¤ Vjp2qq   v0 1pr   ¡ Vjp1qq.   (2)
+
+Define expected profits as a function of the reserve as
+                                                                       
+                                                        p1q   p2q
+                                   pprq  E π pVj , Vj , v0 , rq                                       (3)
+
+where we suppress dependence of p on v0 for notational simplicity. We use the
+term optimal reserve to refer to a reserve price maximizing pprq, and denote such a
+reserve by r . Given realizations of V p1q and V p2q , one can obtain the optimal re-
+serve price simply by maximizing (3), which we state as the following observation:
+
+Observation 1. For a given v0 , the seller’s optimal reserve price is identified from obser-
+vations of Vj
+                  p1q and V p2q from auctions without a reserve price.
+                           j
+
+
+    Importantly, this observation does not require knowledge of N nor of any bids
+lower than Vj
+                    p1q and V p2q . This result holds true even if bidders are asymmetric
+                             j
+and have correlated values. We estimate profits and the optimal reserve price as
+follows:
+
+                                            1 ¸                     
+                                              J
+                                 p̂prq 
+                                                      p1q p2q
+                                                 π pVj , Vj , v0 , rq .                                (4)
+                                            J
+                                              j1
+
+                                   r̂ J    arg max
+                                                 r
+                                                    p̂prq.                                             (5)
+
+Remarks. Note that auctions with only one bidder—in which case, a realization of
+V p2q will be missing—should not be discarded from the sample for estimation of
+6Throughout, we use the terms revenue and profit interchangeably.
+                   THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                     9
+
+the optimal reserve price. Rather, these observations should be included as having
+a realization of zero for the missing bid, as zero is precisely the contribution such a
+bid would make to the seller’s profit in such cases. Auctions with zero bidders can
+be ignored, as the seller receives zero profit from these auctions no matter what
+reserve is chosen.
+
+  It is important to note that our approach implicitly assumes that historical re-
+alizations of Vj
+                p1q and V p2q are representative of future realizations; that is, we
+                         j
+assume that these distributions are stable over time. In practice, these distribu-
+tions may change, for example, due to changes in the underlying demand for the
+product. Our approach requires observations of auctions with no reserve price in
+order to correctly estimate the reserve price; once the estimated reserve price is put
+into practice, the practitioner will no longer observe the full distribution of second
+highest bids (as the reserve price will bind in some auctions). In practice, there-
+fore, the practitioner may find it useful to periodically remove or reduce reserve
+prices in order to obtain anew data on second and first highest bids and recompute
+the optimal reserve price. This issue is discussed in a different context in Chawla
+et al. (2014), who proposed an alternative approach to auction design rather than
+relying on reserve prices.
+
+  On par with the rest of the empirical auctions literature, we do not model how
+distributions of bids could change due to bidders strategically accounting for how
+these bids will be used to set reserve prices in the future. As pointed out by Ostro-
+vsky and Schwarz (2016), these dynamic concerns disappear as the market grows
+large.
+
+  In our empirical application, we highlight that the loss from using a non-optimal
+reserve price is asymmetric, in that the loss from setting too high a reserve is much
+larger than the loss from setting too low a reserve (see also Kim 2013 and Ostrovsky
+and Schwarz 2016). The practitioner may find it useful, therefore, to scale down es-
+timated reserves by some value less than one, and then increase this scaling factor
+10                          COEY, LARSEN, SWEENEY, AND WAISMAN
+
+as number of observed auctions grows.7 We do not consider this scaling approach
+here but believe this would be a promising modification to directly implementing
+estimated reserve prices.
+
+     The reserve prices we compute do not condition explicitly on auction-level het-
+erogeneity. This can be considered either as a direct focus on homogeneous goods,
+where reserve prices can be estimated separately for each distinct good (as in our
+empirical application), or instead as a practical approach to computing reserve
+prices in cases where auction designers know that auction-level heterogeneity is
+present but cannot condition on it, and are restricted to choosing instead a single,
+unconditional reserve price. An example of such a setting are some display ad auc-
+tion platforms that, either for technological reasons or for purposes of keeping the
+platform easy to understand for participants, set only a single reserve price for all
+ads sold in a given timeframe. Our approach can be extended to account explic-
+itly for auction-level heterogeneity, conditioning the estimation of reserve prices
+on a vector of observed auction-level covariates, Wj . For example, one could use
+kernel smoothing to estimate the expectation in (3) conditional on Wj , use these
+estimates to construct the objective function in (4) and then proceed as before. The
+underlying assumption would be that, conditional on Wj , the observed auctions
+are independently and identically distributed.
+
+
+
+               3. P ROPERTIES     OF   E STIMATED R ESERVES       AND   R EVENUE
+
+     In this section we discuss the properties of estimated reserve prices and rev-
+enue. We begin by providing traditional asymptotic results for the estimator and
+discussing inference. We then provide a new bound on the number of auctions
+that must be observed in order for the auction revenue using the estimated reserve
+price to approximate the true optimal revenue arbitrarily closely. All proofs are
+found in the Appendix.
+
+7The field experiments of Ostrovsky and Schwarz (2016) were subject to a scaling factor enforced
+by the auction platform because the platform feared setting too high of a reserve.
+                        THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                            11
+
+3.1. Asymptotic Properties. We now present asymptotic results for the estimators
+r̂ J and p̂pr̂ J q. Standard M-estimation theory establishes the consistency of r̂ J for r .
+We apply Theorem 2.1 from Newey and McFadden (1994), whose conditions we
+show are satisfied.
+
+Assumption 1. pprq is continuous, with pprq uniquely maximized at r , where r belongs
+to a compact set.
+
+   Assumption 1 is common in the econometrics literature. Note that the assump-
+tion that r belongs to a compact set is natural in our setting given that we model
+valuations as belonging to a bounded interval.
+
+                                                        Ñ pprq and r̂ J
+Theorem 1. If Assumption 1 is satisfied, then p̂pr̂ J q Ý
+                                                               p
+                                                                               ÝÑp r.
+   The proof, given in the Appendix, consists of showing that, under Assumption
+1, suprPr0,ωs | p̂prq  pprq| Ý
+                              Ñ 0. Hence, all the requirements from Theorem 2.1 of
+                                      p
+
+
+Newey and McFadden (1994) are satisfied, which yields Theorem 1. Having estab-
+lished consistency, we now derive the asymptotic distribution of the estimator r̂ J ,
+which is not standard. This ultimately implies that this estimator belongs to a class
+of estimators that converge at a cube-root rate, of which an example is the maxi-
+mum score estimator proposed by Manski (1975). To demonstrate this and derive
+the asymptotic distribution, we show that the conditions in the main theorem of
+Kim and Pollard (1990), adapted below, are satisfied.
+
+   We first introduce the following notation and assumptions. Let π̃ p, rq  π p, rq 
+π p, r q. Let PR pq be defined as the supremum of |π̃ p, rq| over the class P R               
+tπ̃p, rq : |r  r| ¤ Ru.
+Assumption 2. The classes P R , for R near 0, are uniformly manageable for the envelopes
+PR , and Erπ̃ p, rqs is twice differentiable with second derivative Σ at r .
+
+Theorem 2. If Assumptions 1 and 2 are satisfied, and r is an interior point, then the
+                   °J
+process J 2{3 1J    j1 π̃   p, r   αJ 1{3 q converges in distribution to a Gaussian process Zpαq
+with continuous sample paths, expected value              12 α2 Σ, and covariance kernel H, where
+12                                 COEY, LARSEN, SWEENEY, AND WAISMAN
+
+H p β, αq          limtÑ0 1t Erπ̃ p, r   βtqπ̃ p, r    αtqs for any β, α in R. Furthermore, if Z
+has nondegenerate increments, then J 1{3 pr̂ J  r q converges in distribution to the random
+maximizer of Z.
+
+
+     The slow rate of convergence of r̂ J (cube-root rate) suggests a strong data re-
+quirement to obtain a precise estimate of r . In other words, the econometrician
+must observe many previous auctions in order to accurately estimate the optimal
+reserve price. In Section 3.2 we provide an explict bound on this data requirement
+and discuss how it relates to Theorem 2.
+
+     While estimating the optimal reserve price itself may require a large amount of
+data, determining how much the auction designer could gain from optimally choosing
+the reserve price does not. In fact, p̂pr̂ J q converges at a square-root rate to a normal
+distribution, which we present in the following theorem:
+
+Theorem 3. If the conditions from the previous theorems are satisfied, then
+? J  p̂pr̂ q  pprq Ñ
+                       Ýd N
+                                                      
+                                    0, Erπ̃ p, r q2 s .
+            J
+
+
+     To conclude our discussion of traditional asymptotic results, we briefly discuss
+inference. Simulating the asymptotic distribution of r̂ J is impractical as Σ depends
+upon the distributions of the two order statistics used to estimate r , which mo-
+tivates the use of resampling methods. Abrevaya and Huang (2005) showed that
+the nonparametric bootstrap is not valid for this cube-root class of estimators. Al-
+ternative resampling methods that may be used in this case include subsampling
+(Delgado et al. 2001), m out of n bootstrap (Lee and Pun 2006), numerical bootstrap
+(Hong and Li 2017), and rescaled bootstrap (Cattaneo et al. 2017). Another possibil-
+ity is to replace the indicator in the objective function with a smoothed estimator,
+which, along with further assumptions, might restore asymptotic normality and
+achieve faster rates of convergence, akin to the Horowitz (1992) smoothed maxi-
+mum score estimator. We leave this possibility as an avenue for future research.
+
+     However, the nonparametric bootstrap can be used for inference on the object
+p̂prˆJ q. Let p̂b prq be the objective function defined above calculated from a bootstrap
+                        THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                       13
+
+sample of size J drawn with replacement from the original sample, and let r̂ bJ be the
+estimator calculated from this bootstrap sample. Results in Abrevaya and Huang
+(2005) yield p̂b pr̂ bJ q  p̂b pr q    OP p J 2{3q and r̂bJ  r  OP p J 1{3q, which imply that
+for the bootstrap analog
+                      a                                 a                   
+                         J p̂b pr̂ bJ q  p̂pr̂ J q       J p̂b pr q  p̂pr q   o P p1q,
+
+which has the same limiting distribution as
+                                                                ? J  p̂pr̂ q  pprq conditional on the
+                                                                          J
+
+data due to a standard result from bootstrap theory.
+
+3.2. Bound on Revenue Performance. We now provide a new theoretical argu-
+ment establishing a probabilistic upper bound on the quantity ppr q  ppp
+                                                                         r J q, which
+shrinks to zero at the rate plog J { J q1{2 . This argument is closely related to work by
+Mohri and Medina (2016), although the bounds Mohri and Medina (2016) derive
+are less explicit than ours.8
+
+   Given a sample of J auctions, we refer to the seller’s reserve price as being the
+estimated reserve price if the seller chooses the reserve that maximizes profit on
+past data, that is, in auction J               1 they choose the reserve price p
+                                                                               rJ              arg maxr ppprq.
+In expectation (over the possible bids in the J                      1th auction), this gives a profit of
+ppp
+  r J q, which, by definition, is lower than the expected profit given by the optimal
+reserve price, ppr q. We study the size of this difference, and how it changes as the
+number of observed auctions becomes large.
+
+   We state our bound in the following theorem. Its proof uses techniques from
+statistical learning to probabilistically bound the difference between ppprq and pprq
+uniformly in r. Specifically, the empirical Rademacher complexity (defined in the Ap-
+pendix) plays a key role in obtaining this bound. These techniques are developed
+in Koltchinskii (2001) and Koltchinskii and Panchenko (2002); Mohri et al. (2012)
+provide a textbook overview.
+
+8Mohri and Medina’s (2016) bounds are stated in terms of the Rademacher complexity and pseudo-
+dimension of the class of possible reserve price functions mapping observables to reserves. The
+authors consider reserve prices that may be a function of observable covariates, which we do not
+do here.
+14                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+
+Theorem 4. Let 0      ¤ Vjp1q ¤ ω 8. For any δ ¡ 0, with probability at least 1  δ over
+the possible realizations of the J auctions, it holds that
+                                            ?log 2   b               c
+                   ppr q  ppp
+                              rJq ¤ ω
+                                            8             2 2 log J       log 4δ
+                                                J     4      J        6     2J     .
+
+     Equivalently, in order for the profit from the estimated reserve to be within ε of
+the profit from the optimal reserve with probability at least 1  δ, the seller needs
+to have observed approximately J auctions such that the expression in the right-
+hand side of the expression in Theorem 4 equals ε. It can be shown that when
+J       1 the expression is positive and that it is strictly decreasing in J, which, in
+principle, enables one to obtain the desired J for each pδ, εq via a simple bisection
+procedure. The only assumption made on the first order statistic of bidders’ values
+in this theorem is that it is non-negative and bounded above. Bidders’ values may
+be arbitrarily correlated with each other and may be drawn from asymmetric mar-
+ginal distributions. Note also that the right-hand side only depends on the value
+distribution through its upper bound ω, and not, for example, its variance. It is
+also important to note that the bound in Theorem 4 relates to the optimal reserve,
+r , and the true expected profit function, ppq, without requiring these objects to be
+known.
+
+     We illustrate the implications of Theorem 4 in Figure 1 below. For this illustra-
+tion, we normalize ω  1, and thus revenue is in units of fractions of the maximum
+willingness to pay. We then plot “iso-data” curves in pδ, εq space, where each curve
+represents the possible combinations of ε and δ that are possible given a fixed his-
+tory of observed auctions. In this figure, a curve located further to the southwest
+is preferable, as it represents a closer approximation to the true optimal revenue
+(i.e. a smaller ε) with a higher probability (i.e. a lower δ). The top line represents
+a sample size of J  1, 000, the middle line represents J  5, 000, and the bottom
+line represents J  10, 000. The middle line suggests that with a history of 5,000
+auction realizations, one could guarantee a payoff within 0.348 (units of the maxi-
+mum willingness to pay) of the optimal profit with probability 0.975; or, with the
+same size history, one could guarantee a payoff within 0.3447 of the optimal profit
+                      THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                         15
+
+
+
+
+                          F IGURE 1. Iso-data curves in pδ, εq space
+Notes: Figure displays combinations of pδ, εq that can be achieved given a fixed sample size J
+using the bound implied by Theorem 4. Top line represents J  1, 000, middle line represents
+J  5, 000, and bottom line represents J  10, 000.
+
+with probability 0.70. The larger sample, J                10, 000, can guarantee a payoff that
+is much closer to the optimal profit. Each iso-data curve is relatively flat in the δ
+dimension, reflecting the fact that the sample size requirements are more stringent
+for achieving a given level of ε closeness to the optimal profit, and are less stringent
+for achieving an improvement in δ (i.e. in the probability with which the revenue
+is reached).
+
+  We now relate the explicit bound obtained in this subsection to the asymptotic
+results obtained in the previous subsection. Theorem 2 implies that ppr̂ J q  ppr q 
+O p p J 2{3 q.9 By definition, therefore, for any δ       ¡ 0, there exists an M ¡ 0 such that
+9Performing a second-order Taylor expansion yields p r̂    p q  ppr q  p2 pr̃qpr̂ J  r q2  O p p J 2{3 q,
+where r̃ is an intermediate value between r̂ J and r .
+                                                        J
+16                              COEY, LARSEN, SWEENEY, AND WAISMAN
+
+Prp J 2{3 | ppr̂ J q ppr q|   Mq ¥ 1  δ. The fact that the convergence result in Theorem
+2 is achieved at a J 2{3 rate implies that the bound in Theorem 4 is conservative, as
+it is expressed as a function of plog J { J q1{2 . However, Theorem 2 does not allow
+one to explicitly compute the number of auctions required in order to approach the
+optimal revenue with a given probability; it simply states that such an M exists.
+The advantage of the bound in Theorem 4, on the other hand, is that it is explicit,
+allowing one to directly compute a conservative estimate of the number of auctions
+J which must be observed for estimated reserve prices to perform well without
+requiring knowledge of ppq or r .
+
+
+       4. C OMPUTING O PTIMAL R ESERVE P RICES IN E- COMMERCE A UCTIONS
+
+     We apply our methodology to a dataset of eBay auctions selling commodity
+products, which we define as those products which are cataloged in one of several
+commercially available product catalogs. Examples of commodity products in-
+clude ”Microsoft Xbox One, 500 GB Black Console”, ”Chanel No.5 3.4oz Women’s
+Eau de Parfum”, and ”The Sopranos - The Complete Series (DVD, 2009)”. We will
+refer to each distinct product as a “product” or “product-category.” Within each
+product, the items sold are relatively homogeneous. For this exercise, we select
+popular smartphone products listed through auctions in 2013. We consider only
+auctions with no reserve price; specifically, we only include auctions for which the
+start price was less than or equal to $0.99, the default start price recommendation
+on eBay. We omit auctions in which the highest bid is in the top 1% of all highest
+bids for that product and limit to products that are auctioned at least 500 times in
+our sample.
+
+     Table 1 shows summary statistics at the product level. There are 18 distinct prod-
+ucts in our sample, and each product category contains 961 auctions on average,
+with the number of auctions ranging from 516 to 2,525. As reserve prices increase
+revenue only when they lie between the highest and second highest bids, the size
+of the gap between these bids is of particular interest. This gap ranges from $8.41
+(8.7% of the mean second highest bid) for product 2 to $42 for product 18 (17.7%
+                    THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                   17
+
+of the mean second highest bid). This gap suggests that reserve prices may be able
+to increase bids somewhat over a no-reserve auction.
+
+      We estimate optimal reserves separately in each product category. We do this
+exercise separately for the case where the seller’s outside option (v0 ) for the good
+is set to zero and where v0 is set to half of the average second highest bid. Setting
+v0       0 will yield the reserve price that will maximize the expected payment of
+the winning bidder to the seller ignoring the seller’s outside option, which may
+be the quantity that the auction platform is most interested in maximizing, as plat-
+form fees are typically proportional to this payment. Setting v0 to some fraction of
+the expected second highest bid is perhaps a more realistic representation of the
+seller’s perceived value of keeping the good.
+
+      In Figure 2, we select one specific product in our sample, product #18, which
+is the “Apple iPhone 5 16GB Black-Slate Verizon”. In the figure we plot expected
+profit as a function of the reserve price given the empirical distribution of the first
+and second highest bids. Panel A considers the setting where v0         0 and panel
+B considers the setting where v0 is half the average second order statistic. Unsur-
+prisingly for a product supplied elastically on other online or offline platforms, the
+figure shows that there is a sharp drop-off in profit for reserves beyond a certain
+point (about $150 in panel A and about $275 in panel B). This large drop off illus-
+trates a point also discussed in Ostrovsky and Schwarz (2016) and Kim (2013): the
+loss from setting a non-optimal reserve price is asymmetric, such that overshoot-
+ing the optimal reserve has a much larger loss in magnitude than undershooting
+it.
+
+      The vertical line represents the optimal reserve price computed using the first
+and second highest bid distributions. The gain from the optimal reserve over a
+            v0 is 0.81% in panel A and 0.86% in panel B. Figures 3 and 4 display
+reserve of r
+the same measure for each product separately. In Figure 3, when v0  0, the gain
+from using the estimated reserve price over setting r  v0 ranges from 0.27% to
+0.81%, depending on the product. Similarly, in Figure 4, when v0 is set to half the
+18                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+                     TABLE 1. Product-Level Descriptive Statistics
+
+
+                                   Highest Bid                 Second Highest Bid
+
+       Product # Obs        Average($) Std Dev ($)           Average ($) Std Dev ($)
+       1          805          78.82           46.83            67.73           33.59
+       2          657          55.82           25.15            47.41           23.23
+       3          1309         239.02         108.41            219.80         101.87
+       4          594          211.78         123.20            185.56          81.98
+       5          877          235.99          93.59            213.46          86.74
+       6          1286         257.49         121.87            234.76         107.28
+       7          728          215.04          92.21            190.06          80.39
+       8          839          230.17         100.72            205.38          90.69
+       9          2525         199.06          92.55            181.10          76.90
+       10         2465         139.26          58.48            125.56          54.69
+       11         712          143.11          64.07            128.22          55.68
+       12         733          208.91          93.24            188.25          76.20
+       13         570          159.53          62.46            142.29          59.40
+       14         680          172.18         107.12            149.91          73.52
+       15         733          120.28          60.35            105.26          54.31
+       16         572          121.25          65.54            104.10          56.63
+       17         701          127.28          59.13            114.64          55.62
+       18         516          350.80         156.78            308.68         138.60
+Notes: Table displays, for each product, the number of auctions recorded and the average and
+standard deviation of the first and second highest bids.
+
+
+
+
+average second highest bid, the gain from using the estimated reserve price ranges
+from 0.11–0.86%.
+
+     We now turn to the question of how close optimal reserve prices will be to those
+estimated using a finite history of first and second-highest bids. The theoretical
+guarantee of Theorem 4 assures us that estimated reserve prices will eventually
+perform close to optimally. We assess this feature through a simulation exercise.
+                                        THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                            19
+
+
+                                       F IGURE 2. Profit Under Different Reserve Prices
+
+                       350
+                                                                                                350
+                       300
+
+                       250
+ Expected Profit ($)
+
+
+
+
+                                                                                                300
+
+
+
+
+                                                                          Expected Profit ($)
+                       200
+
+                       150                                                                      250
+
+                       100
+
+                                                                                                200
+                        50
+
+                         0
+                             0   200    400        600     800   1000
+                                                                                                150
+                                                                                                      0   200         400     600         800   1000
+                                       Reserve Price ($)
+
+                                       ( A ) v0   0                                                       ( B ) v0    0.5  EpV p2q q
+Notes: Seller expected profit as a function of the reserve price, given the empirical distribution of
+first and second highest bids, for Apple iPhone 5 16GB Black-Slate Verizon. Panel A sets v0  0
+and panel B sets v0 to half the average second highest bid. Vertical line displays location of
+optimal reserve price.
+
+
+                       For each product, we draw 1,000 sequences, each of length 250, at random with
+replacement from the empirical distribution of all auctions observed for that prod-
+uct over the sample period. Within each sequence, we then estimate the reserve
+price suggested by our approach using only the first τ observations in the se-
+quence, doing so separately for each τ                                  P t1, ..., 250u.                        Thus, we begin with only
+1 historical auction observation, then 2, then 3, and so on, for each drawn se-
+quence. Next, at each of these estimated reserve prices, using the full sample of
+historical observations for the product, we compute the expected profit the seller
+would receive from using this computed reserve price. Therefore, for this exercise
+we treat the empirical distribution of auctions in our sample as representing the
+“true” distribution of first and second highest bids, and we treat sellers as only
+having information on a history of τ auctions drawn at random from the full em-
+pirical distribution.
+
+                       Figure 5 shows the results of this exercise for the same product as in Figure 2.
+The quantities on the y-axis are expressed as a fraction of the expected profit that
+20                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+
+      F IGURE 3. Revenue Increase from Optimal Reserve Price When v0                   0
+
+
+
+
+Notes: Figure displays, for each product, the percentage increase in revenue from an auction using
+the optimal computed reserve price vs. an auction with r  v0 , where v0  0.
+
+
+
+
+would be generated by using the optimal reserve price computed on the full sam-
+ple of observations for the product (in the case of the Apple iPhone 5 16GB Black-
+Slate Verizon, there are 516 total observations, as shown in Table 1). The three
+non-solid lines in Figure 5 are the estimated expected profits (relative to the full
+sample optimal profit) computed along three of these randomly drawn sequences,
+progressively incorporating more observations in the sequence in computing the
+reserve price, as described in the preceding paragraph. The solid red line is an
+average across all such paths.
+                    THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                              21
+
+
+         F IGURE 4. Revenue Increase from Optimal Reserve Price When v0                 
+         0.5  EpV p2q q
+
+
+
+
+Notes: Figure displays, for each product, the percentage increase in revenue from an auction using
+the optimal computed reserve price vs. an auction with r  v0 , where v0 is set to half the average
+second highest bid.
+
+
+
+    As expected, given Theorem 4, the non-solid and solid lines in Figure 5 do in-
+deed converge to the optimal expected profit level. In the initial phases, estimated
+reserve prices can be seriously suboptimal, even compared to setting a reserve of
+r    v0. However, convergence to the optimal level appears to occur quite quickly.
+    Table 2 displays results from this simulation exercise separately for each product
+for the two cases we consider for v0 . For each product category, the q                      0.50
+column displays the median number of auctions required for the computed reserve
+22                                                COEY, LARSEN, SWEENEY, AND WAISMAN
+
+
+                              F IGURE 5. Expected Profit From Computed Reserve Prices Using
+                              Different Numbers of Observed Auctions
+
+                   1.02                                                                1.02
+
+
+                     1                                                                   1
+
+
+                   0.98                                                                0.98
+ Relative Profit
+
+
+
+
+                                                                     Relative Profit
+                   0.96                                                                0.96
+
+
+                   0.94                                                                0.94
+
+
+                   0.92                                                                0.92
+
+
+                    0.9                                                                 0.9
+                          0       50    100        150   200   250                            0   50   100       150    200   250
+
+                                       ( A ) v0   0              ( B ) v0  0.5  EpV p2q q
+Notes: Expected profit (as a fraction of the optimal expected profit) as a function of the number of
+auctions observed, where simulations are conducted by drawing sequences of auctions from the
+empirical distribution of first and second highest bids from auctions for Apple iPhone 5 16GB
+Black-Slate Verizon and computing the estimated expected profit progressively adding each
+auction at a time. Non-solid lines represent expected profits estimates from this exercise for three
+such randomly drawn sequences. Solid red line represents expected profits, averaged over all of
+the 1,000 drawn samples. Panel A sets v0  0 and panel B sets v0 to half the average second
+highest bid.
+
+
+price to yield expected profit higher than an auction with r                                                    v0 . The median
+is taken across the 1, 000 simulated samples for that product. The q                                                    0.05 and
+q              0.95 columns represent, respectively, the 0.05 and 0.95 quantiles rather than
+the median.
+
+                   For the example product considered in Figures 2 and 5, across all simulated
+sample paths, the median number of auctions required for the computed reserve
+price to yield a higher expected profit than simply setting r                                           v0 is 12 when v0  0.
+In other words, a history of only 12 prior auctions may be sufficient for a seller to
+benefit by computing the optimal reserve price based on this historical data. We
+find that the 0.05 and 0.95 quantiles of the number of auctions required for the
+computed reserve price to outperform r                                                v0 are 1 and 120, respectively. Thus,
+observing 120 auctions of this particular product should be sufficient to ensure a
+positive gain from using a computed reserve price. When v0 is instead set to half
+                                        THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                   23
+
+
+                               F IGURE 6. Computed Reserve Prices Using Different Numbers of
+                               Observed Auctions
+
+                                                                                         400
+                     350
+                                                                                         350
+                     300                                                                 300
+
+
+
+
+                                                                     Reserve Price ($)
+                     250                                                                 250
+ Reserve Price ($)
+
+
+
+
+                     200                                                                 200
+
+                                                                                         150
+                     150
+                                                                                         100
+                     100
+                                                                                          50
+                      50
+                                                                                           0
+                                                                                               0   50      100      150      200   250
+                       0
+                           0      50    100        150   200   250
+                                                                                                    Number of Auctions Observed
+
+                                       ( A ) v0   0              ( B ) v0  0.5  EpV p2q q
+Notes: Figure shows average (solid red line) and standard deviation (dashed blue line) of
+estimated reserve prices over the simulated sequence of auctions drawn from the empirical
+distribution of first and second highest bids from auctions for Apple iPhone 5 16GB Black-Slate
+Verizon. Panel A sets v0  0 and panel B sets v0 to half the average second highest bid.
+
+
+of the average second highest bid, even fewer auctions are required to achieve at
+gain over the r                         v0 case: the median number of auctions required is 9, and the
+0.05 and 0.95 quantiles are 1 and 42, respectively.
+
+                 The results for other products are similar, with the median number of auctions
+required falling between 7 and 25 and the 0.95 quantile falling between 42 and
+176, with fewer auctions required to achieve a positive gain in the case where the
+seller’s outside option is higher. Given the large data settings in which we see
+our approach being the most beneficial, these results are encouraging, as many
+popular products accumulate long histories of sales rather quickly.
+
+                 We now turn again to our example product and examine how the computed
+reserve prices change as the length of the auction sequence used to compute the
+reserve price increases. Figure 6 explains the poor initial performance of estimated
+reserve prices. It shows the mean (solid red line) and standard deviation (dashed
+blue line) of reserve prices for the Apple iPhone 5 16GB Black-Slate Verizon given
+the number of auctions used to compute the reserve price. Reserve prices converge
+24                          COEY, LARSEN, SWEENEY, AND WAISMAN
+
+        TABLE 2. Number of Auctions Required for Computed Reserve
+        Price to Outperform r  v0 Auction
+
+
+                                  v0   0                    v0    0.5  EpV p2qq
+            Product q=0.05 q=0.50 q=0.95                 q=0.05 q=0.50 q=0.95
+            1              2         21        136           1         11       68
+            2              2         15        106           1         8        74
+            3              2         15        131           2         23       135
+            4              2         14        97            1         14       79
+            5              2         20        159           2         18       141
+            6              1         14        138           2         15       88
+            7              1         14        92            1         11       59
+            8              2         15        164           1         10       48
+            9              2         14        69            1         14       85
+            10             2         19        141           1         14       79
+            11             2         17        176           1         11       57
+            12             2         25        121           1         12       93
+            13             2         16        93            1         10       55
+            14             1         12        70            1         12       71
+            15             1         13        93            1         10       65
+            16             1         16        110           1         7        58
+            17             2         18        129           1         12       72
+            18             1         12        120           1         9        42
+Notes: For each product, q  0.50 column displays the median number of auctions required for
+the computed reserve price to yield expected profit higher than an auction with r  v0 . The
+median is taken across 1, 000 simulated samples drawn with replacement from the full set of
+observations for that product. The q  0.05 and q  0.95 columns represent, respectively, the 0.05
+and 0.95 quantiles rather than the median. The first three columns consider v0  0 and the last
+three consider v0  0.5  EpV p2q q.
+
+
+to the optimal reserve while their variance falls, and both appear to be monotonic.
+The large standard deviation in reserve prices in the initial auctions implies that
+the reserve prices recommended by optimization on a short history of auctions are
+often too high. As seen in Figure 2, this can lead to sharply reduced profit.
+                  THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                        25
+
+                      5. M YERSON O PTIMAL A UCTION C ASE
+
+  We now shift our focus slightly and restrict our attention to asymmetric indepen-
+dent (rather than correlated) private values, to focus on how our approach can be
+extended to the setting considered by Myerson (1981). We demonstrate that our
+approach to estimating reserves can be extended to estimate the objects required
+for implementing the optimal auction (rather than just a single reserve price) in the
+case considered by Myerson (1981), that of asymmetric bidders with independent
+private values. In this case, we assume that, in addition to observing the top two
+bids from auctions without a reserve price, the researcher also observes the iden-
+tity of the highest bidder (the bidder’s type, t); this is a standard assumption in
+asymmetric auctions (Athey and Haile 2007).
+
+  Following Bulow and Roberts (1989), we denote the marginal revenue curve of
+bidder i with type t as MRt pq. This marginal revenue curve has the same inter-
+pretation as in a standard monopoly problem: it is the additional revenue that a
+monopoly seller would expect to obtain from the buyer, when facing this buyer in
+isolation (in which case demand is given by 1  Ft pvq) by raising the price a small
+amount. We assume here that Ft is regular, i.e. that ψt pvq    v  1f Fpvpqvq is increas-
+                                                                        t
+                                                                            t
+
+
+ing, in which case MRt pvq     ψt pvq.   In the Myerson (1981) optimal auction, all
+bidders report their values and the seller assigns the good to the bidder with the
+highest marginal revenue, as long as it exceeds v0 . The winning bidder pays the
+least value he could report that would still result in his winning the object, given
+all other reported values. That is, if i is the winning bidder and i has type t, i pays
+MR
+  t pmax tv0 , maxst t MRs pvs quuq. To implement this auction, it is necessary to
+    1
+
+know the marginal revenue functions of each bidder.
+
+
+
+5.1. Identifying and Estimating Marginal Revenue Curves. We now describe
+how MRt pq can be identified. We first describe the concept of type-specific re-
+serve prices. The feature that the seller assigns the good to the bidder with the
+highest marginal revenue as long as it exceeds v0 implies that each bidder faces a
+26                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+type-specific reserve price, which we denote rt , given by rt                  MRt 1pv0q. Contin-
+uing with the standard monopoly pricing analogy from Bulow and Roberts (1989)
+(see also Krishna (2009), p. 67–73), the seller’s value, v0 , can be thought of as the
+marginal cost of selling the good, and thus the seller facing demand by a buyer of
+type t would choose a price rt such that MRt prt q  v0 .
+
+     Now consider a seller designing a second-price auction in which the highest
+value bidder was known to be of type t. We will refer to such a second-price
+auction as a type-t auction. Let imax                  arg maxiPt1,...,nu Vi and denote i’s type as
+tpiq. The condition that the highest value bidder being of type t is then denoted
+tpimax q    t. Using similar notation to (3) above, the expected profit of a seller in a
+type-t auction is given by
+                                                                               
+                                                p1q     p2q
+                        pt prt q  E π pVj , Vj , v0 , rt q|tpimax q  t                          (6)
+
+The optimal reserve price in this setting can be obtained simply by maximizing (6)
+over rt . As highlighted above, arguments in Bulow and Roberts (1989) imply that,
+in terms of marginal revenues, a seller designing such an auction should choose a
+reserve price such that rt such that MRt prt q  v0 , equivalent to the bidder-specific
+reserve prices in the Myerson auction. Therefore, maximizing (6) over rt at differ-
+ent values of v0 will trace out the inverse marginal revenue curve. That is, it will
+yield rt pv0 q  MR
+                    t pv0 q, and hence will identify the MRt curve.
+                      1
+
+
+     We state this result as the following observation:
+
+Observation 2. For any type t, the marginal revenue curve MRt pq is identified from
+observations of Vj
+                    p1q and V p2q from auctions without a reserve price, in which the winner
+                              j
+was of type t.
+
+
+     To estimate MRt pq, we limit to the Jt auctions in which a type-t bidder was the
+winner, and estimate the following for a given value of v0 :
+                                                   Jt                      
+                                                1 ¸          p1q p2q
+                          p̂t,Jt prt , v0 q            π pVj , Vj , v0 , rq                      (7)
+                                                Jt
+                                                  j1
+                     THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                              27
+
+
+                              r̂t,Jt pv0 q  arg max p̂t,Jt pr, v0 q                            (8)
+                                                   r
+
+where we explicitly state the dependence of the procedure on v0 in this case. Re-
+                                                          ˆ 
+peating this process for a range of values for v0 yields MR t pq.
+                                                              1
+
+
+  Once marginal revenues have been estimated, the Myerson auction can be im-
+plemented for a given set of reported values by determining which bidder has the
+highest marginal revenue and determining that bidder’s payment as the lowest
+value that bidder could have reported and still won.
+
+
+
+5.2. Monte Carlo Simulations: Implementing Myerson’s Optimal Auction. We
+now provide Monte Carlo simulations illustrating the approach in the Myerson
+case. In these simulations we work with three bidders, although nowhere in the
+estimation do we require the researcher to know the number of bidders in any
+given auction; we assume for each auction the researcher observes the top two
+bids and the identity of the winning bidder.10 We choose each bidder’s values
+from a different lognormal distribution: V1             LOGNp.5, .25q, V2  LOGNp.75, .25q,
+and V3    LOGNp1, .25q. We simulate 10,000 auctions. Kernel density estimates of
+the simulated draws are displayed in Panel A of Figure 7.
+
+  To illustrate the simplicity of this method and its potential for use even in Big
+Data settings, we take a very coarse approach to optimization and estimation, and
+still find that it performs quite well. We begin by evaluating (6) on a grid of pos-
+sible reserve prices for each bidder and choose the maximizing reserve prices. We
+perform this step at different values on a grid of v0 , yielding estimates of bidder-
+specific marginal revenue curves. Panels B–D of Figure 7 displays, for each bidder,
+the estimated marginal revenue curve and the true underlying marginal revenue
+curve, demonstrating that the estimates coincide quite well with the truth. We
+then implement the Myerson (1981) optimal auction using the same simulated data
+
+
+10Alternatively, one could assume that, for each bidder i, the researcher knows the probability that
+i is the winning bidder and knows quantiles of the marginal distributions of the first and second
+order statistics from auctions in which i was the winner.
+28                                                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+
+                                     F IGURE 7. Densities of Bidder Valuations and Estimated Marginal
+                                     Revenue Functions
+
+                             1                                                                               5
+
+
+                0.8                                                                                          4
+
+
+
+
+                                                                                          Marginal Revenue
+                0.6                                                                                          3
+     Density
+
+
+
+
+                0.4                                                                                          2
+
+
+                0.2                                                                                          1
+                                                                                                                                                             Estimated MR
+                                                                                                                                                             True MR
+                             0                                                                               0
+                                 0     1   2        3      4       5        6         7                      1.5     2     2.5       3         3.5       4        4.5       5
+                                                   V1, V2, V3                                                                    Optimal Reserve
+
+                                            ( A ) Densities                                                                ( B ) Bidder 1 MR
+                             5                                                                               5
+
+
+                             4                                                                               4
+          Marginal Revenue
+
+
+
+
+                                                                                          Marginal Revenue
+
+
+
+
+                             3                                                                               3
+
+
+                             2                                                                               2
+
+
+                             1                                                                               1
+                                                                       Estimated MR                                                                          Estimated MR
+                                                                       True MR                                                                               True MR
+                             0                                                                               0
+                             1.5       2   2.5      3     3.5      4        4.5       5                          2   2.5         3       3.5         4          4.5         5
+                                                 Optimal Reserve                                                                 Optimal Reserve
+
+                  ( C ) Bidder 2 MR                                 ( D ) Bidder 3 MR
+         Notes: Panel A displays Bidder densities for simulations, where V1  LOGN p.5, .25q,
+     V2  LOGN p.75, .25q, and V3  LOGN p1, .25q. Panels B-D display estimated marginal revenue
+          curves and true marginal revenue curves for bidders in Monte Carlo simulations.
+
+
+
+
+draws, estimating marginal revenue through linear interpolation of the marginal
+revenues at grid points.
+
+     Figure 8 displays the estimated seller revenue under three different auction de-
+signs. The horizontal axis represents the seller’s valuation for the good (v0 ). The
+flat, dashed (blue) line is the seller’s expected revenue in a no-reserve auction.
+The solid (red) line is the seller’s expected revenue from choosing a single reserve
+price. The final, highest line (marked with black circles) is the expected revenue
+                                            THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS         29
+
+
+                                                 F IGURE 8. Expected Seller Revenue
+
+                                  2.8
+                                              No Reserve
+                                              Single Reserve
+                                  2.7         Myerson (1981)
+         Expected Seller Profit
+
+
+
+
+                                  2.6
+
+                                  2.5
+
+                                  2.4
+
+                                  2.3
+
+                                  2.2
+
+                                  2.1
+                                        0         0.5           1        1.5         2       2.5
+                                                        Seller Outside Option (v0)
+Notes: Expected seller revenue, as a function of seller’s valuation of the good, v0 , under an
+absolute (no-reserve) auction, auction with a single optimal reserve, or Myerson’s optimal auction,
+from Monte Carlo simulation exercise.
+
+in the Myerson (1981) auction. Figure 8 demonstrates that the gains from imple-
+menting a Myerson’s optimal auction (as opposed to a no-reserve auction) can be
+nearly twice the gains of implementing a single reserve price, especially at lower
+values of the seller’s outside option.
+
+
+                                                               6. C ONCLUSION
+
+  We study a computationally simple approach for estimating the single optimal
+reserve price in asymmetric, correlated private values settings and for estimat-
+ing bidder-specific marginal revenue curves in asymmetric, independent private
+values settings (in order to implement the Myerson (1981) optimal auction). The
+approach applies to settings with incomplete bidding data, where only the top two
+bids are observed, and where the number of bidders is unknown. These data re-
+quirements are frequently met in online (advertising or e-commerce) settings. We
+30                      COEY, LARSEN, SWEENEY, AND WAISMAN
+
+also derive a new bound on the number of auction records one needs to observe
+in order for realized revenue based on estimated reserve prices to approximate the
+optimal revenue arbitrarily closely. We illustrate the approach using eBay data for
+cataloged products, and illustrate that revenue would increase if optimal reserve
+prices were employed in practice. We find that approximately 7–25 auctions need
+to be recorded prior to estimating reserve prices in order for the estimated reserve
+price to outperform revenue in a no-reserve auction (or an auction with the reserve
+set to the seller’s valuation). In simulated data, we demonstrate the simplicity of
+our approach to estimating marginal revenue curves and implementing Myerson’s
+optimal auction, and illustrate the revenue gain that this auction design entails.
+
+     While the approach abstracts away from a number of information settings or
+real-world details (such as common values or inter-auction dynamics), we believe
+the virtue of the approach is its simplicity, providing a tractable approach to com-
+puting reserve prices even in large, unwieldy datasets where typical computation-
+ally demanding empirical auction approaches would be infeasible.
+                   THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                 31
+
+                                   R EFERENCES
+
+Abraham, I., Athey, S., Babaioff, M., and Grubb, M. (2016). Peaches, lemons, and
+  cookies: Designing auction markets with dispersed information. Working paper,
+  Stanford University.
+Abrevaya, J. and Huang, J. (2005). On the bootstrap of the maximum score estima-
+  tor. Econometrica, 73(4):1175–1204.
+Alaei, S., Fu, H., Haghpanah, N., and Hartline, J. (2013). The simple economics
+  of approximately optimal auctions. In Proceedings of the 2013 IEEE 54th Annual
+  Symposium on Foundations of Computer Science (FOCS), pages 628–637. IEEE.
+Aradillas-López, A., Gandhi, A., and Quint, D. (2013). Identification and inference
+  in ascending auctions with correlated private values. Econometrica, 81(2):489–
+  534.
+Athey, S. and Haile, P. A. (2002). Identification of standard auction models. Econo-
+  metrica, 70(6):2107–2140.
+Athey, S. and Haile, P. A. (2007). Nonparametric approaches to auctions. Handbook
+  of Econometrics, 6:3847–3965.
+Bajari, P. and Hortaçsu, A. (2003). The winner’s curse, reserve prices, and endoge-
+  nous entry: Empirical insights from eBay auctions. RAND Journal of Economics,
+  34(2):329–355.
+Balcan, M.-F., Sandholm, T., and Vitercik, E. (2018). A general theory of sample
+  complexity for multi-item profit maximization. Working paper, Carnegie Mellon
+  University.
+Bulow, J. and Roberts, J. (1989). The simple economics of optimal auctions. Journal
+  of Political Economy, 97(5):1060–1090.
+Cattaneo, M. D., Jansson, M., and Nagasawa, K. (2017). Bootstrap-based inference
+  for cube root consistent estimators. Working paper, University of California,
+  Berkeley.
+Celis, L. E., Lewis, G., Mobius, M., and Nazerzadeh, H. (2014). Buy-it-now or take-
+  a-chance: Price discrimination through randomization auctions. Management
+  Science, 60(12):2927–2948.
+32                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+Cesa-Bianchi, N., Gentile, C., and Mansour, Y. (2015). Regret-minimization for
+     reserve prices in second-price auctions. IEEE Transactions on Information Theory,
+     61(1):549–564.
+Chawla, S., Hartline, J., and Nekipelov, D. (2014). Mechanism design for data
+     science. Working paper, Northwestern University.
+Coey, D., Larsen, B., and Sweeney, K. (2014). The bidder exclusion effect. NBER
+     Working Paper 20523.
+Coey, D., Larsen, B., Sweeney, K., and Waisman, C. (2017). Ascending auctions
+     with bidder asymmetries. Quantitative Economics, 8(1):181–200.
+Cole, R. and Roughgarden, T. (2014). The sample complexity of revenue maximiza-
+     tion. In Proceedings of the 46th Annual ACM Symposium on Theory of Computing
+     (STOC), pages 243–252. ACM.
+Deb, R. and Pai, M. M. (2017). Discrimination via symmetric auctions. American
+     Economic Journal: Microeconomics, 9(1):275–314.
+Delgado, M. A., Rodriguez-Poo, J. M., and Wolf, M. (2001). Subsampling infer-
+     ence in cube root asymptotics with an application to Manski’s maximum score
+     estimator. Economic Letters, 73(2):241–250.
+eMarketer (2016).            More than two-thirds of US digital display ad
+     spending     is   programmatic.           https://www.emarketer.com/Article/
+     More-Than-Two-Thirds-of-US-Digital-Display-Ad-Spending-Programmatic/
+     1013789. Last accessed on March 16, 2018.
+Freyberger, J. and Larsen, B. (2017). Identification in ascending auctions, with an
+     application to digital rights management. NBER Working Paper No. 23569.
+Haile, P. A. and Tamer, E. (2003). Inference with an incomplete model of English
+     auctions. Journal of Political Economy, 111(1):1–51.
+Hong, H. and Li, J. (2017). The numerical delta method and bootstrap. Working
+     paper, Stanford University.
+Horowitz, J. L. (1992). A smoothed maximum score estimator for the binary re-
+     sponse model. Econometrica, 60(3):505–531.
+                   THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                    33
+
+Kanoria, Y. and Nazerzadeh, H. (2017). Dynamic reserve prices for repeated auc-
+  tions: Learning from bids. Working paper, Columbia University.
+Kim, D.-H. (2013). Optimal choice of a reserve price under uncertainty. Interna-
+  tional Journal of Industrial Organization, 31(5):587–602.
+Kim, J. and Pollard, D. (1990). Cube root asymptotics. The Annals of Statistics,
+  18(1):191–219.
+Kim, K. I. and Lee, J. (2014). Nonparametric estimation and testing of the symmet-
+  ric IPV framework with unknown number of bidders. Working paper, Univer-
+  sity of Minnesota.
+Koltchinskii, V. (2001). Rademacher penalties and structural risk minimization.
+  IEEE Transactions on Information Theory, 47(5):1902–1914.
+Koltchinskii, V. and Panchenko, D. (2002). Empirical margin distributions and
+  bounding the generalization error of combined classifiers. Annals of Statistics,
+  30(1):1–50.
+Krishna, V. (2009). Auction Theory. Academic press.
+Lee, S. M. S. and Pun, M. C. (2006). On m out of n bootstrapping for nonstan-
+  dard M-estimation with nuisance parameters. Journal of the American Statistical
+  Association, 101(475):1185–1197.
+Levin, D. and Smith, J. L. (1994). Equilibrium in auctions with entry. American
+  Economic Review, 84(3):585–599.
+Li, T., Perrigne, I., and Vuong, Q. (2003). Semiparametric estimation of the opti-
+  mal reserve price in first-price auctions. Journal of Business & Economic Statistics,
+  21(1):53–64.
+Manski, C. F. (1975). Maximum score estimation of the stochastic utility model of
+  choice. Journal of Econometrics, 3(3):205–228.
+Mohri, M. and Medina, A. M. (2016). Learning algorithms for second-price auc-
+  tions with reserve. Journal of Machine Learning Research, 17(74):1–25.
+Mohri, M., Rostamizadeh, A., and Talwalkar, A. (2012). Foundations of Machine
+  Learning. MIT press.
+34                         COEY, LARSEN, SWEENEY, AND WAISMAN
+
+Morgenstern, J. and Roughgarden, J. (2015). The pseudo-dimension of near opti-
+     mal auctions. In Proceedings of the 28th International Conference on Neural Informa-
+     tion Processing Systems (NIPS 2015), pages 136–144. NIPS.
+Myerson, R. B. (1981). Optimal auction design. Mathematics of Operations Research,
+     6(1):58–73.
+Newey, W. K. and McFadden, D. (1994). Large sample estimation and hypothesis
+     testing. In Engle, R. F. and McFadden, D., editors, Handbook of Econometrics vol 4.
+     Elsevier.
+Ostrovsky, M. and Schwarz, M. (2016). Reserve prices in internet advertising auc-
+     tions: A field experiment. Working paper, Stanford University.
+Paarsch, H. J. (1997). Deriving an estimate of the optimal reserve price: An appli-
+     cation to British Columbian timber sales. Journal of Econometrics, 78(1):333–357.
+Platt, B. C. (2017). Inferring ascending auction participation from observed bid-
+     ders. International Journal of Industrial Organization, 54:65–88.
+Roughgarden, T. (2014). Approximately optimal mechanism design: Motivation,
+     examples, and lessons learned. ACM SIGEcom Exchanges, 13(2):4–20.
+Roughgarden, T. and Wang, J. R. (2016). Minimizing regret with multiple reserves.
+     In Proceedings of the 2016 ACM Conference on Economics and Computation (EC ’16),
+     pages 601–616. ACM.
+Samuelson, W. F. (1985). Competitive bidding with entry costs. Economics Letters,
+     17(1):53–57.
+Song, U. (2004). Nonparametric estimation of an eBay auction model with an un-
+     known number of bidders. Working paper, University of British Columbia.
+Tang, X. (2011). Bounds on revenue distributions in counterfactual auctions with
+     reserve prices. RAND Journal of Economics, 42(1):175–203.
+van der Vaart, A. W. and Wellner, J. A. (1996). Weak Convergence and Empirical
+     Processes: With Applications to Statistics. Springer.
+Zeithammer, R. (2017). The futility of soft floors in auctions. Working paper,
+     UCLA.
+                    THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                               35
+
+                                  A PPENDIX A. P ROOFS
+
+A.1. Proof of Theorem 1.
+
+Proof. We will show that p̂prq converges uniformly in probability to pprq. Note that
+    p1q     p2q
+π pVj , Vj , v0 , rq can alternatively be written as maxtr, Vj
+                                                                       p2q u
+                                                                         pv0  rq1pVjp1q rq
+(see Aradillas-López et al. (2013)). For simplicity, assume that v0  0 and let
+                         !
+             °
+p̂1 prq  1J jJ1 max r, Vj
+                                p2q ) and p̂ prq   1 ° J r1 !V p1q r), so that p̂prq 
+                                             2          J  j1     j
+p̂1 prq p̂2 prq. Notice that p̂1 prq is Lipschitz continuous because, for any r1 and r2 ,
+it follows that | p̂1 pr1 q  p̂1 pr2 q| ¤ |r1  r2 |. Furthermore, for any r, it follows by
+the law of large numbers that p̂1 prq Ý        Ñp p1prq. Thus, we can invoke Lemma 2.9
+in Newey and McFadden (1994) to obtain supr | p̂1 prq  p1 prq| Ý        Ñp 0. Finally, it is
+straightforward to check that the function f px, rq  r1tx ¤ ru belongs to a VC
+subgraph class (see, for example, van der Vaart and Wellner (1996)), which guaran-
+tees uniform convergence of p̂2 pq. Consequently, we have supr | p̂prq  pprq|           ÝÑp 0,
+which guarantees that r̂ J   ÝÑp r and p̂pr̂ J q ÝÑp pprq.                                 
+
+
+A.2. Proof of Theorem 2.
+
+Proof. Let p̃prq 1J °jJ1 π̃pξ j , rq. Throughout the proof we will use r1 and r2 such
+that, without loss of generality, r1 ¡ r2 ¡ r . Throughout this proof, we will denote
+the joint density of the two highest bids as f 1,2 p, q and the marginals as f 1 pq and
+f 2 pq.
+
+  By the main theorem of Kim and Pollard (1990), if Assumptions 1 and 2 are
+satisfied, and r is an interior point, and if the following conditions hold
+
+   (1) H p β, αq  limtÑ0 1t Erπ̃ p, r   βtqπ̃ p, r     αtqs exists for each β, α in R and
+
+                    lim Erπ̃ p, r     αtq2 1t|π̃ p, r      αtq| ¡ e{tus  0
+                        1
+                    tÑ0 t
+
+          for each e ¡ 0 and α in R;
+   (2) Er PR2 s    OpRq as R Ñ 0 and for each e ¡ 0 there is a constant K such that
+          Er PR2 1t PR ¡ Kus eR for R near 0;
+36                                            COEY, LARSEN, SWEENEY, AND WAISMAN
+
+      (3) Er|π̃ p, r1 q  π̃ p, r2 q|s  Op|r1  r2 |q near r ;
+
+
+
+
+                                              °J
+Then the process J 2{3 1J                       j1 π̃   p, r     αJ 1{3 q converges in distribution to a Gauss-
+ian process Zpαq with continuous sample paths, expected value  12 α2 Σ, and covari-
+ance kernel H, where H p β, αq                            limtÑ0 1t Erπ̃p, r                βtqπ̃ p, r     αtqs for any β, α in
+R. Furthermore, if Z has nondegenerate increments, then J 1{3 pr̂ J  r q converges in
+distribution to the random maximizer of Z. We now prove that conditions (1)–(3)
+above are satisfied.
+
+     To establish condition (1), we first characterize the limiting behavior of 1t Erπ̃ p, r
+βtqπ̃ p, r              αtqs as t        Ñ    0. By the definition of π̃ p, rq, this amounts to studying
+the behavior of four different terms, which we conduct separately below. Let
+r1    r         αt and r2            r         βt. First, we consider the term
+                                                                               
+          h1              maxtV p2q , r1 u  maxtV p2q , r u                   maxtV p2q , r2 u  maxtV p2q , r u .
+
+Notice that when V p2q                      ¡ r2 then h1  0; when V p2q r then h1  pr1  rqpr2  rq;
+and when r                       V p2q     r2 then h1  pr1  V p2q qpr2  V p2q q. Therefore,
+1                                                                        
+  E maxtV p2q , r1 u  maxtV p2q , r u maxtV p2q , r2 u  maxtV p2q , r u
+t
+    !
+ 1t pr1  rqpr2  rqPrpV p2q rq
+                                                                                                                   )
+              E   pr1  V p2qqpr2  V p2qq|r                      V p2q        r2 Prpr             V p2q    r2 q
+          #               » r                           » r2                                  » r2                      » r2                 +
+     1
+              αβt     2
+                                  f 2 puqdu     r1 r2           f 2 puqdu  pr1         r2 q          u f 2 puqdu               u f 2 puqdu
+                                                                                                                                 2
+      t                       0                           r                                    r                        r
+          !                                                                
+ 1t          αβt2 F2 pr q               p r  q2 p α      βqt      αβt2       r f2prqpr2  rq            opr2  r qs
+                                                                                                                                                      )
+           r2r pα                  βqts rr f 2 pr qpr2  r q          opr2  r qs               prq2 f2prqpr2  rq           o pr 2  r  q
+      1!                                                            )
+         αβt2 F2 pr q               αβt f 2 pr q βt optq
+                                            2
+      t
+     1
+      t
+        optq  op1q.
+                                THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                   37
+
+  The second term we consider is
+                                                                         
+     h2           r 1tV p1q           r u  r2 1tV p1q          r2 u      maxtV p2q , r1 u  maxtV p2q , r u .
+
+When V p1q              r  , h2      pr  r2qpr1  rq; when r                     V p1q       r2 and V p2q       r  , h2
+                                                                                                                           
+r2pr1  rq; and when r                       V p1q         r2 and r          V p2q         V p1q , h2  r2 pr1  V p2q q.
+Hence,
+    1                                                                    
+      E r 1tV p1q r u  r2 1tV p1q r2 u maxtV p2q , r1 u  maxtV p2q , r u
+    t
+       1! 
+     t pr  r2qpr1  rqPrpV p1q rq  r2pr1  rqPrpV p2q r V p1q r2q
+              r2r1 Prpr               V p2q    V p1q        r2 q
+                                                                                                           )
+               ErV p2q |r              V p2q    V p1q          r2 s Prpr     V p2q       V p1q      r2 q
+              #                                 » r2 » r                                      » r2 » v
+         1
+                  αβt F1prq  r2 αt
+                           2
+                                                                f 1,2 pu, vqdudv  r1 r2                   f 1,2 pu, vqdudv
+          t                                       r     0                                       r   r
+                       » r2 » v                           *
+                  r2                 u f 1,2 pu, vqdudv
+                        r      r
+              "                                 » r2                              » r2
+         1
+                  αβt F1prq  r2 αt
+                           2
+                                                       Fv pr , vqdv  r1 r2             rFv pv, vq  Fv pr, vqsdv
+          t                                      r                                r
+                       » r2                                           *
+                  r2           rF1,2pv, vq  F1,2pv, rqsdv
+                        r
+          1!                                                                                                 )
+         t
+               αβt F1prq  r2 αtrβtFv pr, rq optqs  r1r2 optq r2 optq
+                           2
+
+
+
+         1
+          t
+            optq  op1q.
+
+  The third term is
+                                                                         
+     h3           r 1tV p1q           r u  r1 1tV p1q          r1 u      maxtV p2q , r2 u  maxtV p2q , r u .
+
+The term h3                  0 when V p1q
+                                 ¡ r1 or V p2q ¡ r2; h3  r1pr2  rq when V p2q
+r   V p1q    r1 ; h3  r1 pr2  V p2q q when r V p1q  r1 and r    V p2q r2 ; and
+h3  pr  r1 qpr2  r q when V p1q r . Consequently,
+1                                                                                                             
+  E r 1tV p1q                   r u  r1 1tV p1q        r1 u        maxtV p2q , r2 u  maxtV p2q , r u
+t
+38                                               COEY, LARSEN, SWEENEY, AND WAISMAN
+          !
+ 1t r1pr2  rqPrpV p2q                               r      V p1q        r1 q
+                                                                                                                                                          )
+          r 1         r2  ErV p2q |r               V p1q      r1 , r          V p2q         r2 s Prpr            V p1q    r1 , r      V p2q       r2 q
+          #               » r1 » r                                                                  » r2 » v
+             r1 βt                          f 1,2 pu, vqdudv  αβt F1 pr q  r1 r2                                f 1,2 pu, vqdudv
+     1                                                                      2
+     t                        r        0                                                              r       r
+                       » r1 » r2
+          r 1 r 2                          f 1,2 pu, vqdudv
+                         r2        r
+                   » r2 » v                                          » r1 » r2                               *
+              r1                   u f 1,2 pu, vqdudv           r1                 u f 1,2 pu, vqdudv
+                    r     r                                         r2     r
+          "               » r1                                                            » r2
+             r1 βt               Fv pr , vqdv  αβt2 F1 pr q  r1 r2                         r Fv pv, vq  Fv pr , vqsdv
+     1
+     t                        r                                                           r   
+                       » r1
+          r 1 r 2             f 1,2 pr , vqpr2  r qdv
+                         r2
+                   » r2                                                             » r1                                                            *
+              r1          rF1,2pv, vq  F1,2pv, rqsdv r1r                                f 1,2 pr , vqpr2  r qdv orpr2  r q2 s
+                    r                                                               r2
+     1!
+     t
+              r1 αβt2 Fv pr, rq  αβt2 F1prq  r1r2 opr1  rq
+                                                      » r1                                                  *
+              r 1 o pr 2  r  q  r 1 β 2 t 2               f 1,2 pr , vqdv orpr2  r q2 s
+                                                       r2
+
+ 1t optq  op1q.
+     The fourth and final term is
+                                                                                   
+      h4              r 1tV p1q               r u  r2 1tV p1q          r2 u         r 1tV p1q          r u  r1 1tV p1q         r1 u .
+
+The term h4                0 if V p1q ¡ r2; h4  r1r2 if r                             V p1q       r2 ; and h4         pr  r2qpr  r1q
+if V p1q           r . Thus,
+          1         p 1q             p 1q
+                                                                                                                                           
+            E r 1tV         r u  r2 1tV        r2 u r 1tV p1q r u  r1 1tV p1q                                                    r1 u
+          t
+               !                                                           )
+           1t r1r2 Prpr V p1q r2q pr  r2qpr  r1qPrpV p1q rq
+               "    » r2                        *
+           t r1r2  f1pvqdv αβt F1pr q
+             1                         2      
+                      r
+               !                                                )
+           1t r1r2r f1prqpr2  rq opr2  rqs αβt2 F1prq
+                               THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                                          39
+
+      1!  2                                 )
+      t
+        pr q f1prqβt                o ptq
+
+         prq2 f1prqβ            op1q.
+
+   These four results show that the limit H p β, αq is well defined for each β, α in
+R, which establishes the first part of (1). For the second part of (1), notice that
+|π̃p, r        αtq| is bounded for any t, which means that there exists a t                                                         8 such that
+the indicator would be 0 for all t                           t, establishing the result.
+
+   We now establish (2). Let R                           ¡   0 and ř be the maximizer of π̃ p, rq such that
+|r  r  |            R. We first need to show that Erπ̃ p, řq2 s                                      OpRq.           We will split the
+analysis into three terms. First, notice that for the first term:
+
+pmaxtV p2q, řu  maxtV p2q, ruq2  p| maxtV p2q, řu  maxtV p2q, ru|q2 ¤ p|ř  r|q2                                                                   R2
+
+which implies that its expected value is Op R2 q. Moving to the next two terms we
+will assume that ř             ¡ r, as the calculations for the opposite case are analogous. For
+the second one,
+
+pr1tV p1q             r u  ř1tV p1q          řuq2    prq21tV p1q                     r u        ř2 1tV p1q        řuq2  2r ř1tV p1q                 r u
+
+so taking expectations yields:
+        » r                         » r                               » ř                                » r                        » r
+prq2            f 1 pvqdv  r ř           f 1 pvqdv         ř   2
+                                                                                  f 1 pvqdv        ř   2
+                                                                                                                   f 1 pvqdv  r ř               f 1 pvqdv
+         0                            0                                     r                               0                              0
+
+ př  rq2 F1prq ř2r f1prqpř  rq                       opř  r qs
+
+ Opř  rq opř  rq  Opř  rq                           Op Rq.
+
+   The third and last term is given by:
+                                                                                                                                 
+        E    pmaxtV p2q, řu  maxtV p2q, ruqpr1tV p1q                                     r u  ř1tV p1q              řuq
+                                                                                                                                     
+         E pmaxtV p2q, rur1tV p1q                          r u           E pmaxtV p2q, řuř1tV p1q                          řu
+                                                                                                                                                
+                       E   pmaxtV p2q, ruř1tV p1q                     řu        E pmaxtV p2q, řur1tV p1q                              r u
+40                                        COEY, LARSEN, SWEENEY, AND WAISMAN
+                    » r » v                                       » ř » v
+           prq2                     f 1,2 pu, vqdudv  ř    2
+                                                                               f 1,2 pu, vqdudv
+                         0       0                                   0    0
+                        » ř »   v                                                   » r » v
+                   ř                maxtu, r u f 1,2 pu, vqdudv  r ř                           f 1,2 pu, vqdudv
+                         0    0                                                           0     0
+                                     » r » v                                  » ř » v
+           rprq2  ř2s                         f 1,2 pu, vqdudv  ř    2
+                                                                                          f 1,2 pu, vqdudv
+                                      0       0                                 r 0
+                        » ř » v
+                   ř                 maxtu, r u f 1,2 pu, vqdudv
+                         r 0
+                                                               » ř                                 » ř » r
+           pr  řqpr řqF1,2pr, rq  ř2                           Fv pv, vqdv r ř                      f 1,2 pu, vqdudv
+                                                                   r                                r 0
+                        » ř » v
+                   ř                 u f 1,2 pu, vqdudv
+                         r      r
+                                                                                                         » ř
+           Opr  řq  řpř  rqrFv pr, rqpr  řq opr  řqs ř                                        Gpvqdv
+                                                                                                           r
+
+           Opr  řq                řrGpr qpř  r q      opř  r qs  Opř  r q                 Op Rq,
+
+which, along with the results for the previous two terms, establishes the first part
+of condition (2). The second part of condition (2) follows directly from the integra-
+bility of π̃ p, řq2 .
+
+     To verify that (3) holds, notice that:
+
+          |π̃pξ j , r1q  π̃pξ j , r2q|
+            |πpξ j , r1q  πpξ j , r2q|
+                      !           )     !                           )             !                )           !           )
+            max Vjp2q, r1  r11 Vjp1q                        r1        max            p2q
+                                                                                       Vj , r2           r2 1 Vj
+                                                                                                                    p1q      
+                                                                                                                          r2 
+                 !                                                        
+          ¤         p2q )
+              max Vj , r1
+                                                      !
+                                                     )       !        )     !          )
+                                       max Vjp2q, r2  r21 Vjp1q r2  r11 Vjp1q r1 
+                        !                   )                !        )   !         )
+          ¤ |r 2  r 1 |         1 Vjp 1q
+                                          r2 |r2  r1 | r1 1 Vj
+                                                               p 1q
+                                                                     r2  1 Vj
+                                                                              p 1q    
+                                                                                   r1 
+
+Taking the expectation, we obtain
+                                         
+  E π̃ pξ j , r1 q  π̃ pξ j , r2 q ¤ |r2  r1 |         |r2  r1|PrpVjp1q r2q r1 Prpr2 Vjp1q r1q
+                                               Op|r2  r1|q f1pr2qpr1  r2q opr1  r2q  Op|r2  r1|q.
+                           THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                       41
+
+This establishes (3).
+
+  Finally, we derive Σ. Notice that:
+
+     Erπ̃ p, rqs  Erπ p, rqs  Erπ p, r qs
+                          » ω̄                                      » ω̄
+                                  maxtr, V p2q u f 2 puqdu               r1tV p1q            ru f 1 pvqdv  Erπ p, r qs
+                           0                                          0
+                           »r                   » ω̄                           »r
+                      r            f 2 puqdu          u f 2 puqdu  r              f 1 pvqdv  Erπ p, r qs
+                               0                  r                            0
+
+Differentiating this expression with respect to r, we obtain
+
+                 BErπ̃p, rqs  » r f puqdu r f prq  r f prq  » r f pvqdv  r f prq
+                     Br          0
+                                     2         2         2
+                                                                 0
+                                                                     1           1
+                                »r          »r
+                               f2puqdu  f1pvqdv  r f1prq
+                                         0                  0
+
+Taking the second derivative and evaluating at r , we obtain
+
+                                         Σ   f 2 pr  q       2 f 1 pr  q       r f 11 pr q.
+
+                                                                                                                                
+
+
+A.3. Proof of Theorem 3.
+
+Proof. This theorem follows directly from Theorem 2. First, notice that p̂pr̂ J q 
+                 °J
+p pr  q    1
+             J      pξ j , r̂ J q p̂prq pprq. Since r̂ J  r  OP p J 1{3q and 1J °jJ1 π̃p, r
+                  j1 π̃
+                                         °
+αJ 1{3 q  OP p J 2{3 q, the term 1J jJ1 π̃ pξ j , r̂ J q is also OP p J 2{3 q. A simple applica-
+tion of the Central Limit Theorem establishes the result.                                                                       
+
+
+A.4. Proof of Theorem 4. We will use slightly different notation in this proof than
+elsewhere in the paper, letting S J                      pz1, . . . , z J q be a fixed sample of size J and
+denoting quantities estimated on this sample by a subscript S J .
+
+  We start with the definition of empirical Rademacher complexity:
+
+Definition. Let G be a family of functions from Z to ra, bs, and S J                                    pz1, . . . , z J q a fixed
+sample of size J with elements in Z. Then the empirical Rademacher complexity of G with
+42                           COEY, LARSEN, SWEENEY, AND WAISMAN
+
+respect to S J is defined as:
+                                                                                   
+                                                                1¸
+                                                                 J
+                                  p S pGq  Eσ sup
+                                  R                                       σj gpz j q
+                                                         gP G
+                                     J
+                                                                J
+                                                                    j1
+
+where σ    pσ1, . . . , σJ q, and each σj is an independent uniform random variable with
+values in t1, 1u.
+
+     We state a useful preliminary result.
+
+Theorem 5. Let G be a family of functions mapping Z to r0, 1s. Then for any δ ¡ 0, with
+probability at least 1  δ, for all g P G:
+                                                                                   d
+                                       1¸
+                                        J
+                                                                                       log 2δ
+                        Er gpzqs                g p z j q ¤ 2R
+                                                              p S pGq
+                                                                 J
+                                                                               3
+                                       J                                                 2J
+                                           j1
+
+Proof. See Mohri et al. (2012), Theorem 3.1.                                                                
+
+     This result can be straightforwardly adapted to obtain a two-sided bound.
+
+Corollary 1. Let G be a family of functions mapping Z to r0, 1s. Then for any δ ¡ 0, with
+probability at least 1  δ, for all g P G:
+                                                                                  d
+                                                   
+                                       1¸
+                                        J
+                                                                                      log 4δ
+                           r p qs 
+                       E g z
+                                       J
+                                                  p q ¤ 2Rp S pGq
+                                             g z j                 J
+                                                                                3
+                                                                                          2J
+                                        j1        
+
+Proof. Applying Theorem 5 above to G1                        tg             1 : g       P Gu and noting that
+p S pGq
+R  J
+          Rp S pG1q, we obtain the result that for any δ{2 ¡ 0, with probability at
+                J
+
+least 1  δ{2, for all g P G:
+                                                                                d
+                        1¸
+                         J
+                                                                                    log 4δ
+                                  gpz j q  Er gpzqs ¤ 2R
+                                                        p S pGq
+                                                           J
+                                                                               3           .
+                        J                                                             2J
+                            j1
+
+Theorem 5 also implies that for any δ{2                   ¡ 0, with probability at least 1  δ{2, for
+all g P G:
+                                                                                d
+                                       1¸
+                                        J
+                                                                                    log 4δ
+                        Er gpzqs                gpz j q ¤ 2R
+                                                            p S pGq
+                                                               J
+                                                                               3           .
+                                       J                                              2J
+                                           j1
+                          THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                                 43
+
+Combining these two results and applying the union bound gives the desired re-
+sult.                                                                                                                    
+
+  Now for simplicity let v0      0 so that πpVjp1q, Vjp2q, rq  r1pVjp2q r ¤ Vjp1qq
+  p2q        p2q
+Vj 1pr ¤ Vj q and G  tπ p, , rq : r P r0, ω su. We can now prove an upper bound
+on ppr q  ppp
+              rS q in terms of the empirical Rademacher complexity of G.
+                     J
+
+
+Lemma 1. Let 0 ¤ Vj
+                              p1q ¤ ω      8. For any δ ¡ 0, with probability at least 1  δ, it holds
+                                               c
+that ppr q  ppp
+                r S J q ¤ 4R
+                           p S pGq                     log 4δ
+                              J
+                                             6ω          2J .
+
+Proof.
+
+                         ppr q  ppp
+                                    rS J q  ppr q  ppS J pp
+                                                             rS J q       ppS J pp
+                                                                                 rS J q  ppp
+                                                                                            rS J q
+
+                                           ¤ pprq  ppS prq ppS pprS q  ppprS q.
+                                                                  J         J     J               J
+
+
+                                           ¤ 2 sup | pprq  ppS prq|.
+                                                   rPr0,ω s
+                                                                      J
+
+
+
+The first inequality follows because p
+                                     rS J maximizes ppS J by definition. Applying
+Corollary 1 with z j           pVjp1q, Vjp2qq we have that for any δ ¡ 0, with probability at
+least 1  δ:
+                                                                                                        d
+                                                                       
+             1   p1q p2q                             ¸
+                                                      J
+                                                             p 1q p 2q                                       log 4δ
+                    r p
+     sup  E π Vj , Vj , r              qs       1
+                                                              p
+                                                         π Vj , Vj , r        q¤      RS p G q
+                                                                                       2p
+                                                                                                      3              ,
+    rPr0,ω s  ω                                  Jω
+                                                     j1                              ω J                      2J
+
+or equivalently,
+                                                                                  d
+                                                                                       log 4δ
+                             sup | pprq  ppS J prq| ¤ 2R
+                                                        p S pGq             3ω                .
+                            rPr0,ω s
+                                                           J
+                                                                                         2J
+
+Therefore for any δ ¡ 0, with probability at least 1  δ:
+                                                                            d
+                                                               log 4δ
+                                ppr q  ppp
+                                          rS J q ¤ 4RS J pGq 6ω
+                                                    p                  .
+                                                                                      2J
+
+                                                                                                                         
+
+  Following Mohri and Medina (2016), define π1 pVj , Vj , rq  Vj 1pr
+                                                                            p1q    p2qp2q                 ¤ Vjp2qq
+r1pVj
+        p2q    r   ¤ Vjp1qq        p1q
+                                 Vj 1pVj
+                                            p1q                    p1q        p1q p1q
+                                                      rq and π2 pVj , rq  Vj 1pVj                       rq, so that
+44                                 COEY, LARSEN, SWEENEY, AND WAISMAN
+
+      p1q   p2q
+π pVj , Vj , rq π1pVjp1q, Vjp2q, rq π2pVjp1q, rq. Define also G1  tπ1p, , rq                                 : r   P
+r0, ωsu and G2  tπ2p, rq : r P r0, ωsu. The following lemma is useful:
+Lemma 2. Let H be a set of functions mapping X to R and let Ψ1 , . . . , Ψ J be µ-Lipschitz
+functions for some µ ¡ 0. Then for any sample S J of J points x1 , . . . , x J                 P X , the following
+inequality holds:
+                                                                                             
+                                    ¸
+                                    J                                            ¸
+                                                                                 J
+                                           σj pΨ j  hqpx j q ¤                       σj hpx j q .
+                     1                                            µ 
+                       Eσ sup                                        Eσ sup
+                     J    hP H      j1
+                                                                   J    hP H     j1
+
+Proof. See Lemma 14 in Mohri and Medina (2016).                                                                        
+
+     We now find an upper bound for the right hand side of Lemma 1, which is not
+expressed in terms of Rademacher complexity and which makes the asymptotic
+behavior of the term ppr q  ppp
+                                rS J q clear. This will lead to Theorem 4.
+                                                                       b
+Lemma 3. Let 0 ¤ Vi
+                                p1q ¤ ω       8. Then Rp S pGq ¤ ω           2
+                                                                                   op J 1{2 q.
+                                                             J              Jπ
+
+                 p S pGq
+Proof. Note that R                   ¤ Rp S pG1q         p S pG2 q, as the supremum of a sum is less
+                                                         R
+                    J                         J             J
+
+than the sum of suprema. We give upper bounds on both of these terms. For the
+first term, we have:
+                                                                                                                            
+                                  1¸
+                                   J
+p S pG1 q  Eσ  sup
+R
+                                                  p2q
+                                          σj rVj 1pr    ¤ Vjp2qq    r1pVj
+                                                                           p2q    r    ¤ Vjp1qq         p1q
+                                                                                                       Vj 1pVj
+                                                                                                              p1q          rqs
+                         rPr0,ω s J j1
+   J
+
+
+                                            
+                                   ¸
+                                   J
+            ¤ 1J Eσ  sup                 σj r
+                           rPr0,ω s j1
+                                            
+                                   ¸
+                                   J
+             1J Eσ        sup           σi r
+                           rPt0,ω u j1
+                     a
+            ¤   2ω
+                         J
+                          log 2
+
+
+The first inequality follows from applying Lemma 2 with Ψ j pxq    π1pVjp1q, Vjp2q, xq
+and hpxq  x, and the observation that the functions Ψ j prq are 1Lipschitz for all
+j. The equality follows because the supremum will always be attained at r  0 (if
+                     THE SIMPLE EMPIRICS OF OPTIMAL ONLINE AUCTIONS                                         45
+°J
+  j1 σi   ¤ 0) or at r  ω (if °jJ1 σj ¡ 0).           The final inequality is an application of
+Massart’s lemma (see for e.g. Mohri et al. (2012)).
+
+  For the second term, we have
+                                                                                               
+                                                       1¸
+                                                        J
+                     p S pG2 q  Eσ  sup
+                     R                                        σj Vjp1q1pVjp1q               rq
+                                           rPr0,ω s J j1
+                        J
+
+
+                                                                                        
+                                                        ¸
+                                                        J
+                                ¤ ωJ Eσ  sup                 σj 1pVjp1q           rq
+                                               rPr0,ω s j1
+                                                                                   
+                                                        ¸
+                                                        J
+                                                                         p1q
+                                 ωJ Eσ  sup                 σj 1pVj             r q
+                                               rPr0,ω s j1
+                                     d
+                                ¤ω        2       2 log J
+                                                   J
+                                                          .
+
+
+The first inequality follows from applying Lemma 2 with Ψ j pxq  Vj x and hpxq 
+                                                                                                      p1q
+1pVjp1q      xq, noting that Ψ j pxq are ω-Lipschitz for all j. The equality follows be-
+cause the distributions of σj and          σj are identical.               Finally, the last inequality fol-
+lows from Massart’s lemma (see Proposition 2 in Mohri and Medina (2016)).
+                        p S pG1 q and R
+  Putting the bounds on R             p S pG2 q together, we have:
+                           J             J
+
+                                               a                   d
+                           p S pGq ¤
+                                        2ω         log 2                2      2 log J
+                           R  J
+                                                               ω                       .
+                                                  J                             J
+
+                                                                                                            
+
+
+  This leads immediately to Theorem 4:
+
+
+Theorem. Let 0 ¤ Vj
+                         p1q ¤ ω     8. For any δ ¡ 0, with probability at least 1  δ over the
+possible realizations of S J , it holds that
+                                              ?log 2             b                   c
+                  ppr q  ppp
+                             rS J q ¤ ω
+                                              8                       2 2 log J              log 4δ
+                                                   J          4          J          6          2J     .
+
+
+Proof. Combine Lemmas 1 and 3.                                                                              
+

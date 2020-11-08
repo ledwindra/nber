@@ -1,0 +1,1616 @@
+                               NBER WORKING PAPER SERIES
+
+
+
+
+              SOLUTION METHODS FOR MODELS WITH RARE DISASTERS
+
+                                   Jesús Fernández-Villaverde
+                                          Oren Levintal
+
+                                       Working Paper 21997
+                               http://www.nber.org/papers/w21997
+
+
+                     NATIONAL BUREAU OF ECONOMIC RESEARCH
+                              1050 Massachusetts Avenue
+                                Cambridge, MA 02138
+                                    February 2016
+
+
+
+
+Fernandez-Villaverde gratefully acknowledges financial support from the National Science Foundation
+under Grant SES 1223271. The views expressed herein are those of the authors and do not necessarily
+reflect the views of the National Bureau of Economic Research.¸˛
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2016 by Jesús Fernández-Villaverde and Oren Levintal. All rights reserved. Short sections of text,
+not to exceed two paragraphs, may be quoted without explicit permission provided that full credit,
+including © notice, is given to the source.
+Solution Methods for Models with Rare Disasters
+Jesús Fernández-Villaverde and Oren Levintal
+NBER Working Paper No. 21997
+February 2016
+JEL No. C63,C68,E32,E37,E44,G12
+
+                                              ABSTRACT
+
+This paper compares different solution methods for computing the equilibrium of dynamic stochastic
+general equilibrium (DSGE) models with rare disasters along the line of those proposed by Rietz (1988),
+Barro (2006}, Gabaix (2012), and Gourio (2012). DSGE models with rare disasters require solution
+methods that can handle the large non-linearities triggered by low-probability, high-impact events
+with sufficient accuracy and speed. We solve a standard New Keynesian model with Epstein-Zin preferences
+and time-varying disaster risk with perturbation, Taylor projection, and Smolyak collocation. Our
+main finding is that Taylor projection delivers the best accuracy/speed tradeoff among the tested solutions.
+We also document that even third-order perturbations may generate solutions that suffer from accuracy
+problems and that Smolyak collocation can be costly in terms of run time and memory requirements.
+
+
+Jesús Fernández-Villaverde
+University of Pennsylvania
+160 McNeil Building
+3718 Locust Walk
+Philadelphia, PA 19104
+and NBER
+jesusfv@econ.upenn.edu
+
+Oren Levintal
+Interdisciplinary Center (IDC) Herzliya
+P.O.Box 167. Herzliya, 4610101
+Israel
+oren.levintal@idc.ac.il
+1       Introduction
+    Rietz (1988), Barro (2006), and Gabaix (2012) have popularized the idea that low-
+probability events with a large negative impact on consumption (“rare disasters”) can account
+for many asset pricing puzzles, such as the equity premium puzzle of Mehra and Prescott
+(1985).1 Barro (2006), in particular, argues that a rare disaster model calibrated to match
+data from 35 countries can reproduce the observed high equity premium, the low risk-free
+rate, and the stock market volatility. Barro assumed disaster probabilities of 1.7 percent a
+year and declines in output/consumption in a range of 15 to 64 percent.
+    Many other researchers have followed Barro’s lead and formulated, calibrated/estimated,
+and solved models with disaster probabilities and declines in consumption that are roughly
+in agreement with Barro’s original proposal.2 Furthermore, the approach has been extended
+to analyze business cycles (Gourio, 2012), credit risk (Gourio, 2013), and foreign exchange
+markets (Farhi and Gabaix, 2008 and Gourio, Siemer, and Verdelhan, 2013). These calibra-
+tions/estimations share a common feature: they induce large non-linearities in the solution.
+This is not a surprise. The mechanism that makes rare disasters work is the large precau-
+tionary behavior responses induced in normal times by the probability of tail events.
+    Dealing with these non-linearities is not too challenging when we work with endowment
+economies. A judicious choice of functional forms and parameterization allow a researcher to
+either derive closed-form solutions or formulae that can be easily evaluated.
+    The situation changes, however, when we move to production models, such as those of
+Gourio (2012, 2013), Andreasen (2012), Isoré and Szczerbowicz (2013, 2015), and Petrosky-
+Nadeau, Zhang, and Kuehn (2015). Suddenly, having an accurate solution is of foremost
+importance. For example, rare disaster models have the promise of helping to design policies
+to prevent disasters (with measures such as financial stability policy) and to mitigate them
+once they have occurred (with measures such as bailouts and unconventional monetary pol-
+icy). The considerable welfare losses associated with rare disasters reported by Barro (2009)
+suggest that any progress along the lines of having accurate quantitative models to design
+counter-disaster policies is a highly rewarding endeavor.
+    But we do not care only about accuracy. We also care about speed. Models that can
+be useful for policy analysis usually require estimation of parameter values, which involves
+the repeated solution of the model, and that the models be as rich in terms of detail as the
+
+    1
+      See also Barro (2009), who, with the help of Epstein and Zin (1989) preferences, can fix some coun-
+terfactual implications of models with power utility and high-risk aversion regarding the responses of the
+price/dividend ratio to increases in uncertainty.
+    2
+      Among many others, Barro and Ursúa (2012), Barro and Jin (2011), Nakamura, Steinsson, Barro, and
+Ursúa (2013), Wachter (2013), and Tsai and Wachter (2015).
+
+                                                    2
+most recent generation of dynamic stochastic general equilibrium (DSGE) models, which are
+characterized by many state variables.
+   Gourio (2012, 2013) and Petrosky-Nadeau, Zhang, and Kuehn (2015) solve their models
+with standard projection methods (Judd, 1992). Projection methods are highly accurate
+(Aruoba, Fernández-Villaverde, and Rubio-Ramı́rez, 2006), but they suffer from an acute
+curse of dimensionality. Thus, the previous papers concentrate in analyzing relatively small
+models. Andreasen (2012) and Isoré and Szczerbowicz (2013, 2015) solve more fully-fledged
+models with perturbation solutions. Perturbation solutions are fast to compute and can
+handle many state variables. However, Isoré and Szczerbowicz (2013) only undertake first-
+and second-order perturbations and Andreasen (2012) and Isoré and Szczerbowicz (2015) a
+third-order perturbation. We will argue below that there are reasons to be cautious about
+the properties of these perturbation solutions (see also Levintal, 2015). Perturbations are
+inherently local solution methods and rare disasters often trigger equilibrium dynamics that
+travel far away from the approximation point of the perturbation. Moreover, perturbations
+may fail to approximate accurately asset prices and risk premia due to the strong volatility
+embedded in these models.
+   To get around the limitations of existing algorithms, we apply a new solution method,
+Taylor projection, to compute DSGE models with rare disasters. This method, recently
+proposed by Levintal (2016), is a hybrid of Taylor-based perturbations and projections (and
+hence its name). Like standard projection methods, Taylor projection starts from a residual
+function created by plugging the unknown decision rules of the agents into the equilibrium
+conditions of the model and searching for coefficients that make that residual function as
+close to zero as possible. The novelty of the approach is that, instead of “projecting” the
+residual function according to an inner product, we approximate the residual function around
+the steady state of the model using a Taylor series, and find the solution that zeros the Taylor
+series. We show that Taylor projection is sufficiently accurate and fast so as to open the door
+to the solution and estimation of rich models with rare disasters, including New Keynesian
+models such as those in Christiano, Eichenbaum, and Evans (2005) and Smets and Wouters
+(2007).
+   To do so, we first propose in section 2 a standard New Keynesian model augmented with
+Epstein-Zin preferences and time-varying rare disaster risk. We also present seven simpler
+versions of the model. In what we will call version 1, we start with a benchmark real business
+cycle model, also with Epstein-Zin preferences and time-varying rare disaster risk. This model
+only has four state variables (capital, the classical technology shock, and two additional state
+variables associated with the time-varying rare disaster risk). Then, we start adding more
+shocks and price rigidities, until we get to version 8, our complete New Keynesian model with
+
+
+                                               3
+twelve state variables. Our layer-by-layer analysis allows us to gauge how accuracy and run
+time change as new mechanisms are added to the model and as the dimensionality of the
+state space grows.
+    In section 3, we calibrate the model with a baseline parameterization, which captures rare
+disasters, and with a non-disaster parameterization, where we shut down rare disasters. The
+latter calibration will help us in measuring the effect of disasters on the accuracy and speed
+of our solution methods.
+    In section 4, we describe how we solve each of the eight versions of the model, with
+the two calibrations, using perturbation, Taylor projection, and Smolyak collocation. We
+implement different levels of each of the three solution methods: perturbations from order
+1 to 5, Taylor projections from order 1 to 3, and Smolyak collocation from level 1 to 3.
+Therefore, we generate eleven solutions per each of the eight versions of the model and each
+of the two calibrations, for a total of 176 possible solutions (although we did not find a few
+of the Smolyak solutions because of convergence/memory constraints).
+    In section 5, we present our main results. Our first finding is that first-, second-, and
+third-order perturbations fail to provide a satisfactory accuracy. This is particularly true
+for the risk-free interest rate and several impulse response functions. Our second finding
+is that fifth-order perturbations are much more accurate, but they become cumbersome to
+compute and require a non-trivial runtime and some skill at memory management. Our third
+finding is that second- and third-order Taylor projections offer an outstanding compromise
+between accuracy and speed. Second-order Taylor projections can be as accurate as Smolyak
+collocations and, yet, be solved in a fraction of the time. Third-order Taylor projection takes
+longer to run, but their accuracy can be quite high, even in testbed as challenging as the New
+Keynesian model with rare disasters.3
+    We postulate, therefore, that a new generation of solution methods, such as Taylor pro-
+jection (but also, potentially, others such as those in Maliar and Maliar, 2014) can be an
+important tool in fulfilling the promises of production models with rare disasters. We are
+ready now to start our analysis by moving into the description of the model.
+
+
+2       A DSGE Model with Rare Disasters
+    We build a standard New Keynesian model along the lines of Christiano, Eichenbaum,
+and Evans (2005) and Smets and Wouters (2007). In the model, there is a representative
+
+    3
+     We provide MATLAB codes that implement the Taylor projection method for a general class of DSGE
+models. Given these codes, the implementation of our method in larger, more complex models should be
+relatively easy and straightforward.
+
+                                                 4
+household that consumes and saves, a final good producer, a continuum of intermediate
+good producers subject to Calvo pricing, and a monetary authority that sets up the nominal
+interest rate following a Taylor rule. Given the goals of this paper and to avoid excessive
+complexity in the model, we avoid wage rigidities.
+   As we described in the introduction, we augment the standard New Keynesian model
+along two dimensions. First, we introduce Epstein-Zin preferences. Beyond being extremely
+popular in macroeconomics and asset pricing, these preferences have been studied in the
+context of New Keynesian models by Andreasen (2012), Rudebusch and Swanson (2012), and
+Andreasen, Fernández-Villaverde, and Rubio-Ramı́rez (2013), among several others. Second,
+we add a time-varying rare disaster risk. Rare disasters impose two permanent shocks on
+the real economy: a productivity shock and a capital depreciation shock. When a disaster
+occurs, technology and capital fall immediately. This specification should be viewed as a
+reduced form that captures severe disruptions in production, such as those caused by a war
+or a large natural catastrophe, and failures of firms and financial institutions, such as those
+caused by massive labor unrest or a financial panic.
+   We present first the full New Keynesian model and some of its asset pricing implications.
+Then, in subsection 2.7, we briefly describe the simpler versions of the model mentioned in
+the introduction.
+
+
+2.1    The household
+   A representative household’s preferences are representable by an Epstein-Zin aggregator
+between the period utility Ut and the continuation utility Vt+1 :
+
+                                                                1−ψ
+                                Vt1−ψ = Ut1−ψ + βEt Vt+1
+                                                      1−γ        1−γ
+                                                                                            (1)
+
+where the period utility over consumption ct and labor lt is given by Ut = eξt ct (1 − lt )ν and
+Et is the conditional expectation operator. The parameter γ controls risk aversion (Swanson,
+2012) and the intertemporal elasticity of substitution (IES) is given by 1/ψ, b where ψb =
+1 − (1 + ν) (1 − ψ) (Gourio, 2012). The intertemporal preference shock ξt follows:
+
+
+                             ξt = ρξ ξt−1 + σξ ξ,t , ξ,t ∼ N (0, 1) .
+
+   The household’s budget constraint is given by:
+
+                                    bt+1                       bt
+                       ct + x t +        = wt lt + rt kt + Rt−1 + Ft + Tt ,                 (2)
+                                     pt                        pt
+
+
+
+                                                 5
+where xt is investment in physical capital, wt denotes the real wage, rt is the real rental price
+of capital, Ft are the real profits of the firms in the economy, and Tt is a real lump-sum
+transfer from the government. The household trades a nominal bond bt that pays a nominal
+gross interest rate of Rt . We transform the nominal bond into real quantities by dividing by
+the price pt of the final good. There is, as well, a full set of Arrow securities. With complete
+markets and a zero net supply condition for those securities, we can omit them from the
+budget constraint without further consequences.
+   Investment xt induces the law of motion for capital:
+                                                               
+                                                             xt
+                            kt∗   = (1 − δ) kt + µt 1 − S           xt                         (3)
+                                                            xt−1
+
+where
+                                                       ∗
+                                         log kt = log kt−1 − dt θt                             (4)
+
+and                                                   2
+                                      xt      κ   xt
+                                   S        =        − Λx .
+                                     xt−1     2 xt−1
+       ∗
+Here, kt−1 is the capital decision taken by the household in period t − 1. Actual capital kt ,
+however, depends on the disaster shock. Define an indicator function dt that takes values 0
+or 1. If a disaster occurs in t (i.e., dt = 1), kt falls by θt . Gourio (2012) interprets θt as the
+permanent capital depreciation caused by the disaster.
+   We want, in addition, to capture the idea that the disaster risk can be time-varying. To
+do so, we add an AR structure to the log of θt :
+
+                  log θt = (1 − ρθ ) log θ̄ + ρθ log θt−1 + σθ θ,t , θ,t ∼ N (0, 1)
+
+which resembles those in models with stochastic volatility (Fernández-Villaverde, Guerrón-
+Quintana, and Rubio-Ramı́rez, 2015; see also a similar specification in Gabaix, 2012). Note,
+nevertheless, that dt is non-Gaussian, a fact that will have a material effect on the dynamics
+of the model. We specify the evolution of θt in logs to ensure positive values of this variable.
+   The second term on the right-hand side of equation (3):
+                                                       
+                                                     xt
+                                         µt 1 − S           xt
+                                                    xt−1
+
+includes two parts: First, an investment-specific technological shock µt that follows:
+
+                        log µt = log µt−1 + Λµ + σµ µ,t , µ,t ∼ N (0, 1) .
+
+
+                                                    6
+Second, a quadratic capital adjustment cost function that depends on investment growth
+(Christiano, Eichenbaum, and Evans, 2005).
+   The household maximizes its preferences (1) subject to the budget constraint (2) and the
+law of motion for capital (3). The optimality conditions for this problem are:
+
+                      Et (Mt+1 exp (−dt+1 θt+1 ) [rt+1 + qt+1 (1 − δ)]) = qt              (5)
+                                                                   
+                                             xt            0    xt     xt
+                        1 = q t µt 1 − S              −S
+                                            xt−1               xt−1 xt−1
+                                     "                           2 #!
+                                                     xt+1      xt+1
+                         +Et Mt+1 qt+1 µt+1 S 0                           ,               (6)
+                                                      xt        xt
+                                            ct
+                                        ν          = wt ,                                 (7)
+                                          1 − lt
+
+where λt is the Lagrange multiplier associated with the budget constraint, qt is the Lagrange
+multiplier associated with the evolution law of capital (as a ratio of λt ), and Mt+1 is the
+stochastic discount factor:
+                                                              ψ−γ
+                                             λt+1           Vt+1
+                                 Mt+1 = β                         ψ−γ .
+                                              λt              1−γ 1−γ
+                                                         Et Vt+1
+A non-arbitrage condition also determines the nominal gross return on bonds:
+
+                                                                Rt
+                                       1 = Et Mt+1                  .
+                                                               Πt+1
+
+   See the appendix for more details.
+
+
+2.2    The final good producer
+   The final good yt is produced by a perfectly competitive firm that bundles a continuum
+of intermediate goods yit using the production function:
+                                                                      ε
+                                            Z       1       ε−1
+                                                                    ε−1
+                                     yt =                yit di
+                                                              ε
+                                                                                          (8)
+                                                 0
+
+
+where ε is the elasticity of substitution. The final good producer maximizes profits subject
+to the production function (8) and taking as given the price of the final good, pt , and all
+intermediate goods prices pit . Well-known results tell us that:
+                                                                      1
+                                            Z    1                 1−ε
+                                    pt =                 p1−ε
+                                                          it di            .
+                                              0
+
+
+
+
+                                                         7
+2.3    Intermediate good producers
+   There is a continuum of differentiated intermediate good producers that combine capital
+and labor with the production function:
+
+                                                   α 1−α
+                                              
+                                    yi.t = max At ki,t li,t − φzt , 0 .                                 (9)
+
+The common neutral technological level At follows a random walk with a drift in logs:
+
+                    log At = log At−1 + ΛA + σA A,t − (1 − α) dt θt , A,t ∼ N (0, 1) ,
+
+subject to a Gaussian shock A,t and a rare disaster shock dt with a time-varying impact
+θt . Following Gourio (2012), disasters reduce physical capital and total output by the same
+factor. This can be easily generalized at the cost of heavier notation and, possibly, additional
+state variables. Note the presence of a common fixed cost φzt , which we index by a measure
+of technology,
+                                                      1    α
+                                              zt = At1−α µt1−α
+
+to ensure that such fixed cost remains relevant along the equilibrium dynamics of the model.
+   Intermediate good producers rent labor and capital in perfectly competitive markets with
+flexible wages and rental rates of capital. However, intermediate good producers set prices à
+la Calvo. In each period, a fraction 1 − θp of intermediate good producers reoptimize their
+prices to p∗t = pit (the reset price is common across all firms that update their prices). All
+other firms keep their old prices. This pricing structure yields the standard Calvo block (see
+derivation in the appendix):
+
+                             kt     α wt
+                                =                                                                      (10)
+                             lt   1 − α rt
+                                                          −ε
+                                                     Πχt
+                                                      
+                             gt1= mct yt + θp EMt+1            1
+                                                              gt+1                                     (11)
+                                                     Πt+1
+                                                    χ 1−ε  ∗ 
+                              2    ∗                Πt           Πt    2
+                             gt = Πt yt + θp EMt+1                    gt+1                             (12)
+                                                    Πt+1        Π∗t+1
+                            εgt1 = (ε − 1) gt2                                                         (13)
+                                          1−α  α 1−α α
+                                       1         1  w t rt
+                            mct =                          .                                           (14)
+                                     1−α         α     At
+
+              pt                                                              p∗t
+Here, Πt ≡   pt−1
+                    is the inflation rate in terms of the final good, Π∗t ≡   pt
+                                                                                    is the ratio between the
+reset price and the price of the final good, mct is the marginal cost of the intermediate good
+producer, and gt1 and gt2 are auxiliary variables that allow us to write this block recursively.
+
+                                                     8
+2.4     The monetary authority
+   The monetary authority sets the nominal interest rate according to the Taylor rule:
+
+                                    γR              γΠ                yt
+                                                                                    !γy !1−γR
+                   Rt         Rt−1                Πt                     yt−1
+                      =                                                                         eσm m,t   (15)
+                   R           R                  Π                 exp (Λy )
+
+where m,t ∼ N (0, 1) is a monetary shock, the variable Π is the target level of inflation, and
+R the implicit target for the nominal gross return of bonds (which depends on Π, β, and the
+growth rate along the balanced growth path of the model). The proceedings from monetary
+policy are distributed lump-sum to the representative household.
+
+
+2.5     Aggregation
+   The aggregate resource constraint is given by:
+
+                                                      1      α 1−α
+                                                                         
+                                     ct + x t =        p At kt lt  − φzt                                   (16)
+                                                      vt
+
+where                                                                    −ε
+                                                      Z    1   
+                                                                   pit
+                                            vtp   =                            di
+                                                       0           pt
+is a measure of price dispersion with law of motion:
+                                                   −ε
+                                           Πχt−1
+                                       
+                          vtp   = θp                        p
+                                                           vt−1 + (1 − θp ) (Π∗t )−ε .
+                                            Πt
+
+2.6     Asset prices
+   Rare disasters have a large impact on asset prices. In fact, this is the reason they have
+become so popular. Thus, it is worthwhile to spend some space reviewing the asset pricing
+implications of the model. First, we have that the price of a one-period risk-free real bond,
+qtf , is determined by the Euler condition:
+
+                                              qtf = Et (Mt+1 ) .
+
+   Second, the price of a claim to the stream of dividends divt = yt − wt lt − xt (all income
+minus labor income and investment), which we can call equity, is equal to:
+
+                                                          e
+                                  qte = Et Mt+1 divt+1 + qt+1
+                                                                                     
+                                                                                          .
+
+
+
+                                                               9
+In our budget constraint, we specified that the household owns the physical capital and rents
+it to the firm. Given our complete markets assumption, this is equivalent to the firm owning
+the physical capital and the household owning these claims to dividends. Our specification
+makes deriving optimality conditions slightly easier.
+   Third, we can define the price-earnings ratio:
+                                                       e
+                            qte
+                                                          
+                                          divt+1      qt+1
+                                = Et Mt+1         1+           .
+                           divt            divt      divt+1
+
+   All these prices can be solved indirectly, once we have obtained the solution of Mt+1
+and other endogenous variables, or simultaneously. In this paper, we will solve for qtf and
+qte simultaneously with the other endogenous variables. This will show the flexibility of
+our approach. In general, it is not a good numerical strategy to solve simultaneously for
+volatile asset prices. For example, the price of a consol fluctuates wildly, especially if the
+expected return is low or even negative. This happens when disaster risk suddenly rises.
+The perturbation solution for the price of this asset would display large Taylor coefficients
+that converge very slowly. The Taylor projection method may even fail to give a solution,
+because it builds on the assumption that variables fluctuate within the convergence domain
+of their Taylor series. Note that in models with financial frictions, it is necessary to solve
+simultaneously for real variables and asset prices, as the latter influences the values of the
+former.
+
+
+2.7       Stripping down the full model
+   In our analysis below, we will solve eight versions of the model in order to examine the
+computational properties of the solution for models of different size and complexity.
+   Version 1 of the model is a benchmark real business cycle model with Epstein-Zin prefer-
+ences and time-varying disaster risk. Prices are fully flexible, the intermediate good producers
+do not have market power (i.e., ε goes to infinity), and there are no adjustment costs in in-
+vestment. Hence, instead of the the Calvo block (10)-(14), factor prices are determined by
+their marginal products:
+
+                                     rt = αAt ktα−1 lt1−α                                  (17)
+                                    wt = (1 − α) At ktα lt−α .                             (18)
+
+                                                                         ∗
+The benchmark version consists of four state variables: planned capital kt−1 , disaster shock
+dt , disaster risk θt , and technology innovations σA A,t . Also, since the model satisfies the
+classical dichotomy, we can ignore the Taylor rule.
+
+                                               10
+    Version 2 of the model introduces investment adjustment costs to version 1, but not the
+investment-specific technological shock. This adds past investment xt−1 as another state
+variable. We still ignore the monetary part of the model.
+    Version 3 of the model reintroduces price rigidity. Since we start using the Calvo block
+                                                                                             p
+(10)-(14), we need two additional state variables: past inflation Πt−1 and price dispersion vt−1 .
+However, in this version 3, we employ a simple Taylor rule that responds only to inflation.
+Versions 4 and 5 extend the Taylor rule so it responds to output growth and the past interest
+rate. These two versions introduce past output and interest rate as additional state variables.
+But, in all three versions, there are no monetary shocks to the Taylor rule.
+    Finally, versions 6, 7, and 8 of the model introduce the investment-specific technological
+shock, the monetary shocks, and the preference shocks. These shocks are added to the vector
+of state variables one by one. Therefore, the full model that we described in detail in this
+section (version 8) contains 12 state variables.
+
+
+3     Calibration
+    Before we compute the model, we normalize all relevant variables to obtain stationarity.
+We follow the normalization scheme in Fernández-Villaverde and Rubio-Ramı́rez (2006).
+    The model is calibrated at a quarterly frequency. When needed, Gaussian shocks are
+discretized by monomial rules with 2n nodes (for n shocks). Parameter values are listed
+in Table 1. Most parameters are taken from Fernández-Villaverde, Guerrón-Quintana, and
+Rubio-Ramı́rez (2015), who perform a structural estimation of a very similar DSGE model
+(hereafter FQR). There are three exceptions. The first exception is Epstein-Zin parameters
+and standard deviation of TFP shocks, which we take from Gourio (2012).
+    The second exception is the three parameters in the Taylor rule, which we calibrate
+somewhat more conservatively than those in FQR. Specifically, we pick the inflation target
+to be 2 percent annually, the inflation parameter γΠ to be 1.3, which satisfies the Taylor
+principle, and the interest smoothing parameter γR to be 0.5. The estimated values of γR
+and γΠ in FQR are less common in the literature. Furthermore, when combined with rare
+disasters, they generate too strong, and empirically implausible, nonlinearities.
+    The third exception is the parameters related to disasters. In the baseline calibration,
+we calibrate the mean disaster impact θ̄ such that output loss in a disaster is 40 percent.
+This is broadly in line with the figures presented by Barro (2006), who indicates an average
+contraction of 35 percent (compared to trend). We do not account for partial recoveries, so
+the impact of disaster risk may be overstated. For our purposes, this type of bias makes the
+model more difficult to solve because the nonlinearity is stronger. The persistence of disaster
+
+                                               11
+risk is set at ρθ = 0.9, which is close to Gourio (2012) and Gabaix (2012), although these
+researchers use specifications that are slightly different from ours. The standard deviation of
+the disaster risk is calibrated at σθ = .025. The four disaster parameters - disaster probability,
+mean impact, persistence, and standard deviation - have a strong effect on the precautionary
+saving motive and, hence, on asset prices and equilibrium dynamics. Ideally, these parameters
+should be jointly estimated, but, to keep our focus, we do not pursue this route in the present
+paper. Instead, we choose parameter values that generate realistic risk premia and that are
+broadly consistent with the previous literature.
+    We also consider an alternative no-disaster calibration. In this calibration, we set the
+mean and standard deviation of the disaster impact very close to zero, while keeping all
+the other parameter values as in the baseline calibration in Table 1. We do so in order to
+benchmark our results without disasters and gauge the role of large risks in terms of accuracy
+and computational time.
+
+
+4       Solution Methods
+    Given that we will deal with models with up to 12 state variables, we can only investigate
+solution methods that scale well in terms of the dimensionality of the state space. This
+eliminates, for example, value function iteration or projection methods based on tensors. The
+three methods left on the table are perturbation (a particular case of which is linearization),
+Taylor projection, and Smolyak collocation.4 The methods are implemented for different
+polynomial orders. More concretely, we will aim at computing 176 solutions, with 11 solutions
+per each of the eight versions of the model -perturbations from order 1 to 5, Taylor projections
+from order 1 to 3, and Smolyak collocation from level 1 to 3- and the two calibrations described
+above, the baseline calibration and the no-disaster calibration. As we will describe below, we
+could not find a few of the Smolyak collocation solutions.
+    Perturbation and Smolyak collocation are well-known methodologies. They are described
+in detail in Fernández-Villaverde, Rubio-Ramı́rez, and Schorfheide (2016). In comparison,
+Taylor projection is a new method recently proposed by Levintal (2016). We discuss the
+three methods briefly in the next pages. But, before doing so, we need to introduce some
+notation.
+
+    4
+      Judd, Maliar, and Maliar (2011) is a possible alternative solution, based on a simulation method. Maliar
+and Maliar (2014) survey the recent developments in simulation methods. We abstract from simulation
+methods, because the Smolyak collocation method is already satisfactory in terms of computational costs.
+Possibly, for larger models simulation methods may be more efficient than Smolyak collocation, although we
+will later introduce some comments on why we conjecture that, for this class of models, simulation methods
+may be difficult to implement.
+
+                                                     12
+   Following Schmitt-Grohé and Uribe (2004), we cast the model in the following form:
+
+                                    Et f (yt+1 , yt , xt+1 , xt ) = 0                         (19)
+                                    yt = g (xt )                                              (20)
+                                    xt+1 = h (xt ) + ηt+1 ,                                  (21)
+
+where xt is a vector of nx state variables, yt is a vector of ny control variables, f : R2nx +2ny →
+Rnx +ny , g : Rnx → Rny , h : Rnx → Rnx , η is a known matrix of dimensions nx × n , and  is a
+n × 1 vector of zero mean shocks. The first equation gathers all expectational conditions, the
+second one maps states into controls, and the last one gives us the law of motion for states.
+Equations (19)-(21) constitute a system of ny + nx functional equations in the unknown
+policy functions g and h. In practical applications, some of the elements of h are known
+(e.g. the evolution of the exogenous state variables), so the number of unknown functions
+and equations is smaller.
+
+
+4.1    Perturbation
+   Perturbation introduces a perturbation parameter σ that controls the volatility of the
+model. Specifically, equation (21) is replaced with:
+
+
+                                     xt+1 = h (xt ) + σηt+1 .
+
+   At σ = 0, the model boils down to a deterministic model. The steady state of the
+deterministic model, denoted x̄, is calculated (assuming it exists). Then, by applying the
+implicit function theorem, we recover the derivatives of the policy functions g and h with
+respect to x and σ. Having these derivatives, the policy functions are approximated by
+a Taylor series around x̄. To capture risk effects, the Taylor series must include at least
+second-order terms (Schmitt-Grohé and Uribe, 2004).
+   High-order perturbation solutions have been developed and explored by Judd (1998), Gas-
+par and Judd (1997), Jin and Judd (2002), Schmitt-Grohé and Uribe (2004), and Aruoba,
+Fernández-Villaverde, and Rubio-Ramı́rez (2006), among others. Obtaining perturbation
+solutions is easy for low orders, but the problem becomes cumbersome at high orders, espe-
+cially for large models. In this paper, we use the perturbation algorithm presented in Levintal
+(2015), which allows to solve models with non-Gaussian shocks up to the fifth order.
+
+
+
+
+                                                   13
+4.2    Smolyak collocation
+   Collocation is one of the projection methods introduced by Judd (1992). The policy
+functions g (x) and h (x) are approximated by polynomial functions gb (x, Θg ) and b
+                                                                                   h (x, Θh ),
+where Θg and Θh are the polynomial coefficients of gb and b
+                                                          h, respectively. Let Θ = (Θg , Θh )
+denote a vector of size nΘ of all polynomial coefficients. Substituting in equation (19) yields
+a residual function R (xt , Θ):
+                                                                                                
+        R (xt , Θ) = Et f gb ĥ (xt , Θh ) + ηt+1 , Θg , gb (xt , Θg ) , h (xt , Θh ) + ηt+1 , xt .
+                                                                          b
+
+
+Collocation methods evaluate the residual function R (x, Θ) at N points {x1 , . . . , xN }, and
+find the vector Θ for which the residual function is zero at all points. This requires solving
+a nonlinear system for Θ:
+                                    R (xi , Θ) = 0, ∀i = 1, . . . , N.                                  (22)
+
+The number of grid points N is chosen such that the number of conditions is equal to the
+number of coefficients to be solved (nΘ ).
+   Since DSGE models are multidimensional, the choice of the basis function is crucial for
+computational costs. We follow Krüger and Kubler (2004) by using Smolyak polynomials as
+the basis function. Smolyak polynomials are products of Chebyshev polynomials, but unlike
+tensor products, which grow exponentially, the number of terms in Smolyak polynomials
+grows polynomially with the number of state variables. We implement Smolyak polynomials
+of levels 1, 2, and 3. These approximation levels vary in the size of the basis function. The
+level 1 approximation contains 1 + 2nx terms, the level 2 contains 1 + 4nx + (4nx (nx − 1)) /2
+terms, and the level 3 contains 1 + 8nx + 12nx (nx − 1) /2 + 8nx (nx − 1) (nx − 2) /6 terms (see
+Krüger and Kubler, 2004, for details). The Smolyak approximation level is different from the
+polynomial order, as it contains higher order terms. For instance, an approximation of level 1
+contains quadratic terms. Hence, the number of terms in a Smolyak basis of level k is larger
+than the number of terms in a k order complete polynomial.
+   The first step of this approach is to construct the grid {x1 , . . . , xN }. The bounds of the
+grid affect the accuracy of the solution. For a given basis function, a wider grid reduces
+accuracy, because the same approximating function has to fit a larger domain of the state
+space. Generally, we would like to have a good fit at points that the model is more likely to
+visit, at the expense of other less likely points.
+   Disaster models pose a special challenge for grid-based methods, because the disaster
+periods are points of low likelihood, but with a large impact. Hence, methods that build a grid
+over a high probability region are not appropriate for disaster models (see a recent summary
+
+
+                                                     14
+in Maliar and Maliar, 2014). For this reason, we choose a more conservative approach and
+construct the grid by a hypercube. Specifically, we obtain a third-order perturbation solution,
+which is computationally cheap, and use it to simulate the model. Then, we take the smallest
+hypercube that contains all the simulation points (including the disaster periods) and build a
+Smolyak grid over the hypercube. In the level-3 Smolyak approximations, we had to increase
+the size of the hypercube by up to 60 percent; otherwise, the Jacobian would be severely
+ill-conditioned (we use the Newton method; see below). Our grid method is extremely fast,
+so we ignore its computational costs in our run time comparisons.5
+    The final, and most demanding, step is to solve the nonlinear system (22). Previous
+studies have used time iteration, e.g., Krüger and Kubler (2004), Malin, Krüger, and Kubler
+(2011), and Fernández-Villaverde, Gordon, Guerrón-Quintana, and Rubio-Ramı́rez (2015),
+but this method can be slow. More recently, Maliar and Maliar (2014) have advocated
+the use of fixed-point iteration as a faster algorithm. For the size of our models (up to 12
+state variables), we find that a Newton method with analytic Jacobian performs surprisingly
+well. The run time of the Newton method is faster than that of the fixed-point methods
+reported in the literature for models of similar size, e.g. see Judd, Maliar, Maliar, and Valero
+(2014). Moreover, the Newton method ensures convergence if the initial guess is sufficiently
+good, whereas fixed-point iteration does not guarantee convergence even if it starts near
+the solution. Our initial guess is a third-order perturbation solution, which proves to be
+sufficiently accurate for the models we study. Thus, the Newton method converges in just a
+few iterations. The main cost we encounter is the memory constraint, which becomes binding
+at a level-3 approximation for the largest model (12 state variables).6
+    The algorithm employed in solving the nonlinear system dictates the type of basis function
+and grid that should be used. Since we apply the Newton method, we must use a basis
+function and a grid that yield a numerically stable system. Our implementation of Smolyak
+collocation has this property. By comparison, methods that use derivative-free solvers (e.g.,
+Maliar and Maliar, 2015) gain more flexibility in the choice of basis functions and grids, but
+lose the convergence property of Newton-type solvers, which are particularly convenient in
+our case because we have access to a good initial guess.
+
+   5
+      Judd, Maliar, Maliar, and Valero (2014) propose to replace the hypercube with a parallelotope that
+encloses the ergodic set. This technique may increase accuracy if the state variables are highly correlated.
+In our case, the correlation between the state variables is very low (piecewise correlation is 0.14 on average),
+so the potential gain from this method is small, while computational costs are higher. More recently, Maliar
+and Maliar (2014, 2015) have proposed new types of grids. We skip the implementation of these more
+advanced techniques because our collocation method already performs well and the new ideas, which carry
+computational costs of their own, may be more useful in other classes of models.
+    6
+      We work on a Dell computer with a Intel(R) Core(TM) i7-5600U Processor and 16GB RAM, and our
+codes are written in MATLAB/MEX.
+
+                                                      15
+4.3    Taylor projection
+   Taylor projection is a new type of projection method proposed by Levintal (2016). As with
+standard projection methods, the goal is to find Θ for which the residual function R (x, Θ),
+defined by equation (22), is approximately zero over a certain domain of the state space that
+is of interest. Taylor projection builds on the Taylor theorem, which states that R (x, Θ) can
+be approximated in the neighborhood of x0 by a kth-order Taylor series about x0 . If the
+kth-order Taylor series is exactly zero (i.e., all the Taylor coefficients up to the kth-order are
+zero), then R (x, Θ) ≈ 0 in the neighborhood of x0 . Thus, Taylor projection finds Θ for which
+the kth-order Taylor series of the residual function about x0 is exactly zero. This amounts
+to finding Θ that solves:
+
+                            R (x0 , Θ) = 0
+                            ∂R (x, Θ)
+                                                 = 0, ∀i = 1, . . . , nx
+                              ∂xi           x0
+                             ∂ 2 R (x, Θ)
+                                                  = 0, ∀i1 , i2 = 1, . . . , nx
+                               ∂xi1 ∂xi2     x0
+                            ..
+                             .
+                             ∂ k R (x, Θ)
+                                                      = 0, ∀i1 , . . . , ik = 1, . . . , nx .   (23)
+                            ∂xi1 · · · ∂xik      x0
+
+
+Namely, the residual function and all its derivatives up to the kth-order should be zero at x0 .
+When this holds, all the terms of the kth-order Taylor series of R (x, Θ) about x0 are zero.
+   System (23) is solved for Θ using the Newton method with the analytic Jacobian. For
+comparability with Smolyak collocation, we use the same initial guess, which is a third-order
+perturbation solution, and the same stopping rule for the Newton method.
+   Taylor projection offers several computational advantages over standard projection meth-
+ods. First, a grid is not required. The polynomial coefficients are identified by information
+that comes from the model derivatives, rather than a grid of points. Second, the basis
+function is a complete polynomial. This gives additional flexibility over Smolyak polynomi-
+als. For instance, interaction terms can be captured by a second-order solution, which has
+1 + nx + nx (nx + 1) /2 terms in the basis function. In Smolyak polynomials, interactions
+show up only at the level-2 approximation with 1 + 4nx + (4nx (nx − 1)) /2 terms in the basis
+function (asymptotically 4 times larger). More terms in the basis function translate into a
+larger Jacobian, which is the main computational bottleneck of the Newton method. Finally,
+the Jacobian of Taylor projection is much sparser than the one from collocation. Hence, the
+computation of the Jacobian and the Newton step is cheaper.
+
+
+                                                            16
+    The main cost of Taylor projection is the computation of all the derivatives. Note that the
+Jacobian requires differentiation of the nonlinear system (23) with respect to Θ. These deriva-
+tives can be computed efficiently by the chain rule method developed by Levintal (2015). This
+method expresses high-order chain rules in compact matrix notation that exploits symmetry,
+permutations, and repeated partial derivatives. The chain rules can also take advantage of
+sparse matrix (or tensor) operations. For more details, see Levintal (2016).
+
+
+5       Results
+    We are finally ready to discuss our results. In three subsections, we will describe our
+findings in terms of accuracy, simulations, and computational costs.
+
+
+5.1     Accuracy
+    Following the literature, we assess the accuracy of the various solution methods in two
+ways. As proposed by Judd (1992), we compare the mean and maximum unit-free Euler
+errors across the ergodic set of the model. We approximate this ergodic set by simulating
+the model with the solution that was found to be the most accurate (third-order Taylor
+projection).
+    We first report accuracy measures for the no-disasters calibration model to benchmark our
+results. Tables 2-3 report the mean and maximum error for this calibration. As expected, all
+11 solutions are reasonably accurate for each of the 8 versions of the model. The mean Euler
+errors (in log10 units) range from around -2.7 (for a first-order perturbation) to -10.2 (for a
+level-3 Smolyak). The max Euler errors range from -1.3 (for a first-order perturbation) to -9.3
+(for a level-3 Smolyak). These results replicate the well-understood notion that models with
+weak volatility can be approximated well by linearization. See, for a similar result, Aruoba,
+Fernández-Villaverde, and Rubio-Ramı́rez (2006).7
+    Tables 4-5 report the accuracy measures for the baseline calibration.8 The accuracy
+measures change significantly when disasters are introduced into the model. The mean and
+maximum errors are now, across all solutions, 2-3 orders of magnitude larger than before.
+
+    7
+      All through this section, we approximate the same set of variables by all methods and use the model
+equations to solve for the remaining variables. While applying perturbation methods, researchers usually
+employ instead the perturbation solution for all variables. We avoid that practice because we want to be
+consistent across all solution methods.
+    8
+      The results for the level-1 Smolyak collocation are partial, because the Newton solver did not converge
+in all cases. The level-3 Smolyak could not be solved for version 8 of the model due to insufficient memory.
+Also, for the level-3 Smolyak and to avoid ill-conditioned Jacobians, the size of the grid was increased by 30
+percent for version 3 of the model and by 60 percent for versions 4-7.
+
+                                                     17
+First-order perturbation and Taylor projection solutions are severely inaccurate, with max
+Euler errors as high as -0.4. Higher-order perturbation solutions are more accurate, but
+errors are still relatively large. In particular, we find that a third-order perturbation solution
+is unlikely to be accurate enough, with mean Euler errors between -1.8 and -2.4 and max Euler
+errors between -1.7 and -1.9. Even a fifth-order perturbation can generate a disappointing
+mean Euler error of between -1.9 and -3.5.
+   In comparison, second- and third-order Taylor projections deliver a much more solid
+accuracy, with mean Euler errors between -3.6 and -6.9. Interestingly, the max Euler errors
+are about two orders of magnitude larger, suggesting that in a few rare cases these solutions
+are significantly less accurate. We will later explore whether the differences between mean
+and max Euler errors are economically significant.
+   The Smolyak solution improves over the fifth-order perturbation solution, but it is less
+accurate than a Taylor projection of comparable order. How can this happen given the
+higher-order terms in the polynomials forming the Smolyak solution? Because of the strong
+nonlinearity generated by rare disasters. The Smolyak method has to extrapolate outside the
+grid. Since the grid already contains extreme points (rare disasters), extrapolating outside
+these extreme points introduces even more extreme points (e.g., a disaster period that occurs
+right after a disaster period). By comparison, Taylor projection evaluates the residual func-
+tion and its derivatives at one point, which is a normal period. Thus, it has to extrapolate
+only for next-period likely outcomes, which can be either normal or disaster periods. This
+reduces the approximation errors that contaminate the solution.
+   To dig deeper, we plot in Figure 1 the model residuals across the ergodic set for the four
+most accurate solutions (second- and third-order Taylor projection and Smolyak collocation).
+We use version 7 of the model, for which we have all four solutions. These plots reveal the
+different pattern of the errors of Taylor projection compared to Smolyak collocation. Taylor
+projection exhibits very small errors throughout most of the sample, except for two peaks of
+high errors, which occur around disaster periods. Since Taylor projection zeros the Taylor
+series of the residual function, the residuals are small as long as the model stays around the
+center of the Taylor series (the steady state in our case). Namely, Taylor projection yields a
+locally accurate solution, which deteriorates at points distant from the center. Fortunately,
+these points are relatively unlikely, even considering the effects of disaster risk.
+   In principle, it is possible to improve the accuracy of Taylor projection by solving the
+model at multiple points, as done in Levintal (2016). For instance, we could solve the model
+also at a disaster period and use this solution when the model visits that point. However, for
+these solutions to be accurate an important condition must hold: the state variables must
+not change dramatically (in probability) from the current period to the future period. This
+
+
+                                               18
+condition holds when the model is in a normal state, because it is highly likely that it stays
+at a normal state the next period as well. However, if the model is in a disaster state, it is
+very likely that it will change to a normal state the next period. Hence, solving the model
+in a disaster state is prone to higher approximation errors. Nevertheless, it is important to
+understand this property of Taylor projection, because one can build the model in such a way
+that the future state of the economy is likely to be similar to the current state (for instance,
+by increasing the frequency of the calibration or the persistence of the exogenous shocks).
+   The Smolyak errors depicted in Figure 1 are more evenly distributed than the Taylor pro-
+jection errors. This is not surprising, because the collocation algorithm minimizes residuals
+across the collocation points, which represent the ergodic set. This also reflects the uniform
+convergence of projection methods (Judd, 1998). The problem is that the disaster periods
+tilt the solution towards these rare episodes at the expense of the more likely normal states.
+As a result, the errors in normal states get larger, because the curvature of the basis function
+is limited. The solution to the problem is to increase the Smolyak order, but as shown below,
+the computational costs are too high.
+
+
+5.2    Simulations
+   Our second step is to compare the equilibrium dynamics generated by the different so-
+lutions. In particular, we look at two standard outputs from DSGE models: moments from
+simulations and impulse response functions.
+   Rare disasters generate a strong impact on asset prices and risk premia. The solution
+methods should be able to approximate these effects. Hence, we examine how the different
+solutions approximate the prices of the two assets in our model: equity and risk-free bonds.
+Tables 6-7 present the mean risk-free rate and the mean return on equity across simulations
+generated by the different methods. We focus on version 7 of the model, for which we have
+all the solutions. By the previous accuracy measures, the most accurate solutions are Taylor
+projection of orders 2 and 3, and Smolyak collocation of orders 2 and 3. The mean risk-free
+rate in these four solutions is 1.7-1.8 percent. Note that despite the differences in mean and
+maximum Euler errors, from an economic viewpoint, these four solutions yield roughly the
+same result. The differences across the four solutions are smaller than 0.06.
+   By comparison, perturbation solutions, which have been found to be less accurate, gen-
+erate a much higher risk-free rate, ranging from 4.8 percent at the first order to 2.3 percent
+at the fifth order. At the third order (a popular choice when solving models with stochastic
+volatility), the risk-free rate is 2.9 percent. Therefore, our evidence suggests that perturba-
+tion methods fail to approximate accurately the risk-free rate, unless one goes for very high
+
+
+                                              19
+orders. At the fifth order, the approximation errors are relatively small, which is consis-
+tent with the results obtained by Levintal (2015). Nevertheless, researchers that seek higher
+accuracy should use different methods. The approximation of the mean return on equity is
+more volatile across the different perturbation solutions, but fairly close to the 5.8-5.9 percent
+obtained by the four accurate solutions.
+   We next examine impulse response functions. We focus on the disaster variables, which
+generate the main nonlinearity in our model. Figure 2 presents the response of the model
+to a disaster shock. The initial point is the fixed point to which the model converges in the
+absence of shocks. The figure plots the response of output, investment, and consumption.
+In the left panels we plot three perturbation solutions and a third-order Taylor projection.
+In the right panels we plot the three Taylor projections and Smolyak levels 2 and 3 (the
+mnemonics in the figure should be easy to read). Although the scale of the shock is large
+and, therefore, it tends to cluster all impulse response functions, we can see some non-trivial
+differences in the impulse response functions from low-order perturbations with respect to
+all the other impulse response functions (furthermore, the model is solved for the detrended
+variables, which are much less volatile).
+   Figure 3 plots the impulse response functions of a disaster risk shock (θt ). We assume that
+the disaster impact θt rises from a contraction of 40 percent to a contraction of 45 percent,
+which under our calibration is a 3.5 standard deviation event. As explained in section 3, this
+relatively small change has a large impact on the model, because the model is highly sensitive
+to the disaster parameters. All solutions generate in response a decline in detrended output,
+investment, and consumption, but the magnitudes differ considerably. As before, the left
+panels of the figure compare the perturbation solutions to a third-order Taylor projection.
+Low-order perturbation solutions fail to approximate well the model dynamics, although the
+fifth-order perturbation is relatively accurate. The right panel of Figure 3 shows a similarity
+of the four most accurate solutions (second- and third-order Taylor projection and Smolyak
+levels 2 and 3). We read this figure, as well as the results from Tables 6-7, as suggesting
+that the solutions generated by a second- and third-order Taylor projection are economically
+indistinguishable from the solutions from a Smolyak collocation.
+   Figure 4 shows similar impulse response functions, but only for the four most accurate
+solutions. The left panel depicts the same impulse response as in Figure 3 with some zooming
+in. The right panel shows impulse response functions for a larger shock, which increases the
+anticipated disaster impact from 40 percent to 50 percent. Given the standard deviation of
+θt , which is calibrated at 2.5 percent, the shock we consider is a 7 standard deviation event.
+Barro (2006) points out that, while rare, this is a shock that is sometimes observed in the
+data. Note that differences among the solutions are economically small (the scale is log).
+
+
+                                               20
+Nevertheless, there seem to be two clusters of solutions: second-order Taylor projection and
+Smolyak level-2 and third-order Taylor projection and Smolyak level-3.
+   We conclude from this analysis that second- and third-order Taylor projections and
+Smolyak solutions are economically similar. We could not find a significant difference be-
+tween these solutions. The other solutions are relatively poor approximations, except for the
+fifth-order perturbation solution, which is reasonably good.
+
+
+5.3    Computational costs
+   Our previous findings suggest that the second- and third-order Taylor projections and
+Smolyak solutions are similar. However, when it comes to computational costs, there are
+more than considerable differences among the solutions. Table 8 reports total run time (in
+seconds) for each solution. The second-order Taylor projection is the fastest method among
+the four accurate solutions by a large difference. It takes less than 3 seconds to solve the
+seventh version of the model with second-order Taylor projection, 100 seconds with third-
+order Taylor projection, 31 seconds with second-order Smolyak and 4,067 seconds with third-
+order Smolyak. Given that these solutions are roughly equivalent, this is a remarkable result.
+Taylor projection allows us to solve large and highly nonlinear models in a few seconds, and
+potentially to nest the solution within an estimation algorithm, where the model needs to be
+solved hundreds of times for different parameter values. Note also that a second-order Taylor
+projection takes considerably less time than a fifth-order perturbation (3.5 seconds versus
+60.3 seconds for the full model), even if its mean Euler errors are smaller (-3.6 versus -2.2).
+   The marginal costs of the different methods are extremely heterogeneous. Moving from
+version 7 to version 8 of the model adds only one exogenous state variable. This change
+increases the run time of a second-order Taylor projection by 0.8 second. By comparison,
+a third-order Taylor projection takes about 61 more seconds, Smolyak level-2 takes roughly
+31 more seconds, and Smolyak level-3 could not be computed due to insufficient memory.
+Extrapolating these trends forward implies that the differences in computational costs across
+solutions would increase rapidly with the size of the model.
+   We conclude that the second-order Taylor projection solution delivers the best accu-
+racy/speed tradeoff among the tested solutions. The run time of this method is sufficiently
+fast to enable estimation of the model, which would be much more difficult with the other
+methods tested. For researchers interested in higher accuracy at the expense of higher costs,
+we recommend the third-order Taylor projection solution, which is faster than a Smolyak
+solution of comparable order.
+   Finally, we provide MATLAB codes that perform the Taylor projection method on the class
+
+
+                                              21
+of models defined in section 4. Given these codes, Taylor projection is as straightforward
+and easy to implement as standard perturbation methods. In comparison, coding a Smolyak
+collocation requires some degree of skill and care.
+
+
+6     Conclusions
+    Models with rare disasters have become a popular line of research in macroeconomics and
+finance. However, rare disasters, by inducing significant non-linearities, present non-trivial
+computational challenges that have been largely ignored in the literature or dealt with only
+in a non-systematic fashion. To fill this gap, in this paper, we formulated and solved a
+New Keynesian model with time-varying disaster risk (including several simpler versions of
+it). Our findings were as follows. First, low-order perturbation solutions (first, second, and
+third) do not offer enough accuracy as measured by the Euler errors, computed statistics, or
+impulse response functions. A fifth-order perturbation fixes part of the problem, but it is
+still not entirely satisfactory regarding accuracy and it imposes some serious computational
+costs. Second, a second-order Taylor projection seems an excellent choice, with a satisfactory
+balance of accuracy and run time. A third-order Taylor projection can handle a medium
+size model with even better accuracy, but at a higher cost. Finally, Smolyak collocation
+methods were accurate, but they were hard to implement (we failed to find a solution on
+several occasions and faced memory limitations) and suffered from long run times.
+    This paper should be read only as a preliminary progress report. There is much more to
+be learned about the properties of models with rare disasters than we can cover in one paper.
+However, we hope that our results will stimulate further investigation on the topic.
+
+
+
+
+                                              22
+7     Appendix
+7.1    Euler Conditions
+    Define the household’s maximization problem as follows:
+                                                          
+                                      1−ψ
+                                                      1−ψ
+                                                  1−γ 1−γ
+                                max
+                                 ∗
+                                     Ut   + βEt Vt+1
+                              ct ,kt ,xt ,lt
+
+                             s.t. ct + xt − wt lt − rt kt − Ft − Tt = 0
+                                                               
+                           ∗                                 xt
+                          kt − (1 − δ) kt − µt 1 − S                xt = 0
+                                                            xt−1
+                                     kt+1 = kt∗ exp (−dt+1 θt+1 ) .
+
+Note that the value function Vt depends on the household’s actual stock of capital kt and on
+past investment xt−1 , as well as on aggregate variables and shocks that the household takes
+as given. Thus, let us use Vk,t and Vx,t to denote the derivatives of Vt with respect to capital
+kt and past investment xt−1 (assuming differentiability). These derivatives are obtained by
+the envelope theorem:
+
+                             (1 − ψ) Vt−ψ Vk,t = λt rt + Qt (1 − δ)                        (24)
+                                                                  2
+                                   −ψ               0    xt      xt
+                         (1 − ψ) Vt Vx,t = Qt µt S                      ,                  (25)
+                                                        xt−1    xt−1
+
+where λt and Qt are the Lagrange multipliers associated with the budget constraint and the
+evolution law of capital (they enter the Lagrangian in negative sign). We exclude the third
+constraint from the Lagrangian and substitute it directly in the value function or the other
+constraints, whenever necessary.
+    Differentiating the Lagrangian with respect to ct , kt∗ , xt , and lt yields the first-order
+conditions:
+
+                                          (1 − ψ) Ut−ψ Uc,t = λt                           (26)
+                                           γ−ψ
+                                1−γ           −γ
+                                                                          
+                 (1 − ψ) βEt Vt+1          1−γ
+                                       Et Vt+1   Vk,t+1 exp (−dt+1 θt+1 ) = Qt             (27)
+                                                                  
+                                           xt           0    xt      xt
+                      λt = Qt µt 1 − S             −S                      +               (28)
+                                          xt−1              xt−1 xt−1
+                                                γ−ψ
+                                           1−γ 1−γ           −γ
+                                                                       
+                          + (1 − ψ) βEt Vt+1         Et Vt+1    Vx,t+1
+                                      (1 − ψ) Ut−ψ Ul,t = −λt wt                           (29)
+
+
+
+
+                                                   23
+   Substituting the envolope conditions (24)-(25) and defining:
+
+                                                                 Qt
+                                                          qt =
+                                                                 λt
+
+yields equations (5)-(7) in the main text.
+
+
+7.2    The Calvo Block
+   The intermediate good producer that is allowed to adjust prices maximizes the discounted
+value of its profits. Fernández-Villaverde and Rubio-Ramı́rez (2006, pp. 12-13) derive the
+first-order conditions of this problem for expected utility preferences, which yield the following
+recursion:
+
+
+                                                                −
+                                                           Πχt
+                                                            
+                                gt1 = λt mct yt + βθp Et             1
+                                                                    gt+1
+                                                           Πt+1
+                                                          χ 1−  ∗ 
+                                                          Πt           Πt
+                                gt2 = λt Π∗t yt + βθp Et                     2
+                                                                            gt+1 .
+                                                          Πt+1        Π∗t+1
+
+   To adjust these conditions to Epstein-Zin preferences, divide by λt to have:
+
+
+                                                           χ − 1
+                              gt1                    λt+1   Πt    gt+1
+                                  = mct yt + βθp Et                                                     (30)
+                              λt                      λt    Πt+1  λt+1
+                                2
+                                                          χ 1−  ∗  2
+                              gt                    λt+1   Πt       Πt  gt+1
+                                  = Π∗t yt + βθp Et                  ∗
+                                                                                                        (31)
+                              λt                     λt    Πt+1    Πt+1 λt+1
+
+   Note that β λλt+1
+                  t
+                     is the stochastic discount factor in expected utility preferences. In
+Epstein-Zin preferences the stochastic discount factor is given instead by (2.1). Substituting
+                      gt1              gt2
+and defining ḡt1 =   λt
+                          ,   ḡt2 =   λt
+                                             yields (10)-(14). The other conditions in the Calvo block follow
+directly from Fernández-Villaverde and Rubio-Ramı́rez (2006, pp. 12-13).
+
+
+
+
+                                                            24
+References
+Andreasen, M. (2012): “On the Effects of Rare Disasters and Uncertainty Shocks for Risk
+  Premia in Non-Linear DSGE Models,” Review of Economic Dynamics, 15(3), 295–316.
+
+Andreasen, M. M., J. Fernández-Villaverde, and J. F. Rubio-Ramı́rez (2013):
+  “The Pruned State-Space System for Nonlinear DSGE Models: Theory and Empircal Ap-
+  plications,” NBER Working, 18983.
+
+Aruoba, S. B., J. Fernández-Villaverde, and J. F. Rubio-Ramı́rez (2006): “Com-
+  paring Solution Methods for Dynamic Equilibrium Economies,” Journal of Economic Dy-
+  namics and Control, 30(12), 2477–2508.
+
+Barro, R. J. (2006): “Rare Disasters and Asset Markets in the Twentieth Century,” Quar-
+  terly Journal of Economics, 121(3), 823–866.
+
+          (2009): “Rare Disasters, Asset Prices, and Welfare Costs,” American Economic
+  Review, 99(1), 243–64.
+
+Barro, R. J., and T. Jin (2011): “On the Size Distribution of Macroeconomic Disasters,”
+  Econometrica, 79(5), 1567–1589.
+
+Barro, R. J., and J. F. Ursúa (2012): “Rare Macroeconomic Disasters,” Annual Review
+  of Economics, 4(1), 83–109.
+
+Christiano, L. J., M. Eichenbaum, and C. L. Evans (2005): “Nominal Rigidities and
+  the Dynamic Effects of a Shock to Monetary Policy,” Journal of Political Economy, 113(1),
+  1–45.
+
+Epstein, L. G., and S. E. Zin (1989): “Substitution, Risk Aversion, and the Temporal
+  Behavior of Consumption and Asset Returns: A Theoretical Framework,” Econometrica,
+  57, 937–969.
+
+Farhi, E., and X. Gabaix (2008): “Rare Disasters and Exchange Rates,” Working Paper
+  13805, National Bureau of Economic Research.
+
+Fernández-Villaverde, J., G. Gordon, P. A. Guerrón-Quintana, and J. F.
+  Rubio-Ramı́rez (2015): “Nonlinear Adventures at the Zero Lower Bound,” Journal of
+  Economic Dynamics and Control, 57, 182–204.
+
+
+
+
+                                            25
+Fernández-Villaverde, J., P. A. Guerrón-Quintana, and J. F. Rubio-Ramı́rez
+  (2015): “Estimating Dynamic Equilibrium Models with Stochastic Volatility,” Journal of
+  Econometrics, 185, 216–229.
+
+Fernández-Villaverde, J., and J. F. Rubio-Ramı́rez (2006): “A Baseline DSGE
+  Model,” Discussion paper, University of Pennsylvania.
+
+Fernández-Villaverde, J., J. F. Rubio-Ramı́rez, and F. Schorfheide (2016): “So-
+  lution and Estimation Methods for DSGE Models,” Working Paper 21862, National Bureau
+  of Economic Research.
+
+Gabaix, X. (2012): “Variable Rare Disasters: An Exactly Solved Framework for Ten Puzzles
+  in Macro-Finance,” Quarterly Journal of Economics, 127(2), 645–700.
+
+Gaspar, J., and K. L. Judd (1997): “Solving Large-Scale Rational-Expectations Models,”
+  Macroeconomic Dynamics, 1, 45–75.
+
+Gourio, F. (2012): “Disaster Risk and Business Cycles,” American Economic Review,
+  102(6), 2734–66.
+
+Gourio, F. (2013): “Credit Risk and Disaster Risk,” American Economic Journal: Macroe-
+  conomics, 5(3), 1–34.
+
+Gourio, F., M. Siemer, and A. Verdelhan (2013): “International risk cycles,” Journal
+  of International Economics, 89(2), 471–484.
+
+Isoré, M., and U. Szczerbowicz (2013): “Disaster Risk in a New Keynesian Model,”
+  Working Papers 2013-12, CEPII research center.
+
+        (2015): “Disaster Risk and Preference Shifts in a New Keynesian Model,” Working
+  Papers 2015-16, CEPII research center.
+
+Jin, H.-H., and K. L. Judd (2002): “Perturbation Methods for General Dynamic Stochastic
+  Models,” Manuscript, Hoover Institution.
+
+Judd, K. L. (1992): “Projection Methods for Solving Aggregate Growth Models,” Journal
+  of Economic Theory, 58, 410–452.
+
+         (1998): Numerical Methods in Economics. MIT Press, Cambridge.
+
+Judd, K. L., L. Maliar, and S. Maliar (2011): “Numerically Stable and Accurate
+  Stochastic Simulation Methods for Solving Dynamic Models,” Quantitative Economics, 2,
+  173–210.
+
+                                             26
+Judd, K. L., L. Maliar, S. Maliar, and R. Valero (2014): “Smolyak Method for Solv-
+  ing Dynamic Economic Models: Lagrange Interpolation, Anisotropic Grid and Adaptive
+  Domain,” Journal of Economic Dynamics and Control, 44, 92–123.
+
+Krüger, D., and F. Kubler (2004): “Computing Equilibrium in OLG Models with
+  Stochastic Production,” Journal of Economic Dynamics and Control, 28, 1411–1436.
+
+Levintal, O. (2015): “Fifth Order Perturbation Solution to DSGE Models,” Manuscript,
+  Interdisciplinary Center Herzliya.
+
+         (2016): “Taylor Projection: A New Solution Method to Dynamic General Equilib-
+  rium Models,” Manuscript, Interdisciplinary Center Herzliya.
+
+Maliar, L., and S. Maliar (2014): “Numerical Methods for Large Scale Dynamic Eco-
+  nomic Models,” in Handbook of Computational Economics, ed. by K. Schmedders, and K. L.
+  Judd, vol. 3, pp. 325–477. Elsevier.
+
+        (2015): “Merging Simulation and Projection Approaches to Solve High-Dimensional
+  Problems with an Application to a New Keynesian Model,” Quantitative Economics, 6, 1–
+  47.
+
+Malin, B. A., D. Krüger, and F. Kubler (2011): “Solving the Multi-country Real Busi-
+  ness Cycle Model Using a Smolyak-collocation Method,” Journal of Economic Dynamics
+  and Control, 35, 229–239.
+
+Mehra, R., and E. C. Prescott (1985): “The Equity Premium: A Puzzle,” Journal of
+  Monetary Economics, 15(2), 145–161.
+
+Nakamura, E., J. Steinsson, R. Barro, and J. Ursúa (2013): “Crises and Recoveries
+  in an Empirical Model of Consumption Disasters,” American Economic Journal: Macroe-
+  conomics, 5(3), 35–74.
+
+Petrosky-Nadeau, N., L. Zhang, and L. Kuehn (2015): “Endogenous Disasters,”
+  Discussion paper, Carnegie Mellon University.
+
+Rietz, T. A. (1988): “The Equity Risk Premium: a Solution,” Journal of Monetary Eco-
+  nomics, 22(1), 117–131.
+
+Rudebusch, G., and E. Swanson (2012): “The Bond Premium in a DSGE Model with
+  Long-run Real and Nominal Risks,” American Economic Journal: Macroeconomics, 4,
+  105–143.
+
+
+                                           27
+Schmitt-Grohé, S., and M. Uribe (2004): “Solving Dynamic General Equilibrium Mod-
+  els Using a Second-Order Approximation to the Policy Function,” Journal of Economic
+  Dynamics and Control, 28, 755–775.
+
+Smets, F., and R. Wouters (2007): “Shocks and Frictions in US Business Cycles: A
+  Bayesian DSGE Approach,” American Economic Review, 97, 586–608.
+
+Swanson, E. T. (2012): “Risk Aversion and the Labor Margin in Dynamic Equilibrium
+  Models,” American Economic Review, 102(4), 1663–91.
+
+Tsai, J., and J. A. Wachter (2015): “Disaster Risk and its Implications for Asset Pric-
+  ing,” Working Paper 20926, National Bureau of Economic Research.
+
+Wachter, J. A. (2013): “Can Time-Varying Risk of Rare Disasters Explain Aggregate
+  Stock Market Volatility?,” Journal of Finance, 68(3), 987–1035.
+
+
+
+
+                                            28
+                   Table 1: Baseline Calibration
+
+Parameter                                      Value       Source
+Leisure preference (ν)                           2.33   Gourio (2012)
+Risk aversion (γ)                                 3.8   Gourio (2012)
+Inverse IES (ψ)b                                  0.5   Gourio (2012)
+Trend growth of TFP (ΛA )                      .0028     FQR (2015)
+Std of TFP shocks (σA )                           .01   Gourio (2012)
+Trend growth of investment shock (Λµ )             0
+Std of investment shock (σµ )                  .0024     FQR (2015)
+Discount factor (β)                               .99    FQR (2015)
+Cobb-Douglas parameter (α)                        .21    FQR (2015)
+Depreciation (δ)                                 .025    FQR (2015)
+Fixed production costs (φ)                          0    FQR (2015)
+Disaster probability                            .0043   Gourio (2012)
+Mean Disaster size (θ̄)                        .5108
+Persistence of disaster risk shock (ρθ )           .9
+Std of disaster risk shock (σθ )                 .025
+Adjustment cost parameter (κ)                     9.5   FQR   (2015)
+Calvo parameter (θp )                          .8139    FQR   (2015)
+Automatic price adjustment (χ)                 .6186    FQR   (2015)
+Elasticity of substitution ()                     10   FQR   (2015)
+Inflation target (Π)                           1.0050
+Inflation parameter in Taylor rule∗ (γΠ )         1.3
+Output growth parameter in Taylor rule (γy )    .2458   FQR (2015)
+Interest smoothness in Taylor rule∗ (γR )          .5
+Std of monetary shock (σm,t )                  .0025    FQR (2015)
+Persistence of intertemporal shock (ρξ )        .1182   FQR (2015)
+Std of intertemporal shock (σξ )               .1376    FQR (2015)
+
+
+
+
+                                 29
+                                Table 2: No disasters: Mean Euler Errors (log10) across the ergodic set
+     Model                                         state vars           Perturbation               Taylor Projection    Smolyak collocation
+                                                                1st    2nd    3rd    4th    5th    1st    2nd    3rd    1st    2nd     3rd
+     1.   Benchmark with EZ and disasters              4        -2.8   -3.4   -5.3   -6.4   -7.1   -3.3   -6.2   -8.7   -3.3   -7.4   -10.2
+     2.   + capital adjustment costs                  5         -2.7   -3.9   -5.0   -6.7   -7.1   -3.1   -4.9   -6.8   -2.7   -5.1    -7.1
+     3.   + Calvo                                     7         -2.8   -4.0   -4.4   -5.9   -6.5   -3.3   -5.2   -7.0   -3.2   -5.3    -7.0
+     4.   + Taylor rule depends on output growth      8         -2.8   -4.1   -4.7   -6.2   -6.9   -3.3   -5.2   -7.0   -3.2   -5.3    -6.5
+     5.   + Taylor rule is smoothed                    9        -2.8   -4.1   -4.6   -6.1   -6.7   -3.3   -5.2   -7.0   -3.2   -5.2    -6.5
+     6.   + investment shock                          10        -2.8   -4.1   -4.6   -6.1   -6.7   -3.1   -4.9   -6.8   -3.2   -5.3    -6.7
+     7.   + monetary shock                            11        -2.7   -3.9   -4.6   -5.9   -6.6   -2.9   -4.7   -6.4   -3.0   -5.1    -6.4
+     8.   + intertemporal preference shock            12        -2.8   -4.0   -4.6   -5.7   -6.6   -3.0   -4.8   -6.5   -3.2   -5.2      -
+
+
+
+                                Table 3: No disasters: Max Euler Errors (log10) across the ergodic set
+     Model                                         state vars           Perturbation               Taylor Projection    Smolyak collocation
+
+
+
+
+30
+                                                                1st    2nd    3rd    4th    5th    1st    2nd    3rd    1st    2nd    3rd
+     1.   Benchmark with EZ and disasters              4        -1.3   -2.3   -4.2   -5.4   -7.1   -1.3   -3.4   -5.5   -1.9   -6.2   -9.3
+     2.   + capital adjustment costs                  5         -1.8   -2.9   -4.2   -5.4   -6.6   -1.8   -2.9   -4.2   -1.4   -3.2   -5.5
+     3.   + Calvo                                     7         -1.6   -2.7   -4.1   -5.1   -6.0   -1.6   -2.8   -4.1   -1.9   -4.2   -5.4
+     4.   + Taylor rule depends on output growth      8         -1.6   -2.8   -4.1   -5.4   -6.4   -1.6   -2.8   -4.1   -1.9   -4.2   -5.0
+     5.   + Taylor rule is smoothed                    9        -1.6   -2.8   -4.2   -5.4   -6.5   -1.6   -2.8   -4.1   -1.9   -4.1   -4.9
+     6.   + investment shock                          10        -1.8   -3.0   -4.5   -5.5   -6.5   -1.8   -3.1   -4.5   -2.1   -4.1   -4.9
+     7.   + monetary shock                            11        -1.8   -3.0   -4.4   -5.4   -6.4   -1.8   -3.1   -4.4   -2.0   -3.9   -4.9
+     8.   + intertemporal preference shock            12        -1.7   -3.0   -4.0   -5.1   -6.1   -1.7   -3.1   -4.4   -2.1   -4.1     -
+                             Table 4: Disaster Models - Mean Euler Errors (log10) across the ergodic set
+     Model                                         state vars            Perturbation              Taylor Projection    Smolyak collocation
+                                                                1st    2nd    3rd    4th    5th    1st    2nd    3rd    1st    2nd    3rd
+     1.   Benchmark with EZ and disasters               4       -1.7   -2.0   -2.4   -2.9   -3.5   -3.1   -5.3   -6.9   -3.2   -6.0   -8.5
+     2.   + capital adjustment costs                   5        -1.6   -2.0   -2.4   -2.8   -3.2   -2.5   -4.1   -5.4     -    -1.6   -3.6
+     3.   + Calvo                                      7        -1.7   -2.0   -1.8   -1.7   -1.9   -2.4   -3.8   -4.8   -1.0   -2.6   -3.6
+     4.   + Taylor rule depends on output growth       8        -1.8   -2.1   -2.1   -2.0   -2.2   -2.5   -4.0   -5.1   -1.0   -2.7   -3.5
+     5.   + Taylor rule is smoothed                     9       -1.7   -2.1   -2.1   -2.1   -2.2   -2.2   -3.7   -4.5     -    -2.7   -3.7
+     6.   + investment shock                           10       -1.8   -2.1   -2.1   -2.1   -2.2   -2.3   -3.7   -4.5     -    -2.6   -3.6
+     7.   + monetary shock                             11       -1.8   -2.2   -2.1   -2.1   -2.2   -2.2   -3.6   -4.5     -    -2.6   -3.8
+     8.   + intertemporal preference shock             12       -1.7   -2.1   -2.1   -2.1   -2.2   -2.2   -3.6   -4.4     -    -2.6     -
+
+
+
+                              Table 5: Disaster Models - Max Euler Errors (log10) across the ergodic set
+     Model                                         state vars           Perturbation               Taylor Projection    Smolyak collocation
+
+
+
+
+31
+                                                                1st    2nd    3rd    4th    5th    1st    2nd    3rd    1st    2nd    3rd
+     1.   Benchmark with EZ and disasters              4        -1.5   -1.7   -1.9   -2.1   -2.4   -1.5   -3.1   -3.8   -1.8   -4.9   -7.3
+     2.   + capital adjustment costs                  5         -0.8   -1.2   -1.8   -2.1   -2.4   -0.8   -1.1   -1.8     -    -0.7   -2.4
+     3.   + Calvo                                     7         -0.5   -1.6   -1.7   -1.6   -1.6   -0.6   -1.7   -2.5   -0.1   -1.7   -2.6
+     4.   + Taylor rule depends on output growth      8         -0.5   -1.7   -1.8   -1.8   -1.9   -0.5   -1.7   -2.3   -0.1   -1.7   -2.6
+     5.   + Taylor rule is smoothed                    9        -0.5   -1.6   -1.8   -1.9   -1.9   -0.5   -1.6   -2.2     -    -1.7   -2.6
+     6.   + investment shock                          10        -0.8   -1.7   -1.8   -1.9   -1.9   -0.8   -1.7   -2.3     -    -1.7   -2.7
+     7.   + monetary shock                            11        -0.7   -1.8   -1.9   -1.9   -2.0   -0.9   -2.0   -2.4     -    -1.9   -2.8
+     8.   + intertemporal preference shock            12        -0.4   -1.5   -1.8   -1.8   -1.9   -0.5   -1.5   -2.1     -    -1.9     -
+                           Table 6: Disaster Models - Risk-free rate (% annualized) - simulation average
+     Model                                         state vars          Perturbation           Taylor Projection   Smolyak collocation
+                                                                1st   2nd   3rd   4th   5th   1st   2nd   3rd     1st   2nd    3rd
+     1.   Benchmark with EZ and disasters              4        4.6   3.1   1.8   1.0   0.7   0.6   0.5   0.5     0.5   0.5    0.5
+     2.   + capital adjustment costs                  5         4.6   2.9   1.6   0.8   0.4   0.3   0.2   0.2      -    0.1    0.2
+     3.   + Calvo                                     7         4.6   3.0   2.0   1.4   1.1   0.4   0.4   0.4     0.3   0.4    0.4
+     4.   + Taylor rule depends on output growth      8         4.7   3.5   2.7   2.2   2.0   1.5   1.6   1.6     1.8   1.6    1.6
+     5.   + Taylor rule is smoothed                    9        4.7   3.4   2.8   2.4   2.1   1.4   1.5   1.6      -    1.5    1.6
+     6.   + investment shock                          10        4.8   3.5   2.9   2.5   2.2   1.5   1.6   1.7      -    1.6    1.7
+     7.   + monetary shock                            11        4.8   3.6   2.9   2.5   2.3   1.5   1.7   1.8      -    1.7    1.8
+     8.   + intertemporal preference shock            12        4.7   3.4   2.8   2.4   2.1   1.3   1.5   1.6      -    1.5     -
+
+
+
+                         Table 7: Disaster Models - Return on Equity (% annualized) - simulation average
+     Model                                         state vars          Perturbation           Taylor Projection   Smolyak collocation
+
+
+
+
+32
+                                                                1st   2nd   3rd   4th   5th   1st   2nd   3rd     1st   2nd    3rd
+     1.   Benchmark with EZ and disasters              4        5.3   5.3   5.4   5.4   5.4   5.4   5.4   5.4     5.4   5.4    5.4
+     2.   + capital adjustment costs                  5         5.5   5.6   5.7   5.8   5.8   5.8   5.8   5.8      -    6.2    5.8
+     3.   + Calvo                                     7         5.5   5.6   5.8   5.9   6.0   5.7   5.7   5.7     5.1   5.7    5.7
+     4.   + Taylor rule depends on output growth      8         5.4   5.6   5.8   5.9   5.9   5.7   5.7   5.7     4.7   5.7    5.7
+     5.   + Taylor rule is smoothed                    9        5.4   5.6   5.9   6.1   6.1   5.6   5.7   5.8      -    5.7    5.7
+     6.   + investment shock                          10        5.5   5.7   6.1   6.2   6.2   5.8   5.8   5.9      -    5.8    5.9
+     7.   + monetary shock                            11        5.5   5.7   6.1   6.2   6.2   5.7   5.8   5.9      -    5.8    5.9
+     8.   + intertemporal preference shock            12        5.4   5.5   5.9   6.1   6.1   5.6   5.7   5.8      -    5.7     -
+                                                     Table 8: Run time (seconds)
+      Model                                        state vars        Perturbation             Taylor Projection   Smolyak collocation
+                                                               1st 2nd 3rd 4th         5th    1st 2nd     3rd     1st   2nd      3rd
+      1.   Benchmark with EZ and disasters               4     0.0 0.0 0.0 0.0          0.3   0.5 0.7      1.6    0.3    0.5      1.0
+      2.   + capital adjustment costs                   5      0.0 0.0 0.0 0.3          1.6   0.6 1.0     2.0      -    1.1       4.6
+
+
+
+
+33
+      3.   + Calvo                                      7      0.0 0.0 0.0 0.9          4.5   0.5 1.3     7.7     0.4    3.3     83.2
+      4.   + Taylor rule depends on output growth       8      0.0 0.0 0.0 1.2         6.6    0.6 1.5    13.7     0.4   5.7     308.4
+      5.   + Taylor rule is smoothed                    9      0.0 0.0 0.0 1.5         10.3   0.5 1.8    29.2      -    12.7   622.3
+      6.   + investment shock                           10     0.0 0.0 0.1 3.4         18.4   0.5 2.2     54.3     -    23.9   1444.0
+      7.   + monetary shock                             11     0.0 0.0 0.1 4.4         31.7   0.5 2.7    100.4     -    31.0   4067.2
+      8.   + intertemporal preference shock             12     0.0 0.0 0.1 5.4         60.3   0.6 3.5    161.5     -    62.2       -
+     We    work on a Dell computer with an Intel(R) Core(TM) i7-5600U Processor and   16GB    RAM.
+                  Figure 1: Model residuals across the ergodic set
+
+                                  Taylor Projection 2nd order
+0.04
+
+0.02
+
+   0
+
+-0.02
+
+-0.04
+                100   200   300      400     500      600       700   800   900   1000
+
+        ×10-3                     Taylor Projection 3rd order
+   4
+
+   2
+
+   0
+
+  -2
+
+  -4
+                100   200   300      400     500      600       700   800   900   1000
+
+                                      Smolyak 2nd order
+0.04
+
+0.02
+
+   0
+
+-0.02
+
+-0.04
+                100   200   300      400     500      600       700   800   900   1000
+
+        ×10-3                         Smolyak 3rd order
+   4
+
+   2
+
+   0
+
+  -2
+
+  -4
+                100   200   300      400     500      600       700   800   900   1000
+
+
+
+
+                                            34
+            Figure 2: Impulse response functions to a disaster shock
+
+
+               log(output)                                         log(output)
+-0.5                                                -0.5
+                                  tp3                                                 tp3
+-0.6                                                -0.6
+                                  pert1                                               tp2
+                                  pert3                                               tp1
+-0.7                                                -0.7
+                                  pert5                                               smol2
+                                                                                      smol3
+-0.8                                                -0.8
+
+-0.9                                                -0.9
+
+ -1                                                  -1
+
+-1.1                                                -1.1
+    0   5     10   15        20   25      30            0   5    10    15        20   25      30
+
+
+             log(investment)                                    log(investment)
+-2.5                                                -2.5
+                                  tp3                                                 tp3
+-2.6                                                -2.6
+                                  pert1                                               tp2
+                                  pert3                                               tp1
+-2.7                                                -2.7
+                                  pert5                                               smol2
+                                                                                      smol3
+-2.8                                                -2.8
+
+-2.9                                                -2.9
+
+ -3                                                  -3
+
+-3.1                                                -3.1
+    0   5     10   15        20   25      30            0   5    10    15        20   25      30
+
+
+            log(consumption)                                    log(consumption)
+-0.7                                                -0.7
+                                  tp3                                                 tp3
+-0.8                                                -0.8
+                                  pert1                                               tp2
+                                  pert3                                               tp1
+-0.9                                                -0.9
+                                  pert5                                               smol2
+                                                                                      smol3
+ -1                                                  -1
+
+-1.1                                                -1.1
+
+-1.2                                                -1.2
+
+-1.3                                                -1.3
+    0   5     10   15        20   25      30            0   5    10    15        20   25      30
+
+
+
+
+                                               35
+         Figure 3: Impulse response functions to a disaster risk shock
+
+             log(detrended output)                                  log(detrended output)
+-0.91                                                  -0.935
+
+
+-0.92                                                  -0.94
+
+
+-0.93                                                  -0.945
+                                                                                            tp3
+                                     tp3                                                    tp2
+                                     pert1                                                  tp1
+-0.94                                                  -0.95
+                                     pert3                                                  smol2
+                                     pert5                                                  smol3
+
+-0.95                                                  -0.955
+     0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+         log(detrended investment)                              log(detrended investment)
+-2.88                                                  -2.93
+
+
+ -2.9                                                  -2.94
+
+
+-2.92                                                  -2.95
+                                                                                            tp3
+                                     tp3                                                    tp2
+                                     pert1                                                  tp1
+-2.94                                                  -2.96
+                                     pert3                                                  smol2
+                                     pert5                                                  smol3
+
+-2.96                                                  -2.97
+     0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+         log(detrended consumption)                             log(detrended consumption)
+-1.065                                                 -1.08
+
+-1.07
+                                                       -1.085
+-1.075
+
+-1.08                                                  -1.09
+                                                                                            tp3
+                                     tp3                                                    tp2
+-1.085
+                                     pert1                                                  tp1
+                                                       -1.095
+                                     pert3                                                  smol2
+-1.09
+                                     pert5                                                  smol3
+
+-1.095                                                  -1.1
+     0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+
+
+                                                  36
+Figure 4: Impulse response functions to small (left) and big (right) disaster risk shocks
+
+
+                 log(detrended output)                                  log(detrended output)
+    -0.938                                                 -0.935
+
+
+     -0.94                                                 -0.94
+
+
+    -0.942                                                 -0.945
+                                         tp2                                                    tp2
+                                         tp3                                                    tp3
+    -0.944                                                 -0.95
+                                         smol2                                                  smol2
+                                         smol3                                                  smol3
+
+    -0.946                                                 -0.955
+         0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+              log(detrended investment)                             log(detrended investment)
+     -2.93                                                 -2.93
+
+                                                           -2.935
+    -2.935
+                                                           -2.94
+
+
+                                         tp2               -2.945                               tp2
+     -2.94
+                                         tp3                                                    tp3
+                                         smol2             -2.95                                smol2
+                                         smol3                                                  smol3
+
+    -2.945                                                 -2.955
+         0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+             log(detrended consumption)                             log(detrended consumption)
+    -1.084                                                 -1.08
+
+    -1.086                                                 -1.085
+
+    -1.088                                                 -1.09
+
+     -1.09                               tp2               -1.095                               tp2
+                                         tp3                                                    tp3
+    -1.092                               smol2              -1.1                                smol2
+                                         smol3                                                  smol3
+
+    -1.094                                                 -1.105
+         0   5      10    15    20       25      30             0   5      10    15    20       25      30
+
+
+
+
+                                                      37
+

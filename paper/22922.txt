@@ -1,0 +1,2105 @@
+                                NBER WORKING PAPER SERIES
+
+
+
+
+      AUTOMATED ECONOMIC REASONING WITH QUANTIFIER ELIMINATION
+
+                                         Casey B. Mulligan
+
+                                        Working Paper 22922
+                                http://www.nber.org/papers/w22922
+
+
+                      NATIONAL BUREAU OF ECONOMIC RESEARCH
+                               1050 Massachusetts Avenue
+                                 Cambridge, MA 02138
+                                    December 2016
+
+
+
+
+I appreciate the comments on this work from seminar participants at the University of Chicago and
+the financial support of the Thomas W. Smith Foundation. The views expressed herein are those of
+the author and do not necessarily reflect the views of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2016 by Casey B. Mulligan. All rights reserved. Short sections of text, not to exceed two paragraphs,
+may be quoted without explicit permission provided that full credit, including © notice, is given to
+the source.
+Automated Economic Reasoning with Quantifier Elimination
+Casey B. Mulligan
+NBER Working Paper No. 22922
+December 2016
+JEL No. B41,C63,C65
+
+                                             ABSTRACT
+
+Many theorems in economics can be proven (and hypotheses shown to be false) with “quantifier elimination.”
+ Results from real algebraic geometry such as Tarski’s quantifier elimination theorem and Collins’
+cylindrical algebraic decomposition algorithm are applicable because the economic hypotheses, especially
+those that leave functional forms unspecified, can be represented as systems of multivariate polynomial
+(sic) equalities and inequalities. The symbolic proof or refutation of economic hypotheses can therefore
+be achieved with an automated technique that involves no approximation and requires no problem-specific
+information beyond the statement of the hypothesis itself. This paper also discusses the computational
+complexity of this kind of automated economic reasoning, its implementation with Mathematica and
+REDLOG software, and offers several examples familiar from economic theory.
+
+
+Casey B. Mulligan
+University of Chicago
+Department of Economics
+1126 East 59th Street
+Chicago, IL 60637
+and NBER
+c-mulligan@uchicago.edu
+       Economics has been profoundly affected by progress in information technology
+that has facilitated the collection and processing of vast amounts of data related to
+economic activity.    Information technology has so far assisted less with economic
+reasoning – deducing conclusions about behavior, markets, or welfare from assumptions
+or observations about motivation, technology, and market structure – of the sort done by
+Alfred Marshall, Paul Samuelson, Gary Becker, or Roger Myerson. There are automatic
+algebraic simplifiers, but simplicity is often in the eye of the beholder and such tools are
+sparingly used by economic theorists. Computers have already been used for generating
+numerical examples, but approximation quality is a concern, and more thinking is always
+needed to appreciate the generality of the results from examples. The purpose of this
+paper is to show how approximation-free economic reasoning is beginning to be
+automated, present the mathematical foundations of those procedures, and allow readers
+of this paper to access a user-friendly tool for automated economic reasoning.
+       Section I introduces, to an economics audience, quantified systems of polynomial
+equalities and inequalities, and their quantifier-free equivalents, as defined in real
+algebraic geometry. Section II shows how a number of hypotheses in economic theory,
+especially those that leave functional forms unspecified, are isomorphic with those
+systems. Section III shows how quantifier elimination can be used as a tool for proving
+hypotheses, detecting inconsistent assumptions, reformulating hypotheses to make them
+True, measuring the relative strength of alternative assumptions, and generating examples
+and counterexamples. Results from mathematicians Tarski, Collins, and followers –
+shown in Section IV – speak to the feasibility of, and algorithms for, eliminating
+quantifiers from systems of polynomial equality, inequality, and not-equal relations
+(hereafter “polynomial inequalities”) and thereby for confirming or refuting many
+hypotheses in economic theory. In addition to presenting results from the mathematics
+literature, Section IV links them with the economic examples, and gives special attention
+to single-cell decompositions, universal sentences, and existential sentences.
+       Readers are also pointed to existing software implementations of quantifier-
+elimination methods and given some indication as to likely progress in this dimension.
+One of the implementations is in the Wolfram Language/Mathematica, which has a
+number of other symbolic capabilities such as automated differentiation and various
+
+
+
+                                                                                          1
+interface options. REDLOG is less familiar and has a more primitive user interface, but
+typically eliminates quantifiers more quickly than Mathematica does.1
+
+
+I. Sets and hypotheses represented with and without quantifiers
+
+
+I.A. An example from elementary algebra
+        As a first example, Figure 1 shows the two dimensional set of coefficients (b,c) of
+parabolas that have real roots. Equation (1) features two (of many) ways of defining the
+same set:
+
+
+                         {(𝑏, 𝑐 ) ∈ ℝ2 : ∃𝑥(𝑥 2 + 𝑏𝑥 + 𝑐 = 0)} =
+                                                                                                (1)
+                                  {(𝑏, 𝑐 ) ∈ ℝ2 : 𝑏2 ≥ 4𝑐 }
+
+
+where b, c and x are scalar real numbers.2 The first (hereafter, “quantified”) definition
+uses the “existential” quantifier “Exists” () over the quantified variable x in order to
+represent the parabola property of interest: having a real root. The second “quantifier-
+free” definition has no quantifiers, but nonetheless describes the same subset of ℝ2 .
+        Now consider the question of whether a particular parabola (b,c) is in the set
+featured in (1): whether it has real roots. The question might not be answered in finite
+time with the quantified definition, taken literally, because a parabola cannot be
+confirmed to be outside the set without checking all possible values of x. At the same
+time, the quantifier-free definition provides verification in just one step: verifying
+whether b and c satisfy the inequality.           Ease of verification is why it can be of
+“enormous” practical value to “eliminate quantifiers” from a set’s definition: that is, to
+take a quantified definition such as the LHS of (1) and transform it into a quantifier-free
+
+1
+  Mathematica calculations have been fast enough for my purposes. See also Bradford, et al.
+(2016), who find Mathematica to be faster than three other implementations (none of which is
+REDLOG) and Davenport and England (2015), who find Mathematica to be “exceptionally fast.”
+I have also encountered specific problems that REDLOG processes orders of magnitude more
+slowly than Mathematica does.
+2
+  I assume that the coefficient on x2 is nonzero, and therefore without loss of generality describe
+roots of quadratic equations by reference to a quadratic equation with a unit coefficient on x2.
+Throughout the paper, each variable is assumed to be a scalar real number unless explicitly
+indicated otherwise.
+
+                                                                                                  2
+one such as the RHS of (1). 3 Indeed, some artificial intelligence research equates
+quantifier elimination with the vernacular concept of “solving” a mathematics problem
+(Arai, et al. 2014, p. 2).
+         Real algebraic geometry has a number of results as to (a) what quantified set
+definitions have an equivalent quantifier-free representation, and (b) algorithms that
+eliminate quantifiers. The purpose of this paper is to report results from the real algebraic
+geometry and symbolic computation literatures, show how they permit a significant part
+of economic theory to be automated, and give more details as to features that are
+especially relevant for the economics applications.
+         The quantified definition (1) has one quantified variable, x, and two that are
+unquantified {b,c}. Now consider introducing quantifiers over one or two of the parabola
+coefficients as well. For example, if we introduce the “universal” quantifier “ForAll” ()
+over the linear-term coefficient b, we describe a coefficient set in ℝ:
+
+
+                 {𝑐 ∈ ℝ: ∀𝑏∃𝑥 (𝑥 2 + 𝑏𝑥 + 𝑐 = 0)} = {𝑐 ∈ ℝ: 𝑐 ≤ 0}                            (2)
+
+
+The quantified definition reads “For all b, there exists a real root” (the order of the
+quantifiers matters in this case).        Again, the quantifier-free definition facilitates
+verification that any particular parabola is in the set of interest. Introducing a third
+quantifier, we have:
+
+
+                             ∃𝑐∀𝑏∃𝑥 (𝑥 2 + 𝑏𝑥 + 𝑐 = 0) = 𝑇𝑟𝑢𝑒                                 (3)
+
+
+All three of the variables are quantified in Equation (3). A fully-quantified formula is
+known as a “sentence,” and all sentences are either True or False. 4 Removing the
+quantifiers from a sentence is known as “deciding” that sentence and, in effect, is a proof
+of its assertion because the quantifier-free representation of any sentence is either True or
+False.
+
+
+
+3
+ Caviness and Johnson (1998, p. 2).
+4
+ Another example is the hypothesis that all parabolas have a real root (∀{𝑏, 𝑐}∃𝑥 (𝑥 2 + 𝑏𝑥 + 𝑐 =
+0)), which is a False sentence.
+
+                                                                                                3
+         Hypotheses that involve assumptions also fit into this framework.              Take for
+example the hypothesis that if any parabola’s coefficients satisfy b2  4c then it has real
+roots:
+
+
+         ∀{𝑏, 𝑐 }[𝑏2 ≥ 4𝑐 ⇒ ∃𝑥(𝑥 2 + 𝑏𝑥 + 𝑐 = 0)]
+                                                                                               (4)
+                         = ∀{𝑏, 𝑐 }[𝑏2 < 4𝑐 ∨ ∃𝑥(𝑥 2 + 𝑏𝑥 + 𝑐 = 0)] = 𝑇𝑟𝑢𝑒
+
+
+The first equality follows from the definition of “Implies” (): that either the implication
+is True or the assumption is False. 5 The second equality shows the removal of the
+quantifiers from the sentence, and that the result is True. This example shows how
+statements of the form “If X is true, then so is Y” are logically equivalent to Boolean
+combinations of hypotheses with And () and Or () and are therefore sentences that
+would be proven True or False by quantifier elimination.
+
+
+
+
+I.B. The General Framework
+I.B.1. The formulated hypothesis
+       The general framework has N <  real scalar variables x1, …, xN.                      The
+formulation HF of a hypothesis involves quantifiers on x1, …, xNF, with the remaining 0
+ F < N of them free (unquantified):
+
+
+                 𝐻𝐹 = (𝑄1 𝑥1 )(𝑄2 𝑥2 ) … (𝑄𝑁−𝐹 𝑥𝑁−𝐹 )𝑇(𝑥1 , 𝑥2 , … , 𝑥𝑁 )
+                                                                                               (5)
+                             𝑄𝑖 ∈ {∀, ∃} 𝑖 = 1, … , (𝑁 − 𝐹)
+
+
+where the “Tarski formula” T by itself is a quantifier-free Boolean combination, with the
+logical And and Or operators, of a finite number of polynomial (in x1, …, xN)
+
+
+5
+ Note that, by this definition (also implemented as “Implies” in Mathematica and REDLOG),
+∃𝑐(𝑐 < 0 ⇒ 𝑐 > 0) = 𝑇𝑟𝑢𝑒. This is one reason why (a) logicians sometimes argue for
+alternative definitions of Implies (Priest 2000, p. 53) and (b) when connecting assumptions with
+implications under the existential quantifier, Mathematica requires that there exists a point in
+which both the assumption and implication are simultaneously True. See also below on “empty
+assumption sets.”
+
+                                                                                                   4
+inequalities. 6 For brevity I also use the Not operator, which merely refers to reversing an
+inequality (or changing = to ), and the Implies operator, which is a shorthand for a
+Boolean combination of And, Or and Not (see above).
+         Of particular interest are universal and existential formulations that have the same
+quantifier on each of the NF variables. In these cases, I show the quantifier only once
+and list the quantified variables in braces:
+
+
+    (𝑄𝑥1 )(𝑄𝑥2 ) … (𝑄𝑥𝑁−𝐹 )𝑇(𝑥1 , 𝑥2 , … , 𝑥𝑁 ) ≡ 𝑄{𝑥1 , 𝑥2 , … , 𝑥𝑁−𝐹 }𝑇(𝑥1 , 𝑥2 , … , 𝑥𝑁 )     (6)
+
+
+Hypotheses formulated with only one kind of quantifier, e.g., (6), have the same meaning
+regardless of the order of the quantifiers. Moreover, every universal formulation can be
+expressed as an existential formulation, and vice versa:
+
+
+     ¬∀{𝑥1 , 𝑥2 , … , 𝑥𝑁−𝐹 }𝑇(𝑥1 , 𝑥2 , … , 𝑥𝑁 ) = ∃{𝑥1 , 𝑥2 , … , 𝑥𝑁−𝐹 }¬𝑇(𝑥1 , 𝑥2 , … , 𝑥𝑁 )   (7)
+
+
+where ¬ is the Not operator.7 If, for given values of the free variables, the Tarski formula
+is not True on all of ℝ𝑁−𝐹 , then there exists at least one point in ℝ𝑁−𝐹 where the Tarski
+formula is false, and vice versa. The order-invariance and quantifier-interchangeability
+properties of universal and existential formulations offer many opportunities for
+facilitating and verifying computation.
+         Because of their relationship with proofs, sentences (F = 0) are especially useful
+for automating economic reasoning.               This contrasts with previous discussions of
+quantifier elimination in economic theory, such as Brown and Matzkin (1996), Snyder
+(2000), Brown and Kubler (2008), Carvajal et al. (2014), and Chambers and Echenique
+(2016), whose purposes are to derive restrictions on free variables that they associate with
+“observables.” Moreover, with an exception appearing in the appendix of Brown and
+Matzkin (1996), they do not intend to “carry out” the quantifier elimination but rather be
+assured that the result of doing so would be a non-empty semi-algebraic set in ℝ𝐹 .
+
+
+
+6
+  C.W. Brown (2004, 2). For example, putting the middle of (4) in the same format, we have
+(∀𝑏)(∀𝑐)(∃𝑥)[𝑏2 < 4𝑐 ∨ 𝑥 2 + 𝑏𝑥 + 𝑐 = 0], with the Tarski formula in square brackets.
+7
+  (7) is known as “De Morgan’s law for quantifiers.”
+
+                                                                                                  5
+I.B.2. An equivalent representation, without quantifiers
+
+
+         As above, we are interested in a quantifier-free, but equivalent, statement HE of a
+formulated hypothesis HF. Formally,
+
+
+                                𝐻𝐸 = 𝑃(𝑥𝑁−𝐹+1 , … , 𝑥𝑁 )                                       (8)
+
+
+where P is another Tarski formula (distinct from the T appearing in HF), and therefore a
+quantifier-free Boolean combination of a finite number of polynomial inequalities. If
+there are no free variables (F = 0), then P is either 1 = 1 (True) or 1 = 0 (False).
+         Quantifier elimination refers to an algorithmic method that derives P from HF.8
+We are also interested in the existence and properties of such “automated” method(s), but
+first we consider some familiar economic hypotheses that fit into this framework and the
+potential value of such a method as a tool for economic reasoning.
+
+
+
+
+II. Examples of quantifiers in economic analysis
+II.A. Concave and quasiconcave production functions
+
+         Consider the assertion, adapted from Jehle and Reny (2011), about continuous
+and differentiable production functions of two inputs x and y: that all such production
+functions f that are strictly increasing and strictly quasiconcave at a point (x,y) with
+positive input quantities are concave functions of their inputs at that point. We can
+investigate this assertion by formulating a hypothesis within the framework (5), as shown
+below:
+
+
+
+
+8
+  In the quadratic formula example (2), it would be a method that derives the RHS (an inequality
+restriction on c) from the LHS. Ideally, the same method used for (2) could also be used for (1),
+(3), and (4) and any other application that fits within the general framework (5).
+
+                                                                                                    6
+                          𝜕𝑓(𝑥, 𝑦) 𝜕𝑓(𝑥, 𝑦) 𝜕 2 𝑓(𝑥, 𝑦) 𝜕 2 𝑓 (𝑥, 𝑦) 𝜕 2 𝑓(𝑥, 𝑦)
+               ∀ {𝑥, 𝑦,           ,        ,           ,            ,           }
+                            𝜕𝑥       𝜕𝑦         𝜕𝑥 2        𝜕𝑦 2        𝜕𝑥𝜕𝑦
+
+                          𝜕𝑓(𝑥, 𝑦)     𝜕𝑓(𝑥, 𝑦)
+    [(𝑥 > 0 ∧ 𝑦 > 0 ∧              >0∧          >0
+                            𝜕𝑥           𝜕𝑦
+                 2                             2
+      𝜕𝑓(𝑥, 𝑦) 𝜕 2 𝑓 (𝑥, 𝑦)    𝜕𝑓(𝑥, 𝑦) 𝜕 2 𝑓 (𝑥, 𝑦)     𝜕𝑓(𝑥, 𝑦) 𝜕𝑓(𝑥, 𝑦) 𝜕 2 𝑓(𝑥, 𝑦)
+    ∧(        )             + (        )             < 2                              )          (9)
+        𝜕𝑥         𝜕𝑥 2          𝜕𝑦         𝜕𝑦 2           𝜕𝑥       𝜕𝑦        𝜕𝑥𝜕𝑦
+
+                       𝜕 2 𝑓(𝑥, 𝑦)       𝜕 2 𝑓(𝑥, 𝑦)
+                     ⇒(            ≤ 0 ∧             ≤0
+                           𝜕𝑥 2              𝜕𝑦 2
+                                                                            2
+                                       𝜕 2 𝑓 (𝑥, 𝑦) 𝜕 2 𝑓(𝑥, 𝑦)    𝜕 2 𝑓(𝑥, 𝑦)
+                                   ∧                            ≥ (           ) )] = 𝐹𝑎𝑙𝑠𝑒
+                                           𝜕𝑥 2         𝜕𝑦 2          𝜕𝑥𝜕𝑦
+
+
+The hypothesis formulation on the LHS of (9) is a universal sentence with 7 scalar real
+variables. 9 Its logical form is an assumption with an implication. The first-derivative
+conditions in the assumption say that, at the arbitrary point (x,y), the production function
+is increasing in both arguments. The assumption’s second-derivative condition says that
+the production function is strictly quasiconcave at that point. The implication’s second-
+derivative conditions say that the production function is, at the same point, jointly
+concave in the two inputs. Eliminating the quantifiers from the LHS reveals that the
+hypothesis is False: there are elements of ℝ7 in which the assumption is True but the
+implication is not.
+        Note that quantifiers in the general framework (5), and in the example (9), are not
+formulating universal or existential statements about elements of a function space.
+Rather, (9) refers to values of function arguments and derivatives at a particular point
+(x,y) and thereby to polynomials in ℝ7 . “ForAll” means all possible values for those
+seven arguments and derivatives. This isomorphism is essential to broadly applying the
+results from real algebraic geometry because the latter refer to polynomials in real closed
+fields (such as the real numbers). Table 1 illustrates the isomorphism more starkly by
+relabeling the input and derivative values as v1 through v7.10 Every component of the
+
+
+9
+  Two of them, x and y, are not related to the rest of the inequalities, but we use them later as we
+modify the example.
+10
+   The variables in (9) are mapped to the generic notation {v1,…,v7} in alphabetical order (as
+sorted by Mathematica with variables before functions of variables). Table 1 lists the variables in
+
+                                                                                                   7
+assumption and every component of the hypothesis is an equality or inequality comprised
+of a sum of various products of these variables (with some of the variables appearing
+more than once in the product).
+        The ForAll quantifier is powerful because it allows statements about real numbers
+to generate statements about classes of functions. If, for example, (9) had been True,
+then it would tell us that any real-valued differentiable two-argument function that is
+strictly increasing and strictly quasiconcave at a point (with positive inputs) would be
+concave at that point because any such function has its arguments and derivatives
+(relevant to concavity and quasiconcavity) at a point described by seven real numbers.
+(9) is in fact False, which tells us that there exists seven real numbers to assign to those
+arguments and derivatives that describe, at a point with positive inputs, positive marginal
+products and strict quasiconcavity but not concavity. Any function with those seven
+arguments and derivatives would prove by example that not all quasiconcave functions
+are concave. 11
+        It follows that neither (9) nor (5) requires the production function to be a
+polynomial in x and y alone, as assumed the chapters of Brown and Kubler (2008) that
+posit semi-algebraic economies. Indeed, as we shall see, an explicitly semi-algebraic
+production function would restrict the range of analysis and potentially have tremendous
+computational costs.
+
+
+
+II.B. A Monopolist’s pass through of marginal costs
+
+        Consider a monopolist that faces a demand curve whose inverse is W(q) with
+W(q) < 0, where q is the quantity sold to consumers. The cost of producing q is g(q,a),
+which satisfies
+
+
+
+
+order of the complexity of their contribution to the system of polynomial inequalities (C. W.
+Brown 2004).
+11
+   Given seven numbers that falsify (9), a entire family of nonconcave but analytic, increasing and
+quasiconcave functions could be found by using those values to specify the corresponding level
+and derivative terms in an infinite Taylor-series representation of the production function. It is an
+entire family because the seven numbers are consistent with any values for the third- and higher-
+order coefficients in the Taylor series.
+
+                                                                                                   8
+                   𝜕𝑔(𝑞, 𝑎)     𝜕 2 𝑔(𝑞, 𝑎)     𝜕 2 𝑔(𝑞, 𝑎)
+                            ≥0,             ≥0,             >0                                (10)
+                     𝜕𝑞             𝜕𝑞 2           𝜕𝑞𝜕𝑎
+
+
+where a is a cost parameter that increases marginal cost. If the monopolist produces and
+sells q, then he receives W(q) from each unit sold. His optimal quantity is described by: 12
+
+
+                                  𝑞𝑊(𝑞 ) − 𝑔(𝑞, 𝑎) ≥ 0                                        (11)
+
+
+                                𝜕
+                                   [𝑞𝑊 (𝑞 ) − 𝑔(𝑞, 𝑎)] = 0                                    (12)
+                                𝜕𝑞
+
+
+                                𝜕2
+                                     [𝑞𝑊(𝑞 ) − 𝑔(𝑞, 𝑎)] < 0                                   (13)
+                                𝜕𝑞 2
+
+
+The pass-through rate  can be defined to be the impact of a on the monopolist’s optimal
+price per unit impact on marginal cost:13
+
+
+                                         𝑑
+                                            𝑊 (𝑞 )
+                                    𝜇≡   𝑑𝑎
+                                                                                              (14)
+                                       𝑑 𝜕𝑔(𝑞, 𝑎)
+                                       𝑑𝑎 [ 𝜕𝑞 ]
+
+
+                            𝑑 𝜕
+                              { [𝑞𝑊 (𝑞 ) − 𝑔(𝑞, 𝑎)]} = 0                                      (15)
+                            𝑑𝑎 𝜕𝑞
+
+
+
+
+The assumptions (10)-(15) and W(q) < 0 are polynomial inequalities in the 9-
+                           𝑑𝑞            𝜕𝑔   𝜕 2𝑔   𝜕 2𝑔
+dimensional space {𝑞, 𝑑𝑎 , 𝑔(𝑞, 𝑎), 𝜕𝑞 , 𝜕𝑞𝜕𝑎 , 𝜕𝑞2 , 𝑊 (𝑞 ), 𝑊 ′ (𝑞 ), 𝑊 ′′ (𝑞 )} .   Quantifier
+
+elimination in this space can confirm a number of hypotheses about pass-through. For
+example, a convex demand curve (W > 0) is necessary but not sufficient for pass-
+
+12
+  See also Weyl and Fabinger (2013).
+13
+  A more familiar derivative would use the partial, rather than total, derivative in the
+denominator. This paper features the total derivative because it makes the quantifier elimination
+a bit more complicated and interesting.
+
+                                                                                                    9
+through to exceed one ( > 1) at positive quantities (q > 0). Note that both the pass-
+through implication and the extra assumptions are all (rather trivial) polynomial
+inequalities in the same space and thereby keep the hypothesis within the general
+framework (5).
+
+
+
+II.C. Laffer curve surprises
+            Consider the prototype static representative agent economy for examining
+aggregate consequences of labor income taxation. Specifically, the representative agent
+has preferences over the amount consumed c and the amount worked n, as represented by
+the utility function u(c,n). c is a good, n is a bad, and preferences are quasiconcave, in
+the relevant range. The economy’s production set is weakly convex with its boundary
+described by the monotone increasing production function f(n).
+            The government levies a constant-rate labor income tax in order to finance a lump
+sum transfer. Given a labor income tax rate , a competitive equilibrium in this economy
+is a list of five scalars {c,n,a,r,w} such that:
+    (i)        Given a, r, w, and , the pair (c,n) maximizes the representative worker’s
+               utility subject to his budget constraint:
+
+
+                 (𝑐, 𝑛) = argmax 𝑢(𝑐 ′ , 𝑛′ ) 𝑠. 𝑡. 𝑐 ′ ≤ (1 − 𝜏)𝑤𝑛′ + 𝑟 + 𝑎             (16)
+                            𝑐 ′ ,𝑛 ′
+
+
+
+    (ii)       Given w, n maximizes the representative employer’s profits a:
+
+
+                                       𝑛 = argmax 𝑓 (𝑛′ ) − 𝑤𝑛′                          (17)
+                                              𝑛′
+
+
+
+                                        𝑎 = max
+                                             ′
+                                                𝑓 (𝑛′ ) − 𝑤𝑛′                            (18)
+                                              𝑛
+
+    (iii)      The government budget constraint balances
+
+
+                                              𝑟 = 𝜏𝑤𝑛                                    (19)
+
+
+There typically is more than one tax rate that is consistent with the same amount of
+revenue r: for example no revenue could come from  = 0 or from  = 1. In this case, the
+                                                                                      10
+lower tax rate method of obtaining that revenue is associated with more equilibrium
+utility for the representative agent, but is that a general result? Formally, if we have an
+equilibrium {cL,nL,aL,rL,wL} associated with tax rate L and another equilibrium
+{cH,nH,aH,rH,wH} associated with tax rate H > L > 0 and rL = rH > 0, can we conclude
+that u(cL,nL) > u(cH,nH)?
+        Note that, unless L were at the peak of the Laffer curve, we cannot assume that,
+say, cH differs from cL by only a differential change as we did with the first two examples
+that applied the chain rule of calculus. This Laffer-curve example relates to discrete
+differences, but is nonetheless amenable to quantifier elimination. Here the assumptions
+are:
+                                    0 < 𝜏𝐿 < 𝜏𝐻 < 1                                       (20)
+
+
+                  𝑤𝐿 > 0, 𝑤𝐻 > 0, 𝑛𝐿 > 0, 𝑛𝐻 > 0, 𝑐𝐿 > 0, 𝑐𝐻 > 0                          (21)
+
+
+                                  𝜏𝐿 𝑤𝐿 𝑛𝐿 = 𝜏𝐻 𝑤𝐻 𝑛𝐻                                     (22)
+
+
+        (𝑐𝐿 − 𝑐𝐻 )(𝑛𝐿 − 𝑛𝐻 ) > 0 , (𝑛𝐿 − 𝑛𝐻 )𝑤𝐿 ≤ 𝑐𝐿 − 𝑐𝐻 ≤ (𝑛𝐿 − 𝑛𝐻 )𝑤𝐻                  (23)
+
+
+        𝑢𝐿 = 𝑢(𝑐𝐿 , 𝑛𝐿 ) > 𝑢𝐿′ = 𝑢(𝑐𝐿′ , 𝑛𝐻 ), 𝑐𝐿 − 𝑐𝐿′ = (𝑛𝐿 − 𝑛𝐻 )(1 − 𝜏𝐿 )𝑤𝐿           (24)
+
+
+                           ′
+       𝑢𝐻 = 𝑢(𝑐𝐻 , 𝑛𝐻 ) > 𝑢𝐻 = 𝑢(𝑐𝐻′ , 𝑛𝐿 ), 𝑐𝐻 − 𝑐𝐻′ = (𝑛𝐻 − 𝑛𝐿 )(1 − 𝜏𝐻 )𝑤𝐻             (25)
+
+
+               (𝑢𝐿′ − 𝑢𝐻 )(𝑐𝐿′ − 𝑐𝐻 ) > 0 ,       ′
+                                                (𝑢𝐻 − 𝑢𝐿 )(𝑐𝐻′ − 𝑐𝐿 ) > 0                 (26)
+
+
+                𝑀(𝑐𝐿 , 𝑛𝐿 ) = (1 − 𝜏𝐿 )𝑤𝐿 , 𝑀(𝑐𝐻 , 𝑛𝐻 ) = (1 − 𝜏𝐻 )𝑤𝐻                     (27)
+
+
+        The inequalities (20) and (21) define the question of interest (i.e., looking at
+equilibria with nondegenerate tax rates, positive wage rates, and positive amounts
+worked).14 Equation (22) assumes that the two equilibria have the same tax revenue.
+
+
+14
+  For brevity, I also assume that the utility and production functions are continuously
+differentiable in the neighborhood of each of the two equilibria being considered. This
+
+                                                                                           11
+The inequalities (23) represent the production function assumptions: production is strictly
+increasing and the marginal product of labor is weakly decreasing.15 The inequalities
+(24) define and characterize one of the equilibrium utility levels. In particular, an agent
+in equilibrium L choses not to work the amount nH and have the corresponding
+consumption level 𝑐𝐿′ . In equalities (25) do the same with respect to the H equilibrium.
+The inequalities (26) say that consumption is a good. The equations (27), which include
+the marginal rate of substitution function M, are the workers’ first order condition for
+each of the two equilibria under consideration.
+         Formally, the hypothesis of interest is that (20) through (27) imply that uL > uH.
+Quantifier elimination in a sixteen-dimensional space shows that more assumptions are
+required in order to conclude that uL > uH, because the hypothesis is true in part, but not
+all, of the sixteen-dimensional space. 16 For example, the additional assumption that
+consumption and leisure are normal goods – in particular that (M(cL,nL)  M(cH,nH))(nL 
+nH) > 0 – is sufficient. An alternative sufficient assumption is that the demand for labor
+is elastic ((wLnL  wHnH)(nL  nH)  0).
+         Note that the equilibrium definition (16) through (19) is not in the format (5) and
+therefore not identical to the Tarski formula that is the conjunction of (20) through (27).
+However, any pair of a low-tax equilibrium and high-tax equilibrium that satisfies (20)
+and (21) will have associated with it the sixteen real numbers (delineated in the previous
+footnote) that satisfy (22) through (27). Anything that is necessarily implied by (20)
+through (27) must therefore describe any pair of equilibria (satisfying (20) and (21)). In
+other words, adding any additional implications of (16) through (19) to the assumptions
+already in the Tarski formula cannot alter a conclusion that is already True.
+         Conversely, quantifier elimination shows that, without an assumption beyond (20)
+through (27), it is possible that uL < uH. Even so, it is not necessarily obvious that there is
+
+guarantees that different tax rates are associated with different work amounts and permits
+calculation of marginal rates of substitution and marginal products in the same neighborhoods.
+15
+   Note that, for brevity, I have eliminated four equations and four variables by making the
+substitutions 𝑓 (𝑛𝑖 ) = 𝑐𝑖 , 𝑓 ′ (𝑛𝑖 ) = 𝑤𝑖 , 𝑖 = 𝐿, 𝐻. As a result, c is measuring the levels of both
+consumption and production, and w is measuring both the wage and the production function
+slope.
+16
+   The sixteen variables are
+𝑐𝐿 , 𝑐𝐻 , 𝑐𝐿′ , 𝑐𝐻′ , 𝑀(𝑐𝐿 , 𝑛𝐿 ), 𝑀(𝑐𝐻 , 𝑛𝐻 ), 𝑛𝐿 , 𝑛𝐻 , 𝑢𝐿 , 𝑢𝐻 , 𝑢𝐿′ , 𝑢𝐻
+                                                                           ′
+                                                                             , 𝑤𝐿 , 𝑤𝐻 , 𝜏𝐿 , 𝜏𝐻 . Taking the Tarski
+formula as (20) – (27)  uL > uH, the universal sentence is False and the existential sentence is
+True (i.e., the Tarski formula is True somewhere, but not everywhere).
+
+                                                                                                                   12
+a pair of equilibria (defined by (16) through (19)) with the property that uL < uH. Below I
+show that quantifier elimination can generate necessary conditions for a result, such as uL
+< uH, which can then be compared with the equilibrium definition for a possible
+contradiction.   In this Laffer-curve example, it turns out that no other property of
+equilibrium is relevant for concluding that uL could be less than uH. Appendix I proves
+this by providing specific utility and production functions, and graphing the
+corresponding Laffer curve, for which uL < uH at high tax rates.
+        It is well known that models with optimization can be examined with local
+analysis (“first-order conditions” at a point) or revealed preference arguments (e.g., (24)
+and (25) from the Laffer-curve model), with many results obtainable with either
+approach.17 A revealed preference argument can be more versatile because it connects to
+points away from the optimum, but also more tedious because of the number of
+inequalities involved.    Quantifier elimination alters this tradeoff in favor of reveal
+preference because the processing of inequalities is embedded in the elimination
+procedure that, as shown in Section IV, is to be done by computer.
+
+
+
+II.D. Concave and quasiconcave production functions revisited
+
+        As compared to subsection II.A above, Jehle and Reny (2011) examine more
+general production functions in that their functions (a) can have more than two inputs and
+(b) do not have to be differentiable. They relate concavity and quasiconcavity to triples
+of production inputs, rather than single-point second-derivative restrictions as in equation
+(9). Quantifier elimination can be applied in the “triples” framework too, as suggested by
+the subsection II.C’s Laffer-curve example. Specifically, it can be shown by quantifier
+elimination (in the space of real numbers) that a production function f, with any number
+of inputs, that is positive, homogeneous, and quasiconcave must be concave.
+        Let V1 and V2 be any two vectors of production input and  denote a scalar. We
+define two more vectors W1 and W2 as well as the scalar :
+
+
+
+17
+  Some of the important contributions to revealed preference theory are Samuelson (1938), Afriat
+(1967), Brown and Matzkin (1996), and Chambers and Echenique (2016).
+
+                                                                                             13
+                                    𝜇𝑉1            (1 − 𝜇)𝑉2
+                            𝑊1 =           , 𝑊2 =                                                 (28)
+                                   𝑓(𝜇𝑉1 )        𝑓((1 − 𝜇)𝑉2 )
+
+
+                                              𝑓(𝜇𝑉1 )
+                                𝜆=                                                                (29)
+                                     𝑓 (𝜇𝑉1 ) + 𝑓((1 − 𝜇)𝑉2 )
+“Positive, homonogenous, and quasiconcave” are represented algebraically as:
+
+
+                              𝑓 (𝜇𝑉1 ) > 0 , 𝑓((1 − 𝜇)𝑉2 ) > 0                                    (30)
+
+
+         𝜇 > 0 ⇒ 𝑓(𝜇𝑉1 ) = 𝜇𝑓 (𝑉1 ) , 𝜇 < 1 ⇒ 𝑓((1 − 𝜇)𝑉2 ) = (1 − 𝜇)𝑓 (𝑉2 )                      (31)
+
+
+                                    𝑓 (𝑊1 ) = 𝑓(𝑊2 ) = 1                                          (32)
+
+
+         𝑓 (𝜇𝑉1 + (1 − 𝜇)𝑉2 ) = [𝑓(𝜇𝑉1 ) + 𝑓((1 − 𝜇)𝑉2 )]𝑓(𝜆𝑊1 + (1 − 𝜆)𝑊2 )                      (33)
+
+
+              (𝑓(𝑊1 ) = 𝑓 (𝑊2 ) ∧ 0 < 𝜆 < 1) ⇒ 𝑓(𝜆𝑊1 + (1 − 𝜆)𝑊2 ) ≥ 1                            (34)
+
+
+where (30) specifically refers to f’s positive property. The statements (31) refer to both
+the positive and homogeneous properties. Using the definitions of W1 and W2, (32) and
+(33) refer specifically to the homogeneity of f.18 The statement (34) is the definition of a
+quasiconcave production function.
+          The Tarski formula for the “triples” representation is that (29) through (34)
+together imply that f is concave, as represented by (35):
+
+
+              0 < 𝜇 < 1 ⇒ 𝑓(𝜇𝑉1 + (1 − 𝜇)𝑉2 ) ≥ 𝜇𝑓(𝑉1 ) + (1 − 𝜇)𝑓 (𝑉2 )                          (35)
+
+
+One approach to quantifier elimination from the system (29) - (35) would be to (a) take
+any specific value of K, and (b) apply the algorithm to the (4K+10)-dimensional space
+that includes each of the K elements of each of the V1, V2, W1 and W2 vectors as well as
+
+
+18                                                                               𝜇𝑉 +(1−𝜇)𝑉
+     Note that, from the definitions of W1 and W2, 𝑓(𝜆𝑊1 + (1 − 𝜆)𝑊2 ) = 𝑓 (𝑓(𝜇𝑉 1)+𝑓((1−𝜇)𝑉
+                                                                                          2
+                                                                                             )
+                                                                                               ).
+                                                                                  1           2
+
+
+                                                                                                    14
+values for each of the ten scalars {𝜆, 𝜇, 𝑓(𝑉1 ), 𝑓(𝑉2 ), 𝑓 (𝑊1 ), 𝑓(𝑊2 ), 𝑓(𝜇𝑉1 ), 𝑓((1 −
+𝜇)𝑉2 ), 𝑓 (𝜇𝑉1 + (1 − 𝜇)𝑉2 ), 𝑓(𝜆𝑊1 + (1 − 𝜆)𝑊2 )} .19 However, the result would apply
+only to the specific value of K.
+        A second approach is to leave the dimension of the vectors unspecified, because
+none of those vectors enter (29) - (35) except through f, which maps vectors into scalars.
+All of the inequalities in the Tarksi formula are polynomial inequalities in the ten-
+dimensional       space     {𝜆, 𝜇, 𝑓(𝑉1 ), 𝑓(𝑉2 ), 𝑓(𝑊1 ), 𝑓(𝑊2 ), 𝑓(𝜇𝑉1 ), 𝑓((1 − 𝜇)𝑉2 ), 𝑓(𝜇𝑉1 +
+(1 − 𝜇)𝑉2 ), 𝑓(𝜆𝑊1 + (1 − 𝜆)𝑊2 )}. The Tarski formula would be True for all values of
+this vector if and only Jehle and Reny’s Theorem 3.1 – that all positive, homogeneous,
+and quasiconcave productions are concave – were correct.                       Quantifier elimination
+confirms their Theorem.
+        Note, however, that the quantifier-elimination-based proof, as well as Jehle and
+Reny’s, involves referencing eight different points on the production function f and using
+the assumed properties to derive relationships between those eight points even though the
+each definition of concavity and quasiconcavity refers to only three.20 In this sense, a
+more comprehensive result from quantifier elimination requires more thought – i.e.,
+“manual” rather than “automated” economic reasoning – as to the setup of the Tarski
+formula, as compared to the single-point approach (9).
+
+
+
+
+III. Quantifier elimination as a tool for economic reasoning
+
+        Quantifier elimination can do more than determine the truth of hypotheses. It can
+help formulate and understand hypotheses by detecting inconsistent assumptions,
+calculating necessary and sufficient conditions, and generating examples.                           Each
+subsection below explains how this is done and provides examples by reference to the
+production function, monopolist pricing, and Laffer curve models above.
+
+
+
+
+19
+  This approach would also need to include the definitions (28) in its Tarski formula.
+20
+  Similarly, the Laffer curve problem refers to four points on the utility function (𝑢𝐿 , 𝑢𝐻 , 𝑢𝐿′ , 𝑢𝐻
+                                                                                                      ′
+                                                                                                        )
+even though the statement of the hypothesis refers to only two (uL,uH).
+
+                                                                                                       15
+III.A. Detecting inconsistent assumptions
+
+        Anything can be “proven” with an empty assumption set because 𝐴 ⇒ 𝐵 is
+identical to ¬𝐴 ∨ 𝐵, which is True everywhere that A is false. It is therefore important to
+know whether assumptions are mutually consistent. Quantifier elimination performs this
+task too, by beginning with the sentence that there exist values of each of the variables so
+that the assumptions are simultaneously True. If the quantifier-free representation of that
+existential sentence is False, then the assumptions are mutually inconsistent.
+        Take the Laffer curve model, in which the “surprise” result uL < uH requires that
+one of the goods is inferior (M(cL,nL) < M(cH,nH)) at the same time that the demand for
+labor is relatively inelastic ((wLnL  wHnH)(nL  nH) < 0). In order to confirm that the two
+assumptions are simultaneously compatible with (20) through (27), we eliminate
+quantifiers from the sentence that says that there exists at least one point in ℝ16 where
+(20) through (27), M(cL,nL) < M(cH,nH), and (wLnL  wHnH)(nL  nH) < 0 are True.
+
+
+
+III.B. Necessary and sufficient conditions: reformulating hypotheses to
+make them True
+
+        The hypothesis (9) is False. Quantifier elimination can show what assumptions
+could be added so that the reformulated hypothesis is True.                 For example, consider
+reformulating the hypothesis without the quantifiers corresponding to the production
+function’s second derivatives, as shown below using the condensed notation of Table 1.
+
+
+  ∀{𝑣1 , 𝑣2 , 𝑣3 , 𝑣5 }[(𝑣1 > 0 ∧ 𝑣2 > 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6 )
+                                                       ⇒ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )]      (36)
+                                        3
+                   = {(𝑣4 , 𝑣6 , 𝑣7 ) ∈ ℝ : ((𝑣4 = 0 ∨ 𝑣7 = 0) ∧ 𝑣6 = 0) ∨ 𝐺 (𝑣4 , 𝑣6 , 𝑣7 )}
+
+
+
+As before, there are seven variables, but three of them are unquantified (free) and
+correspond to the second derivatives of the production function. The LHS of equation
+(36) is not a sentence. This alone says that the formulated hypothesis might be neither
+True nor False. Applying quantifier elimination to the formulated hypothesis, we get the
+RHS of (36), which is a set of restrictions on the free variables {v4,v6,v7}. The set
+
+                                                                                                 16
+consists of two subsets described by the blue term and the G term. 21 Each subset’s
+description is providing sufficient conditions to add to the assumptions of (9) to make it
+True.22 For example, the blue term says that the hypothesis (9) would be True if its
+assumptions also included that the production function was a quasilinear function of its
+inputs, as shown in (37).23
+
+
+                                   ∀{𝑣1 , 𝑣2 , 𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 }
+
+        [(𝑣1 > 0 ∧ 𝑣2 > 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6                                           (37)
+        ∧ ((𝑣4 = 0 ∨ 𝑣7 = 0) ∧ 𝑣6 = 0)) ⇒ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )] = 𝑇𝑟𝑢𝑒
+
+
+
+In other words, quantifier elimination produces the blue term that, when added to the
+assumptions, makes the formulated hypothesis (9) True. 24 Moreover, some of the
+byproducts of Cylindrical Algebraic Decomposition (CAD), which is the primary
+quantifier-elimination algorithm, are further options for algebraically describing
+restrictions among the of the variables, regardless of whether they are “free.” These
+options facilitate characterizing the intersection of the assumption and hypothesis sets,
+which goes more directly to the question of what additional assumptions are needed to
+make a hypothesis True.           CAD and other quantifier-elimination algorithms are the
+subjects of Section IV.
+
+
+
+III.C. Necessary and sufficient conditions: distinguishing strong
+assumptions from weak ones
+
+           In many cases there are multiple assumptions that deliver a result. Quantifier
+elimination can show which, if any, implications are stronger than others, conditional on
+
+
+21
+     G is a more complicated function that is shown in Appendix II.
+22
+     Together, the two are also necessary.
+23                                                          𝜕2 𝑓(𝑥,𝑦)           𝜕2 𝑓(𝑥,𝑦)            𝜕2 𝑓(𝑥,𝑦)
+     In the more verbose notation, the blue term is ((         𝜕𝑦 2
+                                                                          =0∨     𝜕𝑥 2
+                                                                                            = 0) ∧    𝜕𝑥𝜕𝑦
+                                                                                                                 = 0).
+24
+   In other words, because it is not a sentence, equation (36) has a lot in common with the
+quantifier elimination in Brown and Matzkin (1996) and Chambers and Echenique (2016).
+However, they do not use CAD, or improvements on it, to actually perform the quantifier
+elimination.
+
+                                                                                                                     17
+a set of assumptions A. Specifically, if one of those implications is B and the other C,
+then the statement that B is a (weakly) stronger implication than C is written as:25
+
+
+                          [𝐴 ⇒ (𝐵 ⇒ 𝐶 )] = [¬𝐴 ∨ ¬𝐵 ∨ 𝐶]                                    (38)
+
+
+Reversing B and C in (38) would make the statement that C is a (weakly) stronger
+implication than B. If both are True, then B and C are equivalent conditional on A
+[𝐴 ⇒ (𝐵 ⇔ 𝐶 )].
+        In the Laffer curve model, assuming (20) through (27), quantifier elimination
+proves that a linear production function (wL = wH) is one with elastic labor demand ((wLnL
+ wHnH)(nL  nH) < 0). Another example: quantifier elimination proves that, conditional
+on the same assumptions, nL > nH is equivalent to uL > uH.
+        Of course, irrelevant assumptions do not affect conclusions.                 Quantifier
+elimination therefore (a) still obtains the result even when the Tarski formula contains
+irrelevant assumptions and (b) can be used to identify the irrelevant assumptions. These
+features of quantifier elimination allow the user to assemble his Tarski formula with less
+discretion. The proof in the Laffer curve model, for example, requires evaluating utility
+at four points: {𝑢(𝑐𝐿 , 𝑛𝐿 ), 𝑢(𝑐𝐻 , 𝑛𝐻 ), 𝑢(𝑐𝐻′ , 𝑛𝐿 ), 𝑢(𝑐𝐿′ , 𝑛𝐻 )} , where 𝑐𝐻′ ( 𝑐𝐿′ ) is the
+consumption that would be obtained by working the low-tax (high-tax) amount at the
+high-tax (low-tax) prices. The first two are obvious, but the user might not be sure
+                    , 𝑢 𝑐𝐻 , 𝑛𝐿′ )} must also be included.26 These two utility levels, and the
+                 ′ ) (
+whether {𝑢(𝑐𝐿 , 𝑛𝐻
+revealed-preference restrictions that go with them (for a total of eight utility levels and
+four revealed-preference restrictions), could be included in the Tarski formula without
+affecting the conclusions. For that matter, the Tarski formula can be augmented with any
+additional implication of the equilibrium definition (16) through (19) that is expressible
+as a polynomial inequality.
+
+
+
+
+25
+  To be clear, A, B, and C are Boolean variables.
+26
+  Any labor amounts with a prime indicates the amount that must be worked in order to obtain
+the counterfactual consumption.
+
+                                                                                               18
+III.D. Generating examples, counter-examples, and step-by-step proofs
+
+        The     primary     quantifier-elimination      algorithm,     Cylindrical     Algebraic
+Decomposition (CAD) automatically generates sample points as part of its lifting phase
+(the phases of CAD are discussed further below). For a hypothesis that is not everywhere
+False, the CAD can generate an example. For a hypothesis that is not everywhere True,
+the CAD can generate a counterexample. Take the Laffer curve model, without normal-
+goods or elastic-demand restrictions. The hypothesis that, conditional on (20) through
+(27), uL > uH is neither everywhere True nor everywhere False. The CAD can therefore
+generate both an example of uL > uH and uL  uH, both of which are consistent with (20)
+through (27). See Table 2.
+        A CAD represents a step-by-step proof. In order to see, and qualify, this result, it
+is necessary to reference some of the theorems from real algebraic geometry and to
+understand some of the details of CAD construction. This is the purpose of Section IV.
+
+
+IV. Relevant Theorems from Real Algebraic Geometry
+
+IV.A. Tarski: Quantifier elimination is always possible
+        Mathematician and logician Alfred Tarski proved that there exists a universal
+algorithm (that is, one not requiring problem-specific guidance) for quantifier elimination
+from systems of polynomial inequalities on real closed fields by providing such an
+algorithm. 27 Because the real numbers are an example of a real closed field, the Tarski
+result guarantees that there exists a P so that HF = HE and gives an algorithm for finding
+P. If HF is a sentence, then the quantifier elimination algorithm is a “decision method”: a
+procedure for determining whether HF is True or False.28
+        Tarski’s theorem applies to all of the examples above because, when interpreted
+in the right space, they are special cases of systems of polynomial inequalities. A system
+with even one transcendental term is not covered by Tarski’s theorem (unless there is a
+change of variables that makes all terms polynomial), although quantifier elimination
+
+
+
+27
+   Tarksi made the proof in 1930 (Caviness and Johnson 1998, p. 1), but the result was not
+published until Tarski (1951).
+28
+   Renegar (1998, p. 221).
+
+                                                                                             19
+may still be possible. There are algorithms for deciding existential sentences that contain
+transcendental terms, although they are not fully developed (see below).
+
+
+
+IV.B. Collins: A more efficient algorithm for quantifier-elimination that
+defines sets recursively
+
+        Although Tarski’s method is enough to prove that quantifiers can be eliminated, it
+is not used in practice due to its “extreme” inefficiency. 29 A major step forward came
+with the Cylindrical Algebraic Decomposition (CAD) method introduced by
+mathematician George E. Collins in 1973. 30
+
+
+
+IV.B.1. Properties of CAD
+       In our setting (5), the CAD method decomposes ℝ𝑁 into finitely many connect
+regions, known as “cells,” with three properties:
+        (i)      each cell of the CAD is a semi-algebraic set (i.e., it is defined by a finite
+                 number of quantifier-free polynomial inequalities).
+        (ii)     The CAD result is cylindrical because the projections of any two of the
+                 cells into ℝ𝑘 , 1  k  N, are either identical or disjoint.
+        (iii)    Each cell is adapted to the Tarski formula from which it was derived,
+                 which means that none of the polynomials in the Tarski formula T has
+                 more than one sign {-1,0,1} in any one of the cells.
+Every Tarski formula has such a CAD (Basu, Pollack and Roy (2011, Theorem 5.6)).
+        The T-adapted (i.e., uniform sign) property of the cells, and the fact that the cells
+are finite in number, means that any quantified formula can be confirmed in a finite
+number of steps.31 The cylindrical property of the decomposition means that the cells
+have a natural ordering and many times can be processed more than one at a time.
+        Narrowly speaking, CAD refers to a method, or sometimes an expanded set of
+polynomials (including, among others, those in the original Tarski formula) obtained by
+29
+   Arai, et al. (2014). See also Davenport, Siret and Tournier (1988, p. 119), who describe
+Tarski’s method as “completely impractical.”
+30
+   Collins (1973) and Collins (1975).
+31
+   By construction, the Tarski formula is True at any one point in a cell if and only if it is True
+everywhere in that cell.
+
+                                                                                                      20
+the method. One of result of the CAD method is its cells, described by Cylindrical
+Algebraic Formulas (CAFs).        I follow Kauers (2011), Mathematica, REDLOG, and
+others by (a) referring to CAD and CAFs interchangeably and (b) displaying CAFs that
+are simplified to exclude cells where the Tarski formula is false and to unify the
+remaining cells. 32 For example, I refer to the right-hand sides of (2) and (3) as CADs.
+       As an example (due to Kauers 2011), take the set of all points in the plane that are
+outside the origin-centered circle of radius two and inside the hyperbola centered at (1,1):
+
+
+          {(𝑥1 , 𝑥2 ) ∈ ℝ2 : 𝑥12 + 𝑥22 − 4 > 0 ∧ (𝑥1 − 1)(𝑥2 − 1) − 1 < 0}                (39)
+
+
+Figure 2 displays a CAD of the set described in (39), with each of the two-dimensional
+cells shown as a different color. The CAD partitions the x1-axis six different ways: x1 
+r1, x1  (r1, r2], x1  (r2,1), x1 = 1, x1  (1,2) and x1 > 2, where r1 and r2 are the two real
+roots of z4  2z3  2z2 + 8z  4 = 0. Each of partition of x1 defines a cylinder of all points
+in the plane that would be projected onto that part of the x1-axis. Each cylinder is itself
+vertically partitioned where one of the polynomials changes sign, which guarantees that
+the CAD is adapted to the two polynomials.           If the problem were more than two
+dimensional, then the CAD would proceed further by stacking one-higher dimensioned
+cylinders on top of the cells in the [x1,x2] plane, partitioning those cylinders, stacking
+one-higher dimensioned cylinders on the cells in the [x1,x2,x3] space, etc.
+       The CAD shown in Figure 2 has seven two-dimensional cells and two one-
+dimensional cells. Although not emphasized in Figure 2, the rest of the plane could be
+decomposed into cells (12 in this case) using the same cylinders. As a result, at most 21
+sample points need to be checked – one in each cell – to confirm or deny hypotheses such
+as “There exists points outside the circle that are inside the hyperbola” or “All points
+outside the circle are inside the hyperbola.” In this way, CAD decides universal and
+existential sentences in a finite number of steps.
+
+
+
+
+32
+  See Strzebonski (2010) and Chen and Maza (2015) for more on the distinction between CAD
+and CAF.
+
+                                                                                            21
+IV.B.2. CAD Construction
+       A CAD is obtained in two straightforward, albeit tedious, phases: projection and
+lifting. In the projection phase, one variable is eliminated at a time in the order that they
+are quantified in the formulated hypothesis. 33 In order to eliminate a variable, both
+polynomial intersections and singularities are found. 34 In Figure 2, there are two
+intersection points, two singularities for the circle (x1 =  2), and one singularity for the
+hyperbola (x1 = 1) that can be used to make a cylindrical projection. 35 The set described
+in (39) is two dimensional, so there is only one projection step, but the general case
+involves one projection step for each variable eliminated, with the exception of the final
+variable.    Also note that higher polynomial degrees can increase the number of
+intersections and singularities to be processed, as shown by example below.
+        The following describes the lifting phase, assuming for brevity that xN is the first
+variable eliminated, 𝑥𝑁−1 is the second, etc., until only x1 is left. In the lifting phase, one
+scalar value – a sample point – for x1 is found for each of the cells defined on the x1-axis
+by the projection phase. Using those values, sample points in the [x1,x2] plane are found
+for each of the cells in the cylinders above the cells on the x1–axis. This procedure is
+repeated (“lifted”) through each dimension until there is a sample point in the [x1,x2,…,
+xN] space for every cell in the CAD. Because the CAD is adapted to the Tarski formula,
+one sample point is enough to determine which˙ inequalities are satisfied at all points in
+
+
+
+
+33
+   This means that CAD can be constructed in at least N! different ways: one for each possible
+variable-elimination sequence. Although familiar from linear systems, Gaussian elimination is
+not necessarily a close analogy because polynomial intersections are not the only calculations that
+may occur as the CAD eliminates a variable (Van den Dries 1988, p. 9).
+34
+   When viewed as a function of the variable being eliminated, each polynomial in the system has
+roots that are (a) numbered according to the degree of that variable and (b) potentially a function
+of the remaining variables. As a function of the remaining variables, the roots need to be
+identified as real or complex (the source polynomial’s singularity points indicate which is the
+case) and the real ones sorted collectively for the entire system (the polynomial intersection
+points indicate the sort order). Each sort is associated with conditions on the remaining variables
+and a partition of the eliminated variable at each root. The exact algebra requires several pages of
+explanation, for which readers are referred to the literature, especially Arnon, Collins and
+McCallum (1998) and Basu, Pollack and Roy (2011). I have found the latter to be especially
+helpful because each subalgorithm is illustrated with an example (see also (Dolzmann, Sturm and
+Weispfenning 1998)).
+35
+   Figure 2’s projection does not need the x1 = 2 singularity in order to have a cylindrical
+projection, but it would if the set of interest were the points outside both the circle and hyperbola.
+
+                                                                                                   22
+the cell. The quantifier-free formula is the union of all cells where the Tarski formula is
+True.36
+          Recall the existential quantifier elimination result shown in (1), which has a
+Tarski formula of x2 + bx + c = 0. If x were eliminated first, and then c, then the full
+decomposition of ℝ3 the nine cells below
+
+
+                                          𝑏                    𝑏
+             (𝑏2 < 4𝑐 ) ∨ (𝑏2 = 4𝑐 ∧ 𝑥 < − ) ∨ (𝑏2 = 4𝑐 ∧ 𝑥 = − ) ∨
+                                          2                    2
+                              𝑏                    𝑏 √𝑏2 − 4𝑐
+              (𝑏2 = 4𝑐 ∧ 𝑥 > − ) ∨ (𝑏2 > 4𝑐 ∧ 𝑥 < − −         )
+                              2                    2    2
+
+                                          𝑏 √𝑏2 − 4𝑐
+                        ∨ (𝑏2 > 4𝑐 ∧ 𝑥 = − −         )∨
+                                          2    2
+                                                                                                  (40)
+                              𝑏 √𝑏2 − 4𝑐      𝑏 √𝑏2 − 4𝑐
+              (𝑏2 > 4𝑐 ∧ 𝑥 > − −         ∧𝑥 <− +         )
+                              2    2          2    2
+
+                                                𝑏 √𝑏2 − 4𝑐
+                              ∨ (𝑏2 > 4𝑐 ∧ 𝑥 = − +         )
+                                                2    2
+
+                                                𝑏 √𝑏2 − 4𝑐
+                              ∨ (𝑏2 > 4𝑐 ∧ 𝑥 > − +         )
+                                                2    2
+
+
+Only three of the cells above satisfy the Tarski formula. The (b,c) projections of those
+three cells are:37
+
+
+                         (𝑏2 = 4𝑐 ) ∨ (𝑏2 > 4𝑐 ) ∨ (𝑏2 > 4𝑐 )                                     (41)
+
+
+which simplifies to the RHS of (1).
+          Note that, for economic applications, CAD construction, and even quantifier
+elimination by way of CAD, can be fully delegated to either commercial or open-source
+software packages, much as the standard economics practice for, say, inverting matrices.
+Mathematica and REDLOG are featured in what follows.
+
+
+36
+   The lifting phase can be done together with the quantifier elimination, in which case entire
+cylinders may be discarded (i.e., no sample points calculated).
+37
+   As C.W. Brown (2003, p. 97) puts it, “the existential quantifier is simply projection.”
+
+                                                                                                   23
+IV.B.3. Single-cell CADs
+       In general, CADs can have many cells, especially when the number of variables is
+large. The three-dimensional version of the circle-hyperbola example has 242 cells (as
+compared to 9 shown in Figure 2).              The four-dimensional version has 3,531. 38
+Sometimes the CAD has just one cell, even when there are more than two variables. The
+single-cell CADs are of special interest because (a) the hypothesis represented by the
+CAD can be proved recursively in the order in which the CAD projections occurred and
+(b) the steps of that recursive proof correspond to the components of the single-cell
+formula generated by the CAD.
+        Take, for example, a three-dimensional set described by
+
+
+              {(𝑥, 𝑦, 𝑧) ∈ ℝ3 : 𝑥 > 0 ∧ 𝐴𝑦 (𝑥, 𝑦) > 0 ∧ 𝐴𝑧 (𝑥, 𝑦, 𝑧) = 0}                     (42)
+
+
+Where Ay and Az are quantifier-free functions mapping scalar arguments into ℝ1 . The
+system of inequalities is triangular in the sense that only Az = 0 contains all three
+variables and, of the remaining two inequalities, only Ay > 0 contains both remaining
+variables. Eliminating the variables in the order {z,y,x}, the cylindrical decomposition is:
+
+
+                  {𝑥 > 0 ∧ {𝑦: 𝐴𝑦 (𝑥, 𝑦) > 0} ∧ {𝑧: 𝐴𝑧 (𝑥, 𝑦, 𝑧) = 0}}                        (43)
+
+
+which is cylindrical because the third atom is conditional on x and y, the second atom is
+conditional on x, and the first atom can be evaluated without regard for y and z. It has
+only one cell, as evidenced by the fact that it has no disjunctions (). (43) would be a
+single-cell CAD if the functions Ay and Az were algebraic (i.e., polynomials).
+        The monopolist’s pass-through model from above is a triangular system with a
+single-cell CAD, from which a recursive proof can be constructed. Consider the (True)
+hypothesis that, assuming (11)-(13), (15), a demand curve that is concave and slopes
+
+
+38
+  These CADs (technically, CAFs) were calculated by Mathematica, with cells distinguished by
+the disjunction operator (). The cell counts refer only to the cells where the Tarski formula is
+True.
+
+                                                                                                24
+down (W(q)  0, W(q) < 0), then marginal costs are not overshifted (ie.,   1). To see
+                                                                        𝜕𝑔(𝑞,𝑎)
+this concisely, we drop the irrelevant variables {𝑔(𝑞, 𝑎),                        , 𝑊(𝑞)} and the
+                                                                          𝜕𝑞
+
+inequalities in which they appear: (11), (12) and the first part of (10).39 That leaves six
+             𝜕2𝑔   𝜕 2 𝑔 𝑑𝑞
+variables {𝜕𝑞𝜕𝑎 , 𝜕𝑞2 , 𝑑𝑎 , 𝑊 ′′ (𝑞 ), 𝑊 ′ (𝑞 ), 𝑞} and seven inequalities describing the
+
+assumptions of the model. 40 When the six variables are eliminated in this order, the CAD
+representation of the model’s assumptions is:
+
+                        ′(              ′′ (
+                                                        𝑑𝑞     𝜕 2 𝑔(𝑞, 𝑎)
+          {𝑞 > 0 ∧ 𝑊 𝑞 ) < 0 ∧ 𝑊               𝑞) ≤ 0 ∧    <0∧             ≥0
+                                                        𝑑𝑎         𝜕𝑞 2
+                                                                                               (44)
+            𝜕 2 𝑔(𝑞, 𝑎)      ′         ′′
+                                               𝜕 2 𝑔(𝑞, 𝑎) 𝑑𝑞
+          ∧             = [2𝑊 (𝑞 ) + 𝑞𝑊 (𝑞 ) −            ] }
+               𝜕𝑞𝜕𝑎                                𝜕𝑞 2    𝑑𝑎
+
+
+which is a single cell (no disjunctions). In order to prove that pass-through cannot exceed
+one using the CAD (44), we assume the contrary:
+                     𝑑                         𝑑𝑞
+                         ( )          𝑊 ′ (𝑞 ) 𝑑𝑎
+                     𝑑𝑎 𝑊 𝑞   = 2                       >1                                     (45)
+                   𝑑 𝜕𝑔(𝑞, 𝑎)  𝜕 𝑔(𝑞, 𝑎) 𝑑𝑞 𝜕 2 𝑔(𝑞, 𝑎)
+                   𝑑𝑎 [ 𝜕𝑞 ]                 + 𝜕𝑞𝜕𝑎
+                                  𝜕𝑞 2 𝑑𝑎
+
+
+We take the last atom of the single-cell CAD, which represents the assumption (15), to
+eliminate from (45) the first variable (at least) from the elimination list:
+
+
+                                       𝑊 ′ (𝑞 )
+                                                       >1                                      (46)
+                                2𝑊 ′ (𝑞 ) + 𝑞𝑊 ′′ (𝑞 )
+
+
+The result (46) contradicts the first three atoms of the CAD, which are the assumptions
+about a positive quantity and the demand curve’s shape. This completes the CAD-
+inspired proof by contradiction that pass-through cannot exceed one.
+
+39
+   The level of cost g(q,a) appears only in (11) and in doing so does not restrict the remaining
+variables. With (11) dropped, W(q) appears in only in condition (12), without restricting any of
+the other variables. With (11) and (12) dropped, marginal cost appears only in the first part of
+(10), without restricting any of the other variables.
+40
+   The seven inequalities form a triangular system in the sense that only one of them contains all
+six variables, a second contains four variables, and the remaining five contain only one variable
+each.
+
+                                                                                                 25
+          Note that any CAD eliminating N variables has N! different elimination sequences
+and thereby up to N! different CADs and up to N! different methods of proving the same
+result.    The CADs may differ in terms of the number of cells, which means the
+complexity of the proofs they represent may differ.41 One CAD by itself is enough to
+decide a universal sentence, but sometimes it may be of interest to examine multiple
+elimination sequences in order to find a relatively simple proof of that decision.
+
+
+
+IV.B.4. Necessary and sufficient conditions revisited with CAD
+
+          Each of the N! CADs offers a potentially unique algebraic characterization of the
+same set. This is useful when we have a hypothesis that does not follow from the
+assumptions because CAD can offer various algebraic descriptions of the intersection of
+the assumptions and the hypothesis. Any extra assumption that restricts the model to a
+subset of that intersection is, together with the original assumptions, sufficient to
+conclude that the hypothesis is True. Such an extra assumption is readily identified from
+a CAD.
+          The model (9) is an example: concave production does not follow from
+quasiconcave production:
+
+
+                                    ∀{𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 }
+     [(𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6 )                                        (47)
+                                          ⇒ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )] = 𝐹𝑎𝑙𝑠𝑒
+
+
+where (49) uses the condensed notation of Table 1 and for brevity omits v1 and v2, which
+do not affect the conclusions. The intersection of the assumptions and the hypothesis is a
+subset of ℝ5 that can be characterized with CAD. That description depends on the
+elimination sequence used during the projection phase. If the variables representing
+
+
+
+41
+  If variables were eliminated from the pass-through example in reverse order, then the CAD
+would have four cells rather than the single cell shown in (42). Also note the analogy with
+Gaussian elimination for full-rank N-dimensional systems of linear equations: there are N!
+different elimination sequences.
+
+                                                                                               26
+second derivatives (v4,v6,v7) are eliminated last, and otherwise variables are eliminated in
+reverse alphabetical order, we have:
+
+
+                                    (𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 ) ∈ ℝ5 :
+     {                                                                                      }
+         (𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6 ) ∧ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )
+                                                                                                      (48)
+                                                                          5
+                                                (𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 ) ∈ ℝ :
+                        ={                                                                        }
+                             (𝑣4 = 𝑣6 = 0 ∧ 𝑣7 < 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0) ∨ 𝛤(𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 )
+
+
+where the right-hand side is the CAD, which consists of two subsets described by the
+blue term and the  term.42 Each subset is by itself a sufficient condition to add to the
+assumptions of (49) to make it True. 43 For example, the blue term says that the
+hypothesis (49) would be True if its assumptions also included that the production
+function was quasilinear in its second input. In other words, the CAD of the intersection
+of (49)’s assumption and hypothesis produces the blue term that, when added to the
+assumptions, makes it True.
+              Recall that the condition (36) describes a set in just the three free variables
+because the other two (v3,v5) were quantified and then eliminated. In contrast, the CAD
+(48) is a set in all five dimensions.               In other words, CAD can provide a “simple”
+description of a set by prioritizing variables rather than, or in addition to, eliminating
+them. In the case of (48), v3 and v5 still appear, but restrictions on v4, v6, and v7 are
+shown without reference to v3 and v5: that’s that it means for the decomposition to be
+cylindrical. The CAD approach thereby offers a wider range of descriptions of the
+necessary and sufficient conditions than does the elimination approach shown in
+subsection III.B.
+
+
+
+IV.C. The complexity of quantifier elimination
+
+              Collins’ CAD method is not necessarily the most efficient method for quantifier
+elimination, but it is a good benchmark for understanding the computational complexity
+of practical problems.              CAD’s computational complexity (e.g., computing time) is
+
+42
+      is a more complicated function that is shown in Appendix II.
+43
+     Together, the two are also necessary.
+
+                                                                                                       27
+polynomial in the number of inequalities and in the maximum degree of their
+polynomials, but double exponential in the number of variables. In order to anticipate
+practical experiences with CAD-based quantifier elimination, it helps to see a graph of a
+double-exponential function, which reflects a kind of “curse of dimensionality.” Figures
+3a and 3b graph the same function 2^(2x), but on different domains. Figure 3a’s graph is
+almost a vertical wall: doubling the number of variables (e.g., moving from the middle of
+the horizontal axis to the right edge) in this range increases the complexity by a factor of
+more than 4,000. The figure thereby gives the impression that CAD, and perhaps any
+method for quantifier elimination, may never be practical.                  Indeed, a number of
+economics papers discussing quantifier elimination cite the theoretical complexity results
+and suggest that quantifier elimination is too “computationally demanding” without ever
+reporting any actual computation times. 44
+        But Figure 3b gives a much different impression. It is fairly close to linear, with a
+doubling of the number of variables less than tripling the complexity. In other words, the
+feasibility of CAD depends on where the “wall” is located relative to problems of interest
+and whether those problems can be rephrased to, in effect, move the wall to the right. As
+Shankar (2002, p. 13) puts it, “Many decision procedures are of exponential, super-
+exponential, or non-elementary complexity. However, this complexity often does not
+manifest itself on practical examples.” Although CAD and related methods have been
+used for many problems in geometry (Lasaruk and Sturm 2011), I am not aware of their
+use on sentences that represent economic problems, which tend to be less symmetric and
+with lesser polynomial degrees. We must also remember that CAD is not the only
+method for quantifier elimination, especially in the case of existential sentences.
+        There is therefore no substitute for actually trying quantifier elimination on
+economics examples. Each of the examples in this paper, which were chosen for their
+economic interest – they are interesting enough to appear in textbooks and have journal
+articles devoted to them – rather than computational simplicity, have been processed in
+
+
+44
+  E.g., Carvajal, et al. (2014). In his lectures at the Cowles Foundation, mathematician Charles
+Steinhorn (2008, p. 177) conjectures “…quantifier elimination is something that is do-able in
+principle, but not by any computer that you and I are ever likely to see. Well, I’ll retract that last
+statement because it’s probably false.” Using the same logic, Anai et al (2014, p. 7) claim –
+incorrectly, as shown throughout this paper – that “[t]he practical limit to obtain a solution would
+be at most five variables.”
+
+                                                                                                   28
+milliseconds. In my own research and teaching, the norm is that problems of this type are
+processed orders of magnitude faster than the time it takes for me to type the
+assumptions. Appendix III shows an example, based on a growth model with taxation,
+whose CAD is in 41 dimensions, yet nonetheless is processed in milliseconds.
+        With that said, the double-exponential property means that poor judgement and
+brute force can produce economics problems whose CADs are overwhelmingly complex
+for today’s computers. 45 Take the concave production function example II.A., using
+quantifier elimination to prove, based on derivatives at a single point, that a
+homogeneous and quasiconcave production function is a concave production function.
+This example is a particularly tough test for quantifier-elimination methods because (a) it
+concerns second-order properties of the model rather than first-order, and thereby more
+polynomials of higher degree and (b) alternative proof strategies are available that avoid
+any reference to second derivatives of the production function. 46 Nevertheless, assuming
+that the production function has two inputs, the quantifier elimination (in seven
+dimensions) from subsection II.A. takes at most a few dozen milliseconds on a laptop
+computer (see the first row of Table 3).47 If three inputs were assumed, twelve variables
+are quantified and the quantifier elimination occurs in about two minutes with
+Mathematica, and a fraction of a second with REDLOG. However, neither software
+package could eliminate quantifiers in the four-input case in less than five days of
+
+
+
+
+45
+   Complex in terms of having a large number of cells, and defining the cells with roots of high-
+degree polynomials.
+46
+   See subsection II.D.
+47
+   Specifically, using the condensed notation (36), quantifiers are eliminated from
+
+                                    ∀{𝑣1 , 𝑣2 , 𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 }
+                [(𝑣1 > 0 ∧ 𝑣2 > 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6
+                ∧ 𝑣2 𝑣4 + 𝑣1 𝑣6 = 0 ∧ 𝑣2 𝑣6 + 𝑣1 𝑣7 = 0)
+                                         ⇒ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )]
+
+where the two equations are the second-order-term restrictions implied by homogeneity and are
+derived by differentiating Euler’s theorem with respect to each input. The quantifier-free
+equivalent is True (because all homogeneous and quasiconcave production functions are
+concave).
+
+                                                                                                29
+processing (more than 100 million milliseconds; this case has 18 quantified variables).48
+Here we see the double-exponential property.
+        The CAD algorithm, especially when applied to universal sentences, is amenable
+to parallel processing methods that can, in effect, move the “wall” to the right. For
+example, an N-variable universal sentence has N! different sequences in which to
+eliminate variables in the projection phase and there is no known generic formula for
+determining which of these is the least complex. 49 Parallel processors can be used to,
+among other things, simultaneously execute different elimination sequences and then
+terminate all processes that are still running after the first process has completed.50
+        Finally, the CAD algorithm is more general than needed for deciding universal
+sentences, such as the economic examples provided in this paper. Quantifier-elimination
+algorithms are being developed specifically for existential sentences, which are
+equivalent to universal sentences (recall (7)) and known as the “existential theory of the
+reals.” The complexity of the dedicated algorithms are “just” singly exponential in the
+number of variables even without parallel processing. 51 These advances are not yet fully
+incorporated into Mathematica and REDLOG software (Passmore & Jackson, 2009;
+Davenport & England, 2015).52 As computing power increases and singly-exponential
+
+
+48
+   Subsection II.D. shows an alternative approach that expresses the general case (i.e., any number
+of inputs, and a not-necessarily differentiable production function) in the polynomial framework
+(5). As shown in Table 3, this approach eliminates 10 quantifiers in less than one second.
+49
+   C.W. Brown (2004). Mathematica and REDLOG have heuristics for guessing an elimination
+sequence than might economize on computation, but were not used for the results reported in this
+paper. Also note that the elimination sequence is irrelevant for symmetric a Tarski formula such
+as (39); in my experience economic hypotheses are not so symmetric.
+50
+   When consecutive variables have the same quantifier, changing their order does not affect the
+meaning of the formulated hypothesis, but it does affect features of the CAD, such as the number
+of cells and the difficulty of the algebraic operations required to obtain it (Brown and Davenport
+2007). Table 3 eliminates variables in alphabetical order (as sorted by Mathematica), which
+generally does not minimize computation time. Algorithms for determining more efficient
+elimination sequences, which are beyond the scope of this paper, can, for example, find a
+sequence (and process it) for the four-input model in a few minutes as compared to more than
+five days for elimination in alphabetical order.
+51
+   These decision problems are in PSPACE (Canny 1993). See Basu, Pollack and Roy (2011) for
+a recent theoretical treatment of algorithms for deciding existential sentences.
+52
+   Separate from the CAD literature, computer scientists have (for the purpose of automatically
+verifying software programs) developed non-CAD algorithms for deciding existential sentences.
+Some of them, such as those competing at http://smtcomp.sourceforge.net in the QF-NRA
+division, deal with nonlinear polynomials. In my experience, Microsoft’s Z3 is the most adept at
+answering the economics questions, but still narrower than the primarily-CAD methods used by
+
+                                                                                                30
+algorithms are put into practice, it is likely that even larger economic problems will be
+practically processed by quantifier elimination (Passmore, 2011, p. p. 100).
+
+
+
+
+IV.D. The utility of leaving functional forms unspecified
+
+        Ironically, specifying assumptions and hypotheses with particular functional
+forms makes it more difficult to use the quantifier-elimination results. Take, for example,
+the first derivative restriction f/x > 0 in the concave production function example. In
+this form, it is a (trivial) polynomial inequality in the seven-dimensional space noted
+above. If, instead, a production function were specified with transcendental marginal
+product schedules, then we would no longer have a polynomial inequality in x and y.
+Even a Cobb-Douglas production function with exponents  and  would have its first
+derivative restriction entered as 𝛼𝑥 𝛼−1 𝑦 𝛽 > 0, which is not a polynomial inequality in
+{,,x,y}. 53 Thus, while traditional “pencil-and-paper” proving approaches are many
+times facilitated with functional-form assumptions, quantifier elimination in the Tarski-
+Collins tradition is facilitated by avoiding them.
+        Semi-algebraic economies include Cobb-Douglas utility and production functions
+as long as their exponent parameters are rational numbers, because then statements about
+those functions are special cases of polynomial inequalities. Still, for the purposes of
+implementing quantifier elimination as we have outlined above, their approach is
+unnecessarily complicated. First, the quantifier-elimination would have to be performed
+with specific values of the exponent parameters. For example, the production function in
+the Laffer curve example could be, say, n7/10, but then the quantifier-elimination result
+would refer only to n7/10 and not to any other Cobb-Douglas production function, even
+with rational coefficients.
+
+
+
+
+Mathematica and REDLOG. For example, Z3 does not process the concave production function
+problem with three production inputs in less than 1000 seconds.
+53
+   In this case, the marginal-product restrictions could be transformed to be of the form  > 0 and
+ > 0, which are polynomials in { ,}, but more complicated statements about Cobb-Douglas
+production functions cannot be simplified to restrictions on the exponents.
+
+                                                                                                 31
+        Second, a CAD for hypotheses about a production function having a rational
+exponent is likely vastly more complicated than the CAD for the same hypothesis
+expressed in terms of f(n). Take the rather simple (and True) hypothesis that, assuming a
+Cobb-Douglas production function with a positive exponent, aggregate labor income is
+increasing in the amount of labor. Expressed in terms of f(n), it is:
+
+
+
+              (𝑤𝐿 = 𝑓 ′ (𝑛𝐿 ) > 0 ∧ 𝑤𝐻 = 𝑓 ′ (𝑛𝐻 ) > 0 ∧ 𝑛𝐿 > 𝑛𝐻 > 0
+
+                                              𝑓 ′ (𝑛𝐿 )𝑛𝐿 𝑓 ′ (𝑛𝐻 )𝑛𝐻                       (49)
+                  ∧ 𝑓 (𝑛𝐿 ) > 𝑓 (𝑛𝐻 ) > 0 ∧              =            )
+                                                𝑓 (𝑛 𝐿 )     𝑓 (𝑛 𝐻 )
+                                   ⇒ 𝑤𝐿 𝑛𝐿 > 𝑤𝐻 𝑛𝐻
+
+
+where, as in the Laffer curve example, n denotes labor input and w the wage rate. The
+second row of assumptions shows the relevant restrictions imposed by Cobb-Douglas:
+positive output and a constant elasticity of output with respect to input.
+        Deciding the hypothesis (49) with (an eight-dimensional) CAD takes a fraction of
+a second because the number of inequalities is low and the polynomial degrees are no
+more than three.54 Transforming (49) into a semi-algebraic economy by replacing f(n)
+with n to a specific rational power reduces the dimensionality of the CAD, but can
+increase the polynomial degree and thereby increase the decision time by orders of
+magnitude. Figure 4 shows the relative decision times of the semi-algebraic model with
+various production-function exponents.55 The decision time is, for example, five times
+longer when f(n) is replaced with n5/8 (some of the polynomials are of degree 8), and
+3,000 times longer when replaced with n23/30 (some of the polynamials are of degree 30).
+        The unnecessary complexity of semi-algebraic production functions is even
+greater in systems with more inequalities, such as the systems used above to examine the
+Laffer curve. Table 4 shows some results of deciding the (True) hypothesis that a Cobb-
+Douglas production function, together with the other assumptions (20) through (26),
+
+54
+  The eight dimensions are nL, nH, wL, wH, f(nL), f(nH), f(nL), and f (nH).
+55
+  The exponents, when simplified, have denominators ranging from 2 through 30 and numerator
+equal to the integer making the exponent closest to 7/10 without changing the denominator. E.g.,
+13/20 is used rather than 14/20, because the latter simplifies to 7/10. Note that the exponent
+denominator is the degree of the polynomial in the Tarski formula.
+
+                                                                                              32
+guarantees that the lower tax rate is associated with greater utility. The Table’s first two
+rows are the benchmarks with unspecified functional forms. The first row refers to a
+generic production function f(n) that satisfies (23) and (24) as well as the elasticity
+restriction ((wLnL  wHnH)(nL  nH)  0). 56 As shown in Table 3, the decision time with
+REDLOG software is 190 milliseconds.57 The largest power on any one variable in the
+polynomial system is only two, and no more than three variables are multiplied together
+at the same time. For additional comparability with Cobb-Douglas, Table 4’s second row
+also imposes that the elasticity is constant (i.e., labor’s share of output is the same at
+allocations L and H). The second row shows a decision time of 380 milliseconds.
+        The third and fourth rows use the production functions n1/2 and n2/3, respectively,
+and results in the shorted decision times because quadratic and cubic formulas can be
+used. The decision time is about the same with an exponent of 3/4. Several orders of
+magnitude are added to decision times by using more complicated rational exponents,
+such as 3/5 or 4/7. The table also shows how a more complicated rational exponent adds
+to the degree of the polynomial system.
+        As noted by Brown and Kubler (2008), any specific rational exponent allows
+Cobb-Douglas production to fit into the Tarski framework. An irrational exponent would
+not.   A symbolic exponent, e.g., , cannot be processed with Tarski and Collins
+procedures either, because the degree of every polynomial must be known and specific in
+order to apply the algorithms. But the generic functional form f(n) fits in the Tarski
+framework as long as f and its relevant derivatives (at one or more points, as needed) are
+each treated as a separate variable, because the production function restrictions take the
+form of polynomials of a degree that is specific, known, and relatively low. This is an
+example of the computation gains from “rais[ing] the level of abstraction” (Kroening and
+Strichman 2008, p. v).
+
+
+
+
+56
+   The elastic restriction is imposed on the non-semi-algebraic benchmarks because (a) Cobb-
+Douglas production functions satisfy it and (b) it affects the result (see above).
+57
+   Mathematica has more overhead computation – e.g., syntax processing and graphic renderings
+– that make it less reliable for measuring decision times for decisions that are quick (the overhead
+time is large in comparison to the actual calculations).
+
+                                                                                                 33
+V. Conclusions
+
+        A number of economic hypotheses are, interpreted in the right space, quantified
+(“for all”) statements about Tarski formulas, each of which is a quantifier-free Boolean
+combination of polynomial inequalities.58 In order for an economic hypothesis to fit in
+this framework, it must be stated in terms of properties of the model that are expressed as
+a finite number of relationships among real numbers. For example, the hypothesis that,
+for any supply-demand equilibrium in which the two curves have their usual slopes, a
+downward supply shift increases the equilibrium quantity and decreases the equilibrium
+price (Marshall 1895, Book V, Chapter XII) can be expressed in terms of the demand and
+supply slopes in the neighborhood of an arbitrary equilibrium point, the quantity impact,
+and the price impact, each of which is a real number.                   The same hypothesis can
+alternatively be expressed in terms of relationships between two arbitrary points on the
+supply curve and two corresponding points on the demand curve, without reference to
+derivatives (see also Appendix IV). Either way, given that the equilibrium points are
+arbitrary, and that the statements refer to all possible values of the real numbers, the truth
+or falseness of the hypothesis tells us about the properties of supply and demand
+functions on the parts of their domains that satisfy the slope assumptions.
+        In other words, when Alfred Marshall and other early pioneers of formal
+economic reasoning made (correct) if-then statements about human behavior, they were
+implicitly eliminating “for all” quantifiers from a True sentence. 59 The contribution of
+this paper is to make the quantifier elimination explicit and thereby bringing to bear
+applicable tools from real algebraic geometry.
+        Quantifier elimination algorithms automatically decide the truth of such
+hypotheses in finite time, without approximation or functional-form assumptions. The
+algorithms, especially Cylindrical Algebraic Decomposition (CAD), can thereby also
+help formulate and understand hypotheses by detecting inconsistent assumptions,
+
+58
+   See Davenport (2015) and Arai, et al. (2014) for a more systematic measurement of the
+prevalence of problems that can be posed in this way.
+59
+   I use the phrase “implicit quantifier elimination” in the same way that Brown and Kubler
+(2008, p. 4) do, but point out that it applies to if-then sentences, too, and thereby predates Afriat
+(1967) in the economic literature.
+
+                                                                                                    34
+calculating necessary and sufficient conditions, and generating examples. For hypotheses
+that involve optimization, inequality-intensive revealed preference expressions can, with
+quantifier elimination, be as easy to process as equation-intensive local analysis, with the
+added potential of arriving at global conclusions.
+       These results are not merely hopeful conjectures for the practice of economic
+theory. Software is already available for automatically eliminating quantifiers, which I
+have incorporated into an economist-friendly interface running in Mathematica.60 All of
+the hypotheses in this paper were refuted or verified merely by entering them as
+assumptions (e.g., (20) – (27)) and potential implications (e.g, uL > uH). The interface
+confirms the mutual consistency of the assumptions, returns True, False, or “True for
+some [values], False for others,” and provides push-button options for further analysis.
+Figure 5 is a Mathematica screen shot showing the processing of the monopolist’s pass-
+through example.
+       A wide range of economic hypotheses can be processed in this way, although
+more work is needed to expand the range, and better understand the practical limits, of
+economic hypotheses and proofs that can be automated with quantifier elimination. One
+clear limitation of the methods in this paper is that the number of quantified variables
+must be finite which, without variable changes or additional verification strategies (e.g.,
+induction, fixed point, or limit arguments), rules out hypotheses that contain integrals or
+infinite series. As shown by the concave production function example, some economic
+hypotheses can be represented as quantifier elimination problems in multiple ways, and
+thereby present a potential tradeoff between user effort (in assembling the Tarski
+formula) and computational complexity.
+       The quantifier-elimination methods in this paper deliver conclusions, but a
+conclusion is not the same as a concise proof.         The steps of cylindrical algebraic
+decomposition construction are themselves a proof, and the CAD can be displayed by
+quantifier-elimination software. Some CADs have just one cell and thereby immediately
+show the steps of a concise proof (see subsection IV.B.3), but other CADs are
+complicated enough that the proof represented by their construction is too lengthy and
+
+60
+  The Mathematica package is obtained by executing Get["http://economicreasoning.com"] at a
+Mathematica prompt. The package has already been used to generate substantive conclusions
+about the economy (Mulligan and Tsui 2016).
+
+                                                                                          35
+tedious for a human reader to appreciate or practically verify. But even in those cases
+quantifier elimination could be of tremendous assistance to someone attempting to
+construct a concise proof by: confirming that a hypothesis is provable, investigating the
+equivalence of one hypothesis with another, incrementally eliminating or modifying
+assumptions to see which of them are binding, verifying any number of intermediate
+results that may serve as one of the steps in the proof, and automatically generating
+examples.61
+        Human error can result in logically or mathematically erroneous conclusions from
+economic theory, whether those conclusions were generated with a machine or with
+pencil and paper.      In the latter approach, a diligent reader, editor, or referee, also
+operating with pencil and paper, has been required to detect and correct publication
+errors. Human errors could in principle be embedded in quantifier-elimination software
+(Davenport & England, 2015), although CAD methods can decide any universal sentence
+with two different methods (i.e., the left- and right-hand sides of (7) involve different
+CAD software steps) and each of those decisions can be processed in N! different
+sequences (N is the number of quantified variables).             Moreover, multiple software
+packages are available to perform the same calculation (this paper uses both Mathematica
+and REDLOG), not to mention the fact that the owners of commercial software packages
+have both the opportunity and incentive to find and correct software errors. 62 In some
+instances, such as the hypotheses represented with single-celled CADs, the machine-
+generated output is itself a practical guide to confirming its conclusion with pencil and
+paper. Also note that empirical economics publications already include dozens, if not
+hundreds, of matrix inversions that are never verified with pencil and paper or even with
+an alternative software package. Perhaps economic theory will follow a similar path.
+
+
+
+
+61
+   Some of the non-CAD methods for deciding existential sentences do routinely provide proofs,
+but those methods so far appear to be more limited in the practical range of economic problems
+that they can process.
+62
+   If the machine-generated conclusion is that either an example or counter example exists, then
+this can readily be verified with pencil and paper because the software provides the example (see
+also Appendix I).
+
+                                                                                               36
+Appendix I. A non-monotonic Laffer curve
+
+       In the Laffer-curve model shown in the main text, it is possible for a higher tax
+rate to be associated with more utility, holding revenue constant, if leisure is not a normal
+good and the production function is concave enough in labor. This appendix illustrates
+this possibility by taking a specific production function that is piecewise linear, and
+therefore especially concave at the point where the marginal product of labor changes. It
+also takes a specific utility function for which leisure is an inferior good over some range
+that includes the kink in the production function.
+       The utility function is:
+                                  3        𝑛 2
+                     𝑢(𝑐, 𝑛) =      ln 𝑐 −   − (2𝑐 − 1)2 𝑛3 + 1                         (50)
+                                  4        50 3
+
+
+       The production function is (for n > 0):
+
+
+                                              1 4
+                             𝑓 (𝑛) = min {𝐴𝑛 + , 𝑛}                                     (51)
+                                              5 5
+
+
+where A is normalized so that the efficient amount of labor is one and greater than the
+labor at the kink point:
+                                𝜕𝑢/𝜕𝑛               4
+                            −         |         =𝐴<                                     (52)
+                                𝜕𝑢/𝜕𝑐 𝑐=𝐴+1,𝑛=1     5
+                                            5
+
+
+
+Note that, everywhere along the production function, consumption is a good, labor is a
+bad, and preferences are convex.
+       The Laffer curve for this economy can be calculated parametrically by mapping
+each point (n,c) on the production function with n  (0,1), except the kink, to a point on
+the Laffer curve. The tax rate  at a point is the percentage gap between the marginal rate
+of substitution and the marginal product w. The transfer amount at the same point is the
+product wn.
+       A range of wage rates, tax rates and transfer amounts are consistent with a
+competitive equilibrium at the production function kink. All of these points have the
+same equilibrium work, consumption, and utility.
+                                                                                          37
+           Utility rises with n along the production function as long as n < 1. At the kink
+point, utility is ukink.63 Figures 6a and 6b show the resulting Laffer curve with differing
+degrees of detail, using red to show utility (and therefore labor) that is less than its value
+at the kink point. Utility at (above) the kink are shown as black and green, respectively.
+Of course, utility at a zero tax rate (on the green part of the Laffer curve) is greater than it
+is at a 100 percent tax rate (on the red part). Nevertheless, the fine-detail Figure 6b
+shows most clearly that the green (low-utility) part of the Laffer curve is sometimes to
+the left of the red part. This possibility shows why (20) through (27) by themselves are
+not sufficient to imply that uL > uH.
+
+
+
+
+Appendix II. The remainder of the sets from subsections III.C and
+IV.B
+           Equation (36), using the condensed notation of Table 1 and reproduced below,
+shows a set representing the (not necessarily True) hypothesis CAD that quasiconcave
+two-input production functions are concave.
+
+
+     ∀{𝑣1 , 𝑣2 , 𝑣3 , 𝑣5 }[(𝑣1 > 0 ∧ 𝑣2 > 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6 )
+                                                          ⇒ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )]      (36)
+                                           3
+                      = {(𝑣4 , 𝑣6 , 𝑣7 ) ∈ ℝ : ((𝑣4 = 0 ∨ 𝑣7 = 0) ∧ 𝑣6 = 0) ∨ 𝐺 (𝑣4 , 𝑣6 , 𝑣7 )}
+
+
+
+The quantifier-free representation of the set is the disjunction of two terms. The details
+of the second term are:
+
+
+          𝐺(𝑣4 , 𝑣6 , 𝑣7 ) = (𝑣4 ≥ 0 ∧ 𝑣7 ≥ 0 ∧ 𝑣6 ≤ 0) ∨ (𝑣4 𝑣7 ≥ 𝑣26 ∧ 𝑣4 𝑣7 > 0)                (53)
+
+
+Equation (48), reproduced below (and also using the condensed notation from Table 1), is
+a CAD for the set representing the intersection of the assumption and hypothesis above.
+
+
+
+
+63
+     Approximately 0.384.
+
+                                                                                                    38
+                                    (𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 ) ∈ ℝ5 :
+     {                                                                                      }
+         (𝑣3 > 0 ∧ 𝑣5 > 0 ∧ 𝑣32 𝑣7 + 𝑣52 𝑣4 < 2𝑣3 𝑣5 𝑣6 ) ∧ (𝑣4 ≤ 0 ∧ 𝑣7 ≤ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 )
+                                                                                                     (48)
+                                               (𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 ) ∈ ℝ5 :
+                         ={                                                                      }
+                            (𝑣4 = 𝑣6 = 0 ∧ 𝑣7 < 0 ∧ 𝑣3 > 0 ∧ 𝑣5 > 0) ∨ 𝛤(𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 )
+
+
+The CAD is a disjunction of two terms. The details of the second term are:
+
+
+                                𝛤(𝑣3 , 𝑣4 , 𝑣5 , 𝑣6 , 𝑣7 ) = 𝑣3 > 0 ∧ 𝑣4 < 0
+
+
+                   ∧ [𝑣5 > 0 ∧ 𝑣6 ≥ 0 ∧ 𝑣4 𝑣7 ≥ 𝑣62 ] ∨ 𝑣6 < 0 ∧ [(𝑣4 𝑣7 = 𝑣62 )
+                     {                                       [
+
+                                              𝑣23 2              𝑣3 𝑣6                               (54)
+                           ∧ ((𝑣5 > 0 ∧ 𝑣5 + √ 2 (𝑣6 − 𝑣4 𝑣7 ) <       )
+                                              𝑣4                  𝑣4
+
+
+                                         𝑣2
+                           ∨ 𝑣4 𝑣5 + 𝑣4 √ 32 (𝑣62 − 𝑣4 𝑣7 ) − 𝑣3 𝑣6 < 0)]
+                                         𝑣4
+                                                                               ]}
+
+
+
+
+Appendix III. A 41-dimensional example from growth theory
+              This is a two period version of the neoclassical growth model with fiscal policy.
+Output in each period is an additively separable function of capital k and labor n.64 Given
+an initial capital stock k1, first period output can be used to consume (privately c, or
+publicly g) or accumulate capital. Second period output and capital are consumed:
+
+
+                               𝑓 (𝑛1 ) + ℎ(𝑘1 ) = 𝑐1 + 𝑔1 + (𝑘2 − 𝑘1 )                               (55)
+
+
+                                   𝑓 (𝑛2 ) + ℎ(𝑘2 ) + 𝑘2 = 𝑐2 + 𝑔2                                   (56)
+
+
+with
+
+64
+   A separable, rather than homogeneous, production function adds to the algebraic complexity of
+the problem. A nonseparable-nonhomogeneous production function would be more complex than
+either of these.
+
+                                                                                                      39
+                                                            𝜕
+            𝑓(𝑛𝑡 ) > 0, 𝑓 ′ (𝑛𝑡 ) > 0, 𝑓 ′′ (𝑛𝑡 ) ≤ 0,        [𝑛 𝑓 ′ (𝑛𝑡 )] > 0 𝑡 = 1,2                         (57)
+                                                           𝜕𝑛𝑡 𝑡
+
+
+                                 ℎ(𝑘𝑡 ) > 0, ℎ′ (𝑘𝑡 ) > 0 𝑡 = 1,2                                               (58)
+
+
+                                              ℎ′′ (𝑘2 ) ≤ 0                                                     (59)
+
+
+These resource constraints themselves introduce nineteen variables (from the algebraic
+perspective): {𝑓 (𝑛1 ), 𝑓(𝑛2 ), ℎ(𝑘1 ), ℎ(𝑘2 ), 𝑐1 , 𝑐2 , 𝑔1 , 𝑔2 , 𝑘1 , 𝑘2 , 𝑛1 , 𝑛2 , 𝑓 ′ (𝑛1 ), 𝑓 ′ (𝑛2 ),
+𝑓 ′′ (𝑛1 ), 𝑓 ′′ (𝑛2 ), ℎ′ (𝑘1 ), ℎ′ (𝑘2 ), ℎ′′(𝑘2 )}.   The representative agent’s utility over time
+series for consumption and labor are:
+
+
+                                                         𝑢(𝑐2 , 𝑛2 )
+                                        𝑢(𝑐1 , 𝑛1 ) +                                                           (60)
+                                                          1+𝜌
+
+
+         𝜕𝑢(𝑐𝑡 , 𝑛𝑡 )     𝜕𝑢(𝑐𝑡 , 𝑛𝑡 )     𝜕 2 𝑢(𝑐𝑡 , 𝑛𝑡 )     𝜕 2 𝑢(𝑐𝑡 , 𝑛𝑡 )
+𝜌 > −1 ,              >0,              <0,                 <0,                 <0                               (61)
+           𝜕𝑐𝑡              𝜕𝑛𝑡                 𝜕𝑛𝑡2                𝜕𝑐𝑡2
+
+
+                                                                            2
+                        𝜕 2 𝑢(𝑐𝑡 , 𝑛𝑡 ) 𝜕 2 𝑢(𝑐𝑡 , 𝑛𝑡 )     𝜕 2 𝑢(𝑐𝑡 , 𝑛𝑡 )
+                                                        − (                 ) >0                                (62)
+                             𝜕𝑛𝑡2            𝜕𝑐𝑡2               𝜕𝑐𝑡 𝑛𝑡
+
+
+                         𝜕𝑀(𝑐𝑡 , 𝑛𝑡 )     𝜕𝑀(𝑐𝑡 , 𝑛𝑡 )
+                                      >0,              > 0 𝑡 = 1, 2                                             (63)
+                           𝜕𝑐𝑡              𝜕𝑛𝑡
+
+
+                                                                                                 𝜕𝑢/𝜕𝑛
+where M is the intratemporal marginal rate of substitution function − 𝜕𝑢/𝜕𝑐 . 65 Not
+
+including (60), the preference restrictions introduce eleven more variables, where are 
+and the various partial derivatives above.
+           The representative agent chooses consumption, labor, and capital. He pays labor
+income taxes in each period at constant rates 1 and 2, respectively. In addition to the
+resource constraints above, the equilibrium conditions are:
+
+
+65
+     The restrictions (63) are that consumption and leisure are normal goods in the relevant range.
+
+                                                                                                                 40
+                  𝑀(𝑐𝑡 , 𝑛𝑡 ) = (1 − 𝜏𝑡 )𝑓 ′ (𝑛𝑡 ), 𝑔𝑡 = 𝜏𝑡 𝑛𝑡 𝑓 ′ (𝑛𝑡 ) 𝑡 = 1, 2                         (64)
+
+
+                                     𝜕𝑢(𝑐1 , 𝑛1 ) 𝜕𝑢(𝑐2 , 𝑛2 )
+                           (1 + 𝜌)               /             = 1 + ℎ′(𝑘2 )                              (65)
+                                        𝜕𝑐1          𝜕𝑐2
+
+
+These conditions add two more variables, the tax rates, to the previous thirty. In their
+comparative static form (i.e., total derivatives with respect to g), there are eleven more
+             𝑑𝑐𝑡 𝑑𝑛𝑡 𝑑𝑘𝑡 𝑑𝜏𝑡 𝑑𝑔𝑡                              𝑑𝜌
+variables:        ,        , 𝑑𝑔 , 𝑑𝑔 ,        , 𝑡 = 1,2 and        .     This makes a total of 43 variables,
+             𝑑𝑔       𝑑𝑔                 𝑑𝑔                   𝑑𝑔
+
+although two of them (k1 and k2) are not part of the hypothesis because it involves the
+total derivative of the resource constraints rather than the resource constraints themselves.
+        The hypothesis is that – assuming (57)-(59), (61)-(63), 0 < t < 1, ct > 0, nt > 0, gt
+ 0, the total derivatives of (55), (56), (64), and (65) – that a permanent increase in
+                                         𝑑𝑔      𝑑𝑔1       𝑑𝜌          𝑑𝑘1
+government consumption ( 𝑑𝑔1 =                         = 1, 𝑑𝑔 =             = 0) beginning from an allocation
+                                                 𝑑𝑔                    𝑑𝑔
+
+                                                                                        𝑑𝜏     𝑑𝜏2
+that is not on the upward-sloping part of the Laffer curve ( 𝑑𝑔1 ≤ 0,                                ≤ 0) must
+                                                                                                𝑑𝑔
+
+                                                              𝑑𝑛
+increase the amount of labor in period one ( 𝑑𝑔1 > 0). Quantifier elimination, taking less
+
+than 300 milliseconds (see the final row of Table 3), shows that the hypothesis is True. It
+also shows that the hypothesis is not always True if either the Laffer curve assumptions
+or the normal-goods assumptions are removed. 66
+
+
+
+
+66
+  Intuitively, a permanent increase in government consumption has both a wealth effect and a
+substitution effect. The Laffer curve and normal goods assumptions guarantee that both effects
+on labor are in the same direction.
+
+                                                                                                            41
+Appendix IV. Two Classic Examples
+       Economics is replete with hypotheses that can be expressed in the real quantifier
+elimination framework (5). This appendix briefly shows two more of them, drawn from
+some of the most famous hypotheses in economics: Alfred Marshall’s equilibrium
+comparative statics and Anthony Downs’ Median Voter Theorem.
+       Marshall (1895, Book V, Chapter XII) concluded that, for any supply-demand
+equilibrium in which the two curves have their usual slopes, a downward supply shift
+increases the equilibrium quantity q and decreases the equilibrium price p. A local-
+comparative-statics version of Marshall’s result is:
+
+
+                                                        𝕕𝑞 𝕕𝑝
+                                  ∀ {𝑑′ (𝑞), 𝑠 ′ (𝑞),     , }
+                                                        𝕕𝑎 𝕕𝑎
+                                𝕕               𝕕𝑝   𝕕           𝕕𝑞     𝕕𝑝            (66)
+ [(𝑑′ (𝑞) < 0 ∧ 𝑠 ′ (𝑞) ≥ 0 ∧      [𝑠(𝑞) − 𝑎] =    =   𝑑(𝑞)) ⇒ (    >0∧    < 0)]
+                                𝕕𝑎              𝕕𝑎 𝕕𝑎            𝕕𝑎     𝕕𝑎
+
+                 = 𝑇𝑟𝑢𝑒
+
+
+where the inverse demand and supply curves are d(q) and s(q)  a, respectively (i.e., the
+parameter a shifts the supply curve down). The first two assumptions are local slope
+assumptions. The third says that a perturbs the equilibrium. A global version of the
+result requires nine variables rather than four:
+
+
+                     ∀{𝑎, 𝑑(𝑞𝐻 ), 𝑠(𝑞𝐻 ), 𝑞𝐻 , 𝑝𝐻 , 𝑑(𝑞𝐿 ), 𝑠(𝑞𝐿 ), 𝑞𝐿 , 𝑝𝐿 }
+ [([𝑑(𝑞𝐿 ) − 𝑑(𝑞𝐻 )](𝑞𝐿 − 𝑞𝐻 ) < 0 ∧ [𝑠(𝑞𝐿 ) − 𝑠(𝑞𝐻 )](𝑞𝐿 − 𝑞𝐻 ) ≥ 0 ∧ 𝑎 > 0          (67)
+ ∧ 𝑠(𝑞𝐻 ) = 𝑝𝐻 = 𝑑(𝑞𝐻 ) ∧ 𝑠(𝑞𝐿 ) − 𝑎 = 𝑝𝐿 = 𝑑(𝑞𝐿 )) ⇒ (𝑞𝐿 > 𝑞𝐻 ∧ 𝑝𝐿 < 𝑝𝐻 )] = 𝑇𝑟𝑢𝑒
+
+
+The first two assumptions are global slope assumptions. The last three say that the L
+equilibrium differs from the H equilibrium by a downward supply shift in the amount a.
+       In Downs’ (1957) model, public policy g is one dimensional.              Voters are
+heterogeneous, with single-peaked policy preferences that align them from left to right.
+The continuous CDF F(g) denotes the fraction of the electorate whose preferred policy is
+
+
+
+
+                                                                                       42
+no greater than g. Each of two candidates L, R proposes a policy, which for brevity I take
+to be distinct with gL < gR.67 The proof by quantifier elimination is:
+
+
+                                  ∀{𝑣𝐿 , 𝐹(𝑔𝐿 ), 𝑣𝑅 , 𝐹 (𝑔𝑅 )}
+
+ [(0 ≤ 𝐹 (𝑔𝐿 ) < 𝐹 (𝑔𝑅 ) ≤ 1 ∧ 𝑣𝐿 + 𝑣𝑅 = 1 ∧ [𝐹(𝑔𝐿 ) < 𝐹 (𝑔𝑅 ) ⇒ 𝐹 (𝑔𝐿 ) < 𝑣𝐿 < 𝐹 (𝑔𝑅 )])
+                                                                                               (68)
+                                 1                        1
+                 ⇒ ([𝐹 (𝑔𝐿 ) =     ⇒ 𝑣𝐿 > 𝑣𝑅 ] ∧ [𝐹(𝑔𝑅 ) = ⇒ 𝑣𝑅 > 𝑣𝐿 ])] = 𝑇𝑟𝑢𝑒
+                                 2                        2
+
+
+where vL and vR denote the vote shares received by the left and right candidates,
+respectively. The first assumption is a normalization plus the relevant properties of a
+cumulative density function.       The second assumption reflects the arithmetic of vote
+shares in a two-candidate election. The final assumption is single-peaked preferences:
+voters choose the candidate whose proposal is closest to their preference (see also
+(Acemoglu and Robinson 2006, Definition 4.1)). 68                 The hypothesis asserts that
+whichever, if any, candidate’s policy is at the median is the election winner.
+
+
+
+
+67
+   I leave it to the reader to show how the Tarski formula could be amended to allow for the
+additional possibility of gL = gR.
+68
+   Note that, for the purposes of proving the theorem, we do not have to specify how the voters
+between gL and gR vote, except that some of them vote left and others vote right (hence the strict
+inequality surrounding vL).
+
+                                                                                                 43
+Figure 1. Parabolas with real roots
+Figure 2. Circle-hyperbola CAD
+Figure 3a. Double exponential: wide range   Figure 3b. Double exponential: close range
+    Figure 4. Functional form assumptions unnecessarily
+              complicate quantifier elimination
+                          Times for deciding universal sentences with 𝑛𝛼,
+                               relative to leaving f(n) unspecified.
+
+
+
+
+Note: Each observation takes  to be a rational number. The Tarski formula has only ten inequalities. Table 4’s Tarski formula has twenty-three.
+                            Figure 5. Mathematica screen shot
+                              A monopolist’s pass through rate
+
+
+
+
+Note: For brevity, the three unnecessary assumptions among (10)-(12) were not entered. As a result, the system is six dimensional rather than nine.
+Figure 6a. Laffer curve example: wide range   Figure 6b. Laffer curve example: fine detail
+    Table 1. Structure of the polynomial system
+representing the concave production function problem
+Table 2. Examples and counterexamples
+        for the Laffer curve model
+Table 3. Decision times for the economic models
+Times for deciding universal sentences, in milliseconds
+
+                                                             Decision time
+                                            Dimensions       (milliseconds)
+Model                                       represented Mathematica REDLOG
+Concave production function (derivatives at one point)
+      2 inputs                                         7          51         < 50
+      3 inputs                                       12     128,812          < 50
+      4 inputs                                       18      > 10^8        > 10^8
+Concave production function (three-point comparisons)
+      Any number of inputs                           10           66           60
+Monopolist's pass-through                              9          58           60
+Laffer-curve surprises
+      Basic assumptions only                         14         223           180
+      Normal goods restriction                       16         725           200
+      Elastic labor demand restriction               14         740           190
+Growth model processed in 41 dimensions              41         279           230
+
+Note : Universal sentences state a hypotheses to be True for all N -dimensional real
+numbers, where N is the number of dimensions needed to represent the model, and
+typically take longer to decide than existential sentences. Computer time was
+calculated with Mathematica 10.4 and the PSL version of REDLOG (version 3562)
+on a Macbook Air Mid 2012 2GHz Interl i7, without using parallel processing or
+searching for more efficient variable-elimination orders. The variable-elimination
+order is reverse alphabetical (as sorted by Mathematica), except for the concave
+production function models, which are alphabetical.
+Table 4. Functional form assumptions unnecessarily complicate quantifier elimination
+Times for deciding universal sentences, in milliseconds, from REDLOG
+Laffer curve model (14 dimensions)
+
+
+                                            Decision time     Max polynomial degree
+Production function specification           (milliseconds)        own          term
+No functional-form assumption
+     Elastic labor demand                             190             2            3
+     Constant elastic labor demand                    380             2            3
+Cobb-Douglas, with exponent of:
+     1/2                                               50              2           3
+     2/3                                             120               3           4
+     3/4                                             240               4           5
+     3/5                                          > 10^8               5           7
+     Symbolic                                  Outside the polynomial framework
+     Any irrational number                     Outside the polynomial framework
+
+Note : The elastic labor demand specification is (w1n1-w2n2)(n1-n2)>0. The constant
+elastic labor demand specification also has (w1n1c2=w2n2c1). Max own degree is the
+maximum exponent on any one variable in the polynomial system. Term degree is the
+sum of exponents on all variables in a mononomial (max refers to the mononomial with
+the greatest term degree). Note that equation (27) is not part of these systems.
+Bibliography
+Acemoglu, Daron, and James A. Robinson. Economic Origins of Dictatorship and
+        Democracy. New York: Cambridge University Press, 2006.
+Afriat, S. N. "The construction of utility functions from expenditure data." International
+        Economic Review 8 (February 1967): 67-77.
+Arai, Noriko H., Hidenao Iwane, Takua Matsuzaki, and Hirokazu Anai. "Mathematics by
+        Machine." ISSAC '14 Proceedings of the 39th International Symposium on
+        Symbolic and Algebraic Computation. New York: ACM, 2014. 1-8.
+Arnon, Dennis S, George E. Collins, and Scott McCallum. "Cylindrical Algebraic
+        Decomposition I: The Basic Algorithm." In Quantifier Elimination and
+        Cylindrical Algebraic Decomposition, by B.F. Caviness and J.R. Johnson, 136-51.
+        Berlin: Springer-Verlag, 1998.
+Basu, Saugata, Richard Pollack, and Marie-Francoise Roy. Algorithms in Real Algebraic
+        Geometry. Berlin: Springer-Verlag (as updated at perso.univ-rennes1.fr), 2011.
+Bradford, Russell, James H. Davenport, Matthew England, Scott McCallum, and David
+        Wilson. "Truth Table Invariant Cylindrical Algebraic Decomposition." Journal of
+        Symbolic Computation 76 (September 2016): 1-35.
+Brown, Christopher W. "Companion to the Tutorial Cylindrical Algebraic Decomposition
+        Presented at ISSAC 2004." June 30, 2004.
+        http://www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf.
+Brown, Christopher W. "QEPCAD B - a program for computing with semi-algebraic sets
+        using CADs." ACM SIGSAM Bulletin 37, no. 4 (December 2003): 97-108.
+Brown, Christopher W., and James H. Davenport. "The Complexity of Quantifier
+        Elimination and Cylindrical Algebraic Decomposition." Proceedings of the 2007
+        international symposium on symbolic and algebraic computation, 2007: 54-60.
+Brown, Donald J., and Felix Kubler. Computational Aspects of General Equilibrium
+        Theory. Berlin: Springer-Verlag, 2008.
+Brown, Donald J., and Felix Kubler. "Refutable Theories of Value." In Computational
+        Aspects of General Equilibrium Theory, by Donald J. Brown and Felix Kubler, 1-
+        10. Berlin: Springer-Verlag, 2008.
+Brown, Donald J., and Rosa L. Matzkin. "Testable Restrictions on the Equilibrium
+        Manifold." Econometrica 64, no. 6 (November 1996): 1249-62.
+Canny, John. "Improved Algorithms for Sign Determination and Existential Quantifier
+        Elimination." The Computer Journal 36, no. 5 (1993): 409-18.
+Carvajal, Andres, Rahul Deb, James Fenske, and John K.-H. Quah. "A Nonparametric
+        Analysis of Multi-product Oligopolies." Economic Theory 57, no. 2 (October
+        2014): 253-277.
+Caviness, B.F., and J.R. Johnson. "Introduction." In Quantifier Elimination and
+        Cylindrical Algebraic Decomposition, by B.F. Caviness and J.R. Johnson, 1-7.
+        Berlin: Springer-Verlag, 1998.
+Chambers, Christopher P., and Federico Echenique. Revealed Preference Theory.
+        Cambridge: Cambridge University Press, 2016.
+Chen, Changbo, and Marc Moreno Maza. "Simplification of Cylindrical Algebraic
+        Formulas." In Computer Algebra in Scientific Computing, by Vladimir P. Gerdt,
+        Wolfram Koepf, Werner M. Seiler and Evgenii V. Vorozhtsov, 119-34. Cham,
+        Switzerland: Springer International Publishing, 2015.
+Collins, George E. "Efficient Quantifier Elimination for Elementary Algebra." Seminar
+        presentation at Stanford University. 1973.
+                                                                                         44
+Collins, George E. "Quantifier Elimination by Cylindrical Algebraic Decomposition -
+        Twenty Years of Progress." In Quantifier Elimination and Cylindrical Algebraic
+        Decomposition, by B.F. Caviness and J.R. Johnson, 8-23. Berlin: Springer-
+        Verlag, 1998.
+—. "Quantifier Elimination for Real Closed Fields by Cylindric Algebraic
+        Decomposition." Second GI Conference on Automata Theory and Formal
+        Languages. Berlin: Springer-Verlag, 1975. 134-83.
+Davenport, J.H., Y. Siret, and E. Tournier. Computer Algebra: Systems and Algorithms
+        for Algebraic Computation. London: Academic Press, 1988.
+Davenport, James H. "Solving computational problems in real algebra/geometry."
+        Annales Mathematicae et Informaticae 44 (2015): 35-46.
+Davenport, James H., and Matthew England. "Recent Advances in Real Geometric
+        Reasoning." In Automated Deduction in Geometry, by Francisco Botana and
+        Pedro Quaresma, 37-52. Springer-Verlag, 2015.
+Dolzmann, Andreas, Thomas Sturm, and Weispfenning. "Real Quantifier Elimination in
+        Practice." In Algorithmic Algebra and Number Theory, by B.H. Matzat, G.M.
+        Greuel and G. Hiss, 221-47. Berlin: Springer-Verlag, 1998.
+Downs, Anthony. "An Economic Theory of Political Action in a Democracy." Journal of
+        Political Economy 65, no. 2 (April 1957): 135-150.
+Jehle, Goeffrey A., and Philip J. Reny. Advanced Microeconomic Theory. New York:
+        Pearson Education, 2011.
+Kauers, Manuel. "How to Use Cylindrical Algebraic Decomposition." Seminaire
+        Lotharingien de Combinatoire 65 (2011): 1-16.
+Kroening, Daniel, and Ofer Strichman. Decision Procedures: An Algorithmic Point of
+        View. Berlin: Springer-Verlag, 2008.
+Lasaruk, Aless, and Thomas Sturm. "Automatic Verification of the Adequacy of Models
+        for Families of Geometric Objects." In Automated Deduction in Geometry, by
+        Thomas Sturm and Christoph Zengler, 116-140. Berlin: Springer-Verlag, 2011.
+Marshall, Alfred. Principles of Economics. London: MacMillan and Co., 1895.
+Mulligan, Casey B., and Kevin K. Tsui. "The Upside-down Economics of Regulated and
+        Otherwise Rigid Prices." NBER working paper, no. 22305 (June 2016).
+Passmore, Grant Olney. Combined Decision Procedures for Nonlinear Arithmetics, Real
+        and Complex. Edinburgh, UK: University of Edinburgh PhD Dissertation, 2011.
+Passmore, Grant Olney, and Paul B. Jackson. "Combined Decision Techniques for the
+        Existential Theory of the Reals." In Calculemus, by J. Carette and et al., 122-37.
+        Berlin: Springer-Verlag, 2009.
+Priest, Graham. Logic: A Very Short Introduction. New York: Oxford University Press,
+        2000.
+Renegar, James. "Recent Progress on the Complexity of the Decision Problem for the
+        Reals." In Quantifier Elimination and Cylindrical Algebraic Decomposition, by
+        B.F. Caviness and J.R. Johnson, 220-41. Berlin: Springer-Verlag, 1998.
+Samuelson, Paul A. "A Note on the Pure Theory of Consumer's Behavior." Economica 5,
+        no. 17 (February 1938): 61-71.
+Shankar, Natarajan. "Little Engines of Proof." In FME 2002:Formal Methods—Getting
+        IT Right, by Lars-Henrik Eriksson and Peter Alexander Lindsay, 1-20. Springer-
+        Verlag, 2002.
+Snyder, Susan K. "Nonparametric Testable Restrictions of Household Behavior."
+        Southern Economic Journal 67, no. 1 (July 2000): 171-185.
+                                                                                        45
+Steinhorn, Charles. "Tame Topology and O-Minimal Structures." In Computational
+        Aspects of General Equilibrium Theory, by Donald J. Brown and Felix Kubler,
+        165-91. Berlin: Springer-Verlag, 2008.
+Strzebonski, Adam. "Computation with semialgebraic sets represented by cylindrical
+        algebraic formulas." ISSAC '10 Proceedings of the 35th International Symposium
+        on Symbolic and Algebraic Computation. New York: ACM, 2010. 61-68.
+Tarski, Alfred. A Decision Method for Elementary Algebra and Geometry. Los Angeles:
+        RAND Corporation, 1951.
+Van den Dries, Lou. "Alfred Tarski's Elimination Theory for Real Closed Fields."
+        Journal of Symbolic Logic 53, no. 1 (March 1988): 7-19.
+Weyl, E. Glen, and Michael Fabinger. "Pass-through as an economic tool: principles of
+        incidence under imperfect competition." Journal of Political Economy 121, no. 3
+        (June 2013): 528-83.
+
+
+
+
+                                                                                     46
+

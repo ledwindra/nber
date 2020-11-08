@@ -1,0 +1,2380 @@
+                                  NBER WORKING PAPER SERIES
+
+
+
+
+      A NONLINEAR CERTAINTY EQUIVALENT APPROXIMATION METHOD FOR
+                     DYNAMIC STOCHASTIC PROBLEMS
+
+                                              Yongyang Cai
+                                               Kenneth Judd
+                                            Jevgenijs Steinbuks
+
+                                           Working Paper 21590
+                                   http://www.nber.org/papers/w21590
+
+
+                        NATIONAL BUREAU OF ECONOMIC RESEARCH
+                                 1050 Massachusetts Avenue
+                                   Cambridge, MA 02138
+                                      September 2015
+
+
+
+
+We thank Thomas Hertel for his helpful comments. Cai gratefully acknowledges the National Science
+Foundation grant (SES-0951576). We also acknowledge the United States Department of Agriculture
+NIFA-AFRI grant 2015-67023-22905. This research is part of the Blue Waters sustained-petascale
+computing project, which is supported by the National Science Foundation (awards OCI-0725070
+and ACI-1238993) and the state of Illinois. Blue Waters is a joint effort of the University of Illinois
+at Urbana-Champaign and its National Center for Supercomputing Applications. Responsibility for
+the content of the paper is the authors' alone and does not necessarily reflect the views of their institutions,
+or member countries of the World Bank. The views expressed herein are those of the authors and do
+not necessarily reflect the views of the National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been peer-
+reviewed or been subject to the review by the NBER Board of Directors that accompanies official
+NBER publications.
+
+© 2015 by Yongyang Cai, Kenneth Judd, and Jevgenijs Steinbuks. All rights reserved. Short sections
+of text, not to exceed two paragraphs, may be quoted without explicit permission provided that full
+credit, including © notice, is given to the source.
+A Nonlinear Certainty Equivalent Approximation Method for Dynamic Stochastic Problems
+Yongyang Cai, Kenneth Judd, and Jevgenijs Steinbuks
+NBER Working Paper No. 21590
+September 2015
+JEL No. C61,C63,C68,E31,E52
+
+                                             ABSTRACT
+
+This paper introduces a nonlinear certainty equivalent approximation method for dynamic stochastic
+problems. We first use a novel, stable and efficient method for computing the optimal policy functions
+for deterministic dynamic optimization problems, and then use them as certainty-equivalent approximations
+for the stochastic versions. Our examples demonstrate that it can be applied to solve high-dimensional
+problems with up to four hundred state variables with an acceptable accuracy. This method can also
+be applied to solve problems with inequality constraints that occasionally bind. These features make
+the nonlinear certainty equivalent approximation method suitable for solving complex economic problems,
+where other algorithms, such as log-linearization, fail or are far less tractable.
+
+
+Yongyang Cai                                        Jevgenijs Steinbuks
+Becker Friedman Institute                           Washington D.C.
+University of Chicago                               jsteinbuks@worldbank.org
+and
+Hoover Institution
+Stanford University
+Stanford, CA 94305
+yycai@stanford.edu
+
+Kenneth Judd
+Hoover Institution
+Stanford University
+Stanford, CA 94305-6010
+and NBER
+JUDD@HOOVER.STANFORD.EDU
+           A Nonlinear Certainty Equivalent
+          Approximation Method for Dynamic
+                 Stochastic Problems⇤
+       Yongyang Cai†            Kenneth Judd‡ Jevgenijs Steinbuks§
+
+                                September 23, 2015
+
+
+
+                                        Abstract
+
+       This paper introduces a nonlinear certainty equivalent approximation
+       method for dynamic stochastic problems. We first use a novel, stable
+       and efficient method for computing the optimal policy functions for
+       deterministic dynamic optimization problems, and then use them as
+       certainty-equivalent approximations for the stochastic versions. Our
+       examples demonstrate that it can be applied to solve high-dimensional
+       problems with up to four hundred state variables with an acceptable
+       accuracy. This method can also be applied to solve problems with
+   ⇤
+      We thank Thomas Hertel for his helpful comments. Cai gratefully acknowledges the
+National Science Foundation grant (SES-0951576). We also acknowledge the United States
+Department of Agriculture NIFA-AFRI grant 2015-67023-22905. This research is part
+of the Blue Waters sustained-petascale computing project, which is supported by the
+National Science Foundation (awards OCI-0725070 and ACI-1238993) and the state of
+Illinois. Blue Waters is a joint e↵ort of the University of Illinois at Urbana-Champaign and
+its National Center for Supercomputing Applications. Responsibility for the content of the
+paper is the authors’ alone and does not necessarily reflect the views of their institutions,
+or member countries of the World Bank.
+    †
+      Corresponding author: University of Chicago & Hoover Institution. Email: yy-
+cai@stanford.edu
+    ‡
+      Hoover Institution, Stanford University.
+    §
+      Development Research Group, The World Bank.
+
+
+                                             1
+        inequality constraints that occasionally bind. These features make
+        the nonlinear certainty equivalent approximation method suitable for
+        solving complex economic problems, where other algorithms, such as
+        log-linearization, fail or are far less tractable.
+           Keywords: New Keynesian DSGE model, competitive equilib-
+        rium, parallel computing, sparse grid approximation, real business
+        cycle model, occasionally binding constraints
+           JEL Classification: C61, C63, C68, E31, E52
+
+
+
+1       Introduction
+Many important problems across di↵erent fields of economics require solving
+dynamic stochastic general equilibrium (DSGE) or optimal decision-making
+problems. Numerical dynamic programming (DP) is a typical method to
+solve such problems, by formulating them as Bellman equation (Bellman
+1957), and then solving them with value function iteration (or some ac-
+celerating methods like policy function iteration) or time iteration.1 How-
+ever, implementing numerical DP faces challenging problems such as time-
+consuming high-dimensional integration, keeping the shape properties of the
+value/policy function approximation (Cai and Judd 2013, 2015), choosing ap-
+propriate approximation domains, avoiding possible non-convergence because
+of accumulated approximation errors, dealing with the kinks from inequal-
+ity constraints that occasionally bind, and many other challenges. Choosing
+a good approximation can be particularly challenging for multi-dimensional
+dynamic stochastic problems where the domain of state variables expands
+quickly over time, while a wider domain requires a higher degree approx-
+imation. Its implementation for high-dimensional problems is very time-
+consuming even if we take advantage of recent innovations, such as parallel
+dynamic programming methods (Cai et al. 2015b) in a supercomputer or a
+    1
+   For a detailed discussion of these methods, see Judd (1998), Bertsekas (2005, 2007),
+Rust (2008), and Cai and Judd (2014).
+
+
+
+                                          2
+computational grid.
+    Because of these challenges it is common in applied computational eco-
+nomics to rely on methods other than numerical DP, and sacrifice the ac-
+curacy of the results for the greater ease of numerical implementation. The
+most common method is log-linearization; Magill (1977) brought linearization
+methods for dynamic stochastic models to economics. Linear (and log-linear)
+approximations produce decision rules that depend only on the state of the
+dynamical system. They are also called certainty equivalent approximations
+because they do not depend on the variance of any random variable. Because
+of its local nature, log-linearization often fails to give a good solution on
+states that are not near to the steady states.2 In particular, log-linearization
+approximations are unsuitable for problems with inequality constraints that
+bind at states significantly far from the steady state.
+    This paper introduces a new method for solving DSGE or optimal decision-
+making problems, which we call the nonlinear certainty equivalent (NLCEQ)
+approximation method. Application of certainty equivalence approximations
+goes back to Simon (1956) and Theil (1957), who suggested solving dynamic
+programming problems with quadratic objectives and linear transition laws
+by optimizing under perfect foresight, and then using optimal deterministic
+forecasts for approximating unknown future values. They have also demon-
+strated that for some stochastic control problems, the certainty equivalent
+approximation is the exact solution for the optimal decision rules.3 The NL-
+CEQ method is a natural extension of the idea of a certainty equivalent in
+that it solves for a nonlinear decision rule for the non-stochastic problem that
+is globally valid and applies this decision rule to the stochastic model.4 The
+   2
+     For more detailed discussion of perturbation methods in economics, see Gaspar and
+Judd (1997), Jin and Judd (2002), Schmitt-Grohe and Uribe (2004), Fernandez-Villaverde
+and Rubio-Ramirez (2006), Kim et al. (2008), Benigno and Woodford (2012), and Den
+Haan and De Wind (2012).
+   3
+     For a formal derivation of this result see, e.g., Hansen and Sargent (2005, section 3.2).
+   4
+     Solvability of NLCEQ method follows directly from the global concavity of the value
+function by implicit di↵erentiation, see e.g., Theorems 1 - 6 in Jin and Judd (2002).
+
+
+
+                                              3
+NLCEQ method chooses a set of states, solves the deterministic dynamic
+optimization problem using each of those points as the initial condition, and
+then use numerical approximation methods to take the results and construct
+a global nonlinear approximation for the value function and decision rules.
+This method is simple, stable, and efficient, and it can be naturally paral-
+lelized with high efficiency for high-dimensional problems. Furthermore, it
+does not have the challenges faced by the numerical DP. Like log-linearization
+(and other certainty equivalent approximations) it ignores the impact of un-
+certainty on the decision rule, but it is better than log-linearization over
+nontrivial neighborhoods of the deterministic steady state.
+     For deterministic dynamic problems (both social planner’s problems and
+competitive equilibrium problems), NLCEQ can provide very accurate so-
+lution. For stochastic dynamic problems, similar to other numerical ap-
+proaches, it sacrifices some accuracy of the solution for the ease of numerical
+implementation. However, NLCEQ has a number of important advantages
+over those methods.
+     NLCEQ is very robust to break the curse of dimensionality, and, as we
+show below, it can be applied to solve high-dimensional problems with up
+to four hundred state variables in minutes (by parallelism) with an accept-
+able accuracy. Moreover, NLCEQ is also appropriate for solving dynamic
+stochastic problems with inequality constraints that occasionally bind, where
+perturbation is well known for its failure to get solutions with acceptable ac-
+curacy. Furthermore, NLCEQ provides a global solution that can be used
+for e↵ective impulse function analysis.
+     These attractive features make NLCEQ suitable for solving complex eco-
+nomic problems, where other algorithms fail or are too costly to get solutions
+with acceptable accuracy. Of course, like any numerical methods, NLCEQ
+has its own limitations: it may be not applicable to problems, where the
+presence of uncertainty in the original problem does significantly a↵ect op-
+
+
+
+
+                                      4
+timal decision rules, such as dynamic portfolio optimization,5 or problems
+with recursive preferences (Epstein and Zin 1989).6 Like log-linearization
+(and other certainty equivalent approximations), NLCEQ also has a limit
+on its accuracy because it ignores the impact of uncertainty. However, as
+we show in our examples, this accuracy limit is acceptable. In fact, our re-
+sults show that NLCEQ has about order-2 higher accuracy than log-linear or
+log-linear-quadratic perturbation methods for multi-country optimal growth
+problems.
+    In this paper we apply the NLCEQ method to solve three social planner’s
+optimal decision-making problems and one competitive equilibrium problem.
+Our first example is a multi-country real business cycle (RBC) problem (Den
+Haan et al. 2011). We first show that NLCEQ achieves higher accuracy than
+log-linear or log-linear-quadratic perturbation methods in low-dimensional
+RBC problems, and then demonstrate that NLCEQ can solve up to a 200-
+country RBC problem (400 state variables) in minutes by parallelism with an
+acceptable accuracy. Our second example is a RBC model with an occasion-
+ally binding constraint on investment (Christiano and Fisher 2000; Guerrieri
+and Iacoviello 2015), and it shows that NLCEQ can easily deal with occasion-
+ally binding constraints. Our third example is a dynamic stochastic model
+of food and clean energy (Chakravorty et al. 2008), which has inequality
+constraints that occasionally bind. Moreover, the problem’s initial state is
+far away from its steady state and even its state path cannot reach its steady
+state in a finite time. Our results show that NLCEQ achieves an accept-
+able accuracy in solving these problems, which are quite challenging for all
+   5
+     For example, if we apply NLCEQ to solve one portfolio problem assuming no trans-
+action costs, its solution will be investing all money in the risky asset with the largest
+expected return. However, if the portfolio problem has transaction costs or does not
+use a HARA utility, it could also be challenging for other methods as its wealth domain
+will expand quickly across time and it often has occasionally binding constraints (e.g.,
+shorting/borrowing is disallowed or limited). For more details about dynamic portfolio
+optimization see Infanger (2006) and Cai et al. (2013).
+   6
+     Perturbation methods could get a locally accurate solution for problems with recursive
+preferences, see Caldara et al. (2012).
+
+
+                                            5
+other general numerical methods to the best of our knowledge. Our final
+example is a New Keynesian DSGE model with zero lower bound (Guerrieri
+and Iacoviello 2015). Solving New Keynesian DSGE models have been stud-
+ied frequently in the literature, such as Woodford (2003), Del Negro et al.
+(2007), Smets and Wouters (2007), Gali (2008), Maliar and Maliar (2015),
+Fernández-Villaverde et al. (2015), and Guerrieri and Iacoviello (2015). Our
+results show that NLCEQ can easily solve competitive equilibrium problems
+with occasionally binding constraints.7
+    The paper is organized as follows. Section 2 introduces the NLCEQ
+method. Sections 3-6 apply NLCEQ to respectively solve multi-country RBC
+problems, a RBC model with a constraint on investment, a dynamic stochas-
+tic model of food and clean energy, and a New Keynesian DSGE model with
+zero lower bound. Section 7 concludes.
+
+
+2       NLCEQ Method
+   An infinite horizon stochastic optimal decision-making problem can be
+expressed by the following general model:
+                                              (   1
+                                                                      )
+                                                  X
+                      V (x0 ) = max E                   t
+                                                            u (xt , at ) ,
+                                 at 2D(xt )
+                                                  t=0
+                                                                                    (1)
+                                     s.t. xt+1 = g (xt , at , "t ) ,
+
+where xt 2 Rd is a state vector process with an initial state x0 (each state
+variable could be either continuous or discrete), at 2 Rn is the vector of
+    7
+    In this paper, we use GAMS (McCarl et al. 2011) code for all examples except for
+high-dimensional problems in Subsection 3.4. The NLCEQ method can also easily be
+implemented in other programming languages like MATLAB or Dynare (Adjemian et al.
+2011). We use CONOPT (Drud 1996) as the optimization solver in our GAMS code, run
+them on one 3.5GHz Intel processor, and get the solution in seconds/minutes for each
+case. For high-dimensional problems in Subsection 3.4, we use Fortran code and SNOPT
+(Gill et al. 2005) as the optimization solver, implement parallelism on a supercomputer,
+and then get solutions in minutes.
+
+
+
+                                              6
+action variables at time t, "t is a serially uncorrelated random vector process
+with identical and independent distributions across time (for simplicity, we
+assume that the mean or median of "t is zero), u(x, a) is a utility function,
+g (x, a, ") is the stochastic law of motion for the state variable vector x, is
+the discount factor (0 < < 1), D (xt ) is a feasible set of action at , and E {·}
+is the expectation operator. Here, g is a general transition law of the vector
+of state variables, but some elements of the state variable vector x could be
+exogenous or have a deterministic transition law independent of ".
+    To solve the problem (1), value function iteration is often used by solving
+the following Bellman equation backwards:
+
+                  Vt (xt ) = max u (xt , at ) + E {Vt+1 (xt+1 )} ,
+                             at 2D(xt )                                               (2)
+                                      s.t. xt+1 = g (xt , at , "t ) .
+
+Numerical implementation of value function iteration can be challenging for
+a number of reasons. It requires choosing an appropriate approximation
+domain for the state variables, which can be way wider than the one we
+are interested in, because of the stochasticity in the transition law of the
+states. In particular, when ✏t has an infinite support, this may lead to an
+infinite support for xt+1 so that we have to use some remedies like truncation
+methods. Their impact on the solution is, however, hard to be measured.
+Moreover, a wider domain requires a higher-degree approximation for the
+value functions, and then requires more time for an optimization solver to find
+the optimal solution of the Bellman equation. In addition, in the presence of
+multiple uncertainties, the integration part of the Bellman equation can be
+very time-consuming, and may even become infeasible, to get a good accuracy
+for high-dimensional integration. Finally, many problems have occasionally
+binding constraints which lead to kinks in value functions, a big challenge
+for multi-dimensional value function approximation.8
+   8
+   Cai and Judd (2012) propose a rational spline interpolation method for value function
+approximation so that the value function iteration is stable and accurate for the problems
+
+
+                                             7
+Algorithm 1 Nonlinear Certainty Equivalent Approximation Method for
+Infinite-horizon Stochastic Dynamic Programming Problems
+Step 1. Transformation step. Transform the infinite-horizon stochastic
+     problem into a finite horizon deterministic optimal decision-making
+     problem:
+                                    TP1
+                     Ve (x0 ) = max              t
+                                                     u (xt , at ) +   T
+                                                                          VeT (xT ) ,
+                                at 2D(xt ) t=0                                          (3)
+                                  s.t. xt+1 = g (xt , at , 0) ,
+
+      where VeT is a terminal value function given by an initial guess of the
+      value function V .
+
+Step 2. Optimization step. Choose a set of approximation nodes, X = {xj0 :
+     1  j  m} ⇢ Rd , and compute v j = Ve xj0 and its corresponding
+     optimal initial action aj0 2 Rn using an optimization solver to solve (3),
+     for each xj0 2 X, 1  j  m.
+
+Step 3. Approximation step. Using an appropriate approximation method,
+     such that V̂ (x0 ; bv ) approximates {(xj0 , v j ): 1  j  m} data and a
+     vector of functions P̂(x0 ; ba ) approximates {(xj0 , aj0 ): 1  j  m}, i.e.,
+     v j ⇡ V̂ (xj0 ; bv ) and aj0 ⇡ P̂(xj0 ; ba ) for all xj0 2 X, where bv and ba are
+     vectors of parameters.
+
+
+
+    However, in many cases it is acceptable to obtain a solution to the prob-
+lem (1) with less demanding accuracy. For these cases, below we propose
+a simple and fast nonlinear certainty equivalent (NLCEQ) approximation
+method (Algorithm 1) to obtain the value function V and corresponding
+optimal decision rules.
+    NLCEQ is a natural extension of the certainty equivalent approxima-
+tion idea that the locally accurate linearization (log-linearization) method
+implements, but it solves the deterministic optimization problems to find ap-
+proximate values of value/policy functions at pre-specified state nodes and
+with kinks, but it applies to problems with only one continuous state variable.
+
+
+                                             8
+then uses global nonlinear approximation methods to get the approximate
+value/policy functions, so NLCEQ is a globally accurate method. Because
+(3) is a convex optimization problem for most of dynamic programming prob-
+lems in economics, NLCEQ is stable and can work well for problems with
+occasionally binding constraints. Stability of the NLCEQ algorithm ensures
+that solution accuracy is little changed by variations in model parameter
+values (we illustrated this in examples of Subsection 3.2). 9
+     If there is no uncertainty in the underlying problem, the NLCEQ method
+gives us a very accurate value and policy function for large enough T . For
+the stochastic problems, NLCEQ can give an estimate of the value/policy
+functions, which can be subsequently employed in the economic analysis,
+such as impulse function analysis and sensitivity analysis. To obtain more
+accurate approximation, if necessary, we can use the solutions of NLCEQ,
+V̂ (x0 ; bv ) and P̂(x0 ; ba ), as the initial guess for the value/policy functions,
+and then apply other more accurate methods like numerical value function
+iteration (Cai and Judd 2014). When there is some freedom in choosing T ,
+VeT , approximation nodes, and approximation methods, a criterion to choose
+them is that global errors defined in a way like in equation (19) are small
+(note that global errors are always no less than Euler errors). We will discuss
+the steps in more details below.10
+     After we get the optimal policy functions P̂(x0 ; ba ), it is easy to do a
+forward simulation: with a given initial state x0 and one simulation path "t ,
+we use at = P̂(xt ; ba ) to get xt+1 = g (xt , at , "t ) for any time t = 0, 1, 2, ....
+That is, in the simulation process, we do not need to repeatedly apply NL-
+CEQ or solve its optimization problem (3); instead we only need to use the
+solved policy functions P̂(x; ba ) while making sure that xt is located inside
+   9
+      A standard way to avoid any problems with model calibration and sensitivity analysis
+is to choose a wide approximation domain, so that changing calibrated parameter values
+does not push state variables outside the approximation domain, and choose large enough
+T so that the terminal value functions do not have a significant e↵ect on the solution.
+   10
+      For a more complete and general discussion on approximation and optimization in
+solving dynamic stochastic problems, see Judd (1998) and Miranda and Fackler (2002).
+
+
+                                            9
+the approximation domain.11 We can do an impulse response analysis in a
+similar way.
+2.1     Transformation
+In the transformation step of the NLCEQ method, it is usually straight-
+forward to obtain deterministic transition laws for continuous state vari-
+ables. For example, if an exogenous state ✓t has a transition law: ln(✓t+1 ) =
+⇢ ln(✓t ) + ✏t+1 , where ✏t+1 ⇠ N (0, 1) enters linearly into the law of motion of
+the exogenous state, then a simple transformation is to set ln(✓t+1 ) = ⇢ ln(✓t ).
+A more general choice of the transformation is ln ✓t+1 = ⇢ ln ✓t f ( ) with
+function f chosen in such way that the deterministic u(xt , at ) is close to the
+expectation of stochastic utility, i.e, the deterministic u(xt , at ) is nearly a
+certainty equivalent of its stochastic version. One example of such transfor-
+mation is shown in Subsection 4.3, where we obtain more accurate solution
+by choosing ln(✓t+1 ) = ⇢ ln(✓t ) 0.5 2 with = 0.05. Using this general
+transformation, we can deal with problems such as stochastic volatility (see
+e.g., Caldara et al. 2012).
+    To choose the terminal value function, a typical way is to assume that it
+reaches an equilibrium at T , that is, the vector of control variables is chosen
+to be a⇤T so that next-period state is equal to current state xT , and then we
+let VeT (xT ) = u (xT , a⇤T ) /(1   ). We use this in our multi-country RBC
+examples. Another potential way is to use a second-order perturbation as
+the terminal value function, but we do not apply it in this paper because we
+want to focus on NLCEQ only, without hybrid algorithms. The truncation
+time, T , depends on the terminal value function and the discount factor. If
+the terminal value function is close to the true value function, then T could
+  11
+    That is, we have to choose an appropriate approximation domain in the optimization
+step, so that it is wide enough to contain simulated future states. This can be done in
+an iterative way: first guess a wider approximation domain, and then use the NLCEQ
+solution over it to do simulation: if the simulated states locate in a much more narrow
+domain, choose the narrower domain to re-run NLCEQ algorithm for a more accurate
+solution.
+
+
+
+                                          10
+be small, for example, we choose T = 20 for some large-dimensional multi-
+country RBC examples in Section 3; otherwise, T could be chosen such that
+  T
+     < 10 4 if it is hard to find a terminal value function close to the true value
+function. For example, we choose T = 200 in the example with = 0.95 in
+Section 5 such that T = 3.5 ⇥ 10 5 .
+     We can also apply NLCEQ to problems with a discrete stochastic state
+✓t by replacing it by its expected value conditional on its initial value, i.e.,
+E{✓t | ✓0 }. For example, let ✓t be an exogenous Markov chain with k possible
+values, {#1 , ..., #k }, and let P be its k ⇥ k transition matrix, where its (i, j)
+element represents the probability of ✓t+1 = #i conditional on ✓t = #j . If the
+initial-time value of ✓t is #i (i.e., ✓0 = #i ), then we know that its unconditional
+probability vector at time t is pt,i = P t ei , where ei is the column vector with
+1 at the i-th element and 0 everywhere else. Thus, in the transformation
+step, we set the transformed deterministic value for ✓t as its expected value,
+Pk
+    j=1 pt,i,j #j , conditional on its initial value ✓0 = #i , where pt,i,j is the j-th
+element of the vector pt,i . Our example in Section 5 has a discrete stochastic
+state and applies this method.
+
+
+2.2     Optimization
+In the NLCEQ method, the optimization step will be time-consuming for
+high-dimensional problems, but they can be naturally parallelized across the
+approximation nodes, as every node corresponds to one optimization prob-
+lem, which is independent of the others. Moreover, each optimization prob-
+lem has a sparsity structure: the action variables and state variables at time
+t are only connected with the state variables at t 1 and t + 1, that is, it has
+the block-wise tridiagonal pattern in the constraints. We employ this sparsity
+in optimization solvers like the one we used in our high-dimensional multi-
+country RBC examples, SNOPT (Gill et al. 2005), so that each optimization
+
+
+
+
+                                          11
+problem can be solved more efficiently.12
+
+
+2.3     Approximation
+For low-dimensional problems, we can use a variety of approximation meth-
+ods like, for example, multi-dimensional Chebyshev polynomial approxima-
+tion (see Appendix A). However, one advantage of NLCEQ is that it can
+be applied to large-dimensional problems. For large-dimensional problems,
+we will use sparse grid approximation methods. For example, in our large-
+dimensional examples, we employ Smolyak grid points as the approximation
+nodes and Chebyshev-Smolyak polynomials as the approximation method
+(Smolyak 1963 and Malin et al. 2011).13 Moreover, we can also implement
+adaptive sparse grid methods (Brumm and Scheidegger 2014) in NLCEQ.
+    After we get the approximated value/policy functions, Vb (x0 ; bv ) and
+ b 0 ; ba ), it is essential to estimate their errors to the “true” solution so
+P(x
+we know whether NLCEQ gives an acceptable solution. In our examples
+below we implement the unit-free Euler error measure. We also compute
+approximation errors for the approximation functions. That is, we choose
+a set of out-of-sample points, X   b = {b
+                                        xj0 : 1  j  m}b ⇢ Rd , and compute
+vbj = Ve xbj0 and its corresponding optimal initial action b aj0 2 Rn using op-
+  12
+     Optimization step of NLCEQ algorithm can be employed with a variety of modern
+nonlinear optimization solvers, such as e.g., SNOPT (Gill et al. 2005), CONOPT (Drud
+1996), and KNITRO (Byrd et al. 2006). These solvers are also freely available at the
+NEOS server (Czyzyk et al. 1998; Gropp and Moré 1997) with two popular high-level
+modeling languages: GAMS (McCarl et al. 2011) and AMPL (Fourer et al. 2003). If the
+code is written in MATLAB, it can call its internal optimization routine, fmincon, or an
+external solver such as KNITRO.
+  13
+     Smolyak polynomials do not preserve shape of value functions, so using them in stan-
+dard value function iteration can easily make it fail because the optimization problem in
+the Bellman equation becomes a non-concave/non-convex problem, thus it is very chal-
+lenging to find the global maximizer by a standard optimization solver. See Cai and Judd
+(2013, 2015) for discussion about the importance of shape preservation in numerical DP.
+However, with NLCEQ algorithm we do not need to use the approximate value functions
+in the objective of an optimization problem, so it does not face the shape-preservation
+challenge while the value function iteration does.
+
+
+
+                                           12
+timization solver to solve (3), for each x     b 1  j  m.
+                                         bj0 2 X,        b Using these vbj ,
+we compute the approximation errors in the L1 or L1 norm for the value
+function with the following formulas:
+
+                                           vbj     Vb (b
+                                                       xj0 ; bv )
+                        bL1 = max
+                        E
+                                      b
+                                  1jm                vj |
+                                                  1 + |b
+
+
+                              1 X           vbj      Vb (b
+                                                         xj0 ; bv )
+                      bL1
+                      E     =
+                              b
+                              m                         vj |
+                                                   1 + |b
+                                       b
+                                   1jm
+
+Similarly, we can compute approximation errors for the policy functions. In
+our examples, we let X b be a set of 1000 points uniformly and randomly
+drawn in the approximation domain. Note that the computation of vbj =
+Ve x
+   bj0 and its corresponding b
+                             aj0 can be parallelized naturally together with
+the optimization step of NLCEQ.
+
+
+2.4    NLCEQ Method for Competitive Equilibrium
+Algorithm 1 describes the NLCEQ method for social planner’s decision-
+making problems, but it can also be modified for solving competitive equilib-
+rium. Similar to the transformation step of Algorithm 1, we first remove the
+stochasticity of models by replacing those shocks by their mean or median.
+For the transformed deterministic problem, its equilibrium solution should
+satisfy a set of equations (including the deterministic version of Euler equa-
+tions, deterministic transition laws of states, market clearing conditions, and
+other first-order conditions):
+
+                  F(xt , at , xt+1 , at+1 ) = 0, ,     t = 0, 1, 2, ...    (4)
+
+where xt is the state vector, and at is the action vector that should satisfy
+constraints at 2 D (xt ). If there are occasionally binding constraints, then
+
+
+                                          13
+Algorithm 2 Nonlinear Certainty Equivalent Approximation Method for
+Competitive Equilibrium
+Step 1. Transformation step. Transform the stochastic problem into a finite-
+     horizon deterministic system (5).
+
+Step 2. Optimization step. Choose a set of approximation nodes, X = {xj0 :
+     1  j  m} ⇢ Rd . For each xj0 2 X, solve (5) and get its corresponding
+     optimal initial action with aj0 .
+
+Step 3. Approximation step. Use an appropriate approximation method,
+     such that P̂(x0 ; ba ) approximates {(xj0 , aj0 ): 1  j  m}, where ba is
+     a vector of parameters.
+
+
+
+the arguments of F should also contain corresponding Lagrange multipliers
+that we omit below without loss of generality. Moreover, we know that its
+state and control variables will converge to its steady values (xss , ass ) as time
+goes to infinity, i.e.,
+                             x1 = xss , a1 = ass .
+
+      To solve the above infinite-horizon system (4), we approximate it as the
+following minimization problem with a finite horizon and a given initial state
+xj0 :
+
+              min         xEndo
+                           T            xEndo
+                                         ss   + kaT    ass k                   (5)
+            at 2D(xt )
+
+                 s.t.    F(xt ,at ,xt+1 ,at+1 )=0,    t = 0, 1, ..., T   1,
+                         x0 =   xj0 ,
+
+where k·k is a norm and xEndo represents the endogenous state variables. By
+sweeping over the approximation nodes of xj0 , we can construct the approxi-
+mation of policy functions over the state space. Algorithm 2 summarizes the
+NLCEQ method for solving competitive equilibrium.
+   Algorithm 2 yields very accurate solution of a deterministic competitive
+
+
+                                            14
+equilibrium problem for large enough T . Similar to Algorithm 1, Algorithm
+2 is also stable and efficient, and can be naturally parallelized in its opti-
+mization step, so that it can solve large-dimensional problems using sparse
+grid approximation methods.
+    Algorithm 2 can also be applied to solve social planner’s stochastic dy-
+namic programming problems, but Algorithm 1 is easier to implement as
+it does not require formulating the first-order conditions. Therefore, in the
+examples of this paper, we will use Algorithm 1 for solving social planner’s
+problems and Algorithm 2 for computing competitive equilibrium. .
+
+
+3     Application to multi-country real business
+      cycle model
+We apply NLCEQ to solve a multi-country real business cycle (RBC) model
+introduced in Den Haan et al. (2011). We assume that there are N countries
+with a capital stock state vector Kt = (Kt,1 , ..., Kt,N ) and a productivity state
+vector ✓t = (✓t,1 , ..., ✓t,N ) at the beginning of period t. For the j-th country,
+its production at time t is given by ✓t,j f (Kt,j , `t,j ), where `t,j is labor supply
+and f is the Cobb-Douglas production function
+
+                         f (Kt,j , `t,j ) = A(Kt,j )↵ (`t,j )1   ↵
+                                                                     ,            (6)
+
+where ↵ is the expenditure share of capital in the production and A is the
+productivity parameter. The law of motion of capital is:
+
+                            Kt+1,j = (1          )Kt,j + It,j                     (7)
+
+where It,j is investment and is the depreciation rate of capital. The law of
+motion of productivity is exogenous:
+
+                     ln(✓t+1,j ) = ⇢ ln(✓t,j ) + (✏t+1,j + "t+1 )                 (8)
+
+                                            15
+where ✏t,j , "t ⇠ i.i.d. N (0, 1) are a country specific shock and a worldwide
+shock, respectively.
+   The j-th country has an instantaneous utility
+                                                                1
+                                                        1                       1+ ⌘1
+                                            (ct,j )             j       (`t,j )        j
+                        uj (ct,j , `t,j ) =                 1        Bj           1                   (9)
+                                              1             j
+                                                                          1+      ⌘j
+
+
+where ct,j is consumption, j is the inter-temporal elasticity of substitution,
+⌘j is the Frisch elasticity of labor supply, and Bj = (1 ↵)A( j 1)/ j is the
+relative weight of consumption and leisure in the welfare.
+    We want to solve a social planner’s problem with an aggregate utility
+U (ct , `t ), which is the weighted sum of the instantaneous utilities of all coun-
+tries, i.e.,
+                                            N
+                                            X
+                             U (ct , `t ) =   ⌧j uj (ct,j , `t,j )
+                                                   j=1
+
+where ⌧j = A1/ j are Negishi weights, ct = (ct,1 , ..., ct,N ) and `t = (`t,1 , ..., `t,N ).
+Let be the discount factor, and let t,j be an adjustment cost:
+                                                        ✓                 ◆2
+                                                            It,j
+                                   t,j   ⌘       Kt,j                                                (10)
+                                             2              Kt,j
+
+with   as the intensity of the friction. The social planner problem then
+becomes                                               !
+                                  X1
+                         max E         t
+                                         U (ct , `t )               (11)
+                                   c,`,I
+                                                  t=0
+
+subject to (7), and the following aggregate world resource constraint:
+
+              N
+              X                                     N
+                                                    X
+                    (ct,j + It,j         Kt,j ) =               (✓t,j f (Kt,j , `t,j )     t,j ) .   (12)
+              j=1                                       j=1
+
+
+Therefore, the problem has 2N state variables, Kt and ✓t , and 3N control
+variables, ct , `t , and It .
+
+                                                    16
+    In our example, we set A = (1        )/(↵ ) and use the parameter values
+in Juillard and Villemot (2011) as the default. That is, we set = 0.99,
+↵ = 0.36, = 0.025, ⇢ = 0.95,           = 0.5, and      = 0.01, as the default
+values. Since the optimal solution depends only on the states and not the
+time t, we use (K, ✓) to denote current states by omitting the subscript t, and
+use (K + , ✓+ ) to denote next-period states. We are interested in the policy
+solutions over the domain of the state variables (K, ✓) 2 [0.7, 1.3]2N .
+
+
+3.1     Error Measure
+For a given current state vector (K, ✓), the first-order conditions of the RBC
+model (11) tell us that the optimal policy (c, `, I) should satisfy
+
+                    @uj                 @uj 0
+                        (cj , `j ) ⌧j =       (cj 0 , `j 0 ) ⌧j 0 ,      j 0 6= j,       (13)
+                    @c                   @c
+
+                  @uj              @uj               @f
+                      (cj , `j ) =     (cj , `j ) ✓j    (Kj , `j ) ,                     (14)
+                  @`               @c                @`
+and the following N Euler equations:
+                               ⇢                       
+       @uj                         @uj + +                             @f
+           (cj , `j ) !j = E           c ,`                ⇡j+ + ✓j+      Kj+ , `+       (15)
+       @c                          @c j j                              @K        j
+
+
+
+for j = 1, ..., N. Here,
+                                        ✓              ◆
+                                            Ij
+                   !j ⌘ 1 +                            ,                                 (16)
+                                            Kj
+                                                       !                       !
+                                            Ij+                         Ij+
+                   ⇡j+ ⌘ 1 +                                  2        + +           ,   (17)
+                                    2       Kj+                         Kj
+
+and (c+ , `+ , I + ) is the optimal policy in the next period.
+   We use NLCEQ to get the estimate of the optimal policy functions of the
+problem (11): Cj (K, ✓) for consumption, Lj (K, ✓) for labor supply, Ij (k, ✓)
+
+
+                                                  17
+for investment, and Kj+ (K, ✓) = (1         )K + Ij (K, ✓) for the next-period
+capital. Thus, for any (K, ✓), we can compute cj = Cj (K, ✓), `j = Lj (K, ✓),
+Ij = Ij (K, ✓), Kj+ = Kj+ (K, ✓), c+           + +     +          + +      +
+                                     j = Cj (K , ✓ ), `j = Lj (K , ✓ ), Ij =
+Ij (K + , ✓+ ), and then !j and ⇡j+ from the equations (16) and (17).
+    Therefore, for a given (K, ✓), we can compute the following unit-free Euler
+error:
+                     E1 (K, ✓) = max E Fj K, ✓, ✓+        1 ,              (18)
+                                  1jN
+
+with                                                 
+                                  @uj
+                                   @c
+                                        c+j , `j
+                                                +
+                                                                        @f
+           Fj K, ✓, ✓   +
+                            ⌘   @uj
+                                                         ⇡j+ + ✓j+         Kj+ , `+
+                                                                                  j    .
+                                     (cj , `j ) !j                      @K
+                                 @c
+
+Moreover, the unit-free errors for the intratemporal-choice conditions (13)
+and (14) are also available:
+
+                                                 @uj
+                                                  @c
+                                                         (cj , `j ) ⌧j
+                    E2 (K, ✓) = max              @u1
+                                                                           1 ,
+                                     2jN
+                                                  @c
+                                                         (c1 , `1 ) ⌧1
+
+                                         @uj
+                                          @c
+                                               (cj , `j ) ✓j @f
+                                                             @`
+                                                                (Kj , `j )
+              E3 (K, ✓) = max                        @uj
+                                                                               +1 .
+                                1jN
+                                                      @`
+                                                           (cj , `j )
+The unit-free error for the resource constraint is given by
+                                 PN
+                                     j=1 (cj + Ij      Kj +               j)
+                E4 (K, ✓) =             PN                                       1 .
+                                          j=1 (✓j f (Kj , `j ))
+
+
+Using the above errors for the first-order conditions and the resource con-
+straint, we compute the following global L1 error on a domain of (K, ✓),
+denoted D, to measure the accuracy of our solution:
+                                           ⇢
+                            E = max            max Ei (K, ✓) .                             (19)
+                                 (K,✓)2D       1i4
+
+    Note that the estimated policy functions Cj , Lj and Ij should be de-
+fined not only in the domain of (K, ✓) 2 D (in our examples, we let D =
+
+
+                                               18
+[0.7, 1.3]2N ), but also in a wider domain for (K + , ✓+ ). Therefore, in order to
+get the Euler errors E1 , we should apply NLCEQ in a wider domain than
+what we are interested. In our examples, we choose a domain [0.5, 1.5]2N for
+approximating NLCEQ policy functions, and then estimate the global error
+in [0.7, 1.3]2N . In addition, we could have E2 and E3 (and even E4 ) to be
+zero: for any (K, ✓), we let c1 = C1 (K, ✓) and compute other cj from the
+equations (13) instead of letting cj = Cj (K, ✓), and then compute `j from
+(14) instead of letting `j = Lj (K, ✓). This method may obtain a smaller
+global error as it has smaller approximation errors from Cj and Lj . But this
+method may require solving a complicated system of nonlinear equations, so
+we do not apply it in this paper for more generality.
+    To compute the Euler error E1 (K, ✓) for a given (K, ✓), we estimate the
+integration in (18) using Monte Carlo simulation method with 10,000 points
+randomly drawn from the distribution of ✓+ (when N  4, we can use the
+Gauss-Hermite quadrature rule with 7 quadrature nodes in each dimension
+for a faster run). Since the standard deviation of Fj (k, ✓, ✓+ ) is around the
+size of     in all of our cases, the accuracy of the numerical integration is
+about 10 4 , acceptable for measuring the errors of NLCEQ. In our results,
+the global error E is estimated by the maximal value of max1i4 Ei (K, ✓)
+among 10,000 randomly and uniformly drawn points (K, ✓) in the domain
+[0.7, 1.3]2N . This is time-consuming for high-dimensional problems, but it
+can also be parallelized naturally. For all of our examples, we computed the
+standard error of the estimated expectation, and found that the standard
+error is one or two orders of magnitude smaller than the Euler error, so
+the numerical integration error is negligible in our computation of the Euler
+error.
+
+
+3.2    Examples for Accuracy Test
+We first test NLCEQ for its accuracy for the two-country real business cycle
+problem (i.e., N = 2), which has four continuous state variables: two capital
+
+                                       19
+stocks and two productivity levels. In the transformation step of NLCEQ
+(Algorithm 1), we choose T = 50 and the problem becomes
+
+                                       TP1
+                   Ve (K0 , ✓0 ) = max          t
+                                                    U (ct , `t ) +   T
+                                                                         VeT (KT , ✓T ) ,    (20)
+                                    c,`,I t=0
+
+
+subject to (7) and (12) with a deterministic process of ✓t : ln(✓t+1,j ) =
+⇢ ln(✓t,j ). The terminal value function VeT (K, ✓) is given as U (f (K, `⇤ ), `⇤ )/(1
+  ) with `⇤ = (1, ..., 1).
+     In the NLCEQ method, we first use the tensor grid of Chebyshev nodes
+(D + 1 nodes in each dimension) over the domain of the state variables,
+[0.5, 1.5]2N , and then apply degree-D complete Chebyshev polynomials in the
+approximation step. Since we will apply NLCEQ to high-dimensional prob-
+lems using the level-l Smolyak points and Chebyshev-Smolyak polynomials
+(a subset of degree-2l complete Chebyshev polynomials) for approximation,
+we also try them in the low-dimensional problems to check their accuracy.
+     Our starting examples have symmetric model specification, that is, we let
+  j be a constant , and let ⌘j be a constant ⌘. Table 1 lists the global errors
+
+in L1 norm over [0.7, 1.3]2N for the symmetric cases with 2 {0.99, 0.95},
+   2 {0.25, 0.5}, ⌘ 2 {0.1, 0.5}, and = 0.01.14 From Table 1, we see that
+degree-4 complete Chebyshev polynomials have the smallest global errors at
+O(10 3 ). 15
+  14
+       The range for ✓, [0.7, 1.3]N , is narrow: from (8), if ✓t,j is inside the following range
+                                 "         p !           p !#
+                                             2              2
+                                   exp            , exp              ,
+                                          1 ⇢            1 ⇢
+
+which is close to [0.7,
+                    p 1.3],
+                        p then only when ✏t+1,j and "t+1 are simulated to let ✏t+1,j +"t+1
+be bounded in [      2, 2], we can make sure that ✓t+1,j is inside the same range. That is,
+if ✓t,j is at one end of the range, then it has about 16% probability that ✓t+1,j is outside
+of the range. Kollmann et al. (2011) also checked the errors of solutions of perturbation
+methods on the sphere in the state space centered at the steady state with a radius 0.3.
+   15
+      Since our solutions are independent of the value of but the Euler errors E1 depend
+on , we also checked the errors with = 0.02. We found that the global errors of = 0.02
+are the same with the ones of = 0.01 although the -related maximal Euler errors with
+
+
+                                                    20
+      Table 1: Global errors in L1 norm for two-country problems
+                                      Global Error E
+                     ⌘ degree-D Chebyshev        level-l Smolyak
+                          D=2         D=4        l=1       l=2
+       0.99 0.25 0.1 2.4( 2)         1.7( 3)   5.3( 2) 6.7( 3)
+                    0.5 2.1( 2)      2.0( 3)   6.5( 2) 1.0( 2)
+              0.5 0.1 2.0( 2)        1.3( 3)   6.1( 2) 5.3( 3)
+                    0.5 2.1( 2)      1.1( 3)   6.5( 2) 6.1( 3)
+       0.95 0.25 0.1 2.8( 2)         2.6( 3)   5.1( 2) 9.3( 3)
+                    0.5 1.8( 2)      3.7( 3)   7.0( 2) 1.3( 2)
+              0.5 0.1 2.0( 2)        1.5( 3)   5.7( 2) 5.6( 3)
+                    0.5 1.5( 2)      1.7( 3)   6.2( 2) 8.7( 3)
+                                   j
+     Note: ⇣( j) represents ⇣ ⇥ 10 .
+
+     Table 2: Errors in L1 norm for two-country problems with = 0
+                     degree-D Chebyshev         level-l Smolyak
+                   D=4 D=6 D=8 l=2                    l=3     l=4
+      Euler Error     4.2( 5)   2.1( 5)   2.1( 5)   2.6( 4)   2.7( 5)   2.1( 5)
+      Global Error    1.1( 3)   5.6( 5)   3.8( 6)   5.9( 3)   6.1( 4)   7.3( 5)
+     Note: ⇣( j) represents ⇣ ⇥ 10 j .
+
+    We also show that NLCEQ (Algorithm 1) can very accurately solve de-
+terministic dynamic problems. Table 2 lists the maximal Euler errors and
+global errors in L1 norm over [0.7, 1.3]2N for the two-country problem with
+  = 0 and = 0.99, = 0.5, and ⌘ = 0.5 (the results are similar for other
+values of ( , , ⌘)). As we seek higher accuracy and the only source of errors
+for deterministic problems comes from the truncation of infinite horizon and
+the value/policy function approximation, we use a large T = 200 and high
+degree approximation. From Table 2, we see that the global errors are al-
+ways larger than Euler errors so it is not good enough to use Euler errors as
+a criterion. Moreover, we see that our solution can reach five-digit accuracy
+in L1 for the deterministic problem.
+ = 0.02 are a bit higher.
+
+
+
+                                          21
+3.3    Comparison with log-linearization
+Log-linearization is the most popular method for solving dynamic stochastic
+models. It is also a certainty equivalent approximation method: it computes
+a log-linear approximation for the policy function of a deterministic problem
+and uses it in simulations of the stochastic model. While this may be accept-
+able for states close to the deterministic steady state, it is not likely to be a
+good approximation beyond a small neighborhood around the steady state.
+This is particularly relevant if the mean of the stochastic problem is not the
+deterministic steady state.
+    We next present one two-country example where we compare NLCEQ
+with log-linearization. We use an example with asymmetric model specifica-
+tion, by assuming 1 = 0.25 and ⌘1 = 0.1 for the first country, and 2 = 1 and
+⌘2 = 1 for the second country, in their utility functions. The other parame-
+ters are set as their default values. We use the degree-4 complete Chebyshev
+polynomials for approximation in NLCEQ.
+    For NLCEQ, the global L1 error, E, is 0.0014, which is similar to the
+examples in Table 1. Kollmann et al. (2011) report the errors of solutions
+from other methods for this asymmetric case (Model II with N = 2 in their
+Table 4). The perturbation methods (order-1 or order-2) have large errors
+on the sphere in the state space centered at the steady state with a radius
+0.3 (this sphere is inside our domain [0.7, 1.3]2N ). The L1 error of the log-
+linear approximation (i.e., the order-1 perturbation which is linear in log(K)
+and log(✓)) is 0.51. Even its extended order-2 perturbation method (with
+quadratic polynomials in log(K) and log(✓)) has an L1 error equal to 0.21.
+Thus, NLCEQ is far more accurate, up to two orders of magnitude higher,
+than log-linearization over the wider and more relevant domain.
+
+
+
+
+                                       22
+  Table 3: Errors and running times for high-dimensional RBC problems
+                Num of Num of           Max Euler Global        Time
+  N Level l                         T
+                Points    Cores            Error      Error  (minutes)
+  10      1           41       41 20      3.5( 3)    2.4( 2)       0.5
+                                   50     3.6( 3)    2.6( 2)       0.4
+          2          841      288 20      3.2( 3)    4.8( 3)       1.5
+                                   50     7.1( 4)    4.3( 3)       1.4
+  20      1           81       81 20      2.6( 3)    1.9( 2)       0.2
+                                   50     2.0( 3)    1.9( 2)       1.3
+          2        3,281      352 20      2.1( 3)    3.3( 3)       1.7
+                              352 50      5.8( 4)    3.1( 3)      13.5
+                            3,281 50      5.8( 4)    3.1( 3)       1.6
+  50      1          201      201 20      2.3( 3)    1.8( 2)       0.8
+                                   50     1.9( 3)    1.8( 2)       5.7
+          2       20,201    2,048 20      1.5( 3)    2.7( 3)       8.3
+                            2,048 50      3.5( 4)    2.6( 3)      58.1
+                           20,201 50      3.5( 4)    2.6( 3)       8.6
+ 100      1          401      401 20      1.9( 3)    1.8( 2)       2.2
+ 200      1          801      801 20      1.6( 3)    1.8( 2)       8.0
+                                 j
+      Note: ⇣( j) means ⇣ ⇥ 10 .
+
+3.4    Application to High-dimensional Problems
+In this subsection we use NLCEQ to solve the high-dimensional RBC prob-
+lems with the default parameter values and j ⌘ 0.25 and ⌘j ⌘ 0.1. We
+use the same transformed deterministic model (20) with T = 20 or 50 for
+more countries, and use the level-l Smolyak grid and Chebyshev-Smolyak
+polynomials for approximation.
+    Table 3 lists the Euler errors and global errors in L1 norm over [0.7, 1.3]2N
+and running times (in wall clock time) in minutes, for cases with the number
+of countries N = 10, 20, 50, 100, 200 (the dimension of continuous state vari-
+ables is 2N ). For example, for the case with N = 200 countries and T = 20,
+its maximal Euler error is 0.0016 and its global error is 0.018, and it is solved
+in only 8 minutes.
+
+
+                                       23
+    We employ parallelism in a supercomputer. Table 3 lists the numbers
+of approximation points (level-l Smolyak grid) and compute cores of the
+supercomputer for all cases. For the level-1 Smolyak grid, the number of
+cores is chosen to be same with the number of points, so each core runs
+one approximation node corresponding to one optimization problem of the
+deterministic model (20). For the level-2 Smolyak grid, we see that it will be
+faster if we use more cores.16
+    From Table 3, we see that the level-2 Chebyshev-Smolyak polynomial ap-
+proximation obtains about one more digit accuracy than the level-1 Chebyshev-
+Smolyak polynomial approximation for every case. Moreover, T = 50 does
+not improve much accuracy in global errors than T = 20 although it decreases
+the maximal Euler errors, while T = 50 is far more time-consuming. With
+the parallelism, although our examples have far higher numbers of countries
+than those in Kollmann et al. (2011), we still get the optimal solutions with
+an acceptable accuracy in minutes, much faster than the other methods listed
+in Table 3 of Kollmann et al. (2011), except the perturbation methods which
+will have large errors in the wide domain [0.7, 1.3]2N .
+
+
+4     Application to a RBC model with a con-
+      straint on investment
+While high dimensionality is an important computational challenge to solv-
+ing dynamic stochastic problems, low-dimensional problems may have other
+challenges of their own. For example, if there are occasionally binding con-
+straints for state and/or control variables, then the kinks in the value/policy
+functions often make the problem difficult to be solved. One advantage of
+NLCEQ is that it can solve the problems with inequality constraints that
+occasionally bind. Here we illustrate this by applying NLCEQ to solve a
+  16
+     If we can employ a parallel optimization solver for one approximation point so that
+we can use more cores, then it could be even faster.
+
+
+                                          24
+RBC model with a constraint on investment.
+
+
+4.1    Model Overview
+We use the model in Guerrieri and Iacoviello (2015). That is, we solve the
+following social planner’s problem:
+                                   (   1
+                                                             )
+                                       X
+                           max E               t
+                                                   U (ct )                         (21)
+                             c
+                                       t=0
+
+
+subject to the following constraints
+
+                             ct + It = At kt↵ ,                                    (22)
+                             kt+1 = (1             )kt + It ,                      (23)
+                             It        Iss ,                                       (24)
+
+for t 0, where ct is consumption, It is investment, kt is capital, and At is
+technology following the autoregression process
+
+                        ln(At+1 ) = ⇢ ln(At ) + ✏t+1 ,                             (25)
+
+where ✏t is an exogenous innovation with standard normal distribution. We
+use the parameter values in Guerrieri and Iacoviello (2015), that is,      =
+0.96, = 0.1, = 0.975, ↵ = 0.33, ⇢ = 0.9, = 0.013, U (c) = (c1
+1)/(1    ) with = 2. Moreover, Iss is investment in the steady state of the
+deterministic variant of the model (21) with At ⌘ 1. From the first-order
+conditions for the deterministic variant, we know that the steady state is
+                              ✓ ✓                      ◆◆ ↵ 1 1
+                               1 1
+                        kss =                  1+
+                               ↵
+
+and Iss = kss ⇡ 0.3533. Since the value of               is chosen to be close to 1, the
+inequality (24) will bind frequently.
+
+                                         25
+4.2    Error Measure
+Let t t denote the Lagrange multiplier of (24) at period t. We have the
+consumption Euler equation and the Kuhn-Tucker condition for (24):
+
+        U 0 (ct )     t   = Et U 0 (ct+1 ) 1                ↵ 1
+                                                   + ↵At+1 kt+1         (1          )   t+1
+
+          t   (It    Iss ) = 0
+
+    Similarly with the examples in the previous section, we use NLCEQ to get
+the estimate of the optimal consumption function, C (k, A), and the function
+for the Lagrange multiplier, ⇤(k, A), on a domain [0.5kss , 1.5kss ] ⇥ [0.5, 1.5].
+The optimal investment function is I (k, A) = Ak ↵ C(k, A), and the next-
+period capital is K+ (k, A) = (1     )k + I(k, A).
+    Using these approximate functions, for a given (K, ✓), we can compute
+the following unit-free Euler error:
+                     n         ⇣                               ⌘                o
+                                                         ↵ 1
+                    E U 0 (c+ ) 1      + ↵A+ (k + )                (1   )   +
+                                                                                    +
+  E1 (k, A) =                                                                                 1 ,
+                                               U 0 (c)
+                                                                          (26)
+where A is the next-period productivity, c = C (k, A) , = ⇤(k, A), k + =
+         +
+
+K+ (k, A), c+ = C(k + , A+ ), and + = ⇤(k + , A+ ). We use the 15-point Gauss-
+Hermite quadrature rule to estimate the integration in (26). Similarly, the
+unit-free error for the Kuhn-Tucker condition is
+                                       ✓            ◆
+                                           I
+                          E2 (k, A) =             1
+                                           Iss
+
+with I = I (k, A). The error measure for the investment constraint (24) can-
+not be omitted, because the true solution of the model without the constraint
+(24) will also have E1 (k, A) = 0 and E2 (k, A) = 0 with = 0, that is, E1
+and E2 are not enough for error measurement. Thus we need to check the
+
+
+
+                                           26
+following unit-free error
+                                                    ✓              ◆
+                                                             I
+                           E3 (k, A) = max 0, 1                        .
+                                                             Iss
+
+We then compute the following global L1 and L1 errors on a set of points
+(k, A), denoted D, to measure the accuracy of our solution:
+                                              ⇢
+                           EL1 = max               max Ei (k, A) ,
+                                    i=1,2,3       (k,A)2D
+
+                                         8              9
+                                         < 1 X          =
+                        E L1   = max           Ei (k, A) ,
+                                 i=1,2,3 : |D|          ;
+                                                   (k,A)2D
+
+where |D| is the number of points in the set D. We choose two sets of points,
+D1 and D2 , where D1 is a set of 10,000 randomly and uniformly drawn in
+[0.7kss , 1.3kss ] ⇥ [0.7, 1.3],17 and D2 is a set of 10,000 simulated points in the
+path of (kt , At ), where k0 = kss , A0 = 1, At+1 is simulated based on the
+stochastic process (25), and kt+1 = K+ (kt , At ) for t = 0, ..., 9999. Thus, D2
+represents the ergodic set of (k, A), so the errors on D2 are weighted errors
+with more weights on the area around the steady state.
+  17
+     Guerrieri and Iacoviello (2015) show their results in a much narrower range for A,
+[0.97, 1.025]. However, our range for A, [0.7, 1.3], is reasonable: from ln(At+1 ) = ⇢ ln(At )+
+  ✏t+1 , if At is inside the following range
+                                       ✓     ◆       ✓      ◆
+                                           2             2
+                                    exp         , exp           ,
+                                          1 ⇢           1 ⇢
+
+which is close to [0.7, 1.3], then only when ✏t+1 are always simulated in [ 2, 2], we can
+make sure that At+1 is inside the same range. That is, if At is at one end of the range,
+then it has about 2.3% probability that At+1 is outside the range.
+
+
+
+
+                                                  27
+Table 4: Errors of the NLCEQ solution with degree-D complete Chebyshev
+polynomials for the RBC model with a constraint on investment
+  D    Approx Error for c   Approx Error for        Global Error on D1          Global Error on D2
+        EbL1      bL1
+                  E          EbL1      EbL1           E L1       E L1             E L1       E L1
+  10   5.2( 3) 1.7( 3)      2.5( 2) 5.4( 3)         2.6( 2)   3.1( 3)           2.1( 2)   2.5( 3)
+  20   2.6( 3) 5.0( 4)      1.5( 2) 1.4( 3)         1.3( 2)   7.9( 4)           5.3( 3)   6.9( 4)
+  50   1.6( 3) 8.5( 5)      9.8( 3) 2.7( 4)         4.5( 3)   1.4( 4)           4.9( 4)   9.7( 5)
+ 100   8.2( 4) 2.1( 5)      2.2( 3) 6.9( 5)         2.0( 3)   1.2( 4)           1.9( 3)   1.8( 4)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+4.3    Numerical Results
+In the transformation step of the NLCEQ method, we choose T = 100 and
+the problem becomes
+
+                                   TP1
+               Ve (k0 , A0 ) = max       t
+                                             U (ct ) +   T
+                                                             VeT (kT , AT ) ,           (27)
+                               c   t=0
+
+
+subject to (22)-(24) with a deterministic process of At : ln(At+1 ) = ⇢ ln(At ).
+The terminal value function VeT (k, A) is given as U (0.7Ak ↵ )/(1       ). In
+the approximation step of NLCEQ, we use the tensor grid of Chebyshev
+nodes (D + 1 nodes in each dimension) and degree-D complete Chebyshev
+polynomials.
+    Table 4 reports approximation errors and global errors of the solution of
+NLCEQ over two sets of points, D1 and D2 , for various degrees D. We see
+that higher degree approximation achieves higher accuracy, and the weighted
+errors on D2 are a bit smaller than those on D1 . Because of the kinks caused
+by the frequently binding constraint on investment, a polynomial approxi-
+mation is not very good at approximating functions with kinks until a high
+degree approximation (this is reflected by the approximation errors of La-
+grange multiplier in the table, moreover most of global errors in the table
+come from the investment constraint error E3 because of the kinks on the
+investment function), so NLCEQ achieves an accuracy with O(10 3 ) in L1
+
+
+                                         28
+or O(10 4 ) in L1 until the degree-50 approximation.18
+    However, the order-1 perturbation (log-linearization) method has an L1
+global error up to 0.73 and an L1 global error up to 0.17 on the domain
+[0.7kss , 1.3kss ] ⇥ [0.7, 1.3], although its L1 error is 0.02 and L1 error is 0.003
+for the model without the investment constraint (24). The order-2 pertur-
+bation method does not improve the accuracy as its L1 error is 0.8 and L1
+error is 0.18., although it increases about two order accuracy for the model
+without the investment constraint (24). Therefore, this shows that NLCEQ
+is much more accurate, about two or three orders of magnitude higher, than
+the order-1 and order-2 perturbation methods for this problem with the oc-
+casionally binding constraint.
+    The comparison between NLCEQ and log-linearization is also shown in
+Figure 1, which shows the global errors of their solutions when A = 0.7, 1, and
+1.3. The NLCEQ solution is the one with degree-100 complete Chebyshev
+polynomial approximation. Figure 1 shows clearly that NLCEQ is much
+more accurate than log-linearization globally, particularly when the state is
+not close to the steady state.
+    We now try piecewise bilinear interpolation as the approximation method,
+because piecewise bilinear interpolation can deal with the kinks better than
+polynomials. For the approximation nodes, we choose the tensor grid of n
+equally spaced capital in [0.5kss , 1.5kss ] and n equally spaced productivity
+in [0.5, 1.5]. Table 5 lists approximation errors and global errors from NL-
+CEQ with piecewise bilinear interpolation, and we found that the piecewise
+bilinear interpolation has smaller, about one order of magnitude, errors than
+the complete Chebyshev polynomials when they use the same number of
+approximation nodes.
+    Table 6 shows global errors for various standard deviation (approxi-
+mation errors are independent on ). We see that a smaller has smaller
+  18
+     We also tried the case with    = 0, and found that its NLCEQ solution has a bit
+smaller errors than those in Table 4.
+
+
+
+                                        29
+Figure 1: Errors of the solutions from NLCEQ or log-linearization for the
+RBC model with a constraint on investment
+
+
+
+
+Table 5: Errors of the NLCEQ solution with piecewise bilinear interpolation
+for the RBC model with a constraint on investment
+  n    Approx Error for c   Approx Error for   Global Error on D1   Global Error on D2
+        EbL1      bL1
+                  E          EbL1      EbL1      E L1       E L1      E L1       E L1
+  21   3.7( 3) 1.1( 4)      4.0( 2) 3.6( 3)    5.8( 3)   7.6( 4)    1.7( 3)   3.1( 4)
+  51   1.9( 3) 2.6( 5)      7.3( 3) 5.9( 4)    8.7( 4)   1.7( 4)    4.5( 4)   1.1( 4)
+ 101   7.5( 4) 4.1( 6)      4.7( 3) 1.4( 4)    3.6( 4)   1.1( 4)    2.5( 4)   9.8( 5)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+
+
+
+                                       30
+Table 6: Errors of the NLCEQ solution with piecewise bilinear interpolation
+for the RBC model with a constraint on investment and various standard
+deviations
+                        n    Global Error on D1   Global Error on D2
+                               E L1       E L1      E L1       E L1
+               0.001    21   7.5( 3)   8.4( 4)    2.5( 4)   3.5( 5)
+                        51   9.3( 4)   1.2( 4)    4.5( 5)   8.2( 6)
+                       101   2.9( 4)   3.1( 5)    3.0( 6)   6.8( 7)
+               0.02     21   5.6( 3)   7.9( 4)    2.0( 3)   4.6( 4)
+                        51   1.3( 3)   2.8( 4)    7.9( 4)   2.4( 4)
+                       101   6.6( 4)   2.4( 4)    4.2( 4)   2.3( 4)
+               0.05     21   8.1( 3)   1.8( 3)    9.4( 3)   1.5( 3)
+                        51   2.9( 3)   1.4( 3)    5.9( 3)   1.4( 3)
+                       101   2.8( 3)   1.4( 3)    4.0( 3)   1.3( 3)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+errors and it has about four-digit accuracy for the smallest = 0.001. When
+  = 0.05, the errors are up to O(10 3 ) and there are almost no improvement
+by increasing n from 51 to 101. Moreover, when is up to 0.05, the global
+errors on the ergodic set D2 are bigger than those on D1 , because the domain
+containing D1 , [0.7kss , 1.3kss ] ⇥ [0.7, 1.3], is not large enough to contain D2
+for large .
+    However, the errors for large can be decreased by changing the deter-
+ministic transition law of At to ln(At+1 ) = ⇢ ln(At ) 0.5 2 . Table 7 shows
+errors for = 0.05 using the new deterministic transition law of At and piece-
+wise bilinear interpolation. We see that the errors are smaller than those in 6
+from ln(At+1 ) = ⇢ ln(At ). Moreover, a larger n clearly improves the accuracy
+of the solution.
+    Since global errors cannot represent true errors compared with the true
+solution, we implement shape-preserving value function iteration with ratio-
+nal spline interpolation (Cai and Judd 2012) to derive the “true” solution
+and then check the “true” errors. We follow Tauchen (1986) to approximate
+the process of ln(At ) with a Markov chain of 101 equally spaced values in
+
+                                       31
+                                                                                   2
+ Table 7: Errors of the NLCEQ solution using ln(At+1 ) = ⇢ ln(At )           0.5
+                       n     Global Error on D1     Global Error on D2
+                               E L1       E L1        E L1       E L1
+                0.05    21   5.8( 3)   9.5( 4)      7.5( 3)   7.8( 4)
+                        51   1.8( 3)   5.1( 4)      4.9( 3)   4.6( 4)
+                       101   1.7( 3)   4.7( 4)      3.5( 3)   3.9( 4)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+Table 8: “True” relative errors of the NLCEQ solution for the RBC model
+with a constraint on investment
+           n     Piecewise Bilinear Interp.       Complete Chebyshev Poly.
+                error in L1    error in L1    error in L1      error in L1
+           21     6.0( 3)         3.2( 4)          5.2( 3)        1.3( 3)
+           51     3.2( 3)         1.5( 4)          2.7( 3)        2.5( 4)
+          101     4.2( 4)         1.1( 5)          1.3( 3)        1.5( 4)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+[0.5, 1.5], and use 101 equally spaced nodes for capital in [0.5kss , 1.5kss ] as
+the approximation nodes for the rational spline interpolation for each dis-
+crete value of the Markov process ln(At ). The value function iteration stops
+while the relative change of two consecutive value functions is less than 10 6 .
+With these converged “true” solution, Table 8 reports “true” relative errors
+for consumption function in the domain of k and A, [0.7kss , 1.3kss ]⇥[0.7, 1.3],
+from NLCEQ with degree-(n 1) complete Chebyshev polynomials or piece-
+wise bilinear interpolation with n ⇥ n approximation nodes. We see that
+these errors are close to those global errors in Table 4 or Table 6. We also
+see that the “true” relative errors from piecewise bilinear interpolation are
+smaller than those from complete Chebyshev polynomials when n = 101.
+    Figure 2 shows the optimal investment policy functions from NLCEQ
+with piecewise bilinear interpolation (n = 101). We see that when technology
+At > 1 and capital kt > 0.7kss , the investment is always bigger than its lower
+bound. But if At is small then the investment is binding at the lower bound.
+
+
+
+                                         32
+Figure 2: Investment policy function for the RBC model with a constraint
+on investment
+
+
+
+
+5    Application to a dynamic stochastic model
+     of food and clean energy
+In previous section we solved problems with occasionally binding constraints
+and their steady state in the center of their state space. However, in some
+problems like the one shown below, the steady state is on the boundary of the
+feasible space of states, and is approached from only one side. Moreover, we
+know that usually the solution at the initial states is the most important, but
+the initial states could be far away from the steady state. For these problems,
+log-linearization is not reliable because it can only give good solutions around
+the steady state. This section applies NLCEQ to solve such a low-dimensional
+problem, where there are no reachable steady states, its initial states stay in
+a corner region, and there are inequality constraints that occasionally bind.
+
+
+
+
+                                      33
+5.1     Model Setup
+In this example we apply NLCEQ method to solve a stochastic version of
+a dynamic model of food and clean energy introduced by Chakravorty et
+al. (2008). This stylized model serves as a vehicle for developing and solv-
+ing more complex models aimed at understanding complicated real world
+economic problems related to biofuels and global land use.19
+    We assume a single-country economy with two primary factors, land and
+fossil fuels (e.g., oil). The economy has a fixed endowment of land, L, which
+can be used to produce food or biofuels. Let Lt,f and Lt,b be the amounts
+of land dedicated to produce food and biofuels crops at time t, respectively.
+The residual land, L Lt,f Lt,b , is unused. Total land constraint is:
+
+                                     Lt,f + Lt,b  L                                    (28)
+
+    The economy has also some stock of extractable fossil fuel resource (e.g.,
+oil), S, with the initial stock S0 . At period t the economy extracts st units
+of fossil fuel, so we have:
+                                 St+1 = St st .                           (29)
+
+    Production of food employs only land resource. The production function
+for food crops is linear in the amount of land used. There is one stochastic
+tipping event: once it happens, it adversely a↵ects the production of food
+crops at a level J < 1, and this damage is irreversible for any later periods.
+Let the food production per unit of land be ✓t,f before the tipping event
+happens (we assume ✓t,f = 1 for simplicity). Thus, the production function
+  19
+      For direct model extension see Chakravorty et al. (2012). Steinbuks and Hertel
+(2014) present a closely related computable partial equilibrium model of land use at the
+global scale, which incorporates additional sectors and non-homothetic preferences. While
+all these works assume perfect foresight, Cai el al. (2014) incorporate uncertainty in global
+land use decision models.
+
+
+
+
+                                             34
+for food crops is
+                                yt,f ⌘ (1      Jt )✓t,f Lt,f ,                         (30)
+
+where Jt denotes the stochastic damage level: Jt = 0 if the tipping event has
+not happened before time t, otherwise Jt = J. We assume that the stochastic
+process Jt is a Markov chain with the transition probability matrix
+                                                         !
+                                          1     p21 0
+                                P =                          ,                         (31)
+                                              p21   1
+
+where p21 is the probability that the tipping event happens in one year,
+and the (2, 2) element of P is 1 because of the irreversibility of the tipping
+damage.20
+   Production of energy employs both fossil fuels and biofuels, and it is a
+constant elasticity of substitution (CES) function:21
+                              h                                      i1
+                      yt,e ⌘ A ↵ (✓t,b Lt,b ) + (1        ↵) (st )        ,            (32)
+
+where A is the technology parameter of energy production, ✓t,b is the return
+of biofuels crops per unit of land (we assume ✓t,b = 1 for simplicity), ↵ is
+the cost share of biofuels’ feedstocks and is the CES function parameter
+proportional to the elasticity of substitution of oil for biofuels.
+   Let M be the mass of pollution (e.g., carbon concentration), with the
+  20
+    Cai et al. (2015a) assume a more general tipping process with irreversible damages
+on production. We use this simpler version for illustrating the application of NLCEQ
+without loss of generality.
+
+
+  21
+    Chakravorty et al. (2008) assume that fossil fuels and biofuels are perfect substitutes.
+Our modification of the original model makes it more realistic (as biofuels substitute
+imperfectly for petroleum in final liquid fuel demand), and avoids numerical problems
+caused by bang-bang solutions of Chakravorty et al. (2008).
+
+
+
+
+                                              35
+initial stock M0 . The law of accumulation of pollution is:
+
+                              Mt+1 = µst + (1               )Mt ,                    (33)
+
+where µ is the amount of pollution produced from combustion of one unit
+of fossil fuel (relative to biofuels), and is the natural rate of pollution
+absorption by the earth atmosphere and oceans.
+    The non-land production costs of food and biofuels are linear:
+
+                                     ct,j ⌘      j Lt,j ,                            (34)
+
+where j is the food or biofuels cost per unit of land, for j 2 {f, b}. The
+fossil fuel extraction cost is:
+
+                                 ct,e ⌘    1e st (St )
+                                                            2e
+                                                                 ,                   (35)
+
+where 1e and 2e are two positive parameters, so that oil extraction cost
+increases with depletion of the oil stock St .22 Following Cai et al. (2014)
+we assume that at each time t there is an exogenous endowment of other
+primary resources (e.g., labor, physical and human capital, and materials),
+⇧t . A part of this endowment is used in food and energy sectors for oil
+extraction and refining, and production of food and biofuels. The remaining
+amount of other primary resources is converted to other goods, which are
+consumed in final demand. The production of other goods is linear in the
+remaining amount of other primary resources with transformation coefficient
+✓t,o (for simplicity we assume ✓t,o = 1):
+
+                         yt,o ⌘ ✓t,o (⇧t      ct,f       ct,b        ct,e ) .        (36)
+  22
+     This is another modification of Chakravorty et al. (2008), who assume linear extrac-
+tion costs for simplicity. Our cost specification is more commonly used in the environmen-
+tal economics literature (see e.g., Nordhaus and Boyer 2003).
+
+
+
+
+                                            36
+   We assume a utility function, which is additively separable in food, energy,
+and other goods (positively), as well as pollution stock (negatively):
+                                                  1
+                                          1                               1                   1
+                                (yt,f )           f       (yt,e )1 e     (yt,o )1 o
+ u (yt,f , yt,e , yt,o , Mt ) =               1       +Be            +Bo                            BM Mt⌘ , (37)
+                                  1           f
+                                                            1 1e           1     1
+                                                                                  o
+
+
+
+where f , e , o , Be , Bo , BM , and ⌘ are positive parameters.23 In addi-
+tion, following Chakravorty et al. (2008) we assume that pollution stock
+is capped at certain threshold by an international agreement, which is not
+necessarily consistent with unconstrained country pollution optimum. That
+is, we assume that Mt  M for all t with a given upper bound M .
+    The objective of the social planner is to maximize the expected sum of
+the discounted utility with a discount factor . That is, the social planner’s
+problem is
+                                                            (   1
+                                                                                                           )
+                                                                X
+           V (S0 , M0 , J0 ) =        max               E             t
+                                                                          [u (yt,f , yt,e , yt,o , Mt )]       (38)
+                                  Lt,f ,Lt,b ,st 0
+                                                                t=0
+
+
+subject to (28), (29), (33), and Mt  M , with three nonnegative control
+variables at each time t: land dedicated to food crops Lt,f , land dedicated to
+biofuels Lt,b , and extracted fossil fuels st .
+    There are two endogenous state variables: fossil fuel stock, St , governed
+by equation (29), and accumulated pollution, Mt , governed by equation (33),
+and one exogenous discrete state variable: damage level, Jt . Note that the
+steady endogenous states imply zero extraction of fossil fuels and zero pol-
+lution from (29) and (33), i.e., st = 0 and Mt = 0. This means that the
+steady state will not be reached in the optimal path in a finite horizon as Mt
+is always bigger than 0 in our model (although Mt converges to 0 as t goes
+  23
+    This formulation is di↵erent from Chakravorty et. al. (2008), who do not incorporate
+disutility from pollution in the utility function, but it is broadly consistent with the envi-
+ronmental economics and growth literature, see e.g., Andreoni and Levinson (2001), and
+Xepapadeas (2005).
+
+
+                                                          37
+to infinite).
+    We set the total amount of land, L, equal to 1. We also assume that
+the tipping event has not happened at the initial time (i.e., J0 = 0). In our
+example, we let J = 0.1, p21 = 0.0034, = 0.95, ↵ = 0.5, = 0.5, = 0.001,
+µ = 0.25, f = e = o = 0.5, Be = Bo = 0.5, BM = 1, ⌘ = 4, ⇧t ⌘ 1, A = 1,
+  1e = 0.4, 2e = 1, f = 0.3, b = 0.5, and M = 1.06.
+
+
+
+
+5.2    Numerical Results
+Since St is always non-increasing over time and Mt has an upper bound
+M = 1.06, we set the approximation domain for the value/policy functions
+as S0 2 [0.01, 1] and M0 2 [1, 1.06], for each J0 2 0, J . We set the
+length of time path equal to T = 200 periods for the dynamic model of food
+and clean energy in the deterministic model transformed from (38) in the
+transformation step of NLCEQ (Algorithm 1). In the transformation step, if
+J0 = 0, then we change Jt to its unconditional expectation at time t, pt,1,2 J,
+where pt,1,2 = 1 (1 p21 )t (the second element of the vector P t (1, 0)>
+with P given by (31)) is the probability that the tipping event happens at a
+time not later than t; if J0 = J, then it has been a deterministic model as
+Jt will always be J because of the irreversibility of the tipping damage. We
+assume the terminal value function to be u (yT,f , yT,e , yT,o , MT ) /(1 ) where
+(yT,f , yT,e , yT,o ) are given by (30), (32), and (36) with terminal extraction
+sT = 0.01XT .
+    For this specific problem, we can compute the true value/policy functions
+of the model (38) in order to measure the accuracy of solutions from NLCEQ,
+so we do not need to test the accuracy using its Euler equations errors like
+what we did for the RBC model (11). When J0 = 0, the problem can be
+solved as an optimal control problem by a large-scale optimization solver in
+
+
+
+
+                                       38
+Table 9: Errors of Policy Functions from NLCEQ for the Model of Food and
+Clean Energy
+                 D       Error for Lf       Error for s
+                        L1         L1      L1        L1
+                  4 9.4( 3) 1.2( 3) 1.8( 3) 2.8( 4)
+                  6 3.7( 3) 5.8( 4) 1.1( 3) 1.6( 4)
+                  8 2.2( 3) 3.0( 4) 7.8( 4) 9.5( 5)
+                 10 2.1( 3) 1.8( 4) 6.0( 4) 6.1( 5)
+                 20 8.4( 4) 4.8( 5) 2.6( 4) 1.9( 5)
+          Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+the following form:
+                                            (   T
+                                                          "   2
+                                                                                                            #)
+                                                X             X
+                                                      t
+  VJ0 =0 (S0 , M0 ) =        max                                    pt,1,j u (yt,f,j , yt,e , yt,o , Mt )        (39)
+                         Lt,f ,Lt,b ,st 0
+                                                t=0           j=1
+
+
+subject to (28), (29), (33), and Mt  M , where pt,1,1 = 1 pt,1,2 , yt,f,1 =
+✓t,f Lt,f , and yt,f,2 = (1 J)✓t,f Lt,f . When J0 = J, the problem is determin-
+istic:
+                                          ( T                                     )
+                                           X
+                                               t
+            VJ0 =J (S0 , M0 ) = max              [u (yt,f,2 , yt,e , yt,o , Mt )]   (40)
+                                   Lt,f ,Lt,b ,st 0
+                                                          t=0
+
+
+subject to (28), (29), (33), and Mt  M .
+    We use the initial-time solutions for the control variables at approxima-
+tion nodes of S0 and M0 to construct the optimal policy functions for each
+J0 2 0, J . n the NLCEQ method, we use the tensor grid of Chebyshev
+nodes (D + 1 nodes in each dimension) over the domain of the continuous
+state variables, [0.01, 1] ⇥ [1, 1.06], in the optimization step. We apply the
+degree-D complete Chebyshev polynomials in the approximation step, for
+each J0 2 0, J .
+    Table 9 reports absolute errors24 of the policy functions computed by
+  24
+       We do not use relative errors because the solution of the fossil fuel extraction s could
+
+
+                                                      39
+Figure 3: Pre-tipping State Paths for the Model of Food and Clean Energy
+
+
+
+
+NLCEQ over the approximation domain and all discrete state values for
+various degrees D. We see that NLCEQ gives O(10 4 ) accuracy for the policy
+functions, after we use the degree-20 polynomial approximation. Figure 3
+shows the pre-tipping paths of stock of fossil fuel Xt and pollution Mt , and
+we see that our NLCEQ solutions are very close to true solutions, and Mt
+hits its upper bound after 40 periods and sticks on the bound for more than
+100 periods.
+
+
+6     Application to a New Keynesian Model with
+      Zero Lower Bound
+In this section, we apply NLCEQ for competitive equilibrium (Algorithm 2)
+to solving a New Keynesian model with zero lower bound (ZLB). We use
+the New Keynesian model in Guerrieri and Iacoviello (2015), a variant of
+the new Keynesian model with ZLB that is used in Fernández-Villaverde et
+al. (2015) and Maliar and Maliar (2015). The values of parameters are also
+be nearly 0.
+
+
+                                     40
+chosen from Guerrieri and Iacoviello (2015).
+
+
+6.1    Model Overview
+The model consists of a representative household, a government, a final-good
+firm, and intermediate firms. At each time t the government issues bonds
+that expire at t + 1 and the nominal interest rate for the bonds is rt (the
+time unit is a quarter). A representative household consumes ct with a price
+pt from the final-good firm, buys newly issued bonds with a total face value
+bt from the government, sells the expired bonds bt 1 , earns wages from labor
+supply `t with a wage rate wt , and receives a lump-sum transfer Tt from the
+government and profit ⇧t from all firms. The budget constraint is as follows:
+
+                                     bt
+                        pt ct +           = w t ` t + bt              1   + T t + ⇧t               (41)
+                                   1 + rt
+
+   The representative household chooses consumption ct , labor supply `t ,
+and government bonds bt to maximize
+                                        (   1 t
+                                                                 !                  )
+                                            X Y
+                          max E                              i       U (ct , `t )                  (42)
+                          ct ,`t ,bt
+                                            t=0    i=0
+
+
+subject to the budget constraint (41), where
+
+                                                                     `1+⌘
+                                   U (c, `) = ln(c)
+                                                                     1+⌘
+
+with ⌘ = 1. The discount factor               t   is a stochastic process following
+
+                                                        ⇤
+                  ln(    t+1 )   = (1        ⇢) ln(         ) + ⇢ ln( t ) + ✏t+1                   (43)
+
+                                  ⇤
+where ✏t ⇠ i.i.d.N (0, 1),             = 0.994, ⇢ = 0.8, and                    = 0.005. The first-order
+
+
+
+
+                                                   41
+conditions of the household problem imply
+                                     ⇢
+                                               1 + rt ct
+                            1 = Et       t+1                                   (44)
+                                                ⇡t+1 ct+1
+
+and
+
+                                      wt = pt ct `⌘t                           (45)
+
+where ⇡t ⌘ pt /pt 1 is the gross inflation rate.
+    The final-good firm purchases intermediate goods from intermediate firms
+to produce a final good yt and sell it at a price pt . The intermediate firms are
+assumed to have Calvo-type prices: a fraction 1 ✓ of the firms have optimal
+prices and the remaining fraction ✓ of the firms keep the same price as in the
+previous period. Here the Calvo parameter ✓ is set as 0.9. In Appendix B
+we describe the detailed model specification for the final- and intermediate-
+goods firms and derive the following equilibrium conditions:
+
+                              1
+                    1 =        yt `⌘t + ✓Et t+1 ⇡t+1
+                                                 ↵
+                                                     t+1,1                     (46)
+                              t,1
+                              ✓                            ◆
+                         1      yt              ↵ 1
+                    1 =              + ✓Et t+1 ⇡t+1 t+1,2                      (47)
+                          t,2   ct
+                                          ✓          ◆ 1
+                            ↵ t,1           1 ✓⇡t↵ 1 1 ↵
+                   qt =                 =                                      (48)
+                        (↵ 1) t,2            1 ✓
+                        `t
+                 vt+1 =     = (1 ✓)qt ↵ + ✓⇡t↵ vt                              (49)
+                        yt
+
+where ↵ = 6, for any time t 0.
+    Let ⇡ ⇤ , r⇤ , and y ⇤ be the steady-state gross level of inflation, the steady-
+state nominal interest rate, and the steady-state output, respectively. Let
+the government spending gt be always equal to sg yt with sg = 0.2. From the
+market clearing condition yt = ct + gt , we have
+
+                                    ct = (1     sg )yt .                       (50)
+
+                                           42
+Following the Taylor rule (Taylor 1993), we have the nominal interest rate as
+
+                                     rt = max(zt , 0)                                   (51)
+
+with                                                  ✓        ◆
+                                           ⇣⇡ ⌘   ⇡       yt       y
+                                       ⇤      t
+                          zt = (1 + r )       ⇤
+                                                                       1                (52)
+                                            ⇡             y⇤
+where we choose ⇡ = 2.5, y = 0.25, and ⇡ ⇤ = 1.005. We have r⇤ = ⇡ ⇤ / ⇤ 1
+from (44), and the formula for y ⇤ is given in Appendix C. Equation (51)
+implies that the actual policy rate rt must be nonnegative, and this zero
+lower bound will be binding when the notional policy rate zt is smaller than
+0.
+    We now have one endogenous state variable vt and one exogenous state
+variable t , the system of equilibrium equations (44) and (46)-(52), and the
+exogenous process (43). We apply NLCEQ (Algorithm 2) to compute the
+policy functions for (ct , t,1 , t,2 , ⇡t , qt , vt , `t , yt , rt , zt ), and with the NLCEQ
+solution it follows that the consumption price is computed by pt = ⇡t pt 1
+and then the wage is computed by (45).
+
+
+6.2     Numerical Results
+In NLCEQ (Algorithm 2), we transform the stochastic process (43) to be
+deterministic as ln( t+1 ) = ⇢ ln( ⇤ ) + (1 ⇢) ln( t ), and then transform the
+system of equilibrium equations (44) and (46)-(52) to be deterministic by
+canceling their corresponding expectation operator, and choose T = 200 in
+the transformed system (5).
+      In the approximation step of Algorithm 2, since the control variables
+(ct , `t , rt , qt , zt , ⇡t ) can be simply substituted, we only need to approximate
+three control variables ( t,1 , t,2 , yt ) over two state variables (vt , t ). We use
+the relative L1 norm (relative to the steady state values given in Appendix
+C, (v ⇤ , ⇤1 , ⇤2 , y ⇤ ), respectively) in the objective of (5). We use the tensor grid
+
+
+                                             43
+Table 10: Errors of the NLCEQ solution with degree-D complete Chebyshev
+polynomials for the New Keynesian DSGE model with ZLB
+                             D=4      D=6      D = 8 D = 10
+         L1 Global Error 4.4( 3) 3.1( 3) 2.2( 3) 1.8( 3)
+          L1 Global Error 8.1( 4) 6.0( 4) 5.6( 4) 4.6( 4)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+of Chebyshev nodes (D + 1 nodes in each dimension) and degree-D complete
+Chebyshev polynomials to approximate the policy functions. We want to
+get a solution over the state space [1, 1.04] ⇥ [0.96, 1.03], a slightly wider
+domain than the one used in Guerrieri and Iacoviello (2015), so it will have a
+higher chance of a binding ZLB. Thus we choose the approximation domain
+of (v, ) as [1, 1.045] ⇥ [0.936, 1.056] so that next simulated states transited
+from current states in [1, 1.04] ⇥ [0.96, 1.03] using (49) and (43) will be inside
+the approximation domain.
+    Table 10 reports unit-free errors of the NLCEQ solution for various de-
+grees D. The errors are computed on the domain [1, 1.04] ⇥ [0.96, 1.03] . The
+global errors are defined in a similar way in Subsection 3.1, while we need to
+estimate the unit-free errors for the equations (44), (46), and (47), where we
+use the 15-point Gauss-Hermite quadrature rule to estimate the integrations.
+We see that they achieve O(10 3 ) errors in L1 or O(10 4 ) errors in L1 , and
+a higher degree approximation improves the accuracy.
+    We also solve the model with the order-1 (linearization) and order-2 per-
+turbation methods. The order-1 perturbation gives an error 0.011 in L1 and
+0.0014 in L1 . The order-2 perturbation does not improve the accuracy, its
+error is 0.012 in L1 and 0.0012 in L1 . NLCEQ is almost one digit more
+accurate than the perturbation methods.
+    The comparison between NLCEQ and the linearization method is also
+shown in Figure 4, which shows the global errors of NLCEQ with degree-10
+complete Chebyshev polynomials and of the order-1 perturbation method
+when = 0.96, 0.994, 1.03. We see that NLCEQ is always more accurate
+
+
+                                       44
+Figure 4: Errors of the NLCEQ solution for the New Keynesian DSGE model
+with ZLB
+
+
+
+
+than the linearization method. The errors are smaller when is closer to
+steady ⇤ = 0.994. When is the largest (i.e., = 1.03), the errors are the
+largest because a higher implies a higher chance of a binding ZLB (about
+24% state points in [1, 1.04] ⇥ [0.96, 1.03] have a binding ZLB).
+     Figure 5 shows impulse responses of interest rate rt , inflation ⇡t (the
+figure shows the net inflation rate in percent, i.e., 100(⇡t 1)%), and output
+yt (the figure shows deviation of output from the steady state in percent,
+i.e., 100(yt /yss 1)%) to a shock of discount factor 1 (with v1 = vss ). The
+left panel of the figure shows responses to a shock that brings 1 up to 1.03,
+and the right panel shows responses to a shock that brings 1 down to 0.96.
+We see that the interest rate hits the ZLB in the first four periods in the
+left panel, and all three responses (rt , ⇡t , yt ) are decreasing functions of ( t
+decreases along time t in the left panel, and t increases along time t in the
+right panel), and they are almost steady after 20 periods (i.e., 5 years).
+     We also show that NLCEQ (Algorithm 2) can solve deterministic com-
+
+
+                                        45
+         Figure 5: Impulse responses to a shock of discount factor
+
+
+
+
+Table 11: Errors of the NLCEQ solution with degree-D complete Chebyshev
+polynomials for the New Keynesian DSGE model with ZLB and = 0
+                           D = 10 D = 20 D = 50 D = 100
+          1
+         L Global Error 1.3( 3) 7.3( 4) 5.2( 4) 1.7( 4)
+         L1 Global Error 2.3( 4) 8.5( 5) 4.6( 5) 1.3( 5)
+Note: ⇣( j) means ⇣ ⇥ 10 j .
+
+petitive equilibrium problems very accurately. Table 11 lists global errors in
+L1 norm over [1, 1.04] ⇥ [0.96, 1.03] for the New Keynesian DSGE problem
+with ZLB and = 0. We choose a large T = 300 and a higher degree approx-
+imation in order to get a higher accuracy. We see that NLCEQ reaches about
+4-digit accuracy in L1 for the optimal policy functions to the deterministic
+competitive equilibrium problem.
+
+
+7    Conclusion
+We have shown that NLCEQ can be applied to solve dynamic stochastic
+problems with acceptable accuracy when we combine modern approxima-
+tion optimization methods with parallel computing architectures. Examples
+
+                                     46
+include high-dimensional optimal stochastic growth problems up to four hun-
+dred state variables and three problems with occasionally binding constraints,
+including a dynamic stochastic model of food and clean energy, and a New
+Keynesian DSGE model with zero lower bound. This approach greatly ex-
+pands the range of problems that can be solved well globally, and clearly
+dominates any form of linearization.
+
+
+
+
+                                     47
+References
+ [1] Adjemian, S., Bastani, H., Karamé, F., Juillard, M., Maih, J., Mihoubi,
+     F., Perendia, G., Ratto, M., Villemot, S. (2011). Dynare: reference
+     manual version 4. Dynare Working Papers 1, CEPREMAP.
+
+ [2] Aruoba, S.B., J. Fernandez-Villaverde, and J.F. Rubio-Ramirez (2006).
+     Comparing solution methods for dynamic equilibrium economies. Jour-
+     nal of Economic Dynamics and Control, 30, 2477–2508.
+
+ [3] Andreoni, J., and A. Levinson (2001). The simple analytics of the envi-
+     ronmental Kuznets curve. Journal of Public Economics 80, 269–286.
+
+ [4] Bellman, R. (1957). Dynamic Programming. Princeton University Press.
+
+ [5] Benigno, P., and M. Woodford (2012). Linear-quadratic approximation
+     of optimal policy problems. Journal of Economic Theory 147(1), 1–42.
+
+ [6] Bertsekas, D. (2005). Dynamic Programming and Optimal Control, Vols.
+     I. Athena Scientific.
+
+ [7] Bertsekas, D. (2007). Dynamic Programming and Optimal Control, Vols.
+     II. Athena Scientific.
+
+ [8] Brumm, J., and S. Scheidegger (2014). Using adaptive sparse grids to
+     solve high-dimensional dynamic models. SSRN working paper 2349281.
+
+ [9] Byrd, R.H., J. Nocedal, R.A. Waltz (2006). KNITRO: An Integrated
+     Package for Nonlinear Optimization. http://www.ziena.com/papers/
+     integratedpackage.pdf. Technical report, Ziena.
+
+[10] Cai, Y., and K.L. Judd (2012). Dynamic programming with shape-
+     preserving rational spline Hermite interpolation. Economics Letters,
+     117(1), 161–164.
+
+
+
+                                     48
+[11] Cai, Y., and K.L. Judd (2013). Shape-preserving dynamic programming.
+     Mathematical Methods of Operations Research, 77(3), 407–421.
+
+[12] Cai, Y. and K.L. Judd (2014). Advances in numerical dynamic program-
+     ming and new applications. Chapter 8 in: Handbook of Computational
+     Economics, Vol. 3, ed. by K. Schmedders and K.L. Judd, Elsevier.
+
+[13] Cai, Y., and K.L. Judd (2015). Dynamic programming with Hermite
+     approximation. Mathematical Methods of Operations Research, 81, 245–
+     267.
+
+[14] Cai, Y., K.L. Judd, and T.S. Lontzek (2015a). The social cost of car-
+     bon with economic and climate risks. Working paper, arXiv preprint
+     arXiv:1504.06909.
+
+[15] Cai, Y., K.L. Judd, G. Thain, and S. Wright (2015b). Solving dy-
+     namic programming problems on computational grid. Computational
+     Economics, 45(2), 261–284..
+
+[16] Cai, Y., K.L. Judd and R. Xu (2013). Numerical solutions of dynamic
+     portfolio optimization with transaction costs. NBER working paper
+     18709.
+
+[17] Cai, Y., J. Steinbuks, J. Elliott, and T.W. Hertel (2014). The e↵ect
+     of climate and technological uncertainty in crop yields on the optimal
+     path of global land use. Policy Research Working Paper Series 7009, The
+     World Bank.
+
+[18] Caldara, D., J. Fernández-Villaverde, J.F. Rubio-Ramı́rez, and W.
+     Yao (2012). Computing DSGE models with recursive preferences and
+     stochastic volatility. Review of Economic Dynamics, 15, 188–206.
+
+[19] Chakravorty, U., B. Magne and M. Moreaux (2008). A dynamic model
+     of food and clean energy. Journal of Economic Dynamics and Control,
+     32(4), 1181–1203.
+
+                                    49
+[20] Chakravorty, U., Hubert, M.-H., and Nostbakken, L. (2012). The long
+     run impact of biofuels on food prices. Working Paper 2012-11, University
+     of Alberta, Department of Economics.
+
+[21] Christiano, L.J., and J.D.M. Fisher (2000). Algorithms for solving dy-
+     namic models with occasionally binding constraints. Journal of Eco-
+     nomic Dynamics and Control, 24, 1179–1232.
+
+[22] Czyzyk, J., M.P. Mesnier, and J.J. Moré (1998). The NEOS server.
+     IEEE Computational Science & Engineering, 5: 68–75.
+
+[23] Del Negro, M., F. Schorfheide, F. Smets, and R. Wouters (2007). On the
+     fit of new Keynesian models. Journal of Business & Economic Statistics,
+     25 (2), 123–143.
+
+[24] Den Haan, W.J., K.L. Judd and M. Juillard (2011). Computational suite
+     of models with heterogeneous agents II: Multi-country real business cycle
+     models. Journal of Economic Dynamics and Control, 35, 175–177.
+
+[25] Den Haan, W.J., and J. De Wind (2012). Nonlinear and stable
+     perturbation-based approximations. Journal of Economic Dynamics and
+     Control 36(10), 1477-1497.
+
+[26] Drud, A.S. (1996). CONOPT: A System for Large Scale Nonlinear Op-
+     timization. ARKI Consulting and Development A/S, Bagsvaerd, Den-
+     mark.
+
+[27] Epstein, L.G., and S.E. Zin (1989). Substitution, risk aversion, and
+     the temporal behavior of consumption and asset returns: a theoretical
+     framework. Econometrica, 57(4), 937–969.
+
+[28] Fernández-Villaverde, J., and J.F. Rubio-Ramı́rez (2006). Solving DSGE
+     models with perturbation methods and a change of variables. Journal
+     of Economic Dynamics and Control 30(12), 2509–2531.
+
+
+                                     50
+[29] Fernández-Villaverde, J., G. Gordon, P. Guerrón-Quintana, and J.F.
+     Rubio-Ramı́rez (2015). Nonlinear adventures at the zero lower bound.
+     Journal of Economic Dynamics and Control 57, 182–204.
+
+[30] Fourer, R., D. M. Gay, B. W. Kernighan (2003). AMPL: A Modeling
+     Language for Mathematical Programming, 2nd ed. Duxbury Press, Pa-
+     cific Grove, CA.
+
+[31] Gali, J. (2008). Monetary Policy, Inflation, and the Business Cycle: An
+     Introduction to the New Keynesian Framework. Princeton University
+     Press, Princeton, NJ.
+
+[32] Gaspar, J., and K.L. Judd (1997). Solving large-scale rational-
+     expectations models. Macroeconomic Dynamics, 1(1), 45–75.
+
+[33] Gill, P., W. Murray, and M.A. Saunders (2005). SNOPT: An SQP al-
+     gorithm for largescale constrained optimization. SIAM Review, 47(1),
+     99–131.
+
+[34] Gropp, W., and J.J. Moré (1997). Optimization environments and the
+     NEOS server. M. D. Buhmann, A. Iserles, eds. Approximation Theory
+     and Optimization: Tributes to M. J. D. Powell. Cambridge University
+     Press, Cambridge, UK, 167–182.
+
+[35] Guerrieri, L., and M. Iacoviello (2015). OccBin: A toolkit for solving
+     dynamic models with occasionally binding constraints easily. Journal of
+     Monetary Economics, 70, 22–38.
+
+[36] Hansen, L.P., and T.J. Sargent (2005). Certainty equivalence and model
+     uncertainty. Proceedings of the March 2004 Conference “Models & Mon-
+     etary Policy: Research in the Tradition of Dale Henderson, Richard
+     Porter, and Peter Tinsley”, Board of Governors of the Federal Reserve
+     System, 17–38.
+
+
+                                    51
+[37] Infanger, G. (2006). Dynamic asset allocation using a stochastic dynamic
+     programming approach. In Handbook of Asset and Liability Manage-
+     ment, volume 1, North Holland.
+
+[38] Jin, H.-H., and K.L. Judd (2002). Perturbation methods for general
+     dynamic stochastic models. Working paper, Stanford University.
+
+[39] Judd, K.L. (1998). Numerical Methods in Economics. The MIT Press.
+
+[40] Juillard, M., and S. Villemot (2011). Multi-country real business cycle
+     models: Accuracy tests and test bench. Journal of Economic Dynamics
+     and Control, 35, 178–185.
+
+[41] Kim, J., S. Kim, E. Schaumburg, and C.A. Sims (2008). Calculating and
+     using second-order accurate solutions of discrete time dynamic equilib-
+     rium models. Journal of Economic Dynamics and Control 32(11), 3397–
+     3414.
+
+[42] Kollmann, R., S. Maliar, B.A. Malin, and P. Pichler (2011). Comparison
+     of solutions to the multi-country real business cycle model. Journal of
+     Economic Dynamics and Control, 35, 186–202.
+
+[43] Magill, J.P.M. (1977). A local analysis of N-sector capital accumulation
+     under uncertainty. Journal of Economic Theory, 15: 211–219.
+
+[44] Malin, B.A., Krueger, D., and Kubler, F. (2011). Solving the multi-
+     country real business cycle model using a Smolyak collocation method.
+     Journal of Economic Dynamics and Control 35, 229–239.
+
+[45] Maliar, L., and S. Maliar (2015). Merging simulation and projection
+     approaches to solve high-dimensional problems with an application to a
+     new Keynesian model. Quantitative Economics, 6, 1–47.
+
+
+
+
+                                     52
+[46] McCarl, B., et al. (2011). McCarl Expanded GAMS user guide version
+     23.6. http://www.gams.com/mccarl/mccarlhtml/. Accessed 18 Jan-
+     uary 2015.
+
+[47] Miranda, M.J., and P.L. Fackler (2002). Applied computational eco-
+     nomics and finance. MIT press.
+
+[48] Nordhaus, W.D., and J. Boyer. (2003). Warming the world: economic
+     models of global warming. MIT press.
+
+[49] Rust, J. (2008). Dynamic Programming. In: New Palgrave Dictionary of
+     Economics, ed. by Steven N. Durlauf and Lawrence E. Blume. Palgrave
+     Macmillan, second edition.
+
+[50] Schmitt-Grohe, S., and M. Uribe (2004). Solving dynamic general equi-
+     librium models using a second-order approximation to the policy func-
+     tion. Journal of Economic Dynamics and Control 28(4), 755–775.
+
+[51] Simon, H. A. (1956). Dynamic programming under uncertainty with a
+     quadratic criterion function. Econometrica, 24(1), 74–81.
+
+[52] Smets, F., and R. Wouters (2007). Shocks and frictions in US business
+     cycles: A Bayesian DSGE approach. American Economic Review, 97(3),
+     586–606.
+
+[53] Smolyak, S. (1963). Quadrature and interpolation formulas for tensor
+     products of certain classes of functions. Soviet Mathematics, Doklady 4,
+     240–243.
+
+[54] Steinbuks, J., and Hertel, T.W. (2014). Confronting the food-energy-
+     environment trilemma: global land use in the long run. Environmental
+     and Resource Economics, in press, doi:10.1007/s10640-014-9848-y.
+
+[55] Theil, H. (1957). A note on certainty equivalence in dynamic planning.
+     Econometrica, 25(2), 346–349.
+
+                                     53
+[56] Tauchen, G. (1986). Finite state Markov-chain approximations to uni-
+     variate and vector autoregressions. Economic Letters, 20, 177–181.
+
+[57] Taylor, J. (1993). Discretion versus policy rules in practice. Carnegie-
+     Rochester Conference Series on Public Policy, 39, 195–214.
+
+[58] Woodford, M. (2003). Interest and Prices: Foundations of a Theory of
+     Monetary Policy. Princeton University Press.
+
+[59] Xepapadeas, A. (2005). Economic growth and the environment. Chapter
+     23 in Handbook of Environmental Economics, vol. 3, 1219-1271, ed. by
+     K.-G. Mäler and J.R. Vincent, Elsevier.
+
+
+
+
+                                     54
+Appendix A—Approximation
+An approximation scheme approximates a function F (x) with F̂ (x; b) =
+Pn
+   j=0 bj j (x) for some vector of parameters b. A spectral method uses glob-
+ally nonzero basis functions j (x). Examples of spectral methods include
+ordinary or Chebyshev polynomial approximation. In contrast, a finite ele-
+ment method uses local basis functions where for each j the basis function
+ j (x) is zero except on a small part of the approximation domain. Exam-
+
+ples of finite element methods include piecewise linear interpolation, cubic
+splines, and B-splines. See Cai and Judd (2014, 2015) and Judd (1998) for
+more details.
+
+
+Chebyshev Polynomial Approximation
+Chebyshev polynomials on [ 1, 1] are defined as j (z) = cos(j cos 1 (z)).
+The Chebyshev polynomials on a general interval [xmin , xmax ] are defined as
+  j ((2x xmin xmax )/(xmax xmin )) for j 0, and are orthogonal under the
+                                 ´ xmax
+weighted inner product hf, gi = xmin    f (x)g(x)w(x)dx with the weighting
+function
+                              ✓                   ◆2 ! 1/2
+                                2x xmin xmax
+                w(x) = 1                                   .
+                                  xmax xmin
+
+A degree D Chebyshev polynomial approximation for V (x) on [xmin , xmax ] is
+
+                                  D
+                                  X              ✓                          ◆
+                                                     2x     xmin     xmax
+                    V̂ (x; b) =         bj   j                                  ,   (53)
+                                  j=0
+                                                          xmax     xmin
+
+where bj are the Chebyshev coefficients.
+    The canonical Chebyshev nodes on [ 1, 1] are zi = cos ((2i 1)⇡/(2m))
+for i = 1, . . . , m, and the corresponding Chebyshev nodes adapted for the
+general interval [xmin , xmax ] are xi = (zi + 1)(xmax xmin )/2 + xmin . If we have
+Lagrange data {(xi , vi ) : i = 1, . . . , m} with vi = V (xi ), then the coefficients
+
+
+                                                 55
+bj in (53) are
+                                  m
+                              2 X
+                         bj =       vi j (zi ),        j = 1, . . . , D,                  (54)
+                              m i=1
+          P
+and b0 = m  i=1 vi /m. The method is called the Chebyshev regression algo-
+rithm in Judd (1998).
+
+
+Multidimensional Complete Chebyshev Approximation
+In a d-dimensional approximation problem, the domain of the approximation
+function will be
+
+              {x = (x1 , . . . , xd ) : xmin,i  xi  xmax,i , i = 1, . . . d} ,
+
+Let xmin = (xmin,1 , . . . , xmin,d ) and xmax = (xmax,1 , . . . , xmax,d ). We let [xmin , xmax ]
+denote the domain. Let ↵ = (↵1 , . . . , ↵d ) be a vector of nonnegative integers.
+                                      Q
+Let ↵ (z) denote the product di=1 ↵i (zi ) for z = (z1 , . . . , zd ) 2 [ 1, 1]d . Let
+                    ✓                                                              ◆
+                        2x1 xmin,1 xmax,1       2xd xmin,d xmax,d
+           Z(x) =                         ,...,
+                           xmax,1 xmin,1           xmax,d xmin,d
+for any x = (x1 , . . . , xd ) 2 [xmin , xmax ]. With this notation, the degree-D
+complete Chebyshev approximation for V (x) is
+                                            X
+                           V̂ (x; b) =                b↵   ↵   (Z(x)) ,
+                                         ↵ 0, |↵|D
+
+               PD                                                             d+D
+where |↵| =       i=1   ↵i . This is a degree D polynomial, and has            D
+                                                                                       terms.
+
+
+
+
+                                              56
+Appendix B—Equilibrium Conditions in the
+New Keynesian DSGE Model
+The final-good firm buys intermediate goods yi,t from intermediate firms to
+produce a final good yt with the following production function
+                                    ✓ˆ      1                    ◆ ↵↵ 1
+                                                    ↵ 1
+                             yt =               yi,t di
+                                                     ↵
+                                                                             (55)
+                                        0
+
+
+then sell yt at a price pt . Let pi,t be prices of yi,t , then the final-good firm
+chooses yi,t to maximize its profit:
+                                                ˆ       1
+                            max pt yt                       pi,t yi,t di.
+                             yi,t                   0
+
+
+Its first-order condition implies
+                                                ✓            ◆    ↵
+                                                    pi,t
+                               yi,t = yt                              .      (56)
+                                                    pt
+
+   The intermediate firms rent labor supply `i,t from the household with a
+wage rate wt and produce yi,t with a simple production function
+
+                                    yi,t = `i,t ,                            (57)
+
+and sell yi,t at a price pi,t to the final-good firm. The intermediate firms are
+assumed to have Calvo-type prices: a fraction 1 ✓ of the firms have optimal
+prices and the remaining fraction ✓ of the firms keep the same price as in the
+previous period.
+    A re-optimizing intermediate firm i 2 [0, 1] chooses its price pi,t to maxi-
+mize the current value of profit over the time when the optimal pi,t remains
+
+
+
+
+                                                57
+e↵ective:
+                               (    1 j
+                                                        !                                                       )
+                                    X Y
+                 max Et                          t+k          t+j ✓
+                                                                      j
+                                                                          (pi,t yi,t+j         wt+j `i,t+j )        (58)
+                 pi,t
+                                    j=0   k=0
+
+
+subject to the constraints yi,t+j = `i,t+j from (57) and
+                                                                     ✓           ◆    ↵
+                                                                         pi,t
+                                              yi,t+j = yt+j
+                                                                         pt+j
+
+from (56) by letting pi,t+j = pi,t . Here t is the Lagrange multiplier of
+the budget constraint (41). From the first-oder conditions of the household
+problem (42), t satisfies the following equation:
+
+                                                                  1
+                                                         t   =         .                                            (59)
+                                                                 pt ct
+
+The first-order condition of the re-optimizing intermediate firm problem (58)
+implies
+             (   1 j
+                                          !                          ✓                                    ◆)
+                 X Y                                                                      ↵
+        Et                          t+k       t+j ✓
+                                                      j ↵
+                                                       pt+j yt+j          pi,t                     wt+j        =0   (60)
+                 j=0          k=0
+                                                                                      ↵        1
+
+Let ⇡t,j = pt+j /pt . From (45), (59) and (60), for any re-optimizing firm i we
+have
+                             pi,t          ↵ t,1
+                                  ⌘ qt =                                   (61)
+                             pt          (↵ 1) t,2
+where
+                                                  (    1 j
+                                                                                 !                          )
+                                                       X Y
+                        t,1    ⌘ yt `⌘t + Et                               t+k         ✓j ⇡t,j
+                                                                                           ↵
+                                                                                               yt+j `⌘t+j
+                                                        j=1      k=1
+                                                 (    1          j
+                                                                                !                       )
+                                 yt                   X       Y
+                                                                                               1 yt+j
+                        t,2    ⌘    + Et                                  t+k
+                                                                                         ↵
+                                                                                     ✓j ⇡t,j
+                                 ct                   j=1     k=1
+                                                                                                 ct+j
+
+
+
+                                                              58
+We have the recursive formulas for                       t,1     and        t,2 :
+
+
+
+                        t,1    = yt `⌘t + ✓Et                            ↵
+                                                                    t+1 ⇡t+1 t+1,1                         (62)
+                                 yt                                    ↵ 1
+                        t,2    =      + ✓Et                       t+1 ⇡t+1 t+1,2                           (63)
+                                 ct
+
+     From (55) and (56), we have
+
+                          ✓ˆ       1                ◆ 1 1↵
+                pt =                   p1i,t ↵ di
+                               0
+                          ✓                                             ˆ       1                 ◆ 1 1↵
+                    =         (1        ✓)(qt pt )       1 ↵
+                                                                  +✓                p1i,t ↵1 di
+                                                                            0
+                                                                                         1
+                    =         (1       ✓)(qt pt )1           ↵
+                                                                 + ✓p1t      ↵
+                                                                             1
+                                                                                        1 ↵
+
+
+
+
+as
+                                               ✓ˆ        1                  ◆ 1 1↵
+                               pt      1   =                 p1i,t ↵1 di
+                                                     0
+
+This follows that
+                                            ✓                        1 ◆1
+                                                                                1
+                                                1     ✓⇡t↵                          ↵
+                                   qt =                                                                    (64)
+                                                     1 ✓
+     From (56), (57) and the following market clearing condition
+                                                     ˆ       1
+                                           `t =                  `i,t di,
+                                                         0
+
+
+
+
+                                                         59
+we get
+
+                                         1   ✓          ◆   ↵
+                                                 pi,t
+                                ˆ
+            vt+1 ⌘ `t /yt =                                     di
+                                     0           pt
+                                                                         1   ✓
+                                                                           ◆ ↵
+                                                                   pi,t 1
+                                                                    ˆ
+                                                        ↵
+                            = (1                 ✓)qt + ✓                      di
+                                                             0       pt
+                                                               ˆ 1✓           ◆ ↵
+                                                      ↵      ↵         pi,t 1
+                            = (1                 ✓)qt + ✓⇡t                       di
+                                                                 0     pt 1
+                            = (1                 ✓)qt ↵ + ✓⇡t↵ vt                            (65)
+
+
+Appendix C—Steady State of the New Key-
+nesian DSGE Model
+From (63), the steady state of           t,2     is
+
+                        ⇤                           1
+                        2   =                                       ⇤ (⇡ ⇤ )↵ 1 )
+                                (1           sg )(1 ✓
+
+with the given ⇡ ⇤ = 1.005. From (61) and (64), the steady state of                    t,1   is
+
+                                         ⇤            ⇤ ⇤↵           1
+                                         1   =        2q
+                                                                ↵
+
+with                                                                    ! 1 1↵
+                                             1     ✓ (⇡ ⇤ )↵        1
+                            q⇤ =
+                                                   1 ✓
+
+and from (65) the steady state of vt is
+
+                                                 (1     ✓) (q ⇤ ) ↵
+                                v⇤ =
+                                                  1     ✓ (⇡ ⇤ )↵
+
+
+
+
+                                                      60
+Therefore, from vt = `t /yt and (62), we get
+                             ✓                             ◆ 1+⌘
+                                                              1
+
+                        ⇤
+                                 ⇤
+                                 1   (1    ✓ ⇤ (⇡ ⇤ )↵ )
+                       y =
+                                          (v ⇤ )⌘
+
+
+
+
+                                          61
+

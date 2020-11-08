@@ -1,0 +1,2248 @@
+                              NBER WORKING PAPER SERIES
+
+
+
+
+        EXPLOITING MIT SHOCKS IN HETEROGENEOUS-AGENT ECONOMIES:
+             THE IMPULSE RESPONSE AS A NUMERICAL DERIVATIVE
+
+                                          Timo Boppart
+                                           Per Krusell
+                                          Kurt Mitman
+
+                                       Working Paper 24138
+                               http://www.nber.org/papers/w24138
+
+
+                     NATIONAL BUREAU OF ECONOMIC RESEARCH
+                              1050 Massachusetts Avenue
+                                Cambridge, MA 02138
+                                   December 2017
+
+
+
+
+Boppart thanks Vetenskapradet (grant 2016-02194) for financial support. Krusell thanks the Knut
+and Alice Wallenberg Foundation for financial support. MITman thanks the European Research
+Council (ERC Starting Grant 759482) and the Ragnar Soderbergs Stiftelse for financial support.
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+
+© 2017 by Timo Boppart, Per Krusell, and Kurt Mitman. All rights reserved. Short sections of
+text, not to exceed two paragraphs, may be quoted without explicit permission provided that full
+credit, including © notice, is given to the source.
+Exploiting MIT Shocks in Heterogeneous-Agent Economies: The Impulse Response as a Numerical
+Derivative
+Timo Boppart, Per Krusell, and Kurt Mitman
+NBER Working Paper No. 24138
+December 2017
+JEL No. C68,E1
+
+                                            ABSTRACT
+
+We propose a new method for computing equilibria in heterogeneous-agent models with
+aggregate uncertainty. The idea relies on an assumption that linearization offers a good
+approximation; we share this assumption with existing linearization methods. However, unlike
+those methods, the approach here does not rely on direct derivation of first-order Taylor terms. It
+also does not use recursive methods, whereby aggregates and prices would be expressed as linear
+functions of the state, usually a very high-dimensional object (such as the wealth distribution).
+Rather, we rely merely on solving nonlinearly for a deterministic transition path: we study the
+equilibrium response to a single, small "MIT shock'' carefully. We then regard this impulse
+response path as a numerical derivative in sequence space and hence provide our linearized
+solution directly using this path. The method can easily be extended to the case of many shocks
+and computation time rises linearly in the number of shocks. We also propose a set of checks on
+whether linearization is a good approximation. We assert that our method is the simplest and
+most transparent linearization technique among currently known methods. The key numerical
+tool required to implement it is value-function iteration, using a very limited set of state variables.
+
+Timo Boppart                                            Kurt Mitman
+Institute for International Economic Studies            Institute for International Economic Studies
+Stockholm University                                    Stockholm University
+SE-106 91 Stockholm                                     106 91 Stockholm
+Sweden                                                  SWEDEN
+timo.boppart@iies.su.se                                 kurt.mitman@iies.su.se
+
+Per Krusell
+Institute for International Economic Studies
+Stockholm University
+106 91 STOCKHOLM
+SWEDEN
+and NBER
+per.krusell@iies.su.se
+1     Introduction
+
+In this paper we propose a new and simple linearization method for analyzing frameworks
+with consumer heterogeneity and aggregate shocks. We apply it in the context of an
+otherwise standard real business cycle model with two kinds of technology shocks: those
+that are neutral, as in Kydland and Prescott (1982), and those that are investment-specific,
+as in Greenwood, Hercowitz, and Krusell (2000). Our main goal is to show how the method
+works but we also consider the simplest type of potentially stabilizing fiscal policy for a
+version of our environment, namely, countercyclical budget deficits (financed by lump-
+sum transfers). The method we propose is very straightforward and therefore, we hope,
+significantly easier to use than many existing methods—it is accessible even to advanced
+undergraduates in economics. In this introduction, we begin with a brief motivation for
+including household heterogeneity in macroeconomic analysis. We then provide a quick
+summary of the core features of the method and turn to the model setting and policy
+analysis.
+
+
+1.1   Why an interest in heterogeneity?
+
+Recently, the literature on business cycles and stabilization has placed an increasingly
+heavy emphasis on heterogeneity across households in a variety of characteristics: wealth,
+earnings, and more. Whence comes this new emphasis in macroeconomics? There are
+several types of answers. One type of answer relies on the effect inequality has on macroe-
+conomic aggregates. In the economic realm, there is now increasing evidence that the
+marginal propensities to make decisions that are central for households—regarding con-
+sumption (in total as well as in terms of its structure), hours worked, and investments in
+various forms of assets—vary quite substantially in the population; see, for example, the
+findings in Johnson, Parker, and Souleles (2004) who provided evidence on the departure
+from the permanent income hypothesis, and Misra and Surico (2014) for estimating the
+heterogeneity in responses across households. This basic evidence has potentially sharp
+implications for macroeconomic aggregates. Policy makers thus need to know how their
+proposed instruments affect different subgroups, as seemingly similar policies may actually
+
+                                             2
+have radically different effects (policies that are identical in a representative-agent model
+are often not under heterogeneous agents). Thus, the use of representative-agent models in
+macroeconomic theorizing runs the risk of overlooking these important channels. In par-
+ticular, a given policy action can be either more or less potent than what is predicted from
+such a representative-agent model. The rapidly expanding literature on heterogeneous-
+agent modeling can likely be attributed in large part due to these arguments.
+   One might also worry, as elaborated on in Piketty (2014), that extreme inequality can
+lead to social unrest and even threaten our democratic institutions. That is, there is a po-
+litical realm too where inequality affects the macroeconomy. A different way of expressing
+this point, along the lines of the argument above, is that the marginal propensities rele-
+vant in political decisions—voting and political activities more generally—also vary within
+the distribution. The point that the wealth distribution influences aggregate policy, like
+taxes, via dispersed political preferences is since long established (see, e.g., Downs, 1957,
+and Meltzer and Richard, 1981) but the broader implications for the smooth workings of
+democracy are now increasingly emphasized. There is an older macro-and-political econ-
+omy literature formalizing the tax-distribution channel (see, e.g., Persson and Tabellini,
+1994, and Alesina and Rodrik, 1994, as well as Krusell and Rı́os-Rull, 1999) but the
+broader connection is less explored.
+   A second type of argument for the focus on inequality is simply that there is an increas-
+ing interest in it per se, perhaps because we have social preferences displaying inequality
+aversion. In addition, economists and policymakers may be interested in understanding the
+distributional consequences of aggregate shocks. For example, a small aggregate decline in
+hours may mask substantial heterogeneity in unemployment risk across individuals. Re-
+gardless of any potential taste for redistribution, it seems important for macroeconomists
+not just to work out the aggregate consequences of different shocks and policy options but
+also their distributional impacts.
+   A third type of argument, that is related to the first one but also more general in
+nature, is that the representative-agent nature of most of macroeconomic modeling, like
+any other assumption, needs to be examined from a robustness perspective. Clearly, people
+
+
+                                             3
+in the real world are heterogeneous in many dimensions and how well the representative-
+agent model approximates the aggregate behavior of a more diverse population really
+is a very open question.1 That is, the focus on heterogeneity can simply be viewed as
+an effort at examining the robustness (and perhaps inappropriateness) of the benchmark
+model. This endeavor has been ongoing but has been challenging due to the difficulties
+involved in solving dynamic models with consumer heterogeneity, especially models with
+aggregate shocks. Krusell and Smith (1998) is a step forward here, as are a number of
+other papers, including Den Haan (1997), Rı́os-Rull (2001), Reiter (2009, 2010), Ahn et al.
+(2017), and many others; the present paper follows in the footsteps of especially the three
+latter papers. Many of the methods that have been proposed were perhaps once upon a
+time demanding in terms of computer processing time or numerical knowledge investments
+but these challenges are now much less daunting. As a result, in our view, computational
+difficulty should no longer be a primary excuse for applied macroeconomists in abstracting
+from heterogeneity in modeling when such heterogeneity is plausibly important for the
+workings of policy; after all, imagine if engineers had this attitude when constructing
+buildings, bridges, or airplanes. At the same time, we must continue pushing forward
+in terms of providing even better and more easy-to-use tools—just like in engineering
+science—and the present paper is one such effort. In the case of heterogeneous-agent
+economies with aggregate uncertainty, all the available methods rely on some sort of
+approximation, moreover, so it seems valuable to have an arsenal of different methods,
+thus justifying “engineering-style” work along several parallel lines.
+
+
+1.2    The method
+
+As mentioned above, the literature has provided us with number of tools and techniques
+to numerically solve models with heterogeneity and aggregate shocks. These methods can
+be used for the models we discuss in the present paper. However, the tools we develop
+here are, we think, particularly simple to use and intuitive. We especially hope that
+  1
+    When macroeconomic theory is criticized by researchers from other areas within economics, the
+representative-agent assumption may be the most commonly mentioned point. When it comes to commu-
+nicating with non-economists how macroeconomic textbook models work, it, of course, is even harder to
+motivate the representative-agent assumption; it is often best to simply not mention it.
+
+
+                                                 4
+they can become valuable for analyzing fiscal and monetary policy rules and their welfare
+implications for different subgroups of consumers. However, as for how useful and accurate
+our method will be, of course, remains to be seen. As is typically the case in computational
+economics, the most suitable method really varies depending on the specific model to be
+solved and economic question to be answered. We will therefore not aim to make a general
+method evaluation here, but merely present the key ideas and apply it in a set of simple
+examples. It should be noted that although our setting is very standard and closely related
+to the setting in Krusell and Smith (1998) and that studied in the JEDC volume referred
+to below, its benchmark does allow two continuously-valued shocks along with valued
+leisure.
+    The key idea is to come up with an easy-to-use linearization technique. Linearization
+techniques of different sorts have been developed in a number of applications. The first
+complete such contributions were provided in Michael Reiter’s work (Reiter, 2009 and
+2010), but early approaches were also explored by a number of other economists, includ-
+ing Jeff Campbell, Hess Chung, Stefan Krieger, and Marcelo Veracierto. Current, rather
+advanced, linearization techniques include Ahn et al. (2017), which provides a very ambi-
+tious and general toolbox based on the authors’ previous work, and David Childers’ recent
+paper (Childers, 2017). In all these approaches, the linearization approach relies on taking
+derivatives analytically along the lines of a Taylor expansion. In contrast we do not com-
+pute analytical derivatives. More importantly, unlike ours, the standard approach is built
+on recursive methods whereby aggregates and prices are expressed as (to be linearized)
+functions of the state. The state is usually a very high-dimensional object—involving at
+a minimum the distribution of wealth across agents, an infinite-dimensional object—and
+therefore potentially quite challenging to even describe, let alone linearize with respect to.
+There are also many ways of constructing such a linearization and its law of motion. The
+approach we follow here uses recursive techniques for solving the households’ problems
+but not for describing aggregates. Rather, we base our linearization on a nonlinearly ob-
+tained solution for a deterministic transition path to an “MIT shock”. An “MIT shock”
+is an unexpected shock that hits an economy at its steady state, leading to a transition
+
+
+                                              5
+path back towards the economy’s steady state. We study a single, small “MIT shock”
+carefully, and then linearize directly using the computed impulse response. We thus con-
+sider this impulse response as a numerically computed derivative of the effect of an initial
+(infinitesimal) shock on the variable in question at different time horizons.
+       As is typical, the linearization will be performed around a steady state.2 Hence, in a
+first step we solve for a steady state with entirely standard, and fully nonlinear, methods.
+We then study a deviation from this steady state and a transition back to it. Consider for
+example a shock to aggregate TFP, which we denote by z and which, in the economy with
+aggregate shocks, follows an AR(1) process in logs with a serial correlation parameter ρ.
+Thus, (the log of) the shock will go up by, say, one unit in period 0 and thus delivers the
+full sequence of values (1, ρ, ρ2 , ρ3 , . . . ). When we solve for our resulting deterministic equi-
+librium transition path, we consider a dynamic-programming version of the household’s
+problem where the state variable consists of the individual’s own states (asset holdings and
+an income shock in our simple model, as in Aiyagari, 1994) and, importantly, time. The
+appearance of time captures how aggregates affect the individual: the individual takes as
+given a sequence of prices and because it is irrelevant for the individual how these prices
+are determined, they can be summarized as depending simply on time. Notice that they
+will not involve aggregate uncertainty since we consider a deterministic path. The compu-
+tation of the deterministic equilibrium path is straightforward: it uses entirely standard
+methods. In particular, we guess on a price path (or the path for an aggregate variable
+like consumption), solve the household’s problem backwards—given that we know that
+there will be convergence back to the same steady state—and then derive the aggregate
+implications of the households’ behavior and update our guess for the price path. This
+iterative procedure is also standard and fully nonlinear.
+       The result of having computed the nonlinear transition path for the heterogeneous-
+agent economy is a time path for all aggregate statistics: output, consumption, investment,
+prices, and the entire wealth distribution (as well as labor supply if considered as endoge-
+   2
+    As all methods that rely on linearization, our method imposes certainty equivalence. Then, the
+variables in the non-stochastic steady state will by assumption coincide with the ergodic mean of those of
+the stochastic economy.
+
+
+
+                                                    6
+nous).3 So let us focus on a generic such aggregate statistic; we label it x, and we have
+thus obtained a sequence {x0 , x1 , x2 , . . . }. Now consider the same economy subjected to
+recurring aggregate shocks to z. The key idea behind the procedure we use to compute
+equilibria in the aggregate-shocks economy is that we can, and do, regard the x sequence
+in response to the one-time shock in the aggregate technology variable z (and exponen-
+tial convergence back to its mean) as well approximated by a linear system. (The shock
+appears in a multiplicative way an hence we linearize in the logarithm of the variables.)
+A linear system would precisely mean that the effects of shocks are linearly scalable and
+additive so that the level of x at some future time T , after a sequence of random shocks
+is simply x0 z,T + x1 z,T −1 + x2 z,T −2 + . . . , where z,t is the innovation to (the logarithm
+of) z in period t. Thus, our model with aggregate shocks can be obtained by mere simula-
+tion based on the one deterministic path—the non-linear impulse response function—we
+obtained.
+       It is instructive to compare our method with the recursive linearization methods in the
+literature referred to above. In essence, those techniques construct (i) a linear mapping
+from (log) z and some summary description of the aggregate state (such as a set of moments
+of the wealth distribution) to x and then (ii) a resulting linear law of motion for the
+summary of the aggregate state. But this delivers precisely a linear system that, in
+reduced form, gives our simple x0 z,T + x1 z,T −1 + x2 z,T −2 + . . . , so in this sense the
+intermediate steps (i) and (ii) are not needed if one can obtain {x0 , x1 , x2 , . . . }, which we
+do with our nonlinear method.
+       Linearity of a dynamic system allows for very powerful generalizations. First, we can
+look at any outcome variable. For example, our transition-path equilibrium delivers the
+evolution for any distributional statistic, so x could be, say, the 3rd percentile of the
+wealth distribution. Second, one can incorporate more kinds of aggregate shocks easily:
+computation time rises linearly in the number of independent shocks. In the case of two
+shocks, a z and a q shock, one would simply compute two transition-path equilibria, one
+for a period-0 deviation of z from its steady-state value and then a similar one for q. Then,
+   3
+    Of course, individual agents move stochastically within this distribution due to idiosyncratic income
+shocks, but these wash out in the aggregate.
+
+
+                                                   7
+given the linearity, the effects of the two shocks are simply additive: the final effect on x
+in period T is xz0 z,T + xq0 q,T + xz1 z,T −1 + xq1 q,T −1 + xz2 z,T −2 + xq2 q,T −2 + . . . , where q,t
+is the innovation to (the logarithm of) q in period t.
+       A virtue of the linearization method compared to that in Krusell and Smith (1998) is
+that the case with valued leisure can be computed in a more straightforward manner. In
+such a model, as in most cases where there is a nontrivial market-clearing condition each
+period,4 Krusell and Smith (1998) argue that it is necessary to use a two-step procedure:
+each period during a simulation, a price (the wage in this case) needs to be iterated
+on so as to achieve exact market clearing, and hence a supply function (for labor) of
+this static price needs to be computed. This supply function is obtained from consumer
+maximization where future prices are taken as given functions of the future aggregate state
+but the current price can deviate from such a rule.5 In the linearization method here, no
+extra complication arises if there are nontrivial market-clearing conditions each period.
+       We must also emphasize that the key numerical tool used to implement our method—if
+not the only tool—is value-function iteration. Value-function iteration is used for solv-
+ing the consumer’s problem in a steady-state equilibrium. This value-function iteration
+involves a small set of state variables (an exogenous idiosyncratic shock and capital, in
+our application). Value-function iteration is then used again in solving for the transition
+path, now backwards over time, so time is the only additional state variable here and
+the iteration involves only a number of steps equal to the number of time periods until
+the new steady state is reached. In the former case, there is an outer layer of iterations
+over the steady-state interest rate and in the latter case the iteration is over a sequence
+of interest rates, but there is no additional conceptual difference between the two cases.
+Hence, solving for a transition path is really very similar to solving for a steady state.
+       Is the equilibrium we compute accurate? That is, is our linearization an accurate
+method for the economy at hand? Given that a distance measure between the computed
+   4
+     In the baseline Krusell and Smith model without valued leisure both the capital stock and aggregate
+hours are predetermined along any simulation path, such that the output market trivially will clear given
+the wage and interest rate from the firm’s problems. Along simulation paths households may be making
+forecast errors about next period’s capital stock, but contemporaneous prices always clear the market.
+   5
+     The same complication appears, for example, when one solves an asset pricing model where a bond
+price needs to be computed each period; see Krusell and Smith (1997).
+
+
+                                                      8
+equilibrium and the true one cannot typically be obtained in this class of models, there
+is no simple answer. One check that can be performed, however, is to compute transition
+paths for different initial shock sizes and signs and assess whether the resulting effects on
+the variables in question (x in our example) are scalable, as assumed in the linearization
+method. It may then turn out that significant nonlinearities appear or that the shock
+responses are not approximately symmetric around zero, in which case non-linear methods
+are needed. One can design a variety of checks of, such as drawing two consecutive MIT
+shocks, in period 0 and in period 1, and seeing whether the resulting transition path is
+close to that obtained as a sum of two consecutive shocks. With two type of shocks z and
+q, one can subject the economy to simultaneous shocks of these variables at time 0 and
+then compare to the sum of each of the two shocks, and so on.
+       Finally, one may ask whether linearization does not eliminate some important mech-
+anisms in a heterogeneous-agent economy, such as the nontrivial evolution of the wealth
+distribution over time and its effects on aggregates. It does not: it includes all the mech-
+anisms (to a first order). For example, an aggregate shock will influence outcomes in
+a manner taking into account the distribution of marginal propensities to consume and
+work, and the evolution of this distribution will itself be solved for; linearization does not
+set these effects to zero but merely consider their first-order elements.6
+   6
+    To be more concrete, consider an alternative model that will have similar features: one with two
+agents with a common utility function u(c), no idiosyncratic shocks and unrestricted borrowing and lend-
+ing, but unequal wealth between the two agents. Then the equilibrium laws of motion will be given
+by the function H such that A01 = H(A1 , A2 , z) and A02 = H(A2 , A1 , z) and output will be given by
+y = G(A1 , A2 , z), where Ai denotes the wealth of agent i, y output, and z an exogenous shock; a
+prime denotes the variable’s value the following period. Because A1 + A2 = k, the aggregate capi-
+tal stock, we have G(A1 , A2 , z) = G̃(A1 + A2 , z). Now consider how yt+m will change for m > 1
+                                                                               dyt+m
+in response to a change in log z0 . Linearization means that we will identify d log z0
+                                                                                       based only on the
+                                                                                        dA1,t+m−1
+first-order effects, i.e., G̃1 (A1,t+m + A2,t+m , zt+m )H1 (A1,t+m−1 , A2,t+m−1 , zt+m )  d log z0
+                                                                                                      + G̃1 (A1,t+m +
+                                                dA                                            dzt+m
+A2,t+m , zt+m )H1 (A2,t+m−1 , A1,t+m−1 , zt+m ) d2,t+m−1
+                                                    log z0
+                                                            + G̃2 (A1,t+m +  A2,t+m , zt+m ) d log z0 . If preferences
+aggregate, H1 = H2 for all values of the arguments, and then it is easy to show that the first two terms
+of this expression are identical and thus collapse. If not, however, the evolution of the wealth distribution
+will evolve nontrivially, and it will nontrivially affect equilibrium outcomes. Thus, despite a lack of aggre-
+gation the linearization method does captures the effects going through an unequal and evolving wealth
+distribution. This argument is general and can in particular be applied in our context, where there is also
+a lack of aggregation.
+
+
+
+
+                                                         9
+1.3   The model
+
+The model we look at is a standard Aiyagari (1994) economy, augmented to include val-
+ued leisure, with two kinds of aggregate shocks: an input-neutral technology shock and
+an investment-specific technology shock. Consumers face idiosyncratic labor productivity
+risk against which they cannot insure directly but they can accumulate precautionary sav-
+ings. For this model, no aggregation theorem is available: the whole distribution of asset
+holdings among consumers matters for determining aggregate capital accumulation and
+for total hours worked, because the marginal propensities to save (and work) differ across
+consumers. In particular, more wealthy consumers are better insured and have higher
+marginal propensities to save and lower marginal propensities to work. The consumption
+function is not linear either and is not necessarily concave.
+   We briefly look at a formulation of the model with a “demand externality” in the form
+of a reduced-form pure externality on TFP from aggregate consumption. In particular, if
+consumption rises, so does TFP. The interpretation is that of utilization of the input factors
+and the motivation comes from the recent work by Bai, Rı́os-Rull, and Storesletten (2016).
+The difference being that our demand channel amounts to a market failure; whereas those
+authors describe a search market with price posting, which yields efficient outcomes.
+   We illustrate the failure of aggregation by showing that Ricardian equivalence does
+not hold: we look at a transfer policy with a stable rule for government bonds involving
+deficits when consumption is below steady state.
+
+
+1.4   Outline
+
+We begin by describing the model in Section 3. We then briefly describe our computational
+approach in Section 4 after which we show our results in Section 5. In the latter section we
+also discuss accuracy of linearization based on looking at transition paths with different
+sizes and signs of the initial shock. We conclude in Section 6.
+
+
+
+
+                                             10
+2        Numerical methods in macroeconomics: a mini-history
+
+In this section we provide some relevant background in the form of a very brief history of
+numerical methods used in dynamic macroeconomics for the purpose of producing “quan-
+titative macroeconomic theory”, i.e., theory restricted to match relevant microeconomic
+data and other facts, such as long-run trends. The specific aim here is to make connections
+between the method we propose in the present paper and earlier methods and concepts;
+that is, we do in no way aim to accurately reflect the whole literature on solving dynamic
+macroeconomic models. We discuss representative-agent models and how they have been
+solved first.
+
+
+2.1       Representative-agent models
+
+We begin by noting that prior to the path-breaking work by Kydland and Prescott (1982),
+researchers had used analytical methods to characterize perfect-foresight equilibria that
+were the result of “MIT shocks”. An MIT shock, a term coined by Tom Sargent, refers
+to an unpredictable shock to the steady-state equilibrium of an economy without shocks.
+That is, in this economy no shocks are expected to ever materialize but nevertheless a
+shock now occurs. The analysis then focuses on understanding the resulting equilibrium
+transition along a perfect-foresight path, again under the assumption that no shock will
+ever occur again. Thus, the described procedure seems hard to square with rational
+expectations.7
+        The Kydland-Prescott paper developed a non-linear model without market frictions
+and, hence, could focus on solving a planning problem. This problem was approached
+using “linearization” around the steady state; Kydland and Prescott first solved for the
+steady state, then provided a quadratic (second-order Taylor expansion) approximation of
+the objective function—expressed in terms of the vector of choice variables—around that
+steady state, along with a linear set of (or linearized) constraints. Thus, they obtained a
+linear-quadratic problem, which was well known to have an exact solution in the form of a
+    7
+    The “MIT” qualifier reflects the fact that one or more researchers at MIT used this method. Sargent,
+at the time of the invention of the term, was at Minnesota; he received his PhD in Cambridge, Mass., but
+from Harvard.
+
+
+                                                  11
+quadratic value function along with linear policy rules. The paper by King, Plosser, and
+Rebelo (1988) and its technical appendix (separately published later, see King, Plosser,
+and Rebelo, 2002) describe this procedure in detail, including how to compute all the
+endogenous policy and value-function parameters.8
+    A key element in the approach pioneered by Kydland and Prescott was the use of a
+recursive system, which fits value-function methods well. The key objects sought were
+thus functions of a state vector of exogenous and endogenous variables. To be concrete,
+one would for example in the very simplest case of a stochastic growth model with optimal
+saving and no adjustment costs find output, y, to be a function G of the capital stock,
+k, and TFP, z: y = G(k, z). Similarly, the law of motion for the endogenous state
+would be written using a function H as k 0 = H(k, z). Thus, linearization amounted to
+finding linear approximations of G and H—in the form of vectors.9 Once the vectors
+approximating G and H had been found, the system was simulated by drawing shocks
+and unconditional moments were computed, such as correlations between macroeconomic
+variables and their relative percentage standard deviations. The figure below, drawn from
+Kydland and Prescott (1982), illustrates.
+
+   8
+     As of publication, King, Plosser, and Rebelo’s two papers the Kydland-Prescott paper all have thou-
+sands of citations. The paper by King, Plosser, and Rebelo (1988) of course made other, distinct contri-
+butions, such as finding an explicit class of utility functions that was sufficient and necessary for balanced
+growth with constant hours worked.
+   9
+     An alternative method in the literature has been to derive a set of linear stochastic difference equations
+whose solutions then delivers G, when expressed recursively. The solved-out stochastic sequence for capital,
+in our example, would then satisfy k1 = H(k0 , z0 ), k2 = H(H(k0 , z0 ), z1 ), and so on.
+
+
+
+
+                                                      12
+   Quite soon, researchers started examining the numerical accuracy of the solutions
+obtained with the linear-quadratic approximation method; after all, the underlying model
+had nonlinear elements of potential quantitative importance. The classic 1990 issue in the
+Journal of Business and Economic Statistics, edited by John Taylor and Harald Uhlig,
+collected a number of papers employing linear-quadratic other methods to solve the same
+underlying model—the stochastic optimizing growth model: see the next figure for the
+front page.
+
+
+
+
+                                           13
+   The conclusion from the JBES issue was that nonlinearities simply did not seem to
+play a very important role in the model under study.
+   Meanwhile, another development in macroeconomics was taking place whereby VARs—
+vector autoregressions, a tool primarily used for empirical analysis—came to increasing
+use. The path-breaking paper on this topic, Sims (1980), specified a linear system of
+equations for macroeconomic aggregates. From the present perspective, such a system
+can also be derived from the solution to a linear-quadratic model, which researchers soon
+realized. This meant, in particular, that estimated VARs became a convenient tool for
+comparing model to data: one compared the model-generated VAR to that estimated
+in the data, the result of which became known as “structural VARs”, whereby some
+model parameters were estimated directly using a VAR, either with classical or Bayesian
+econometrics.
+   But more importantly from the present perspective, VARs propelled the use of impulse
+response functions, IRFs in quantitative macroeconomic theory: the use of the linear
+system to trace out the path for an endogenous variable in response to an exogenous
+
+                                           14
+shock at an initial point in time. Using a purely empirical VAR, one would identify
+exogenous shocks—such as one to technology—along with their autocorrelation properties
+and then evaluate how an endogenous variable, like output, would behave over time in
+response to a shock innovation at time zero. Using the linear system obtained as an
+approximation to the optimal policy rules at a steady state of the theoretical model one
+can also generate an IRF (and the two IRFs can be compared—an alternative data-model
+comparison to that of using the unrestricted VAR system); a typical example from the
+literature of model-generated IRFs is shown in the figure below (countless papers display
+such multi-box graphs, especially in the monetary literature).
+
+
+
+
+The key about an IRF here is that it can be viewed as a response to an MIT shock:
+let the economy be in steady state, expose it to an “unexpected” shock and work out
+how the endogenous variables will behave over time in a rational-expectations equilibrium
+under the assumption that no other shocks materialize. The rational-expectations part
+sounds contradictory, again, but is not: in a linear-quadratic model, certainty equivalence
+holds, i.e., the coefficients of the linear policy rules do not depend on the second-order
+moments of the shock processes. This means, in particular, that an IRF can be viewed as
+the average (conditionally expected) path of an endogenous variable, thus integrating in
+this expectations operator across outcomes of all future shocks (given the initial shock).
+Thus, the perfect-foresight response to an unexpected shock conditional on no other shocks
+
+                                            15
+occurring coincides with the average response to a shock of the same size that was expected
+(in the sense that it had a zero expected mean but a positive variance) and that is later
+followed by other shocks. Hence, the linearity of the basic models made MIT shocks turn
+out to be really useful!
+   Approximate linearity was then used to compute equilibria in a very broad set of
+business-cycle models, including those with price and wage stickiness. Thus, packages
+like Dynare or Uhlig’s Toolkit became ubiquitous in research as well as teaching; it is
+probably not an understatement to say that this development revolutionized quantitative
+macroeconomic theory. These packages ask the researcher to input the model’s dynamic
+equations in their non-linear form and then automatically offer (i) a calculation of the
+steady state; (ii) the (linear) equilibrium decision rules; (iii) the corresponding impulse
+response functions; and (iv) an estimation routine. It should be noted that in many
+(most?) of the applications in the literature there was no separate check that a linear
+approximation is indeed accurate.
+   For some questions, the linear-quadratic approximation is not useful; one example is
+asset pricing or portfolio choice, where higher moments of the shocks are at the core of the
+analysis. Similarly, in models where non-linearities are believed to play a central role, it
+is also crucial to use other methods. Here, researchers have explored different paths; one
+is to use one out of a variety of the general non-linear approaches (of which several were
+applied in the Taylor-Uhlig volume referred to above) and another path was to develop
+second-order perturbation methods; see, e.g., Judd and Guu (1997) or Schmitt-Grohé and
+Uribe (2004).
+
+
+2.2   Heterogeneous-agent models
+
+The numerical analysis of models with heterogeneous consumers and uninsurable idiosyn-
+cratic shocks started with papers by Imrohoroglu (1989), in a partial-equilibrium case,
+and Huggett (1993) and Aiyagari (1994) in general equilibrium. Given that borrowing
+constraints and uninsurability were central features in these models, it was impossible
+
+
+
+
+                                            16
+to avoid non-linear methods for solving the consumers’ problems.10 Thus, these papers,
+which defined and computed steady states, employed value-function iteration, much as in
+some of the contributions to the JBES volume, now applied at the individual level. In
+Huggett’s and Aiyagari’s work, the price-determination algorithm worked as follows: (i)
+the agent’s dynamic programming problem is first solved using non-linear methods based
+on a guess on a set of prices (such as the steady-state interest rate); (ii) the decision rules
+are then aggregated to check market clearing in the steady state; (iii) and, in case markets
+do not clear, an update on the price(s) is computed and the procedure is repeated until
+markets do clear.
+       A steady-state equilibrium in the heterogeneous-agent economy under study in these
+papers consists (aside from decision rules and value functions solving the consumers’ prob-
+lems) of a small set of prices or aggregate variables (one, in each of the cases of Huggett,
+1993, and Aiyagari, 1994) and a stationary distribution of consumers, within which there
+are idiosyncratic movements but whose aggregate moments are all constant. The algorithm
+described has proven to work for a large number of applications. It should be noted here in
+this context that a reason why these steady-state equilibria are rather straightforward to
+compute is that a given consumer’s dynamic-programming problem is mostly independent
+of how other consumers behave; the only relevant input is a very low-dimensional object
+such as an interest rate and a wage rate (which, of course, are affected by all consumers).11
+Not all steady-state models with heterogeneous agents have this pleasant feature, however.
+One case in point is models where consumers care directly about the whole distribution
+of the other consumers’ state variables, such as in a decentralized search-matching con-
+text (whether in a monetary, labor, or other application). A concrete example here is
+the setup considered in Krusell, Mukoyama, and Şahin (2010): they solve a model that
+is a straight marriage between Aiyagari (1994) and Pissarides (1985). In their model, a
+consumer’s asset holdings will influence the value of being unemployed and hence, in a
+  10
+     The focus of our paper is household heterogeneity, but the methodological challenges posed by models
+with firms heterogeneity, see, e.g., Khan and Thomas (2008) for a representative contribution, are very
+similar to those presented here. Our method is therefore applicable in that class of models as well.
+  11
+     Moreover, for a constant-returns production function, the interest rate and the wage rate are in a one-
+to-one relation to each other so really only one endogenous equilibrium variable is used in the consumer’s
+problem.
+
+
+                                                    17
+bargaining situation with a firm, determine the wage outcome: a higher asset level allows
+you to bargain for a higher wage. Moreover, the wage as a function of asset holdings then
+becomes an equilibrium object that consumers need to know when solving their savings
+problems, since a higher rate of saving today then implies higher wages in the future ac-
+cording to the equilibrium wage function. Thus, the set of equilibrium variables appearing
+as an input into the consumer’s problem is not small in this case: it is a whole function.
+Thus, one needs more sophisticated numerical methods to solve for this kind of stationary
+equilibrium.
+   Equilibria with heterogeneous agents and aggregate shocks were initially computation-
+ally intractable. The reason is that in such models, the recursive objects G and H that
+generalize the representative-agent framework are both infinite-dimensional. The key rea-
+son for this, in turn, is that the economy’s endogenous state vector is infinite-dimensional:
+it consists of the whole distribution of wealth (jointly with idiosyncratic shock outcomes).
+The incomplete-markets assumption, namely, makes any aggregation theorem invalid as a
+rule, even with preferences in a suitable class and, hence, the whole distribution of asset
+holdings today is necessary for predicting the total amount of capital tomorrow. The
+reason, of course, is that agents with different amounts of wealth have different marginal
+propensities to consume. Denoting the distribution by Γ, we would thus have (again with a
+focus on output as the endogenous variable), y = G(Γ, z) and Γ0 = H(Γ, z). Linearization
+did not seem like a natural path forward because (i) the individual’s problem (which is
+also a determinant of G and H) is fundamentally nonlinear and (ii) linearization in infinite
+dimensions is a challenge (G and H both have an infinite-dimensional argument and H is
+an infinite vector-valued function).
+   Surprisingly, however, Krusell and Smith (1998), followed by Krusell and Smith (1997),
+Den Haan (1997), and Rı́os-Rull (2001), found that a (fully non-linear) solution method
+appeared to work quite well for a set of economies that could be viewed as straightforward
+extensions of Huggett (1993) and Aiyagari (1994) to the case of aggregate uncertainty,
+or to Kydland and Prescott (1982) by adding heterogeneous agents and uninsurable id-
+
+
+
+
+                                             18
+iosyncratic risk.12 The approach pursued by Krusell and Smith was to summarize the
+distribution Γ by a small set of moments and replace H with a function that only maps
+this small set of moments from the current to the next period. Thus, so long as a consumer
+only needed to know prices which are determined by the small set of moments and these
+moments could be predicted well by their own past, one obtained a “solvable” setting;
+for a very detailed discussion of the method and a discussion of its accuracy, see Krusell
+and Smith (2006). It turned out, in particular, that “approximate aggregation” obtained,
+namely that only one moment of Γ (the mean) sufficed for producing remarkably good
+forecasting accuracy.
+       Like in the early days of numerical representative-agent analysis, a volume appeared,
+now in the Journal of Economic Dynamics and Control : the issue edited by Den Haan,
+Judd, and Juillard (2010); a front page is displayed in the figure below.13
+
+  12
+     Krusell and Smith (1998) also considered valued leisure; Den Haan (1997) looked at an endowment
+economy; and Krusell and Smith (1997) looked at portfolio choice and asset pricing.
+  13
+     It proved impossible to find a front page on the internet; we would be very grateful if anyone could
+send us a copy of it. With a little help from a friend, Filip Rozsypal, we got by: he very kindly produced
+a photo-shop “replica”.
+
+
+
+
+                                                   19
+The overarching question in this JEDC issue was whether the proposed small-set-of-
+moments approach was accurate enough. Hence, the issue contained papers offering a
+plethora of other methods and a summary of the findings in the issue was that, at least
+for the model under study, all the methods delivered close-to-identical equilibria and, by
+implication, that the small-set-of-moments approach was quite accurate and powerful.
+   A name in the JEDC issue stands out: Michael Reiter. Reiter’s earlier work (Re-
+iter, 2009), namely, had unveiled how linearization could be accomplished in this class of
+models, again something that had appeared impossible. The idea here was to solve the
+consumer’s problem at steady state fully non-linearly and then to summarize the decision
+rules of this problem with a finite set of parameters. These parameters were then made to
+depend on an aggregate state variable Γ̂, which in turn was a reduced-dimension version of
+the full distribution Γ (but not necessarily the moments of Γ). The equilibrium could then
+be linearized with respect to this finite vector summarizing Γ: G and H can be replaced
+
+
+                                           20
+by (large but finite) vectors. The description of Reiter’s approach here is too brief to be
+clear, but the point is that a sophisticated method can be designed and implemented, thus
+in the end allowing a feasible linearization approach also to heterogeneous-agent models
+with aggregate risk. Reiter (2010) offers a refined, more efficient version of the same
+method. Several other authors had previously explored linearization but failed to deliver
+a completed and tested algorithm. Since Reiter’s work, more papers have offered addi-
+tional linearization methods. Most recently, Ahn et al. (2017) propose a method that is
+particularly powerful in reducing the dimensionality efficiently.14
+       Substantively, Reiter’s method suggested that the class of models not only appeared
+to satisfy approximate aggregation but also that these models were well approximated by
+a linear system. Interestingly, in parallel, some papers in the literature did provide fully
+nonlinearly obtained numerical solutions to transition paths following MIT shocks.15 I.e.,
+they provided impulse responses. The point we make in the present paper is that under the
+assumption that linearization works well—as suggested by Reiter—these impulse-response
+functions, obtained by non-linear methods, can be used directly to also simulate the be-
+havior of the economy under aggregate uncertainty, as outlined in the introduction and
+described in more detail below. The fundamental reason is that in linear systems, effects
+of recurring, or different, shocks are additive and the effects scalable. The assumption
+“linearization works well” then simply means that an impulse response, if it is a response
+to a small MIT shock, can be interpreted directly as a linear response. The word “small”
+is important here, as one should view it as of the size required to produce a numerical
+derivative: the entire impulse response (of all endogenous variables) should thus be viewed
+as a numerically computed derivative of the initial shock.
+       As pointed out, the methods proposed here rely on assuming that linearization works,
+but in this sense the approach is not different than that in most of the applied Dynare-
+based literature on representative agents, or that in the recent papers like Ahn et al. (2017)
+on solving heterogeneous-agent models: they all assume that linearization works. We do
+  14
+    Ahn et al. (2017) are also producing easy-to-use Dynare-like packages based on their methods.
+  15
+    One example is provided in Krusell, Mukoyama, Şahin, and Smith (2009), where there is an unexpected
+removal of all TFP fluctuations—these shocks are replaced with their conditional mean as of time 0—and
+a deterministic path toward a steady state is solved for.
+
+
+                                                  21
+discuss this key assumption and propose some tests that can be conducted, namely to try
+out different MIT shocks (or combinations thereof) and see whether the additivity and
+scalability are approximately satisfied. In our example economies, these tests are passed
+with flying colors.
+
+
+3     The settings
+
+We consider a variety of models, the focus of course being on heterogeneous-agent economies.
+However, we also study a very standard representative-agent model to illustrate how our
+methods work. The representative-agent model can be solved non-linearly for a response
+to an MIT shock with standard Dynare commands. We then use this response to gen-
+erate a simulation with shocks and use it to compute conditional moments. Therefore,
+we begin with a description of the representative-agent economy, after which we describe
+the heterogeneous-agent economy. At the end we also look at a model with a demand
+externality; we describe this setting last.
+
+
+3.1   A benchmark representative-agent model
+
+Though our benchmark representative-agent framework involves no frictions, so that one
+could focus on a planning problem, we describe the decentralized equilibrium here as it is
+the core on which the equilibrium with heterogeneous agents is later built.
+    The production technology is standard and involves two shocks. There is a repre-
+sentative firm producing under perfect competition according to the following production
+function:
+                                       yt = zt ktα ht1−α .                               (1)
+
+Thus, the firm solves
+                               max = zt k α h1−α − rt k − wt h,                          (2)
+                                k,h
+
+at time t where the rental rate, rt , and the wage rate, wt , are taken by the firm as given.
+The term zt is a random variable that is taken by the firm as given too; it is exogenous
+
+
+
+                                               22
+and follows a stochastic process given by log zt+1 = ρz log zt + σz z,t+1 , with ρz ∈ (0, 1)
+and z a standard normal shock.
+   Capital accumulation occurs according to
+
+
+                                         kt+1 = (1 − δ)kt + it ,                           (3)
+
+
+where it is investment measured in efficiency units of capital.
+   The resource constraint reads
+                                               ct + qt it = yt ,                           (4)
+
+where qt is an investment-specific technology shock; a fall in its value increases the capacity
+for producing capital. We assume that the investment-specific technology too follows an
+AR(1) process in logs: log qt+1 = ρq log qt + σq q,t+1 , with ρq ∈ (0, 1) and q a standard
+normal shock.
+   There is a representative household solving
+                                                             (∞                  )
+                                                              X
+                                     max                E0          β t u(ct , ht ) ,
+                             {kt+1 ,bt+1 ,ht ,ct }∞
+                                                  t=0         t=0
+
+
+subject to
+
+
+               qt kt+1 + bt+1 = (qt (1 − δ) + rt )kt + bt (1 + r̃t ) + wt ht − ct − Tt ,   (5)
+
+
+ht , ct ≥ 0, and a standard no-Ponzi scheme condition. We have 0 < β < 1, σ > 0, and
+θ > 0. Labor supply is endogenous; T is a lump-sum transfer that will be considered only
+in the heterogeneous-agent model. We note that there are two assets: physical capital and
+government bonds (denoted by b). They must have the same return in a deterministic
+version of the model and, under aggregate uncertainty and a linearized equilibrium, the
+same expected return, even though government bonds gives a safe return and the return
+to capital is risky:                                                       
+                                                        qt+1           rt+1
+                              1 + r̃t+1 = Et                 (1 − δ) +        .            (6)
+                                                         qt             qt
+
+
+
+                                                         23
+   The government budget, finally, reads
+
+
+                                            bt+1 = bt (1 + r̃t ) − Tt .                              (7)
+
+
+When we implement a budget rule in the heterogeneous-agent model we will be more
+specific on the joint path T and b; in the representative-agent model Ricardian Equivalence
+holds so whatever rule is in place will not affect the equilibrium allocation.
+   The equilibrium characterization is straightforward and standard. The first-order con-
+ditions of the household problem read
+                                                                                             
+                                                qt+1           rt+1
+                   uc (ct , ht ) = βEt               (1 − δ) +             uc (ct+1 , ht+1 ),        (8)
+                                                 qt             qt
+
+and
+                                          uc (ct , ht )wt = −uh (ct , ht ),                          (9)
+
+together with a transversality condition. The firm’s first-order conditions are
+
+
+                                            rt = αzt (kt /ht )−(1−α) ,                              (10)
+
+
+and
+                                           wt = (1 − α)zt (kt /ht )α .                              (11)
+
+   The equilibrium sequence {ct , ht , kt+1 }∞
+                                             t=0 is then simply given by
+
+                                                                                          
+                                 qt+1           αzt+1              −(1−α)
+      uc (ct , ht ) = βEt             (1 − δ) +       (kt+1 /ht+1 )         uc (ct+1 , ht+1 ) ,     (12)
+                                  qt             qt
+
+                                 uc (ct , ht )(1 − α)zt (kt /ht )α = −uh (ct , ht ),                (13)
+
+and
+                                   qt kt+1 = (1 − δ)qt kt + zt ktα ht1−α − ct ,                     (14)
+
+which amounts to a system of stochastic difference equations in the sequences for consump-
+tion, hours, and capital, with the restrictions k0 and a limit condition that combines the
+
+
+                                                         24
+no-Ponzi game constraint and a transversality condition; the stochastic z and q processes
+are an exogenously given determinant of the consumption, hours, and capital processes.
+   The steady state can be found as a solution (k, h, c) to the above equations when
+shocks are constant (and normalized to 1), i.e., three equations in three unknowns:
+
+                                                       
+                              1 = β 1 − δ + α(k/h)−(1−α) ,
+
+
+                            uc (c, h)(1 − α)(k/h)α = −uh (c, h),
+
+and
+                                     δk = k α h1−α − c.
+
+In our application we will use the following functional form of preferences:
+
+                                                          1+ 1
+                                           c1−σ − 1   h θ
+                              u(ct , ht ) = t       −ψ t 1.
+                                             1−σ      1+ θ
+
+3.2   The heterogeneous-agent model
+
+We now describe the model when consumers are subject to idiosyncratic shocks. For easier
+notation, we describe it without transfers and bonds but our computations include the
+same kinds of taxes as used in the representative-agent setting.
+   In the heterogeneous-agent model, different consumers will have different amounts of
+efficiency units of labor per hour worked and different levels of wealth. Wages thus consist
+of two components: an aggregate part, w, and an idiosyncratic one, , which is independent
+across consumers and for which a law of large number holds. There is no direct insurance
+against wage shocks but workers can save and they can borrow subject to a borrowing
+constraint: their borrowing must not exceed −k. The implication of these assumptions
+is that a workers wealth will fluctuate over time—reflecting precautionary savings—and
+that the marginal propensities to consume and work will vary in the population. Hence,
+changes in the aggregate economy, e.g., through policy, will generate nontrivial responses
+by the aggregate of consumers. Hence, the joint distribution of  and wealth will matter
+
+
+
+                                            25
+for outcomes in this model; we will denote this distribution Γ and it will be defined below.
+This distribution is also the high-dimensional state variable that makes computation in
+this class of models challenging as it will evolve endogenously over time. In a steady state
+it will be constant: individual wealth and income will vary stochastically but the overall
+distribution of these quantities across individuals will not change.
+       Aside from aggregate prices today and in the future, the consumers decision will be
+informed by the initial individual state, which can be summarized here by the idiosyncratic
+wage shock, , and cash on hand (excluding current labor income), which we denote ω.
+We formulate the consumer’s problem recursively and we begin by defining a stationary
+equilibrium. For all (ω, ), the following functional equation has to be met:
+
+
+                 V (ω, ) = max
+                             0
+                                u(ω + wh − k 0 , h) + βE[V (k 0 (1 − δ + r), 0 )|],
+                             k ,h
+
+
+s.t. k 0 ≥ k. Here,  is some (idiosyncratic) productivity process on finite support to be
+specified later. This problem leads to a pair of decision rules for capital accumulation and
+hours: fk (ω, ) and fh (ω, ), respectively.
+       A stationary equilibrium can now be defined as prices r and w, decision rules fk and
+fh , and a stationary distribution Γ such that
+
+   1. fk (ω, ) and fh (ω, ) attain the maximum in the consumer’s problem for all (ω, );
+                                                       P R
+   2. r = Fk (k̄, h̄) and w = Fh (k̄, h̄), where k̄ ≡ (  ω ωΓ(dω, ))/(1 − δ + r) and h̄ ≡
+      P R
+         ω fh (ω, )Γ(dω, ); and
+
+                                                    P        R
+   3. for all relevant Borel sets B, Γ(B, ) =          ˜ π|˜
+                                                               ω:fk (ω,˜
+                                                                        )(1−δ+r)∈B   Γ(dω, ˜).
+
+In this definition we use F (k, h) ≡ k α h1−α and we implicitly, then, set z = 1; similarly,
+we implicitly set q = 1.
+       An equilibrium with aggregate shocks can be defined as well in a standard manner. We
+instead define the equilibrium we will compute, that is, a deterministic equilibrium where
+z and q follow predictable paths.16 In an equilibrium, we have a consumer’s problem that
+  16
+    Our definition here also serves the role of highlighting how the agent’s problem in a transition-path
+equilibrium is very similar to that in a steady state and, hence, can be computed in a very similar way.
+
+
+                                                   26
+can be written, for all t,
+                                                      
+                                                                               
+                                         0              0 qt+1           rt+1
+   Vt (ω, ) = max     u(ω + wt h − k , h) + βE Vt+1 k        (1 − δ) +       , 0 | .
+               k0 ≥k,h                                     qt             qt
+
+This problem leads to decision rules fk,t (ω, ) and fh,t (ω, ).
+   A sequential equilibrium can now be defined as the sequences of prices {rt }∞
+                                                                               t=0 and
+
+{wt }∞                           ∞              ∞                             ∞
+     t=0 , decision rules {fk,t }t=0 and {fh,t }t=0 , and a distribution {Γt }t=0 such that
+
+
+   1. fk,t (ω, ) and fh,t (ω, ) attain the maximum in the consumer’s problem for all (ω, )
+      and t;
+                                                                                                                    
+   2. rt = zt Fk (k̄t , h̄t ) and wt = zt Fh (k̄t , h̄t ), where k̄t ≡ (  ω ωΓt (dω, ))/ qt+1               rt+1
+                                                                        P R
+                                                                                            qt (1 − δ) +       qt
+                 P R
+      and h̄t ≡  ω fh,t (ω, )Γt (dω, ); and
+                                                           P       R
+   3. for all relevant Borel sets B, Γt+1 (B, ) =         ˜ π|˜
+                                                                  ω:f (ω,˜
+                                                                            q
+                                                                          ) t+1
+                                                                                       r
+                                                                                 (1−δ)+ t+1
+                                                                                            
+                                                                                              ∈B
+                                                                                                   Γt (dω, ˜).
+                                                                      k,t      q         q
+                                                                              t          t
+
+
+
+3.3    Adding a demand externality
+
+We now look at a simple extension whose main purpose is computational: to try to solve
+for an equilibrium where two aggregate (price or quantity) sequences need to be guessed
+and iterated upon in order to solve for a transitional equilibrium in response to an MIT
+shock away from steady state.
+   Thus, assume that the aggregate production function reads
+
+
+                                             yt = At ktα ht1−α ,                                       (15)
+
+
+where At ≡ zt φ(ct ) is taken as given by firms but ct denotes aggregate consumption. The
+factor φ(ct ) thus captures the externality; it is an increasing function and can perhaps be
+thought of as a “utilization” function driven by consumption demand.
+   Thus, the firm solves
+                                  max = At k α h1−α − rt k − wt h                                      (16)
+                                   k,h
+
+at time t.
+
+
+                                                     27
+    Given this formulation, one can ask how a planner would wish to choose an allocation—
+in what way the market allocation fails. However, that is not our aim here. Rather, let
+us note that if ct does not appear as an argument in TFP, i.e., if there is no consumption
+externality, then knowing the capital-labor ratio, along with zt , one can compute the
+equilibrium prices rt and wt . With an externality, however, the capital-labor ratio is not
+sufficient information: one needs to know both this ratio and the level of consumption.
+Therefore, when solving for a transition equilibrium in response to an MIT shock, one
+needs to guess on two sequences (either for r and w or for c and k/h) in order to have
+enough information so that the consumer’s problem is fully specified and can be solved.
+This is not a model virtue per se, of course; we merely add a “complication” so that we
+can put our method to a slightly more demanding test.
+
+
+4    Numerical approach
+
+Here we describe some details of our computations.
+
+
+Representative-agent model          We solve the representative-agent model in Dynare.
+Dynare has a routine that solves for a transition path nonlinearly, and we use this routine
+to find the transitional equilibrium. We start at a steady state and consider a small in-
+crease in z0 and a subsequent deterministic transition of z1 , z2 , and so on, back toward 1.
+We treat the resulting transitional path for output (and any other aggregates of interest)
+as an impulse response—a numerical derivative of output k periods hence in response to
+a shock to (the logarithm of) z at time 0—and then use this impulse response in simula-
+tions to obtain realizations of the stochastic equilibrium based on which we then compute
+unconditional moments. We then compute another transition path, this time for an in-
+novation to (the logarithm of) q, and compute the deterministic transition path. These
+paths are then employed to run simulations and compute unconditional moments—in the
+case of output only, its autocorrelation function—that can be compared to those produced
+by the standard Dynare output based on linearization.
+    In carrying out these computations and comparisons, accuracy is improved by (i)
+
+
+                                             28
+choosing an appropriately small initial shock (so as to approximate a numerical derivative
+as well as possible); (ii) setting a small enough tolerance level for Dynare’s nonlinear
+routine; and (iii) allowing sufficiently many time periods in the impulse response.
+
+
+Heterogeneous-agent model, stationary equilibrium For the heterogeneous-agent
+model the first step is to find a stationary equilibrium. We carry this task out using our
+own MATLAB code. The consumer’s problem is solved on a grid using the endogenous
+grid point method of Carroll (2006).17 The individual income process is an AR(1) process
+and we use 7 grid points to discretize the process into a Markov chain using Rouwenhorst’s
+method (Kopecky and Suen, 2010). For the decision rules, the asset grid has 50 points,
+non-linearly spaced, and households can choose points off the grid by piecewise cubic
+interpolation (pchip in MATLAB). The dynamic programming problem is then solved by
+evaluating the value function at the optimal decisions for consumption, hours, and savings.
+    The steady state is solved for simultaneously with the calibration of the capital-output
+ratio and hours worked. Instead of having nested loops—where one guesses on parameters,
+then conditional on those parameters solves for market clearing prices, then checks if those
+prices are consistent with the calibration targets—there is only one loop where we use
+parameters to clear markets at fixed prices (instead of using prices to clear markets at
+fixed parameters). The target for the capital-output ratio (10.26, quarterly) pins down
+the real rate and wages, and the target for hours (1/3) pins down the level of aggregate
+capital. To find the steady state given these prices and quantities, one guesses on β and
+ψ, solves the household problem and computes aggregate assets and labor supplied by
+the households. If either quantity is too high or too low relative to the demand from
+firms, the guesses are updated. We use a MATLAB’s fsolve solver, which employs a
+trust-region method to solve for the values of β = 0.985 and ψ = 8.024 that clear the
+markets. The stationary distribution is solved for by approximating the distribution using
+  17
+     The method involves guessing a policy rule for consumption of a function of assets and idiosyncratic
+productivity, setting a grid on tomorrow’s assets, then solving (in closed form) for today’s consumption
+using the Euler equation of the household. This then allows one to cover the implied grid for today’s assets
+consistent (hence giving the method its name) which is then used to update the consumption function. We
+do the updating by interpolating the consumption function between the exogenous and endogenous grids
+using piecewise cubic interpolation.
+
+
+                                                    29
+a histogram over income and assets defined on a finer grid than the policy functions—1,000
+points (also non-linearly spaced). We compute the transition matrix between individual
+states using the policy functions of households and the Markov transition matrix for labor
+productivity. We recover the invariant distribution by finding the eigenvector associated
+with the largest eigenvalue (1) of the transition matrix. Aggregate savings and labor supply
+is then straightforwardly computed as the sum of savings over the invariant distribution.
+
+
+Heterogeneous-agent model, transitional equilibrium To solve for a transitional
+equilibrium we also use a home-made MATLAB code. The solution algorithm here is
+outlined as follows:
+Transitional Equilibrium Algorithm
+
+   1. Choose a time T at which point we assume the economy has reached steady state.
+
+   2. Guess a path for the capital-labor ratio, ({Kt/Ht }Tt=0 )0 .
+
+   3. Solve the value function (and policy functions) backwards from t = T −1, . . . 1 setting
+      V T = V SS .
+
+   4. Starting from the steady state distribution, simulate the distribution forward from
+      t = 1, . . . , T using the policy functions and idiosyncratic productivity Markov tran-
+      sition matrix.
+
+   5. At each t, compute aggregate capital and labor supplied KtS , HtS using the distribu-
+      tion and policy functions.
+
+   6. Compute the maximum difference between supply and demand ζ = max |Kt/Ht −
+      KtS/H S |.
+            t
+
+
+
+   7. If ζ < 10−5 min{x,0 , 1}, STOP.
+
+   8. Update guess18 ({Kt/Ht }Tt=0 )1 = υ({Kt/Ht }Tt=0 )0 + (1 − υ){KtS/HtS }Tt=0 and GO TO 2.
+  18
+     The particular values we choose for υ are 0.8, when the deviation ζ is greater than 10−4 , and 0.65
+otherwise.
+
+
+
+
+                                                  30
+The basic idea is that after some long amount of time (here T = 350 quarters) the economy
+will return to the original steady state. Thus, we are guessing on a transition path back
+to the original steady state. In order to solve the households’ and firms’ problems we need
+to know the path of prices along the transition. The capital-labor ratio is sufficient to
+pin down the prices, thus, by guessing a path for the capital-labor ratio we have all the
+prices that we need.19 Thus, then we can take the original steady state value function
+as our terminal condition and solve the household problem backwards. We then simulate
+the distribution over households forward starting with the steady state distribution. If
+the path of the capital output ratio implied by the policy functions and distribution is
+sufficiently close to our guess, we’ve solved for the equilibrium and we’re done. Otherwise,
+we update the guess by taking a convex combination between the guessed path and the
+path implied by simulating forward. Despite the fact that the shooting method that we use
+for the transition path does not have well established convergence properties, in practice
+we find that our algorithm achieves roughly first-order convergence when beginning with
+an initial guess for the path of the capital-labor ratio obtained from the representative-
+agent model. Thus, typically we can achieve our desired level of convergence in less than
+15 iterations.
+    The simulation of a stochastic equilibrium is identical to that used for the representative-
+agent model.
+
+
+5     Parameter selection
+
+5.1    Calibration
+
+Our calibration is straightforward. For the standard parameters we use α = 0.36 to
+match the capital share, δ = 0.025 to match a real rate of 4% per year, and σ = 1
+(logarithmic curvature) as a benchmark value used in the literature. We choose a Frisch
+elasticity θ of 1, again as a standard in the literature. We use standard parameters for
+the technology shocks, a serial correlation coefficient ρz for TFP of 0.95, and a ρq for the
+  19
+     We typically use the solution to the representative-agent model as the initial guess for solving the
+transition.
+
+
+                                                   31
+investment-specific shock of 0.9, with standard deviations σz for TFP of 0.007 and σq for
+the investment-specific shock of 0.02.
+   We calibrate the income process following Krueger, Mitman, and Perri (2016) who
+estimate a process for disposable earnings after taxes and transfers using the PSID. They
+estimate the quarterly persistence for innovations, ρy , to be 0.9923 and the standard
+deviation, σy , to be 0.0983. We treat their measured transitory shock as measurement
+error.
+
+
+5.2      Findings
+
+We begin with the representative-agent (RA) economy, where we can implement our
+method using only Dynare’s model solution. We then display results for the benchmark
+heterogeneous-agent (HA) model, after which we produce checks on the linearity assump-
+tion. We finally present results from the model with an externality and with policy.
+
+
+5.2.1     The RA case
+
+Figure 1 displays the impulse response function for output and various aggregates for the
+RA economy. These results are computed using Dynare’s nonlinear transition algorithm.
+Unless otherwise noted, we always select innovations of size x,0 = 0.01.
+   The figure reports impulse responses that have the expected shape and, by ocular
+inspection, look just like those obtained from Dynare’s standard, linearization-based im-
+pulse response command (we omit showing the latter for brevity). What is key here,
+however, is that we can now simulate the representative-agent economy with aggregate
+shocks based on these impulse responses and compare its features to those generated by
+Dynare’s linearization-based algorithm, as well as for its higher orders of perturbation.
+These results are contained in Table 1 below. Our method produces nearly identical cor-
+relation statistics to those using Dynare linearization and they are also very close to the
+values using second-order perturbation.
+   For the benchmark simulation method we used 500 periods from the deterministic
+impulse response functions. It is instructive to understand how the approximation varies
+
+
+                                            32
+                                   TFP Shock                          10 -5   Consumption                    10 -5   Capital
+             1.00008                                         5                                      6
+
+             1.00007
+                                                                                                    5
+                                                             4
+             1.00006
+                                                                                                    4
+             1.00005                                         3
+             1.00004                                                                                3
+
+             1.00003                                         2
+                                                                                                    2
+             1.00002
+                                                             1
+                                                                                                    1
+             1.00001
+
+                   1                                         0                                      0
+                       0                50           100          0               50        100          0             50      100
+
+
+
+
+                           10 -5   Interest rate                      10 -5     Wages                        10 -4   Output
+                 10                                          6                                      1
+
+                   8                                         5
+                                                                                                  0.8
+                   6
+                                                             4
+                                                                                                  0.6
+                   4
+                                                             3
+                   2
+                                                                                                  0.4
+                                                             2
+                   0
+                                                                                                  0.2
+                  -2                                         1
+
+
+                  -4                                         0                                      0
+                       0                50           100          0               50        100          0             50      100
+
+
+
+
+                           10 -4Inv Specific Shock                    10 -4   Consumption                    10 -4   Capital
+                 2.5                                       1.5                                      0
+
+                                                                                                  -0.2
+                   2                                         1
+                                                                                                  -0.4
+
+                 1.5                                       0.5
+                                                                                                  -0.6
+
+                                                                                                  -0.8
+                   1                                         0
+
+                                                                                                   -1
+                 0.5                                       -0.5
+                                                                                                  -1.2
+
+                   0                                        -1                                    -1.4
+                       0                50           100          0               50        100          0             50      100
+
+
+
+
+                           10 -5   Interest rate                      10 -5     Wages                        10 -5   Output
+                   8                                         4                                      0
+
+                   6                                                                               -1
+                                                             2
+                   4
+                                                                                                   -2
+                   2                                         0
+                                                                                                   -3
+                   0
+                                                                                                   -4
+                  -2                                        -2
+
+                                                                                                   -5
+                  -4
+                                                            -4
+                  -6                                                                               -6
+
+                  -8                                        -6                                     -7
+                       0                50           100          0               50        100          0             50      100
+
+
+
+
+Figure 1: Impulse responses to neutral (top) and investment-specific (bottom) technology
+shocks for the representative-agent economy
+
+                                                                               33
+      Table 1: Correlations between variables — RA economy
+
+z               q        y        c        i        h        r        w
+Our method (N = 500)
+1.000        -0.021     0.785    0.506    0.286    0.372    0.199    0.748
+-0.021       1.000     -0.533    0.324   -0.856   -0.911    0.156   -0.124
+0.785        -0.533     1.000    0.496    0.512    0.686   -0.257    0.867
+0.506        0.324      0.496    1.000   -0.492   -0.284   -0.614    0.863
+0.286        -0.856     0.512   -0.492    1.000    0.969    0.349    0.016
+0.372        -0.911     0.686   -0.284    0.969    1.000    0.137    0.236
+0.199        0.156     -0.257   -0.614    0.349    0.137    1.000   -0.502
+0.748        -0.124     0.867    0.863    0.016    0.236   -0.502    1.000
+    Dynare 1st order
+1.000        -0.021     0.785    0.506    0.286    0.372    0.199    0.748
+-0.021       1.000     -0.533    0.324   -0.855   -0.911    0.156   -0.124
+0.785        -0.533     1.000    0.496    0.512    0.686   -0.257    0.867
+0.506        0.324      0.496    1.000   -0.492   -0.284   -0.614    0.863
+0.286        -0.855     0.512   -0.492    1.000    0.969    0.349    0.016
+0.372        -0.911     0.686   -0.284    0.969    1.000    0.136    0.236
+0.199        0.156     -0.257   -0.614    0.349    0.136    1.000   -0.502
+0.748        -0.124     0.867    0.863    0.016    0.236   -0.502    1.000
+   Dynare 2nd order
+1.000        -0.021     0.784    0.505    0.287    0.368    0.200    0.746
+-0.021       1.000     -0.534    0.323   -0.855   -0.909    0.157   -0.125
+0.784        -0.534     1.000    0.496    0.512    0.681   -0.258    0.867
+0.505        0.323      0.496    1.000   -0.492   -0.287   -0.615    0.863
+0.287        -0.855     0.512   -0.492    1.000    0.967    0.350    0.016
+0.368        -0.909     0.681   -0.287    0.967    1.000    0.137    0.232
+0.200        0.157     -0.258   -0.615    0.350    0.137    1.000   -0.503
+0.746        -0.125     0.867    0.863    0.016    0.232   -0.503    1.000
+
+
+
+
+                                 34
+with the length of the IRF used for the linearization. In Table 2 we display the model
+correlations when we use our method with 10, 100, and 500 (benchmark) periods of the
+IRF for the linearization. As the shocks are persistent, the approximations begin to differ
+when only using a truncated history of the shocks, suggesting that a longer time horizon
+is necessary for an accurate approximation when using highly persistent shocks. However,
+the 100-period simulation length still does a decent job under this scenario.
+
+                Table 2: Correlations between variables — RA economy
+
+        z             q            y        c        i        h        r         w
+        Benchmark (N = 500)
+        1.000      -0.021         0.785    0.506    0.286    0.372    0.199    0.748
+        -0.021      1.000        -0.533    0.324   -0.856   -0.911    0.156   -0.124
+        0.785      -0.533         1.000    0.496    0.512    0.686   -0.257    0.867
+        0.506       0.324         0.496    1.000   -0.492   -0.284   -0.614    0.863
+        0.286      -0.856         0.512   -0.492    1.000    0.969   0.349     0.016
+        0.372      -0.911         0.686   -0.284    0.969    1.000   0.137     0.236
+        0.199       0.156        -0.257   -0.614    0.349    0.137   1.000    -0.502
+        0.748      -0.124         0.867    0.863    0.016    0.236   -0.502    1.000
+               N = 100
+        1.000      -0.018         0.778    0.503    0.284    0.369    0.198    0.741
+        -0.018      1.000        -0.540    0.312   -0.853   -0.911    0.174   -0.135
+        0.778      -0.540         1.000    0.499    0.512    0.688   -0.271    0.868
+        0.503       0.312         0.499    1.000   -0.489   -0.278   -0.616    0.863
+        0.284      -0.853         0.512   -0.489    1.000    0.968   0.337     0.018
+        0.369      -0.911         0.688   -0.278    0.968    1.000   0.120     0.241
+        0.198       0.174        -0.271   -0.616    0.337    0.120   1.000    -0.511
+        0.741      -0.135         0.868    0.863    0.018    0.241   -0.511    1.000
+               N = 10
+        1.000       0.007        0.784     0.420    0.329   0.345    0.808      0.924
+        0.007       1.000        -0.599    0.819   -0.932   -0.934   -0.064     0.051
+        0.784      -0.599        1.000    -0.108   0.804    0.828    0.593      0.751
+        0.420       0.819        -0.108    1.000   -0.678   -0.644   0.050      0.576
+        0.329      -0.932        0.804    -0.678   1.000    0.997    0.409      0.211
+        0.345      -0.934        0.828    -0.644   0.997    1.000    0.381      0.253
+        0.808      -0.064        0.593     0.050   0.409     0.381    1.000     0.521
+        0.924       0.051        0.751     0.576    0.211   0.253    0.521      1.000
+
+
+
+
+                                            35
+5.2.2    The HA case
+
+Turning to the heterogeneous-agent economy, our impulse response functions for output
+and other aggregates are contained in Figures 2 and 3 below, where we include the IRFs
+from the representative-agent economy for comparison.
+
+
+                        10 -5   TFP Shock                       10 -5   Consumption                      10 -5        Capital
+                8                                      5                                        6
+
+                7
+                                                                                                5
+                                                       4
+                6
+                                                                                                4
+                5                                      3
+                4                                                                               3
+
+                3                                      2
+                                                                                                2
+                2
+                                                       1
+                                                                                                1
+                1
+
+                0                                      0                                        0
+                    0           20           40   60        0           20           40   60         0           20             40        60
+
+
+
+
+                        10 -5        Hours                      10 -5        Wages                       10 -4        Output
+               10                                      6                                        1
+                                                                                                                                     HA
+                8                                      5                                                                             RA
+                                                                                               0.8
+                6                                      4
+
+                                                                                               0.6
+                4                                      3
+
+                2                                      2
+                                                                                               0.4
+
+                0                                      1
+                                                                                               0.2
+               -2                                      0
+
+               -4                                      -1                                       0
+                    0           20           40   60        0           20           40   60         0           20             40        60
+
+
+
+
+ Figure 2: Impulse response to neutral technology shock for the HA and RA economies
+
+
+   The impulse response in the heterogeneous-agent model looks quite similar to that in
+the representative-agent setting in the case of a neutral technology shock, though, there
+is a noticeable difference in the response of hours and the capital stock. However, in
+response to the investment-specific shock we note significantly more propagation in the
+heterogeneous-agent relative to the representative-agent economy, with all series noticeably
+different.
+   Given this impulse response we then generate output for an economy with aggregate
+shocks based on treating the impulse response above as a linear response. We simulate
+
+
+                                                                         36
+                        10 -4Inv-Specific   Shock                   10 -4   Consumption                       10 -4        Capital
+             2.5                                         1.5                                         0
+
+                                                                                                   -0.2
+               2                                           1
+                                                                                                   -0.4
+
+             1.5                                         0.5
+                                                                                                   -0.6
+
+                                                                                                   -0.8
+               1                                           0
+
+                                                                                                    -1
+             0.5                                         -0.5
+                                                                                                   -1.2
+
+               0                                          -1                                       -1.4
+                    0           20           40     60          0           20           40   60          0           20             40        60
+
+
+
+
+                        10 -4        Hours                          10 -5        Wages                        10 -5        Output
+               1                                           4                                         0
+                                                                                                                                          HA
+                                                                                                    -1                                    RA
+                                                           2
+             0.5
+                                                                                                    -2
+
+                                                           0
+                                                                                                    -3
+               0
+                                                                                                    -4
+                                                          -2
+
+                                                                                                    -5
+             -0.5
+                                                          -4
+                                                                                                    -6
+
+              -1                                          -6                                        -7
+                    0           20           40     60          0           20           40   60          0           20             40        60
+
+
+
+
+Figure 3: Impulse response to investment-specific technology shock for the HA and RA
+economies
+
+
+
+
+                                                                             37
+shocks for 10,500 periods and discard the first 500 periods of the simulation. One of
+the advantages of our approximation procedure is that we are able to directly simulate
+interesting statistics from the distribution. For example, in Table 3 we include the Gini
+coefficient of the wealth distribution and the fraction of households that are borrowing
+constrained (the steady-state values are 0.77 for the Gini and 26% for the constrained).
+We include the impulse responses for the Gini and fraction of hand-to-mouth (HtM)
+households in Figure 4.
+
+                                       Table 3: Correlations between variables — HA economy
+
+        z       q       y                                        c                         i          h                         r              w             HtM             Gini
+             HA model
+       1.000 -0.021 0.807                                    0.537               0.370              0.263                    0.229         0.772             -0.289      -0.337
+      -0.021 1.000 -0.512                                    0.310              -0.908              -0.838                  0.171         -0.131              0.426       0.500
+       0.807 -0.512 1.000                                    0.526               0.671              0.467                   -0.212         0.881             -0.709      -0.772
+       0.537  0.310   0.526                                  1.000              -0.269              -0.506                  -0.567        0.865              -0.669      -0.643
+       0.370 -0.908 0.671                                   -0.269               1.000              0.958                   0.145          0.247             -0.294      -0.386
+       0.263 -0.838 0.467                                   -0.506               0.958              1.000                   0.379         -0.006             -0.019      -0.111
+       0.229  0.171 -0.212                                  -0.567               0.145              0.379                   1.000         -0.443              0.805       0.771
+       0.772 -0.131 0.881                                    0.865               0.247              -0.006                  -0.443        1.000              -0.792      -0.814
+      -0.289 0.426 -0.709                                   -0.669              -0.294              -0.019                  0.805         -0.792              1.000       0.985
+      -0.337 0.500 -0.772                                   -0.643              -0.386              -0.111                  0.771         -0.814              0.985       1.000
+
+
+
+                         -5                                                                                            -5
+                    10                                                                                            10
+        0.5                                                                                               8
+                                                                               Gini                                                                                          Gini
+                                                                               HtM                                                                                           HtM
+                                                                                                          7
+            0
+
+
+                                                                                                          6
+        -0.5
+
+                                                                                                          5
+         -1
+
+                                                                                                          4
+
+        -1.5
+                                                                                                          3
+
+         -2
+                                                                                                          2
+
+
+        -2.5
+                                                                                                          1
+
+
+
+         -3                                                                                               0
+                0             5   10    15   20   25   30   35       40   45          50                      0             5   10   15   20       25   30    35   40   45          50
+
+
+
+
+Figure 4: Distributional impulse responses to the neutral shock (left) and investment-
+specific shock (right) for the HA economy
+
+
+
+
+                                                                                               38
+5.2.3   Are the responses linear? Some tests
+
+Next, we explore the appropriateness of the linearity and symmetry assumptions implicit
+in our methodology. For brevity, we limit our tests to the HA economy, but similar results
+obtain in the RA case. First, we compute the impulse responses for the z and q shocks of
+sizes for ±0.01 and ±2 standard deviations to investigate whether the deterministic IRFs
+exhibit asymmetries or non-linearities. The normalized (by shock size) impulse responses
+for output to productivity are plotted in Figure 5. The values are normalized by the size
+of the initial shock (i.e., in log deviations from steady-state consumption divided by the
+log of productivity, z0 ). The solid and dotted lines correspond to the 0.01% and -0.01%
+impulse responses, respectively. Note that there is a striking absence of asymmetry or
+non-linearity in the shocks. We plot the equivalent figure for investment-specific shocks
+in Figure 6 with virtually the same result, though here there is a visible deviation with a
+slightly smaller response for the larger positive shock.
+
+
+                                                                                  10-3
+                                                                          9
+                                                                                                                      0.01
+                    Output (Normalized Log Deviation from Steady State)
+
+
+
+
+                                                                                                                      2
+                                                                          8
+                                                                                                                      -0.01
+                                                                                                                      -2
+                                                                          7
+
+
+                                                                          6
+
+
+                                                                          5
+
+
+                                                                          4
+
+
+                                                                          3
+
+
+                                                                          2
+
+
+                                                                          1
+
+
+                                                                          0
+                                                                              0          5   10             15   20           25
+                                                                                                  Quarter
+
+
+
+
+Figure 5: Normalized impulse responses for small/large positive/negative neutral shocks
+
+
+   Next, we assess the appropriateness of linearity in the number of shocks. We compute
+the perfect-foresight impulse responses for both z and q shocks occurring at the same
+
+
+                                                                                                  39
+                                                                                                                                      10-3
+                                                                                                                             0
+                                                                                                                                                                                                                                                                      0.01
+
+
+                                                                       Output (Normalized Log Deviation from Steady State)
+                                                                                                                                                                                                                                                                      2
+                                                                                                                             -1                                                                                                                                       -0.01
+                                                                                                                                                                                                                                                                      -2
+
+
+                                                                                                                             -2
+
+
+
+                                                                                                                             -3
+
+
+
+                                                                                                                             -4
+
+
+
+                                                                                                                             -5
+
+
+
+                                                                                                                             -6
+
+
+
+                                                                                                                             -7
+                                                                                                                                  0                  5                         10                                                   15                      20                  25
+                                                                                                                                                                                    Quarter
+
+
+
+
+Figure 6: Normalized impulse responses for small/large positive/negative investment-
+specific shocks
+
+
+time, correlated either perfectly positively or perfectly negatively. We can then compare
+the IRFs to those from taking the linear combination of the IRFs to the two shocks
+individually.
+
+                                                            -5                                                                                                                                                                                     -4
+                                                       10                                                                                                                                                                                     10
+                                              3                                                                                                                                                                                      0
+                                                                                                                                                              Nonlinear                                                                                                                   Nonlinear
+                                                                                                                                                              Linear                                                                                                                      Linear
+                                                                                                                                                                                                                                   -0.2
+                                             2.5
+        Output (Log Dev from Steady State)
+
+
+
+
+                                                                                                                                                                                              Output (Log Dev from Steady State)
+
+
+
+
+                                                                                                                                                                                                                                   -0.4
+
+                                              2
+                                                                                                                                                                                                                                   -0.6
+
+
+                                             1.5                                                                                                                                                                                   -0.8
+
+
+                                                                                                                                                                                                                                    -1
+                                              1
+
+                                                                                                                                                                                                                                   -1.2
+
+                                             0.5
+                                                                                                                                                                                                                                   -1.4
+
+
+                                              0                                                                                                                                                                                    -1.6
+                                                   0               5                                                         10                 15       20               25                                                              0             5        10             15   20               25
+                                                                                                                                      Quarter                                                                                                                         Quarter
+
+
+
+
+                                                                 Figure 7: Differential impulse responses for correlated shocks.
+
+
+   Clearly, from inspecting Figure 7 there is very little sign of departure from linearity
+here as well.
+
+
+
+                                                                                                                                                                                    40
+5.2.4      Policy: Ricardian non-equivalence and demand-determined output
+
+In the model above, policy would have nontrivial effects relative to the corresponding
+representative-agent economy. This is perhaps a surprise to some, as it is often claimed
+that the model in Krusell and Smith (1998) “shows” that the distribution (almost) does
+not matter for outcomes. The quotation marks are used here because the opposite is in fact
+shown in the same paper. In the case where all consumers have the same discount factor
+the distribution (almost) does not matter for outcomes but in the case with discount-
+factor heterogeneity the distribution does matter. Moreover, the case where it matters
+is the quantitatively reasonable case in the sense that it matches the empirical wealth
+distribution well, whereas the case without discount-factor heterogeneity does not. The
+present model, though not featuring discount-factor heterogeneity, also features significant
+wealth inequality and gives the distribution a more prominent role, largely because the
+dynamic nature of idiosyncratic shocks is different here.20 Thus it will give policy a
+nontrivial role.
+       The purpose of the present section is to show that our method makes policy very
+straightforward to study—it does not add numerical complication. In particular, we show
+how it is straightforward to compute equilibria where policy follows a rule. The class of
+such rules is very large and we specify two very simple fiscal rules for illustration only. We
+also change the model somewhat by introducing an externality: we allow for aggregate
+productivity to depend on contemporaneous aggregate consumption. A key reason for this
+addition is that it makes the model more challenging to solve: it makes it necessary to
+guess on two paths to solve for the transitional equilibrium.21 We show that our method
+continues to work very well.
+       We specify the functional form for the demand externality φ(c) as follows:
+
+
+                                          φ(c) = (c − κc )ϑ ,
+  20
+     An additional reason is that the utility function over consumption and hours employed here does not
+admit aggregation even under complete markets.
+  21
+     The externality also gives policy an additional role, but that is not our focus here.
+
+
+
+
+                                                  41
+where we set ϑ = 0.2 and κc = 0.3Css . We think of this externality as a reduced form
+for the type of demand-determined search productivity shocks modeled in, e.g., Bai et al.
+(2014). In the present paper the externality leads to a market failure, unlike in the Bai
+et al. paper, where the search process, which is competitive, leads to efficient outcomes.
+We conjecture that undirected search would generate features similar to the economy we
+consider here.
+       In this version of the model, knowing the capital-labor ratio is not sufficient for solving
+the household problem, because we need to know, in addition, aggregate consumption
+to determine the factor prices that the households face. We therefore need to shoot on
+an additional aggregate sequence and for this we choose aggregate consumption, ct . The
+algorithm for computing transitions laid out in the section above is modified to update
+both the guess for the capital-labor ratio and aggregate consumption, but is otherwise
+unchanged (i.e., conditional on those conjectured prices and the productivity shock, we
+solve the household problem backwards, then simulate forward, check market clearing—for
+capital and hours, and hence consumption—and update).22
+       We also consider a policy that stabilizes aggregate consumption. The government sets
+the lump-sum transfer according to
+
+
+                                          T = −c + 0.05b,
+
+where c is aggregate consumption and b is the level of government debt (so negative
+values of b imply that the government is saving). This formulation stabilizes aggregate
+consumption, but also ensures long-run budget balance by responding also to the level of
+government debt.
+       Before we display the results for our main endogenous variables, let us illustrate the
+sense in which shooting on two sequences (the capital-labor ratio and consumption) is
+necessary in this economy. To this end, Figures 8 and 9 compare equilibrium wages over
+time to those that would have materialized without movements in the demand externality.
+  22
+    We find that the our algorithm converges quickly when beginning with the RA model path as an initial
+guess despite the fact that we are now guessing on two sequences.
+
+
+
+                                                  42
+Thus, for each aggregate shock scenario, the difference between the curves is a measure of
+how much a consumer would go wrong by predicting the wage solely based on the capital-
+labor ratio and the neutral productivity shock, hence ignoring the externality movements.
+We take some comfort in the fact that the gap is substantial and, thus, that in this version
+of the model shooting on two, as opposed to only one, sequence, is not only necessary from
+a conceptual perspective but also important in a quantitative sense.
+
+
+                            -5
+                       10
+               8
+                                                                     Equilibrium
+                                                                     Counterfactual
+               7
+
+
+
+               6
+
+
+
+               5
+
+
+
+               4
+
+
+
+               3
+
+
+
+               2
+
+
+
+               1
+
+
+
+               0
+                   0             10   20   30   40    50   60   70    80      90      100
+
+
+
+
+          Figure 8: Wages in equilibrium vs. net of externalities, neutral shock.
+
+
+   The impulse responses for the economy with and without the policy are plotted in
+Figures 10 and 11.
+   We see that there is stabilization under the transfer policy. Note that the representative-
+agent version of the present economy would make lump-sum transfers completely ineffec-
+tive because of Ricardian Equivalence. Under incomplete markets, transfers do influence
+aggregates as they involve redistribution across households with different marginal propen-
+
+
+
+                                                     43
+                        -5
+                   10
+           8
+                                                                 Equilibrium
+                                                                 Counterfactual
+           6
+
+
+
+           4
+
+
+
+           2
+
+
+
+           0
+
+
+
+          -2
+
+
+
+          -4
+
+
+
+          -6
+               0             10   20   30   40    50   60   70    80      90      100
+
+
+
+
+Figure 9: Wages in equilibrium vs. net of externalities, investment-specific shock.
+
+
+
+
+                                                 44
+                       TFP-Specific Shock
+                       10 -5                                 10 -5   Consumption                       10 -5    Capital
+              8                                     6                                         8
+
+              6                                                                               6
+                                                    4
+              4                                                                               4
+                                                    2                 Laissez-faire
+              2                                                                               2
+                                                                      Transfer Policy
+              0                                     0                                         0
+                   0            20      40     60        0            20       40       60         0           20     40   60
+
+
+                       10 -4   Interest rate                 10 -5         Hours                       10 -4    Output
+              4                                     3                                         1
+
+                                                    2
+              2
+                                                    1                                        0.5
+              0
+                                                    0
+
+             -2                                     -1                                        0
+                   0            20      40     60        0            20       40       60         0           20     40   60
+
+
+                         Government Debt
+                       10 -3                                 10 -5    Transfers
+              0                                     4
+
+
+                                                    2
+            -0.5
+                                                    0
+
+
+             -1                                     -2
+                   0            20      40     60        0            20       40       60
+
+
+
+
+Figure 10: Impulse response to neutral shock for the HA economy with and without
+deficit-financed transfers.
+
+
+
+
+                                                                       45
+                       Inv-Specific Shock
+                      10 -4                                  10 -4   Consumption                         10 -4    Capital
+              3                                      2                                          0
+
+                                                                       Laissez-faire
+              2                                      1                 Transfer Policy        -0.5
+
+
+              1                                      0                                         -1
+
+
+              0                                     -1                                        -1.5
+                  0            20      40     60         0            20       40        60          0           20     40   60
+
+
+                      10 -4   Interest rate                  10 -5         Hours                         10 -5    Output
+              3                                      5                                          2
+
+              2                                                                                 0
+                                                     0
+              1                                                                                -2
+                                                    -5
+              0                                                                                -4
+
+             -1                                    -10                                         -6
+                  0            20      40     60         0            20       40        60          0           20     40   60
+
+
+                        Government Debt
+                      10 -4                                  10 -5    Transfers
+             10                                    15
+
+                                                   10
+              5
+                                                     5
+              0
+                                                     0
+
+             -5                                     -5
+                  0            20      40     60         0            20       40        60
+
+
+
+
+Figure 11: Impulse response to investment-specific shock for the HA economy with and
+without deficit-financed transfers.
+
+
+
+
+                                                                       46
+sities to consume and work.
+    In addition, we simulate the two versions of the model under recurring aggregate shocks
+using our method. The correlation tables are reported in Table 4. We find that under the
+deficit-financed transfer policy, aggregate consumption is significantly stabilized relative
+to laissez-faire.
+         Table 4: Correlations between variables — HA economy with externality
+
+         z        q         y          c        i             h        r        w      HtM      Gini
+      Laissez-faire
+       1.000 -0.021        0.793      0.544    0.537        0.401     0.416    0.704   -0.332   -0.386
+      -0.021 1.000        -0.237      0.258   -0.854        -0.830   0.269     0.000    0.365   0.412
+       0.793 -0.237        1.000      0.823    0.595        0.269    -0.223    0.958   -0.813   -0.855
+       0.544    0.258      0.823      1.000    0.041        -0.325   -0.387    0.951   -0.745   -0.746
+       0.537 -0.854        0.595      0.041    1.000        0.920     0.014    0.345   -0.454   -0.523
+       0.401 -0.830        0.269     -0.325    0.920        1.000    0.289    -0.018   -0.087   -0.155
+       0.416    0.269     -0.223     -0.387    0.014        0.289    1.000    -0.318    0.681    0.655
+       0.704    0.000      0.958      0.951    0.345        -0.018   -0.318    1.000   -0.818   -0.842
+      -0.332 0.365        -0.813     -0.745   -0.454        -0.087   0.681    -0.818    1.000    0.987
+      -0.386 0.412        -0.855     -0.746   -0.523        -0.155   0.655    -0.842    0.987    1.000
+      Deficit-financed   transfers
+       1.000 -0.021        0.796      0.026    0.413        0.221     0.458    0.718   -0.657   -0.367
+      -0.021 1.000        -0.311      0.400   -0.902        -0.835   0.286    -0.011   -0.282    0.029
+       0.796 -0.311        1.000      0.289    0.523        0.188    -0.142    0.935   -0.635   -0.746
+       0.026    0.400      0.289      1.000   -0.476        -0.717   -0.528   0.549    -0.528   -0.507
+       0.413 -0.902        0.523     -0.476    1.000        0.921    0.059     0.192    0.063   -0.098
+       0.221 -0.835        0.188     -0.717    0.921        1.000    0.274    -0.172    0.310    0.195
+       0.458    0.286     -0.142     -0.528    0.059        0.274    1.000    -0.242   -0.041    0.418
+       0.718 -0.011        0.935      0.549    0.192        -0.172   -0.242   1.000    -0.749   -0.818
+      -0.657 -0.282       -0.635     -0.528    0.063        0.310    -0.041   -0.749    1.000    0.485
+      -0.367 0.029        -0.746     -0.507   -0.098        0.195    0.418    -0.818    0.485    1.000
+
+
+
+
+6    Concluding remarks
+
+We first sum up by pointing to our main findings: we present a simple numerical lin-
+earization method for heterogeneous-agent models with aggregate uncertainty and we find
+that it works very well in a standard RBC setting with neutral and investment-specific
+AR(1) technology shocks. We also look at a model with a consumption externality and
+government transfer policy, both illustrating how easy it is to examine the effects of eco-
+
+
+                                                       47
+nomically relevant policy rules in our economy and how the method works well also when
+there are nontrivial market-clearing conditions each period. The tentative conclusion from
+our analysis here is that it would be entirely feasible to extend our methods to more com-
+plex settings; an example of such a setting is the kind of model studied by Smets and
+Wouters (2003), where there are frictions in price and wage setting, some additional real
+features to those considered here (such as consumption habits), and seven shocks. Given
+that one would solve for impulse responses to each shock individually, the inclusion of more
+shocks is not cumbersome: computing impulse responses to seven shocks is not much more
+time-consuming to the case of two shocks that we considered here.
+       We must also remind the reader that the only nontrivial tool necessary for implement-
+ing our solution method is value-function iteration. Value-function iteration is necessary
+for solving for the steady state and it is also the key tool in solving for the transition
+equilibrium. When it comes to what particular value-function iteration to choose, we are
+agnostic. However, we should note that using the endogenous grid point method in the
+transitional equilibrium case does allow to avoid any root finding or numerical optimiza-
+tion in the backsolve of the household decisions. One can also, alternatively, use methods
+based on policy-function iteration: our basic approach is equally applicable to that case.
+       It is obviously important to be able to solve for a transition path and it may be that
+there are settings for which this is significantly more demanding. As the techniques used
+in solving for transition paths could probably developed further—be made more stable as
+well as faster—we hope that this will not be a significant obstacle. Auclert and Rognlie
+(2017) propose a quasi-Newton method for computing transitions in heterogenous-agent
+economies that offers a promising step in this direction.23
+       Of course, our approach of using numerical linearization to solve for equilibria relies
+on nonlinearities not being important in the model at hand. Although this is a clear
+weakness, it is an integral part of the procedure we propose here to examine to what
+extent the equilibrium is “scalable”, i.e., linear. Thus, if one finds that scalability is not
+  23
+     In their application they compute an approximate Jacobian to the transitional system by solving a
+relaxed version of the household problem and then take Newton steps. They show that the their method
+is stable and efficient, and converges rapidly in their application.
+
+
+
+                                                 48
+satisfied, the model’s behavior is fundamentally more non-linear and other methods will
+have to be used, such as those offered in Krusell and Smith (1998). Finding models that
+are not approximately linear may be challenging, however, as much as such models could
+enhance our understanding of some real-world phenomena. Our scalability check seems a
+reasonable and challenging first hurdle to pass in the hunt for such models.
+       It should also be emphasized that our method, in placing MIT shocks and impulse-
+response analysis at center stage, is sequential in nature, as opposed to recursive, like most
+other approaches. Sequentiality allows us to eliminate the complications introduced by
+infinite-dimensional (and typically uncountable) state vectors and functions of these state
+vectors by replacing them by sequences that, in the numerical application, are finite. For
+example, when one goes from solving an Aiyagari model for a steady state—in which no
+aggregate state variable is needed in the individual’s dynamic programming problem—
+to solving for a transition path for the same economy, one only adds one state variable,
+namely, time. The sequential nature of impulse responses also lends itself to inspecting the
+intuitive mechanisms of the model. In models with aggregate uncertainty and a discrete
+number of shocks, such as Krusell and Smith (1998) or Krusell, Mukoyama, Rogerson, and
+Şahin (2017), impulse responses are not a natural element of the mechanism inspection
+toolbox so it becomes harder to understand the model’s conditional properties.
+       Models based on analytical linearization tend to come with an analysis of the stability
+properties of the dynamic system the model leads to (as in Blanchard and Kahn, 1980). In
+our case, no stability characterization is offered: we solve for a transition path and we do
+not characterize its uniqueness nor whether there are local explosive paths. To the extent
+there is a indeterminate set of stable paths, however, one would think that the iteration
+over price paths would have poor convergence properties; in any case, determinacy issues
+must be left for future research.24
+       Compared to the methods in the literature for solving heterogeneous-agent models, a
+disadvantage of the present method is that it does not offer a metric of fit. Instead it
+  24
+    For a discussion of price-level determinacy in heterogenous-agent models in response to MIT shocks
+see Hagedorn, Manovskii and Mitman (2017) who apply the theoretical results of Hagedorn (2017) to a
+heterogenous-agent New Keneysian model.
+
+
+
+                                                 49
+assumes that linearization works and proceeds based on this assumption. The assump-
+tion, we argue, can be tested to some extent with scalability checks, and hopefully one is
+reassured at this point that linearization offers a good approximation. In contrast, models
+based on recursive techniques, whether linear or nonlinear, can, when they are simulated,
+offer a test in the form of a comparison between the simulated path of aggregate vari-
+ables appearing in an individual’s decision problem and the perceptions of this behavior
+assumed in his decision problem. Thus a goodness-of-fit measure, such as an R2 , can be
+computed.25 In sum, there are pros and cons with our approach but we hope that it can
+be of value, mainly because of its simplicity and ties to impulse-response analysis, in a
+range of interesting applications.
+
+
+References
+
+ Ahn, S., Kaplan, G., Moll, B., Winberry, T., and Wolf, C. (2017). When Inequality
+       Matters for Macro and Macro Matters for Inequality. In NBER Macroeconomics
+       Annual 2017, volume 32. University of Chicago Press.
+
+ Aiyagari, S. R. (1994), “Uninsured Idiosyncratic Risk and Aggregate Saving”, Quarterly
+       Journal of Economics 109: 659-684.
+
+ Alesina, A., and Rodrik, D. (1994) “Distributive politics and economic growth”, The
+       quarterly journal of economics 109(2), 465-490.
+
+ Auclert, A. and Rognlie, M. (2017) “Inequality and Aggregate Demand”, Working Paper.
+
+ Bai, Y., J.-V. Rı́os Rull and K. Storesletten (2012), “Demand Shocks as Productivity
+       Shocks”, Working Paper.
+
+ Blanchard, O. and Kahn, C. M. (1980). “The solution of linear difference models under
+       rational expectations”, Econometrica 1305–1311.
+  25
+     Having said this, the majority of applied papers in quantitative business-cycle modeling are written
+without ever checking whether linearity is a good approximation: they propose models that are fundamen-
+tally non-linear and then just go ahead and solve them using Dynare’s linearization algorithm.
+
+
+
+
+                                                   50
+Carroll, C.D., (2006). “The method of endogenous gridpoints for solving dynamic stochas-
+    tic optimization problems”, Economics letters, 91(3), pp.312-320.
+
+Childers, D. (2017). On the Solution and Application of Rational Expectations Models
+    with Function-Valued States. Unpublished manuscript.
+
+Downs, A. (1957) “An economic theory of political action in a democracy”, Journal of
+    Political Economy, 65(2), 135-150.
+
+Greenwood, J., Hercowitz, Z., and Krusell, P. (2000) “The role of investment-specific
+    technological change in the business cycle”, European Economic Review, 44(1), 91-
+    115.
+
+Den Haan, W. J. (2010), “Assessing the Accuracy of the Aggregate Law of Motion in
+    Models with Heterogeneous Agents
+
+Den Haan, W. J., Judd, K. L., and Juillard, M. (2010). Computational suite of models
+    with heterogeneous agents: Incomplete markets and aggregate uncertainty. Journal
+    of Economic Dynamics and Control, 34(1), 1-3. ”, Journal of Economic Dynamics
+    and Control 34: 79-99.
+
+Hagedorn, M. (2017). “A Demand Theory of the Price Level”, Working Paper.
+
+Hagedorn, M., Manovskii, I. and Mitman, K. (2017). “The Fiscal Multiplier”, Working
+    Paper.
+
+Huggett, M. (1993), “The Risk-Free Rate in Heterogeneous-Agent Incomplete-Insurance
+    Economies”, Journal of Economic Dynamics and Control 17: 953-969.
+
+Imrohoroglu, A. (1989), “Cost of Business Cycles with Indivisibilities and Liquidity Con-
+    straints”, Journal of Political Economy 97: 1364-1383.
+
+Johnson, David S., Jonathan A. Parker, and Nicholas S. Souleles. “The Response of
+    Consumer Spending to the Randomized Income Tax Rebates of 2001.” Bureau of
+    Labor Statistics, Princeton University, and University of Pennsylvania (February)
+    (2004).
+
+                                          51
+Judd, K. and Guu, S. M. (1997). “Asymptotic methods for aggregate growth models”,
+    Journal of Economic Dynamics and Control, 21(6), 1025–1042.
+
+Khan, A. and J. K. Thomas (2008), Idiosyncratic Shocks and the Role of Noncon- vexities
+    in Plant and Aggregate Investment Dynamics, Econometrica 76: 395-436
+
+King, R. G., Plosser, C. I., and Rebelo, S. T. (1988). Production, growth and business
+    cycles: I. The basic neoclassical model. Journal of monetary Economics, 21(2-3),
+    195-232.
+
+King, R. G., Plosser, C. I., and Rebelo, S. T. (2002). Production, growth and business
+    cycles: Technical appendix. Computational Economics, 20(1), 87-116.
+
+Kopecky, K. and Suen R. (2010). “Finite state Markov-chain approximations to highly
+    persistent processes”, Review of Economic Dynamics, Vol 13, p 701-714
+
+Krueger, D., Mitman K. (2016), and Perri, F. “Macroeconomics and Household Hetero-
+    geneity”, Handbook of Macroeconomics, Vol. 2, 843-921.
+
+Krusell, P., and Rı́os-Rull, J. V. (1999) “On the size of US government: political economy
+    in the neoclassical growth model”, American Economic Review, 1156-1181.
+
+Krusell, P. and A. Smith Jr. (1997),“Income and Wealth Heterogeneity, Portfolio Choice,
+    and Equilibrium Asset Returns”, Macroeconomic Dynamics 1: 387-422.
+
+Krusell, P., and A. A. Smith Jr. (1998), “Income and Wealth Heterogeneity in the Macroe-
+    conomy”, Journal of Political Economy 106: 867-896.
+
+Krusell, P., Mukoyama, T., Rogerson, R., and Şahin, A. (2017). Gross worker flows over
+    the business cycle. American Economic Review 107:11, 3447–3476.
+
+Krusell, P, T. Mukoyama and A. Şahin (2010), “Labor-market matching with precaution-
+    ary savings and aggregate fluctuations”, Review of Economic Studies 77: 1477-1507.
+
+Krusell, P., Mukoyama, T., Şahin, A., and Smith, A. A. (2009). Revisiting the welfare
+    effects of eliminating business cycles. Review of Economic Dynamics, 12(3), 393-404.
+
+                                           52
+Kydland, F. E., and E. C. Prescott (1982) “Time to build and aggregate fluctuations”,
+    Econometrica 1345-1370.
+
+Meltzer, A. H., and Richard, S. F. (1981) “A rational theory of the size of government”,
+    Journal of political Economy 89(5), 914-927.
+
+Misra, K., and Surico, P. (2014) ”Consumption, income changes, and heterogeneity: Ev-
+    idence from two fiscal stimulus programs.” American Economic Journal: Macroeco-
+    nomics 6, no. 4: 84-106.
+
+Persson, T., and Tabellini, G. (1994) “Is inequality harmful for growth?”, The American
+    Economic Review, 600-621.
+
+Piketty, T. (2014), Capital in the Twenty-First Century, Belknap Press, Cambridge, MA.
+
+Pissarides, C. A. (1985). Short-run equilibrium dynamics of unemployment, vacancies,
+    and real wages. The American Economic Review, 75(4), 676-690.
+
+Reiter, M. (2009). Solving heterogeneous-agent models by projection and perturbation.
+    Journal of Economic Dynamics and Control, 33(3), 649-665.
+
+Reiter, M. (2010). Approximate and Almost-Exact Aggregation in Dynamic Stochastic
+    Heterogeneous-Agent Models, IHS WP 259.
+
+Rı́os-Rull, J.-V. (2001), “Computation of Equilibria in Heterogeneous Agent Models”, in
+    Marimon, R. and A. Scott, eds., Computational Methods for the Study of Dynamic
+    Economies: An Introduction, Oxford University Press, 238280.
+
+Schmitt-Grohe, S., and Uribe, M. (2004). Solving dynamic general equilibrium models
+    using a second-order approximation to the policy function. Journal of economic
+    dynamics and control, 28(4), 755-775.
+
+Sims, C. A. (1980). Macroeconomics and reality. Econometrica, 1-48.
+
+
+
+
+                                          53
+Smets, F. and Wouters, R., (2003). “An estimated dynamic stochastic general equilib-
+    rium model of the euro area”, Journal of the European economic association, 1(5),
+    pp.1123-1175.
+
+Taylor, J. B., and Uhlig, H. (1990). Solving nonlinear stochastic growth models: a com-
+    parison of alternative solution methods. Journal of Business & Economic Statistics,
+    8(1), 1-17.
+
+
+
+
+                                         54
+

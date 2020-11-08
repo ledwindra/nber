@@ -1,0 +1,2593 @@
+                              NBER WORKING PAPER SERIES
+
+
+
+
+     CLASSIFICATION TREES FOR HETEROGENEOUS MOMENT-BASED MODELS
+
+                                           Sam Asher
+                                        Denis Nekipelov
+                                         Paul Novosad
+                                        Stephen P. Ryan
+
+                                       Working Paper 22976
+                               http://www.nber.org/papers/w22976
+
+
+                     NATIONAL BUREAU OF ECONOMIC RESEARCH
+                              1050 Massachusetts Avenue
+                                Cambridge, MA 02138
+                                   December 2016
+
+
+
+
+The views expressed herein are those of the authors and do not necessarily reflect the views of the
+National Bureau of Economic Research.
+
+NBER working papers are circulated for discussion and comment purposes. They have not been
+peer-reviewed or been subject to the review by the NBER Board of Directors that accompanies
+official NBER publications.
+
+© 2016 by Sam Asher, Denis Nekipelov, Paul Novosad, and Stephen P. Ryan. All rights
+reserved. Short sections of text, not to exceed two paragraphs, may be quoted without explicit
+permission provided that full credit, including © notice, is given to the source.
+Classification Trees for Heterogeneous Moment-Based Models
+Sam Asher, Denis Nekipelov, Paul Novosad, and Stephen P. Ryan
+NBER Working Paper No. 22976
+December 2016
+JEL No. C14,C18,C51,C52,O12,O18
+
+                                         ABSTRACT
+
+A basic problem in applied settings is that different parameters may apply to the same model in
+different populations. We address this problem by proposing a method using moment trees;
+leveraging the basic intuition of a classification tree, our method partitions the covariate space
+into disjoint subsets and fits a set of moments within each subspace. We prove the consistency of
+this estimator and show standard rates of convergence apply post-model selection. Monte Carlo
+evidence demonstrates the excellent small sample performance and faster-than-parametric
+convergence rates of the model selection step in two common empirical contexts. Finally, we
+showcase the usefulness of our approach by estimating heterogeneous treatment effects in a
+regression discontinuity design in a development setting.
+
+Sam Asher                                       Paul Novosad
+Development Research Group                      Economics Department
+The World Bank                                  Dartmouth College
+1818 H St NW                                    6106 Rockefeller Center
+MSN MC 3-308                                    Room 301
+Washington, DC 20433                            Hanover, NH 03755
+sasher@worldbank.org                            paul.novosad@dartmouth.edu
+
+Denis Nekipelov                                 Stephen P. Ryan
+Department of Economics                         Olin Business School
+University of Virginia                          Washington University in St. Louis
+254 Monroe Hall                                 Campus Box 1133
+Charlottesville, VA 22904-4182                  One Brookings Drive
+dn4w@virginia.edu                               St. Louis, MO 63130
+                                                and NBER
+                                                stephen.p.ryan@wustl.edu
+
+
+
+
+A Associated materials (code, data) is available at
+https://sites.wustl.edu/stephenpryan/items/classification-trees-for-heterogeneous-moment-based-models/
+1    Introduction
+Applied researchers are faced with a multitude of decisions when constructing statistical
+models, such as which variables to include in the model, how those variables are related to
+the outcome variable, and how that mapping may vary across the units in the population.
+While theory is often helpful in addressing the first issue, it is rare that the question of
+interest can be answered in complete statistical generality, necessitating decisions about the
+empirical specification. This process of determining the statistical model is often ad hoc, with
+the researcher adding and removing variables and interactions in a non-systematic fashion,
+either as a result of intuitive exploration or in the process of producing so-called “robustness
+checks.” Two major issues arise from this process: the resulting statistical model after the
+search may have different statistical properties than the original model, as the result of
+choosing the specification on the basis of the answers it produces. The second problem is
+that the researcher often only considers a subset of the possible modeling choices, potentially
+introducing specification bias in the estimates. The aim of this paper is to propose a method
+that addresses both of those issues, recovering the correct specification in a systematic fashion
+without introducing bias in the estimates due to the search process.
+
+Our method builds on classification trees, a technique from the computer science and ma-
+chine learning literature for grouping observations in a sample together on the basis of some
+criterion function. We leverage these methods to assign statistical models to disjoint sets of
+a sample. As opposed to standard mixture models, e.g., a random coefficients logit, where
+individuals are assigned a type from some distribution but are assumed to follow one model,
+our method assigns a model with certainty to a group of observations. Using recent results on
+growing honest trees (Cappelli, Mola, and Siciliano (2002), Wager and Athey (2015), Athey
+and Imbens (2015)), we randomly split our sample into two halves. In the first sample, we
+estimate how models should be assigned to observations. We then estimate the parameters
+of those models using the second sample. Our contribution to the econometric theory is in
+showing the uniform convergence of conditional moment-based semiparametric models that
+use classification trees to control for unobserved heterogeneity. Classification and regres-
+sion trees are local estimators that aggregate information from the data in the shrinking
+neighborhoods of the parameter space. In this paper we show that if the complexity of the
+unobserved heterogeneity is relatively low (i.e. the number of components of the unobserved
+heterogeneity grows sublinearly with the sample size) then classification tree does not affect
+uniform convergence of the semiparametric conditional moment function over the values of
+
+
+                                               1
+the finite-dimensional parameter. We also show that a simple version of the bootstrap yields
+valid confidence sets for estimated parameters.
+
+Our setting is one with a long academic literature. The academic medical community has
+long struggled with this issue, where it is commonly referred to as subgroup analysis.1 The
+basic issue is that researchers, through statistical ignorance (or more nefarious motivations),
+may search across subgroups given a treatment until they find one with a statistically sig-
+nificant deviation from the baseline. Only emphasizing this finding, while typically ignoring
+those other groups for which the effect is zero, leads to substantial reporting bias and can
+provide misleading policy implications. This problem has become so severe in the medical
+literature that it is becoming common to pre-announce your testing hypotheses in public
+before engaging on a clinical trial via a “pre-analysis plan.” This practice has also started
+to become more widespread in economics, particularly in development.2
+
+The problem of determining which models apply to which groups of observations is pervasive
+in economics. A simple example provides clear motivation; suppose that the researcher is
+interested in estimating the relationship between some outcome, yi , and a vector of observable
+characteristics, xi . A simple linear regression encapsulating these relationships might be:
+
+                                         yi = xi β + i ,                                  (1.1)
+
+where i is an additive error term. Ignoring complicating issues such as selection bias, omitted
+variables, and measurement error, the researcher faces a problem of determining the form
+of the relationship between x and y. In principle, one can run a completely nonparametric
+regression, but in practice this is rarely, if ever, done for reasons of computational burden,
+lack of data, and poor statistical properties. Instead, researchers often take the following ad
+hoc heuristic approach to estimation.
+
+First, either on the basis of theory or intuition, they estimate a “baseline” statistical model
+that estimates a common parameter vector across all observations. This might be a simple
+specification where all covariates are additive and separable. While some papers stop there,
+a common next step, especially in modeling settings where the estimation’s computational
+burden may not present significant barriers to repeated specification testing, is to estimate
+  1
+   See, for example, Assmann, Pocock, Enos, and Kasten (2000).
+  2
+   The Hypothesis Registry at J-PAL (https://www.povertyactionlab.org/Hypothesis-Registry)
+is an early example; it is now subsumed by the the AEA RCT Registry (https://www.
+socialscienceregistry.org/).
+
+
+
+                                                2
+a sequence of models where the parameters are allowed to vary across observations in some
+observable fashion. These models often take the form of interactions between demographic
+characteristics and outcomes. For example, Card (1999), in an influential chapter in the
+Handbook of Labor Economics, has a section discussing observable heterogeneity with many
+citations to prominent papers using statistical models with interaction effects. While econo-
+metric theory exists for various specification tests for growing or pruning models, this step
+is rarely guided by formal econometric intuition. Instead, the researchers consider a (small)
+finite number of specifications to run and report those results as “robustness checks.” Ro-
+bustness checks are pervasive throughout applied economics at the very highest level across
+all fields in economics; see e.g., Chetty, Hendren, and Katz (2015) in education, Baner-
+jee, Barnhardt, and Duflo (2016) in development, Collard-Wexler and De Loecker (2015) in
+industrial organization, Barreca, Clay, Deschênes, Greenstone, and Shapiro (2015) in envi-
+ronmental, Doyle, Graves, Gruber, and Kleiner (2015) in health, and Heckman, Pinto, and
+Savelyev (2013) in labor. As a signal of what is being emphasized in graduate schools, every
+single one of the 2016 Ph.D. job market candidates at a top university writing in an applied
+field had some variety of robustness checks in their job market paper.3
+
+While the desire to have a sense that one’s estimates are not sensitive to the particular
+modeling choices made in forming those estimates is clearly laudable, there are two important
+limitations to this approach. The first is that these checks are rarely exhaustive or guided
+by some econometrically sound search process. One may erroneously conclude that the
+estimates are robust simply due to the subset of specifications that were chosen. In models
+with discrete variables, it is generally unheard of to see results that estimate the model on all
+subsets of the data. For one reason, there are typically too many subsets to consider. This
+problem becomes infinitely-dimensional when continuous variables are introduced, as any
+and all sub-intervals of the continuous variable may be considered. The other reason brings
+us to our second concern: the statistical properties of models constructed after a researcher
+searches through the model space are not the same as those if the models were predefined.
+One must account for that search process in order to engage in proper inference. That is
+the exact motivation for our paper, and the rest of the paper is organized around discussing
+the estimator (Section 2), developing its statistical properties (Sections 3-5), showing its
+small-sample performance in a Monte Carlo (Section 6), and applying it to a regression
+discontinuity design in a development setting (Section 7). Section 8 concludes.
+  3
+      A majority have a section expressly labeled “Robustness Checks.”
+
+
+
+
+                                                     3
+2    The Estimator
+Decision trees are an example of a recursive binary partitioning algorithm. Trees start with
+an initial “stump,” with all the data grouped together, and proceed to recursively split the
+data along one dimension of the data at a time according to some criterion. For continuous
+variables, the algorithm chooses a split point somewhere along their support. For discrete
+variables, it searches over all disjoint binary sets. The split generates two disjoint sets of the
+data, each known as a “leaf.” The algorithm repeats this process on each leaf, cutting the
+data into smaller and smaller subsets until a stopping criterion is met. The literature has
+considered several stopping criteria, such as requiring the number of observations in each
+leaf to be above some minimum integer k, requiring the proportion of data in each leaf to
+be at least some α, or requiring the improvement in the criterion function after the split to
+be greater than some threshold. We will consider the use of all three of these criteria, where
+their critical values will be set using cross-validation on a holdout sample.
+
+Many variants of trees fall under the broad umbrella of decision trees. Two of the most
+common are classification trees and regression trees. Classification trees vote for assignment
+for an observation into a group on the basis of the observable variables; the criterion function
+is typically “node impurity,” a measure of the dissimilarity of observations in a given node.
+Regression trees fit the average value of the subsample’s dependent variable; the criterion
+function is the mean squared error within the leaf.
+
+Our approach uses a variant of a classification tree that we term a moment tree. Like classi-
+fication trees, we seek to group together observations that have the same parameter vector
+conditional on observable X. However, our criterion function is a moment function, which
+models the dependent variable as some function of the observable variables, parameters, and
+unobservable shocks. We recursively partition the data on the basis of observables into K
+sets, X = {X1 , . . . , XK }, and assign a unique parameter vector, θk , for each Xk to solve a
+moment function in that subgroup:
+
+                                     E[m(Y ; Xk , θk )] = 0.                                (2.2)
+
+If the moment function cannot be satisfied in a given sample, the leaf is assigned a value of
+null.
+
+Our approach relies on the use of so-called “honest trees,” which are implemented by splitting
+the data into two samples. In the first sample, one grows the classification tree. In the
+
+
+                                                4
+second sample, the tree is taken as given but the values of the θ at each leaf are estimated
+using the second sample. We show below formally that this guarantees that the tree is
+estimated uniformly, and that the researcher can ignore the statistical error in the first
+phase of estimating the model specification when calculating standard errors in the second
+phase, as we show that, under certain regularity conditions, the rate of convergence of the
+first step is faster than parametric.
+
+At the stump, our model is exactly the same as a standard GMM-based model, which
+encompasses an extraordinarily large class of empirical problems. One solves for the θ using
+the entire sample and computes the value of the GMM criterion function. Our approach
+extends the GMM approach by considering an addition step, which is to then search over all
+split of the data along each X to find the split that most decreases the value of the GMM
+criterion function across the two subsets.
+
+The literature has considered many variants of the basic decision tree approach. One vari-
+ation that we adopt here is the extension of our moment tree to a moment forest. Forests
+are formed by repeatedly resampling the data with replacement and then growing a tree on
+each resampled data set. A key difference from the standard tree is that only a random
+subset of p variables are considered for splitting at each node. The estimate of θk is then
+the arithmetic average of the θk across all trees in the forest. This approach has at least two
+benefits; first, it is possible to show that one can reduce mean-squared prediction error down
+to irreducible structural error using resampling; and second, it allows the method to scale
+with large dimension X datasets, as only a subset of X is searched over at each split. To see
+the first property, let φ(x) be a predictor of Y in a given sample, and let µ(x) = Ex (φ(x))
+be its expectation. Then:
+
+  E([Yx − φ(x)]2 ) = E([(Yx − µ(x)) + (µ(x) − φ(x))]2 )
+                   = E([Yx − µ(x)]2 ) + 2E(Yx − µ(x))E(µ(x) − φ(x)) + E([µ(x) − φ(x)]2 )
+                   = E([Yx − µ(x)]2 ) + E([µ(x) − φ(x)]2 )
+                   = E([Yx − µ(x)]2 ) + V ar(φ(x))
+                   ≥ E([Yx − µ(x)]2 ).
+
+
+We note that instead of estimating θ using a simple average of the θ in each tree of the
+moment forest, one can instead compute an inverse-variance weighted average to increase
+accuracy of the estimated parameter. Intuitively, estimates from trees with high standard
+
+                                              5
+errors are downweighted relative to more precise estimates from other trees. Standard errors
+are then calculated using the bootstrap applied to the construction of the entire random
+forest. While computationally intense, we have found that in practice this resampling to
+greatly improve the performance of our estimator.
+
+The next section provides a formal analysis of the econometric properties of our proposed
+estimator.
+
+
+3     Econometric Theory
+3.1   Classification forest for moment models
+
+We consider a general model which is defined by moment function ρ(·; ·) : Y × Θ 7→ M,
+where Y is a subset of Rn , Θ is a convex compact subset of Rp and M is a subset of Rm .
+We assume that the data generating process is characterized by vector of random variables
+(Y, X) where random variable X takes the values in X ⊂ Rq .
+
+The data generating process can characterized by the marginal distribution of random vector
+X. We assume that this distribution has an absolutely continuous density fX (·). Our results
+will apply to the cases where some of the components of X are discrete. The DGP is also
+characterized by the mixture over continuous distributions fYk |X (· | x). The mixture weights
+π k (·) are functions of the vector Z which is a strict subset of X. The support of Z, Z is
+an open convex susbset of Rr (r < q). The number of mixture components is bounded by
+K̄ < ∞.
+
+ASSUMPTION 1. Suppose that K is the actual number of mixture components. Then for
+each 1 ≤ k ≤ K there exists a convex compact subset Z k ⊂ Z such that π k (z) = 1 for all
+z ∈ Z k.
+
+We formulate the econometric problem as the problem of estimation of the collection {K, {θk }K
+                                                                                             k=1 }
+that includes the number of mixture components K and a set of parameters θk such that
+
+                                  E k [ρ(Y ; θk ) | X = x] = 0,                          (3.3)
+
+where E k [·|X = x] corresponds to the expectation taken with respect to the mixture compo-
+nent k. We assume that both order and rank conditions are satisfied for each θk . Moreover
+for a given fixed δ > 0 and for any k 6= p we have kθk − θp k ≥ δ.
+
+
+                                               6
+We now develop tree-based algorithm to estimate {K, {θk }K
+                                                         k=1 } in Model (3.3).
+
+For our analysis we use the notion of the random forest that will be based on the applica-
+tion of classification trees. The classification tree partitions the set Z into non-overlapping
+rectangles. Then each rectangle is assigned the label k and parameter θk corresponding to
+the appropriate component of the distribution mixture if such assignment is possible. We
+reserve label 0 and ∅ instead of the estimated parameter for the case where a particular
+element of the partition cannot be classified.
+
+In our further analysis we assume that continuous components of Z lie in the interior of the
+hypercube. This can be done without loss of generality since any open convex sets in Rr
+are homeomorphic, i.e. we can define a one-to-one mapping from Z to the interior of the
+hypercube in Rr . Our further analysis will then apply once Z is mapped into the hypercube.
+
+The partitioning is performed recursively such that the algorithm begins with considering
+the set S (0) = Z ⊂ Rr (parent node of the tree). For this set we select dimension 1 ≤ d ≤ r
+and the threshold c such that S (0) is split into two children S (1,1) = S (0) ∩ {z ∈ S (0) | z d ≤ c}
+and S (1,2) = S (0) ∩ {z ∈ S (0) | z d > c}. If the component d is discrete, then we choose a
+particular value c of z d and split S (0) into two children S (1,1) = S (0) ∩ {z ∈ S (0) | z d = c} and
+S (1,2) = S (0) ∩ {z ∈ S (0) | z d 6= c}.
+
+Then at split k we choose one of k + 1 sets S (k,i) . Then we choose the dimension d and,
+assuming that it is continuous, we select the threshold c and construct two sets S (k+1,i) =
+S (k,i) ∩ {z ∈ S (k,i) | z d = c} and S (k+1,k+2) = S k,i ∩ {z ∈ S (k,i) | z d 6= c}. Then we re-index the
+remaining sets S (k,j) as S (k+1,j) .
+
+The sequence of k splits induces the partition of Z which we denote S. By L we denote a
+generic leaf of the partition. Also, let L(z) be the element of S containing the point z. L(z)
+will also be called the leaf of the classification tree containing z.
+
+Following Wager and Walther (2015) we define {α, k}-valid partition S as a partition gen-
+erated by the recursive partitioning in which each node contains at least a fraction α of the
+data points in its parent node for some 0 < α < 21 and each terminal node contains at least k
+observations. Use the notation Σα,k ({zi }ni=1 ) to denote the set of all {α, k}-valid partitions
+of the sample.
+
+The idea behind the construction of the classification tree is the following. Suppose that L
+
+
+
+
+                                                    7
+is a leaf of the classification tree. If L ⊆ Z k for some k, then the moment condition
+
+                                 K
+                                 X
+         E[ρ(Y, θ) | X = x] =          E l [ρ(Y, θ) | X = x]π l (z) = E k [ρ(Y, θ) | X = x] = 0
+                                 l=1
+
+
+has a solution θk for each point of L. However, if L 6⊂ Z k for any k, then the moment
+condition above does not have solutions.
+
+We associate the unknown conditional expectation E k [· | X = x] with an infinite-dimensional
+parameter which we denote η ∈ H. Then we consider an estimator for the moment function
+m(x; θ, η) = E[ρ(Y, θ) | X = x], denote it m(x;
+                                             b   θ). We take weighting function w(·) : X 7→
+Rp such that E[w(X)w(X)0 ] < ∞ and E[w(X) ∂m(X;θ,η)  ∂θ0
+                                                          ] has full rank for each η ∈ H and
+                                           k
+for all θ in some fixed neighborhood of θ . In that case the finite-dimensional parameter of
+interest θk is identified from any leaf L ⊆ Zk that generates function
+
+                            ML (θ, η) = E [w(X)m(X; θ, η) 1{Z ∈ L}]
+
+Then we estimate the conditional expectation that yields m(x; θ, ηb). Thus corresponding
+sample analog for M (·, ·) can be constructed as
+                                                 P
+                                                           w(xi )m(xi ; θ, ηb)
+                                               i : zi ∈L
+                                M
+                                cL (θ, ηb) =
+                                                     #{i : zi ∈ L}
+
+The classification will be based on the norm k · k and the threshold M n > 0. For the valid
+partition we define the classification tree such that for each element of partition
+
+                                           TS : S 7→ Θ ∪ ∅,
+
+and                         (
+                                arg inf θ kM
+                                           cL (θ, ηb)k, if inf θ kM
+                                                                  cL (θ, η)k ≤ M n ,
+                 TS (L) =
+                                ∅, otherwise.
+In other words, the classification tree returns the parameter that solves the empirical moment
+condition if the minimum of the moment function is below the pre-set threshold. If the
+minimum is above the threshold (meaning that the solution that equates the moment function
+to zero cannot be found), then the tree returns null. Inside the leaves where the minimum
+
+
+
+                                                      8
+is below the threshold we can replace the procedure with solving equation
+
+                                              M
+                                              cL (θ, ηb) = o(1)
+
+which corresponds to the standard Z-estimator. The leaves of the tree are then assigned
+integer labels based on the inferred parameters. For a given δn > 0 we assign two leaves L
+and L0 the same integer label if kTS (L) − TS (L0 )k ≤ δn . The family of {α, k}-valid trees is
+denoted Tα,k ({zi }ni=1 ).
+
+Then the partition-optimal tree can be defined using the moment function
+
+                                ML (θ, η) = E[w(X)m(X; θ, η) | Z ∈ L]
+
+and the norm k · k such that
+                                              TS∗ : S 7→ Θ ∪ ∅
+
+with                            (
+                                    arg inf θ kML (θ, η)k, if inf θ kML (θ, η)k = 0,
+                    TS∗ (L) =
+                                    ∅, otherwise.
+
+Further, using the notation of Wager and Walther (2015), we define partition-optimal forests
+by considering a bootstrap sample of size B and the collection of {α, k}-valid classification
+trees TS ( 1) , . . . , TS ( B) ∈ Tα,k ({zi }ni=1 ) and define {α, k}-valid random forest.
+
+To do that let
+
+Kk = {(L, b) ∈ Λ×{1, . . . , B} : ∀ (L, b), (L0 , b0 ), kTS ( b) (L)−TS ( b0 ) (L0 )k < δ, dH (L, L0 ) < ∆},
+
+where dH (·, ·) is the Hausdorff distance. Let K̄ = ∪k K and K̄ = # K̄. Then the random
+forest is defined as a mapping
+
+                                    H{S (b) }Bb=1 : {1, . . . , K̄} 7→ Θ ∪ ∅,
+
+such that
+                                                       1       X
+                                H{S (b) }Bb=1 (k) =                     TS ( b) (L).
+                                                      # Kk
+                                                             (b,L)∈Kk
+
+The set of {α, k}-valid random forests is denoted Hα,k ({zi }ni=1 ). The partition-optimal forest
+
+
+
+                                                       9
+is defined using the notion of the partition-optimal tree with
+
+                                  ∗
+                                 H{S (b) }B (k) = θk , k = 1, . . . , K
+                                          b=1
+
+
+
+for all partitions S such that for each Z k , k = 1, . . . , K there exists a leaf L ∈ S with
+L ⊆ Z k.
+
+
+3.2     Implementation of honest splitting rules
+
+Wager and Athey (2015) propose to use an application of a cross-validation procedure to
+evaluate the tree splits. We adapt this idea to the evaluation of moment classification trees.
+We split the sample into two subsamples, where one subsample is used to estimate the
+                    b x) and the other one is used to split Z into rectangles.
+moment functions m(θ;
+
+To implement the procedure we take the sample {yi , xi , zi }ni=1 . First, we draw a subsample
+of size s from this sample without replacement and split it into two non-overlapping subsets
+Dt and Dv .
+
+Second, using the subset Dt we grow the tree.
+
+Third, once the splits are made, we compute parameters and assign labels based on the
+                                              cL (θ, ηb) for each leaf using sample Dv .
+minimization of the empirical moment function M
+
+We adhere to a specific methodology for growing the tree, since unlike standard regression
+trees, the classification tree can assign a null label to elements of partition. The goal of
+the recursive splitting is to ensure that estimated moment function well approximates the
+true moment function defined by (3.3). Then we consider the weighted norm k · k with the
+positive definition weighting matrix Ω such that
+
+                                                kak2 = a0 Ω a
+
+and compute the overall prediction error for a given L as
+                  XX
+                             kw(xi )ρ(yi ; θL∗ )1{zi ∈ L} − ML (θ,
+                                                                b ηb)1{zi ∈ L}k2 ,
+                  i∈Dv L∈S
+
+
+where
+                        θL∗ = arg inf kE [w(X)m(X; θ, η) 1{Z ∈ L}]k
+                                      θ
+
+
+
+
+                                                     10
+and
+                                               θbL = arg inf kML (θ, ηb)k .
+                                                               θ
+
+
+The prediction error can be further re-written as
+
+    X X                                                                         
+                       ∗   2                2            ∗ 0       0
+        kw(xi )ρ(yi ; θL )k + kML (θL , ηb)k − 2 ρ(yi ; θL ) w(xi ) ΩM (θL , ηb)) 1{zi ∈ L}.
+                                   b                                    b
+   i∈Dv L∈S
+
+
+Provided that ML (·, ·) is fixed within the leaf L and there is a single minimizer θbL of ML (·.b
+                                                                                                η)
+for all L ∈ S, then we can re-write
+             X                                                 X X
+                    ρ(yi ; θL∗ )0 w(xi )0 Ω ML (θbL , ηb)) =                   ρ(yi ; θL∗ )0 w(xi )0 Ω ML (θbL , ηb)).
+             i∈Dv                                              L∈S i : zi ∈L
+
+
+Under technical conditions that we discuss further, we can show that
+
+                                1         X
+                                                 w(xi )ρ(yi ; θL∗ ) = M (θbL , ηb)) + op (1).
+                          #{i : zi ∈ L} i : z ∈L
+                                                 i
+
+
+
+This means that
+      X                                                X
+             ρ(yi ; θL∗ )0 w(xi )0 Ω M (θbL , ηb)) =         #{i : zi ∈ L}M (θbL , ηb))0 Ω M (θbL , ηb)) + op (1)
+      i∈Dv                                             L∈S
+                               X
+                           =          kM (θbL , ηb))k2 + op (1).
+                               i∈Dv
+
+
+and the prediction error can be re-written as
+                               X                                   X
+                                    kw(xi )ρ(yi ; θL∗ )k2 −               kM (θbL , ηb))k2 + op (1).
+                             i∈Dv                                  i∈Dv
+
+
+In other words, the optimal partition has to maximize the variance of the moment function.
+This result extends the observation in Athey and Imbens (2015) made for standard regression
+trees.
+
+Now based on this idea we can construct an actual mechanism for producing new splits. Con-
+sider step k of the recursive splitting algorithm that paritions Z into subsets S (k,1) , . . . , S (k,k+1) .
+Next, for each i = 1, . . . , k + 1 and each dimension d we consider threshold c that generates
+the new partition S (k+1,1) (i, c, d), . . . , S (k+1,k+2) (i, c, d) according to the algorithm that we
+
+
+                                                               11
+outlined previously. In each subset S (k+1,j) (i, c, d) we estimate the moment function m(θ; x)
+and define function
+                                                     P
+                                                                   w(xi )m(xi ; θ, ηb)
+                                          i : z  S (k+1,j) (i,c,d)
+                       c(k+1,j) (θ, ηb) =
+                       M
+                                               i
+                                                                                       .
+                         i,c,d
+                                              #{i : zi ∈ S (k+1,j) (i, c, d)}
+
+Then we find the set of minimizers
+
+                                (k+1,j)          c(k+1,j) (θ, ηb)k.
+                              θbi,c,d = arg min kMi,c,d
+                                                   θ
+
+
+We note that we need to compute this only in the newly created elements of partition, while
+functions M
+          c and their minimizers on the remaining elements of partition stay the same.
+Then we choose the triple (i, c, d) by maximizing the variance of the moment function
+
+                                       k+2
+                                       X                              2
+                              max            c(k+1,j) θb(k+1,j) , ηb
+                                             M                              .
+                                              i,c,d     i,c,d
+                               i,c,d
+                                       j=1
+
+
+Step k, therefore, requires us to solve 2(k + 1) minimization problems.
+
+
+4   Consistency for Classification Trees and Forests
+In this section, we develop a consistency result for a single tree and then generalize it to the
+random forest. Our first goal will be to show that the splits of the honest tree provide a
+uniform approximation to function ML (θ, η) both over the parameter space and over the leafs
+contained in Z k . Our first assumption establishes the properties of the moment function
+considered in estimation. In particular, with a known infinite dimensional parameter, we
+require that the moment functions have low complexity in the finite dimensional parameter.
+
+ASSUMPTION 2. The class of functions {m(·, θ, η0 ), θ ∈ Θ} has envelope m̃(·) such that
+m̃(·) ≤ m̄ < ∞ and P m̃(·)2 < ∞ and it admits polynomial discrimination.
+
+Our results rely on the existence of a “high quality” estimator for the ancillary parameter
+η. The corresponding condition is formulated as follows
+
+ASSUMPTION 3. Suppose that there exists a uniformly consistent estimator ηb and de-
+
+
+
+
+                                                   12
+terministic sequence rn → ∞ such that rn n1/4 → ∞ such that
+
+                        sup |rn (m(x; θ, ηb) − m(x; θ, η0 ))| = op (1)   (A.1)
+                      x∈X ,θ∈Θ
+
+
+and
+                                        η − η0 k = op (n−1/4 ).
+                                       kb
+
+For the rate defined in Assumption 3 we can define a weighted empirical process Grn =
+rn (ePn −P ) and denote its norm with respect to a function class Fn as kGrn kFn = supf ∈Fn |Grn f |.
+Consider sequence δn → 0, and define the class of functions
+
+             m(·, θk , η) − m(·, θk , η0 ) 1{· ∈ L}, kη − η0 k ≤ δn , L ⊂ Z k , P 1{· ∈ L} ≥ V /2
+                                         
+ Mn =
+
+and the shrinking neighborhood
+
+                         Un = {(θ, η) : kθ − θk k ≤ δn , kη − η0 k ≤ δn }.
+
+The following condition imposes stochastic equicontinuity on the empirical process associated
+with the moment function.
+
+ASSUMPTION 4. For any δn → 0
+
+                                    kGrn kMn = Op (1)      (A.2)
+
+and
+         Grn m(·, θ, η) − m(·, θk , η) 1{· ∈ L} = Op (kθ − θk k), (θ, η) ∈ Un . (A.3)
+                                      
+
+
+Next we require the population moment function to be sufficiently smooth when estimated
+on the leaves that are subsets of Z k ,
+
+ASSUMPTION 5. There exists a neighborhood of (θk , η0 ) such that for all L ⊂ Z k with
+P 1{· ∈ L} ≥ V /2
+
+   P m(·, θ, η) − m(·, θk , η0 ) 1{· ∈ L} = AL (θ − θk ) + O(kθ − θk k2 + kη − η0 k2 )
+                                
+                                                                                           (A.4)
+
+and AL ≥ A for all such L.
+
+
+
+                                                 13
+The set of imposed assumptions allows us to show consistency for each honest classification
+tree.
+
+                        b is the leaf of honest {α, k}-valid classification tree that
+THEOREM 1. Suppose that L
+returns label k and
+                            M   b ηb) = o(r−1 ),
+                            cb (θ,
+                              L            n
+
+      cb (·, ·) is estimated from the subsample that was not used for splitting. Then whenever
+where ML
+k = O(n/V ) under Assumptions 1-5
+
+                                                b θk ) = op (1).
+                                              d(θ,
+
+
+Proof:
+Consider the following decomposition
+
+M                          cb (θ, ηb) − M
+cb (θ, ηb) − ML (θ, η0 ) = M                          cb (θ, η0 ) − M
+                                        cb (θ, η0 ) + M                           cL (θ, η0 ) − ML (θ, η0 )
+                                                                    cL (θ, η0 ) + M
+ L                          L            L             L
+
+
+Assumption 3 guarantees that
+
+                                     cb (θ, ηb) − M
+                                 sup M            cb (θ, η0 ) = op (1).
+                                      L            L
+                                  θ
+
+
+Next consider the class of functions
+
+Fn (L, γ) = m(·, θ, η0 )1{· ∈ L0 } − m(·, θ, η0 )1{· ∈ L}, L0 ⊆ L, e−γ P 1{· ∈ L0 } ≤ P 1{· ∈ L} .
+           
+
+
+Wager and Walther (2015) establish the result that for P 1{· ∈ L} ≥ V /2, the cardinality of
+the set of leaves L0 that lead to class Fn (L, γ) is bounded by
+                                                      r
+                            8r2
+                        
+                    2
+                                (1 − log2 round(2/V )) (1 + O(γ)) = O(γ −2r ).
+                    V       γ2
+
+Let σi be the sequence of i.i.d. Radamacher random variables (i.e. Pr(σi = +1) = Pr(σi =
+−1) = 21 . For f ∈ Fn (L, γ) we define the symmetrized empirical process
+
+                                                      n
+                                          o 1X
+                                        Pf=       σi f (xi ).
+                                            n i=1
+
+
+
+                                                     14
+Then due to the symmetrization lemma (Van Der Vaart and Wellner (1996))
+                                                      !                              !
+                                                                                 
+            P         sup |Pf − P f | >                  ≤ 4P     sup |Po f | >         , for T ≥ 8−2
+                     Fn (L,γ)                                     Fn (L,γ)       4
+
+                                                                        
+Given the sample choose g1 , . . . , gM where M is the                  8
+                                                                            cover of Fn (L, γ) meaning that
+
+                                                 1
+                                 min P|f − gj | ≤ , for each f ∈ Fn (L, γ).
+                                  j              8
+
+Let f ∗ be the argmin. For any function g ∈ L1 (P):
+
+                                                  n                    n
+                                  o     1X                 1X
+                                |P g| =       σi f (xi ) ≤       |f (xi )| ≡ P|g|.
+                                        n i=1              n i=1
+
+Now we focus on the uncertainty associated with the Radamacher sequence σi and compute
+the probabilities conditional on the sample. Choose g = f − f ∗ leading to
+                                                  !                                                              !
+      P    sup |Po f | >         
+                                 4
+                                      {xi }ni=1        ≤P    sup (|Po f ∗ | + P|f − f ∗ |) >     
+                                                                                                 4
+                                                                                                     {xi }ni=1
+          Fn (L,γ)
+                                                           Fn (L,γ)                  
+                                                                     o            n
+                                                       ≤ P max |P gj | > 8 {xi }i=1
+                                                             j
+
+                                                       M max P |Po gj | > 8 {xi }ni=1 .
+                                                                                      
+                                                            j
+
+
+Now recall than gj are bounded by m̄, thus can use Hoeffding inequality
+                                                                 n                            
+                                       
+                                                           = P | σi gj (xi )| > n
+                                                       
+                     P |Po gj | >          {xi }ni=1                                {xi }ni=1
+                                                                  P
+                                       8                                         8
+                                                                  i=1
+                                                                                              
+                                                                               n
+                                                                       n 2
+                                                                          P                2
+                                                           ≤ 2 exp −2 8           (2gj (xi ))
+                                                                                  i=1
+                                                                       2
+                                                           ≤ exp (−n /(128m̄)) .
+
+Next note that since {m(·, θ, η0 ), θ ∈ Θ} admits polynomial discrimination then there exist
+constants a > 0 and b > 0 such that the size of the cover of this class is at most a−b . Provided
+that the cardinality of approximating rectangles is at most O(γ −2r ) then M ≤ O(−b γ −2r ).
+As a result
+                                   !                                                     
+                 o            n                          1          1         2          2
+    P    sup |P f | >     {xi }i=1 ≤ 2 exp O 2r log + b log               − n /(128(m̄) ) .
+        Fn (L,γ)        4                                 γ          
+
+
+                                                                 15
+Since the right-hand side of the evaluation does not depend on the sample, this bound holds
+for the unconditional probability. We also notice that the second term in the exponent
+dominates the first term if
+                                          n
+                                               O(1)
+                                        log n
+and γ = O() In that case we can evaluate
+                                                  !
+                                              
+                                sup |Po f | >          ≤ exp O(−n 2 ) .
+                                                                      
+                          P
+                               Fn (L,γ)       4
+
+                                n
+This shows that the choice    log n
+                                       O(1) ensures that
+
+                                  cb (θ, ηb) − M
+                              sup M            cL (θ, η0 ) = op (1).
+                                   L
+                                θ
+
+
+The last term is evaluated in an analogous fashion. Therefore, we just established that
+
+                                  cb (θ, ηb) − ML (θ, η0 ) = op (1).
+                              sup ML
+                                θ
+
+
+Provided our assumption of continuity of ML (θ, η0 ), this leads to consistency of the estimator
+θ.
+b Q.E.D.
+
+
+Having established consistency of our estimator, we can now evaluate its convergence rate.
+To do that we make an additional assumption regarding the differentiability of the map
+associated with ML (·, ·).
+
+ASSUMPTION 6. Map ML (·, η0 ) is Frechet-differentiable at θk for each L ⊂ Z k with
+P 1{· ∈ L} ≥ V /2 so that
+
+                   kML (θ, η0 ) − ML (θ0 , η0 ) − ṀL (θ − θ0 )k = o(kθ − θ0 k).
+
+THEOREM 2. Suppose that conditions of Theorem 1 are satisfied. Then
+
+                                              b θk ) = Op (1).
+                                         rn d(θ,
+
+
+Proof:
+                      b θk ) = o(1) and thus we can now focus on the shrinking neighborhood
+We established that d(θ,
+
+
+                                                  16
+Un . Consider the empirical process
+                                         √
+                             Gn f =          n(Pn − P )f, f ∈ Fn (L, γ).
+
+We have demonstrated that for the choice of γ =  the class Fn (L, γ) admits polynomial dis-
+crimination with bound O(−2r−b ). Let N (km̃kQ,2 , Fn (L, γ), L2 (Q)) be the covering number
+for the class Fn (L, γ). Recall that the covering integral is defined as
+                                   Z δq
+             J(δ, Fn (L, γ)) = sup     1 + log N (km̃kQ,2 , Fn (L, γ), L2 (Q)) d.
+                                Q     0
+
+
+Provided that we were able to bound N (km̃kQ,2 , Fn (L, γ), L2 (Q)) by O(−2r−b ), then we
+can evaluate the corresponding covering integral as
+                                                     r
+                                                        1
+                                               O(δ   log ),
+                                                        δ
+                                q
+which is bounded from above by δ log δ1∗ where δ ∗ log δ1∗ = 12 . This allows us to evaluate
+                                     ∗
+
+
+
+                                    kGn kFn (L,) = O(P m̃(·)2 )
+
+using Theorem 2.14.1 in Van Der Vaart and Wellner (1996). This means that the classifi-
+cation error is negligible relative to the estimation error. Thus we can use the convergence
+result for standard Z-estimators adopted to the empirical process Grn applying Theorem 3.3.1
+in Van Der Vaart and Wellner (1996) which yields the statement of the theorem. Q.E.D.
+
+
+5    Extensions of the Moment-based Model
+Previously we constructed a semiparametric model whose complexity was restricted in two
+ways. First, we assumed that the moment function ρ(·; ·) is a function of a finite-dimensional
+parameter vector. Second, we assumed that the heterogeneity of the sample is characterized
+by a finite set of semiparametric models that reflect a finite set of applied policies or behavior
+models.
+
+We now consider extensions of our framework in two important directions. First, while
+maintaining the assumption that the observed data is generated by a finite set of policies or
+behaviors, we allow the models themselves to become more complex. The moment vector
+
+
+                                                     17
+ρ(·; ·) is also characterized by an infinite-dimensional parameter. That means that we model
+the data generating process using a finite set of semi-parametric or non-parametric models.
+
+Second, we consider the same semiparametric structure with the moment function ρ(·; ·)
+characterized by a finite-dimensional parameter. At the same time, we allow the set of
+models to be large and potentially grow with the sample size. This extension is based on
+the observation in Wager and Athey (2015) who observe that the regression tree framework
+can be considered as adaptive smoothing, similar to the k-nearest neighbor estimator. In
+this case, ρ(·; ·) plays the role of the local model whose parameters depend on point in the
+support of conditioning variable Z.
+
+
+5.1   Semiparametric model with the finite tree structure
+
+Suppose that our Assumption 1 holds meaning that the tree structure is finite. Consider a
+general moment model, as before characterized by the moment function ρ (·, ·) which is now
+a function of the infinite-dimensional parameter h(·) that needs to be estimated a nuisance
+parameter η (reflecting the conditional expectation)
+
+                          m (x, h(·), η (·)) = E [ρ (Y, h(·)) |X = x]
+
+
+The two infinite-dimensional components , h(·) ∈ Hh and η (·) ∈ Hη that are contained
+in the Banach spaces Hη and Hh . The sieve approach, studied in a sequence of papers by
+Chen and Shen (1998), Ai and Chen (2003) and Chen, Linton, and Van Keilegom (2003),
+approximates the class of infinite dimensional functions H using a parametric family of
+functions Hn whose dimension increases to infinity with the sample size n. Since in our
+setup both the parameter of interest h(·) and the nuisance parameter η(·) can be infinite-
+dimensional, there will be a non-trivial interaction between their asymptotic behaviors. As
+a result, we choose to explicitly model η considering two most commonly used methods for
+estimation of conditional expectations: orthogonal series and kernel smoothers.
+
+The infinite-dimensional parameter of interest h(·) is assumed to be estimated using sieves.
+The series estimator used to recover the conditional moment function is based on the vector
+of basis functions pN (x) = (p1N (x), . . . , pN N (x))0 ,
+                                           n
+                                                                −1       n
+                           N0           1          N        N0        1
+                                                                                pN (xi )ρ (yi , h) .
+                                            P                             P
+             m (x; h, ηb) = p (x)       n
+                                                  p (xi )p (xi )      n
+                                                                                                       (5.4)
+                                            i=1                           i=1
+
+
+
+
+                                                       18
+The kernel estimator is defined using a multi-dimensional kernel function K(·) and a band-
+width sequence bn as
+                                             n                    −1           n                    
+                                       1                    xi −x           1                    xi −x
+                                              P                                    P
+                 m (x; h, ηb) =                     K                                    K                   ρ (yi , h) .   (5.5)
+                                      nbdnx                  bdnx          nbdnx                  bn
+                                              i=1                                  i=1
+
+
+
+In either case, we will denote the resulting estimator by m (x; hb
+                                                                 η ). We then consider the
+same structure for the estimator as in the parametric case where we split the support of the
+conditioning covariate vector Z and estimate parameter h by setting the projected moment
+function M
+         cL (h, ηb) in the leaf of the tree L equal to zero.
+
+As in our analysis of parametric models, we focus on i.i.d data samples. We also impose
+standard assumptions on the basis functions as in Newey (1997). Well known conditions that
+satisfy Assumption 7 are available in, for example, the handbook chapter by Chen (2007).
+
+ASSUMPTION 7. For the basis functions pN (x) the following holds:
+
+  (i) The smallest eigenvalue of E pN (X) pN 0 (X) is bounded away from zero uniformly in
+                                                 
+
+      N .4
+
+ (ii) For some ζ0 (N ) such that ζ0 (N )2 N/n → 0, sup kpN (x)k ≤ ζ0 (N ).
+                                                                       x∈X
+
+(iii) The population conditional moment belongs to the completion of the sieve space and
+      for some α > 0,
+
+                             sup m (x; h, η) − proj m (x; h, η) | pN (x) = O N −α .
+                                                                                
+                     sup
+                (h,η)∈Hh ×Hη x∈X
+
+
+
+Assumption 7[ii] is convenient because ρ (·) is uniformly bounded. It can potentially be
+relaxed to allow for a sequence of constants ζ0 (N ) with sup kpN (x)k ≤ ζ0 (N ), where ζ0 (N )
+                                                                                   x∈X
+grows at appropriate rates as in Newey (1997) such as ζ0 (N )2 N/n → 0 as n → ∞.
+                                                                       √
+When all the basis functions are uniformly bounded, typically ζ0 (N ) = N . In the above
+                                                            −1 N
+         proj m (x; h, η) | pN (x) = pN (x)0 EpN (X)pN (X)0
+                                  
+                                                               Ep (X)m (X; h, η) .
+   4
+    We note that the considered series basis may not be orthogonal with respect to the semi-metric defined
+by the distribution of X.
+
+
+
+
+                                                                19
+The following assumption on the moment function ρ(·) does not require smoothness or con-
+tinuity (see Shen and Wong, 1994; Zhang and Gijbels, 2003).
+
+ASSUMPTION 8.            (i) The moment functions are uniformly bounded: sup kρ(y, h)k ≤
+                                                                                              h,y
+     C. The density of covariates X is uniformly bounded away from zero on its support.
+
+ (ii) Suppose that 0 ∈ Hn and for some C > 0,
+
+                                   sup          Var (ρ (Y, h) | X = x) = O (1) ,
+                            x∈X ,h∈Hn ,|h|<C,
+
+
+
+(iii) For each n, the class of functions Fn = {ρ (·, h) , h ∈ Hn } is Euclidean whose graphs
+      form a polynomial class of sets and whose coefficients depend on the number of sieve
+      terms. There exist constants A, and 0+ ≤ r0 < 21 such that the covering number
+      satisfies
+                                                                          
+                                                               2r0        1
+                                 log N (δ, Fn , L1 ) ≤ A n           log     ,
+                                                                          δ
+
+and for r0 = 0+ , n0+ is defined as log n.
+
+Denote πn h = arg 0inf kh0 − hk∞ . And let d(·) be the metric generated by the L1 norm.
+                    h ∈Hn
+The following result extends Theorem 37 of Pollard (2012) to the case of sieve estimators. A
+related idea for unconditional sieve estimation has been used in Zhang and Gijbels (2003).
+
+LEMMA 1. Suppose that d (πn h, h) = O n−φ . Under Assumptions 7 and 8 for series
+                                         
+
+estimator ηb
+
+                             sup            |m (x; h, ηb) − m (x; h, η)| = op (1)
+                       d(h,h0 )=o(1),h∈Hn
+
+
+uniformly in x provided that N → ∞, and ζ0 (N )2 N n2r0 −1 log n → 0.
+
+Proof of Lemma 1
+
+It follows directly from Assumption 7.[iii] that for (h, η) ∈ Hh × Hη
+                                                                                     
+                                                        N                   1    1
+                  m (x; h, η) − proj m (x; h, η) |p (x) = O                   α
+                                                                                + φ       ,
+                                                                            N    n
+
+
+                                                    20
+that will converge to zero if N → ∞ as n → ∞.
+
+Therefore it suffices to prove Lemma 1 for
+
+                         (∗) = m (x; h, ηb) − proj m (x; h, η) |pN (x) .
+                                                                      
+
+                                                                                 0
+As demonstrated in Newey (1997), for P = pN (x1 ), . . . , pN (xn )                   and Q̂ = P 0 P/n
+                                                               r            !
+                                                                   N
+                                      kQ̂ − Qk = Op                  ζ0 (N ) ,
+                                                                   n
+
+and Q is non-singular by Assumption 7.[i] with the smallest eigenvalue bounded from below
+by some constant λ > 0. Hence the smallest eigenvalue of Q̂ will converge to λ > 0. Following
+Newey (1997) we use the indicator 1n to indicate the cases where the smallest eigenvalue of
+Q̂ is above 12 to avoid singularities.
+
+We consider conditional expectation E [ρ(Yi , h) | Xi = x] as a function of x (given h). We can
+project this function of x on N basis vectors of the sieve space. Let β be the vector of coeffi-
+cients of this projection. Denote Γ(h) = (ρ(Yi , h))ni=1 Also                                n
+                                                                G(h) = (E [ρ(Yi , h) | Xi ])i=1 .
+                                                          define
+Then (∗) equals to a linear combination of 1n |pN 0 (x) β̂ − β |. Note that
+
+                                                                              
+           pN 0 (x) β̂ − β = pN 0 (x) Q̂−1 P 0 (Γ − G) /n + Q̂−1 P 0 (G − P β) /n .                      (5.6)
+
+For the first term in (5.6), we can use the result that smallest eigenvalue of Q̂ is converging
+to λ > 0. Then application of the Cauchy-Schwartz inequality leads to
+
+                     pN 0 (x)Q̂−1 P 0 (Γ − G) ≤ Q̂−1 pN (x) kP 0 (Γ − G)k .
+
+                        ζ0 (N )
+Then Q̂−1 pN (x) ≤         λ
+                                  ,and
+
+                                    v                                 !2
+                                    u N n
+                                    uX X
+                    kP 0 (Γ − G)k = t     pN k (xi ) (Γi (h) − Gi (h))
+                                                 k=1    i=1
+                                         n
+                        √                X
+                    ≤    N max                 pN k (zi ) (Γi (h) − Gi (h))
+                                  k
+                                         i=1
+
+
+
+
+                                                          21
+Thus,
+                                      √       n
+            N0     −1   0      ζ0 (N ) N     X
+           p (x)Q̂ P (Γ − G) ≤           max     pN k (xi ) (Γi (h) − Gi (h)) .
+                                    λ     k
+                                             i=1
+
+
+Denote µn = µ N −1 . Next weadapt the arguments for proving Theorem
+                                                                  37 in Pollard (2012)
+to provide the bound for P     sup n1 kpN 0 (z)Q̂−1 P 0 (Γ − G) k > N µn . For N non-negative
+                                Fn
+random variables Yi we note that
+
+                                         XN
+                             P max Yi > c ≤   P (Yi > c) .
+                                     i
+                                                  i=1
+
+
+Using this observation, we can find that
+                                 X N                         n                           √         !
+      1 N0    −1 0                                          1X                                N
+P sup kp (z)Q̂ P (∆ − G) k > N µn ≤     P               sup       pN k (xi ) (Γi − Gi ) >         µn
+   Fn n                                                  Fn n                             ζ0 (N )
+                                    k=1                       i=1
+
+
+This inequality allows us to substitute the tail bound for the class of functions m (x; h, η)
+that is indexed by h, η and x by a tail bound for a much simpler class
+
+                  Pn = {pN k (·) (Γ(h) − G(h)) : d(h, h0 ) = o(1), h ∈ Hn }.
+
+We note that, according to Lemma 2.6.18 in Van Der Vaart and Wellner (1996), provided
+that each pN k (·) is a fixed function, the covering number for Pn has the same order as
+the covering number for Fn . Then we pick A to be the largest constant for the covering
+numbers Ak n2r0 log 1δ over classes Pn . By Assumption 7.[i] and 8.[i] any f ∈ Pn is bounded
+                       
+
+|f | < C < ∞. Next we note that Var (f ) = O(1) for f ∈ Pn by Assumption 8.[ii]. The
+symmetrization inequality (30) in Pollard (2012) holds if 1/ (16n µ2n ) ≤ 12 . This will occur
+if Nn2 → ∞. Provided that the symmetrization inequality holds, we can follow the steps of
+Theorem 37 in Pollard (2012) to establish the tail bound on the sample sum via a combination
+of the Hoeffding inequality and the covering number for the class Pn . As a result, we obtain
+
+
+
+
+                                             22
+that
+          n                              √         !
+       1 X                                  N
+P sup         pN k (xi ) (Γi − Gi ) > 8         µn
+    Fn n                                ζ0 (N )
+         i=1
+                                                                       n
+                                                                                                         !
+                                                                                                  2
+                                        1 nN µ2n
+                                                 
+            2r0      ζ0 (N )                                        1 X
+≤ 2 exp An log √               exp −                  +P        sup       pN k (zi ) (∆i − Gi )       > 64 .
+                        N µn          128 ζ0 (N )2               Fn n
+                                                                      i=1
+
+
+The second term can be evaluated with the aid of Lemma 33 in Pollard (2012):
+
+                        n
+                                                          !
+                                                   2
+                     1 X
+                                                              ≤ 4 exp An2r0 exp (−n) .
+                                                                           
+             P   sup       pN k (zi ) (∆i − Gi )       > 64
+                  Fn n
+                       i=1
+
+
+As a result, we find that
+
+                                                                  1 nN µ2n
+                                                                         
+        1 N0    −1 0                             2r0    ζ0 (N )
+  P sup kp (x)Q̂ P (Γ − G) k > N µn ≤ 2N exp An log √           −
+     Fn n                                                 N µn 128 ζ0 (N )2
+                                     + 4N exp An2r0 − n
+                                                       
+
+
+We start the analysis with the first term. Consider the case with and r0 > 0. Then the log
+of the first term takes the form
+                        √            1      n
+        An2r0 log ζ0 (N ) N / (µ) −                 µ2 + log N
+                                      128 ζ0 (N )N
+                                 √ 2r !
+                       N ζ 0 (N ) Nn 0        1 µ2 n n                 N n2r0
+        = An2r0 log                      −                 − An 2r0
+                                                                    log        + log N.
+                               µn           128 ζ0 (N )2 N               µn
+
+If N log n/n → 0, then one needs that ζ0 (N )2 N nn2r0 log n → ∞ if r0 > 0 and ζ0 (N )2 Nn log2 n → ∞
+if r0 = 0+ . Hence the first term is of o(1). This condition is also sufficient for the exponent
+in the second term become infinitesimal.
+
+
+Next we provide a similar result for the case where the conditional moment function is
+estimated via a kernel estimator. We begin with formulating the requirement on the kernel.
+
+ASSUMPTION 9. The kernel function K(·) is differentiable single-peaked function. More-
+over, it integrates to 1, is bounded and of q-th order, and is square-integrable.
+
+We formulate the following lemma replicating the result of Lemma 1 for the case of the kernel
+estimator. For uniformity we rely on Assumption 8(i) that requires the density of covariates
+
+                                                   23
+to be uniformly bounded away from zero.
+
+LEMMA 2. Under Assumptions 8 and 9
+
+                               sup            |m(x; h, ηb) − m(x; h, η)| = op (1)
+                         d(h,h0 )=o(1),h∈Hn
+
+
+uniformly in x provided that bn → 0 and b−dz 2r0 −1
+                                         n n        log n → 0.
+
+Using Lemmas 1 and 2 we can formulate the consistency result for the directional derivative.
+
+Proof of Lemma 2 Recall the definition of the kernel estimator
+
+                                    n                 !−1          n                       
+                              1 X          x − xi              1 X                     x − xi
+            m(x; h, ηb) =              K                                ρ (yi , h) K
+                             nbdnz i=1       bn               nbdnz i=1                  hn
+
+For the expression of interest, we can consider
+
+                                                                   n              !−1
+              b (θ, η + n w, z) − m
+              m                     b (θ, η − n w, z)        1 X           z − zi
+                                                       =               K
+                                 n                         nbdnz i=1         bn
+                        n                                                          
+                  1 X                                                        z − zi
+               × dz        [ρ (θ, η + n w, yi ) − ρ (θ, η − n w, yi )] K            .
+                nbn n i=1                                                     bn
+
+
+Then we can consider a class of functions
+                                             
+                                          x−·
+                       Gn = {ρ (·, h) K         , h ∈ Hn , x ∈ X }.
+                                           bn
+
+Consider the class Gn . We can represent it as
+
+                                Gn = {g = f κ : f ∈ Fn , κ ∈ F} .
+
+N1 (·) and N2 (·) correspond to the L1 and L2 covering numbers. Consider the covering
+numbers for classes Fn and F. We select  > 0, then there exist m1 < N1 (, Fn , L1 (Q))
+and m2 < N1 (, F, L1 (Q)) and covers {fj }m                   m2
+                                                  j=1 and {κi }i=1 such that for f ∈ Fn and κ ∈ F
+                                                    1
+
+
+minj Q|f − fj | <  and mini Q|κ − κi | < . We note that |f | ≤ C and |g| ≤ C. Consider
+the cover {fj κi }j=m
+                  j,i=1
+                       1 ,i=m2
+                               noting that fj κi − f κ = (fj − f ) (κi − κ) + f (κi − κ) + κ (fj − f ).
+
+
+
+
+                                                     24
+Then, in combination with Cauchy-Schwartz we have that
+                                       1/2                    1/2
+min Q|κi fj − κf | ≤ min Q|fj − f |2          min Q|κi − κ|2          + C min Q|fj − f | + C min Q|κi − κ|
+ i,j                  j                        i                           j                  i
+
+
+Given the relationship between L1 and L2 covering numbers covers {fj }m              m2
+                                                                        j=1 and {κi }i=1 are
+                                                                          1
+
+                                         1/2                        1/2
+sufficient to achieve minj (Q|fj − f |2 ) <  and mini (Q|κi − κ|2 ) < . This means that
+min Q|κi fj − κf | < 3C. Thus, the L1 covering number for Gn is bounded by a product of L2
+ i,j
+covering numbers for F and Fn (which corresponds to the number of elements in the cover
+{fj κi }j=m
+        j,i=1
+             1 ,i=m2
+                     .
+
+Provided that classes Fn and F satisfy Euclidean property, we can apply Lemma 2.6.20
+from Van Der Vaart and Wellner (1996). This means that the class Gn is Euclidean with
+parameters depending on n. Provided that Var (g) = O (bn ) for g ∈ Gn , we can use a similar
+logic as in the proof of Theorem 37 in Pollard (2012) with the results similar to those in the
+                                                   dz
+proof of Lemma 1. This leads to condition n2rnb    n
+                                                 0 log n
+                                                         → ∞. We note that the bias due to
+                                                m
+kernel smoothing E [m(Xi ; h, ηb)|Xi = x] = O (bn ), where m is the order of the kernel, and
+the bias due to the sieve approximation is n−φ . Then
+
+               L1,p
+                  n ,w
+                          b (θ, η, Zi ) |Zi = z] − L1,p
+                                                      n ,w
+                                                           m (θ, η, z) = O bm    φ
+                                                                                   
+                       E [m                                                 n + n    ,
+
+which converges to zero if b−m
+                            n  → ∞ and nφ → ∞.
+
+
+Provided the unform consistency result, we can replicate our result for the finite-dimensional
+parameter that is estimated using partitioning via honest trees.
+
+                        b is the leaf of honest {α, k}-valid classi
+THEOREM 3. Suppose that L
+
+cation tree that returns label k and M                       cb (·, ·) is estimated from the
+                                     cb (h, ηb) = o(1) where M
+                                       L                      L
+subsample that was not used for splitting. Then whenever k = O(n/V ) under Assumptions
+1-5 and conditions of either Lemma 1 or Lemma 2
+
+                                           h, hk ) = op (1).
+                                         d(b
+
+
+5.2    Semiparametric model with growing tree structure
+
+Our next extension is based on considering the model that we analyzed before but now
+allow the tree to partition the support of covariates such that the number of elements in the
+
+                                                   25
+partition increases as the sample size grows.
+
+The idea of this extension in quite straightforward. Given that Assumption 4 holds for any
+decreasing sample size sequence n → ∞, it would also work for any of its subsequence. The
+expected number of points that falls in the leaf of volume V in the hypercube [0, 1]dz can be
+minorized as n V inf z fZ (z). As a result, given that k splits produce volumes of at least 2−k ,
+then the sufficient condition that yields the uniform consistency is that n 2−k → ∞. That is
+guaranteed whenever k  log n.
+
+
+6     Monte Carlo Evidence
+To showcase the performance of our estimator, we conduct several Monte Carlo experiments.
+We first demonstrate the ability of the estimator to successfully identify heterogeneous treat-
+ment effects in an experimental setting. We then consider the case of a regression discon-
+tinuity design (RDD). We anticipate that these two settings will be fruitful applications of
+our framework, and our Monte Carlo is designed to highlight the strengths of our approach
+while also illustrating potential tradeoffs that a practitioner faces in real settings.
+
+
+6.1   Monte Carlo: RCT
+
+We consider the following data-generating process which mimics a typical randomized con-
+trolled trial (RCT) design. Let the outcome variable be defined as:
+
+                                      Y = τ (X) · W + ,                                    (6.7)
+
+where W is an indicator for treatment, X is a vector of observable covariates, and  is an
+idiosyncratic, normally-distributed shock with mean zero and unit variance. The object of
+interest is τ (X), the true treatment effect, which may be a function of the observables, X.
+We initially draw two discrete X variables that are uniformly distributed over the integers
+from 1 to 8; this generates 64 distinct subgroups. We consider several specifications for τ (X)
+in increasing complexity. In the simplest RCT setting, W is randomly assigned independent
+of X. We draw a uniform random variable and set W to one when the draw is greater than
+one-half and zero otherwise.
+
+For sake of comparison, we start with the simplest possible case: the treatment effect is
+equal to ten for all treated units, and zero otherwise, generating a single treatment effect.
+We highlight two features of the results, shown in Table 1. First, the estimator assigns a
+
+                                                26
+                                 Table 1: Monte Carlo: Uniform RCT
+
+                                                            Tree                OLS
+         numObs / (α, k, M SE)         Num Leafs       Dim(τ ) MSPE        Dim(τ ) MSPE
+         50                              1.000         64.000     0.275     0.000     NaN
+         (0.01,   13, 1e-07)            (0.000)        (0.000)   (0.221)   (0.000)   (NaN)
+         100                             1.000         64.000     0.158     0.250     NaN
+         (0.01,   28, 1e-07)            (0.000)        (0.000)   (0.152)   (0.433)   (NaN)
+         200                             1.000         64.000     0.113     3.250     0.413
+         (0.01,   55, 1e-07)            (0.000)        (0.000)   (0.050)   (1.090)   (0.181)
+         400                             1.000         64.000     0.074    22.875     0.556
+         (0.01,   100, 1e-07)           (0.000)        (0.000)   (0.055)   (3.370)   (0.074)
+         800                             1.000         64.000     0.049    57.625     0.415
+         (0.01,   211, 1e-07)           (0.000)        (0.000)   (0.037)   (1.932)   (0.029)
+         1600                            1.000         64.000     0.053    64.000     0.287
+         (0.01,   411, 1e-07)           (0.000)        (0.000)   (0.031)   (0.000)   (0.017)
+         3200                            1.000         64.000     0.031    64.000     0.212
+         (0.01,   811, 1e-07)           (0.000)        (0.000)   (0.030)   (0.000)   (0.015)
+         6400                            1.000         64.000     0.028    64.000     0.152
+         (0.01,   1611, 1e-07)          (0.000)        (0.000)   (0.012)   (0.000)   (0.012)
+
+
+single treatment effect at all sample sizes for all Monte Carlo runs, consistently recovering
+the true underlying model. Column 3 reports the count of all subgroups that are assigned a
+statistically significant treatment effect at the five percent level; here the tree finds significant
+effects for all 64 subgroups. We have assigned a k, α, and M SE through cross-validation
+against a holdout sample.5 Of these parameters, α is always set at the corner solution
+of α = 0.01, while k and M SE become increasing stringent. Second, the calculation of
+the root mean squared prediction error (MSPE) is a useful baseline to compare following
+(more complex) models against. Here, the MSPE reflects only the statistical sampling error,
+whereas the more complex models we consider next have a convolution of statistical sampling
+and model misspecification.
+
+We also report the performance of OLS estimates run on each subgroup separately in the
+last two columns. The estimator is badly biased at smaller samples, failing to find even a
+single statistically significant treatment effect. The difference between the two estimators is
+driven by the fact that the tree can group together observations from different X, while the
+   5
+     k is the minimum number of observations in each leaf. α is the minimum proportion of data in each
+leaf. M SE is the minimum improvement in MSE after each split.
+
+
+
+                                                  27
+                             Table 2: Monte Carlo: Group RCT
+
+                                                        Tree                OLS
+        numObs / (α, k, M SE)     Num Leafs        Dim(τ ) MSPE        Dim(τ ) MSPE
+        50                          12.875          6.625     0.971     0.000     NaN
+        (0.01, 1, 1e-01)            (1.536)        (2.595)   (0.276)   (0.000)   (NaN)
+        100                          8.750          6.250     0.476     0.125     NaN
+        (0.01, 1, 1e-01)            (6.036)        (2.107)   (0.258)   (0.331)   (NaN)
+        200                          2.125          8.000     0.178     0.625     0.413
+        (0.01, 7, 1e-01)            (0.331)        (0.000)   (0.072)   (0.696)   (0.181)
+        400                          2.125          8.000     0.129     7.500     0.556
+        (0.01, 12, 1e-01)           (0.331)        (0.000)   (0.051)   (2.000)   (0.074)
+        800                          2.000          8.000     0.080    15.125     0.415
+        (0.01, 1, 1e-01)            (0.000)        (0.000)   (0.041)   (2.619)   (0.029)
+        1600                         2.000          8.000     0.069    16.625     0.287
+        (0.01, 1, 1e-01)            (0.000)        (0.000)   (0.028)   (2.997)   (0.017)
+        3200                         2.000          8.000     0.042    18.000     0.212
+        (0.01, 163, 1e-02)          (0.000)        (0.000)   (0.027)   (2.828)   (0.015)
+        6400                         2.000          8.000     0.036    18.125     0.152
+        (0.01, 323, 1e-02)          (0.000)        (0.000)   (0.009)   (2.803)   (0.012)
+        12800                        2.000          8.000     0.019    17.250     0.099
+        (0.01, 1, 1e-02)            (0.000)        (0.000)   (0.011)   (2.487)   (0.007)
+
+
+OLS estimator is forced to estimate separately on each subgroup. At higher sample sizes,
+the OLS estimator is able to recover the true number of effects, but has a large precision
+penalty as it is unable to group together similar observations to improve the standard error.
+This highlights one benefit of using the tree method even when the true model is a single
+treatment effect.
+
+To assess the performance of the estimator when we introduce observable heterogeneity, we
+set the treatment effect to ten if the observation has x1 = 1, and zero otherwise, generating
+two treatment effects. Table 2 reports the results. Initially, the tree estimates too many
+splits, producing too few statistically significant treatment effects (there are 8 groups for
+which the treatment effect is non-zero). Once n > 100, the estimator reconciles this error,
+finding the true model and estimating the treatment effects precisely. The decrease in the
+MSPE reflects this, as the rate returns to a parametric rate once the true model has been
+recovered. Compared to the baseline case of a treatment effect without any observable
+heterogeneity, the standard errors are approximately twice as large. OLS is biased upward
+and has much large standard errors, particularly at larger sample sizes.
+
+                                              28
+                    Table 3: Monte Carlo: Sparse RCT
+
+                                               Tree                OLS
+numObs / (α, k, M SE)    Num Leafs        Dim(τ ) MSPE        Dim(τ ) MSPE
+50                          1.000          0.750     1.320     0.000     NaN
+(0.01, 13, 1e-07)          (0.000)        (0.433)   (0.075)   (0.000)   (NaN)
+100                         5.750          0.625     1.119     0.125     NaN
+(0.01, 1, 1e-01)           (5.379)        (0.484)   (0.275)   (0.331)   (NaN)
+200                         2.375          0.625     1.035     0.250     0.413
+(0.01, 1, 1e-01)           (1.798)        (0.484)   (0.469)   (0.433)   (0.181)
+400                        51.500          1.000     0.784     5.125     0.556
+(0.01, 1, 1e-02)           (4.822)        (0.000)   (0.048)   (1.364)   (0.074)
+800                        32.250          1.000     0.435    10.000     0.415
+(0.01, 1, 1e-02)           (9.588)        (0.000)   (0.089)   (2.693)   (0.029)
+1600                        6.375          1.000     0.146    10.750     0.287
+(0.01, 1, 1e-02)           (0.992)        (0.000)   (0.034)   (3.382)   (0.017)
+3200                        5.250          1.000     0.078    12.500     0.212
+(0.01, 1, 1e-02)           (1.392)        (0.000)   (0.017)   (2.693)   (0.015)
+6400                        3.875          1.000     0.051    12.250     0.152
+(0.01, 1, 1e-02)           (0.927)        (0.000)   (0.020)   (3.192)   (0.012)
+12800                       3.000          1.000     0.022    11.625     0.099
+(0.01, 1, 1e-02)           (0.000)        (0.000)   (0.011)   (2.643)   (0.007)
+25600                       3.000          1.000     0.025    10.500     0.070
+(0.01, 1, 1e-02)           (0.000)        (0.000)   (0.008)   (2.915)   (0.003)
+
+
+
+
+                                     29
+We next consider a case of a sparse treatment effect, where τ (X) = 10 if and only if x1 = 1
+and x2 = 1. Otherwise, τ (X) = 0. This is a challenging specification for the estimator, as
+there are 63 null treatment effects which may appear to be true effects due to within-group
+statistical errors. Table 3 reports the results for 500 replications.
+
+There are several notable features. First, the classification tree has a downward bias on
+the estimated number of treatment effects for the smallest sample sizes. This results from
+the optimal tradeoff of variance (too few observations in each leaf) versus bias (not enough
+partitions of the data to capture the true number of effects). At sample sizes of n = 400
+and above, the tree grows more complex and converges to finding one statistically significant
+treatment effect. The faster-than-parametric decrease in the MSPE at that threshold reflects
+the decline in specification error. It is instructive to contrast the performance of the tree
+against the naive OLS estimates. At the smallest sample sizes, the OLS estimator does not
+find any statistically significant treatment effects. As the sample size grows, the OLS finds
+an increasing number of statistically significant treatment effects. Even after the tree has
+converged to the true model, the OLS estimator continues to overestimate the number of
+treatment effects. Aside from its bias of estimating ten times as many treatment effects as
+the truth, the OLS estimator interestingly has lower prediction error for sample sizes of 200,
+400, and 800. At higher sample sizes, OLS continues to be biased and is also dominated
+on prediction error by the classification tree. The relatively poor MSPE of OLS reflects the
+fact that the estimator cannot group together observations to improve the precision of the
+estimated treatment effect.
+
+To consider a more complex case, we modify the data-generating process for τ (X) to be:
+
+                                  τ (X) = x1 (1 + (x2 − 1)).                              (6.8)
+
+This results in 64 treatment effects as a combination of x1 and x2 . Table 4 reports the
+results. We note that the optimal k = 1, which was set as the lower bound in the cross
+validation search, for all sample sizes. This is driven by two factors. First, setting k higher
+makes it mechanically impossible to cut the data enough times to reproduce the number
+of true treatment effects. For example, when k = 25, the sample size must be at least
+n = 25 · 64 = 1600 before the tree could even potentially match the true set of underlying
+treatment effects. Second, all possible interactions of the two dummy variables have true
+treatment effects, so this design will not experience an over-fitting problem. The optimal
+size of the tree is controlled here by the acceptance criterion, which becomes more lax as the
+
+
+                                              30
+  Table 4: Monte Carlo: RCT with Saturated Sub-Group Heterogeneity
+
+                                             Tree                OLS
+numObs / (α, k, M SE)   Num Leafs       Dim(τ ) MSPE        Dim(τ ) MSPE
+50                       14.160         45.816    12.218     0.006     NaN
+(0.01, 1,   1e-01)       (1.749)        (7.166)   (2.798)   (0.077)   (NaN)
+100                      25.468         47.866     7.198     0.114     NaN
+(0.01, 1,   1e-01)       (2.273)        (4.976)   (2.398)   (0.336)   (NaN)
+200                      42.696         51.388     3.228     2.732     NaN
+(0.01, 1,   1e-07)       (2.528)        (3.151)   (1.161)   (1.501)   (NaN)
+400                      58.564         58.590     1.348    22.960     0.718
+(0.01, 1,   1e-03)       (1.964)        (2.073)   (0.295)   (2.688)   (0.107)
+800                      63.752         63.124     0.648    56.918     0.591
+(0.01, 1,   1e-07)       (0.496)        (0.738)   (0.091)   (2.287)   (0.058)
+1600                     64.000         63.700     0.415    63.646     0.415
+(0.01, 1,   1e-07)       (0.000)        (0.458)   (0.036)   (0.522)   (0.036)
+3200                     64.000         63.932     0.288    63.932     0.288
+(0.01, 1,   1e-07)       (0.000)        (0.252)   (0.026)   (0.252)   (0.026)
+6400                     64.000         63.994     0.201    63.994     0.201
+(0.01, 1,   1e-07)       (0.000)        (0.077)   (0.018)   (0.077)   (0.018)
+12800                    64.000         64.000     0.142    64.000     0.142
+(0.01, 1,   1e-07)       (0.000)        (0.000)   (0.012)   (0.000)   (0.012)
+25600                    64.000         64.000     0.100    64.000     0.100
+(0.01, 1,   1e-07)       (0.000)        (0.000)   (0.009)   (0.000)   (0.009)
+
+
+
+
+                                   31
+sample size grows.
+
+The inability of the tree to grow complex enough for smaller sample sizes is reflected in
+the mean squared prediction error. The MSPE exhibits monotonic but highly nonlinear
+convergence. Once the threshold of n = 1600 is reached, the tree recovers the true underlying
+structure and MSPE drops precipitously. Parametric error rates obtain after that point,
+reflecting the independence of the tree estimation and the estimation of treatment effects,
+as desired.
+
+The OLS estimator in this case has a performance as good or better than the tree approach for
+all sample sizes for which it reports prediction error. This is expected, as the OLS estimator
+in this case is the true model. However, once the tree has found the true model, prediction
+errors are (mechanically) identical, which highlights the independence of the honest tree’s
+predictive performance from the model selection step.
+
+
+6.2   Monte Carlo: RDD
+
+Our second set of Monte Carlo experiments uses a regression discontinuity design (RDD).
+RDD works by leveraging some known threshold, c, on a so-called running variable which
+functions as an assignment mechanism: to the left of the threshold, units do not receive
+a treatment, while those to the right of the threshold do. Assuming that units cannot
+manipulate their running variable, the discontinuous treatment on either side of the threshold
+can be used to estimate the causal effect of a treatment on outcomes, as sorting into the
+control or treatment groups is as “good as random” under the maintained assumption.
+Examples of RDD settings include the assignment of educational treatment on the basis of
+test scores, and means-tested assignments of welfare, unemployment insurance, and disability
+programs on labor supply.
+
+While the RDD setting has broad empirical appeal as a method for obtaining “credible” esti-
+mates of causal effects, the researcher still has to make a number of important assumptions.
+Among those assumptions are classifying units into different groups where the researcher
+may think that treatment effects vary. For example, the treatment effects of magnet schools
+on student achievements may vary in size depending on the income of the student’s parents.
+For low-income students, the effects may be much larger than for high-income students. The
+researcher may split the sample into two groups and estimate separate RDD regressions on
+each group, producing two treatment effects. In general, this search of the model specifica-
+tion process will fail for the reasons discussed above. Our Monte Carlo illustrates how the
+
+                                             32
+present estimator can circumvent this problem by constructing a set of splits of the data
+without intervention of the researcher. A second holdout sample is then used to produce
+consistent estimates of the treatment effect within each sub-group.
+
+We modify the above data-generating process by augmenting the experimental treatment to
+be a function of a running variable:
+
+                                    Y = τ (X) · W (R) + ,                                 (6.9)
+
+where W (R) is now an indicator function that is equal to zero to left of a cutoff value, R̄
+and one to the right:                  
+                                       0 if R < R̄,
+                                 W =                                                  (6.10)
+                                       1 else.
+
+This generates a sharp RDD, as opposed to a fuzzy RDD where the probability of treatment
+is positive everywhere but jumps discontinuously at R̄. We draw R from uniform U [0, 1].
+The object of interest is τ (X), the treatment effect as a function of the vector of covariates.
+We allow the treatment effect to depend on three covariates as follows:
+                                          
+                                          5         if X2 < 0.67,
+                                τ (X) =                                                  (6.11)
+                                          −2        else.
+
+We augment the treatment effect by subtracting 2 if X3 = 1 and adding 5 if X3 = 2. This
+generates six total treatment effects across the covariate space.
+
+The problem facing the econometrician is deciding where to assign different treatment effects.
+It is possible that one could guess the data-generating process above, but it is both unlikely
+and statistically undesirable for the reasons outlined above. Our estimator circumvents this
+process by estimating the partitioning of the X space in a first stage. In a second stage,
+we estimate treatment effects using the standard RDD approach outlined in Imbens and
+Lemieux (2008) and Lee and Lemieux (2010), using a local-linear regression around the
+threshold. We control the window width around the threshold using cross-validation, and
+we report results for various choices of that window width below.
+
+We generate 500 draws of each sample size. We report an out-of-sample mean squared
+prediction error for each sample size, which we constructed by generating data using the
+true (known) generating process and using the estimated tree and associated RDD models
+
+
+                                                33
+                                Table 5: Monte Carlo: RDD
+
+                               Count       Count
+         numObs     Dim(τ )   Discrete   Continuous    Mean X2     MSPE      Pr(Null)
+         500         6.587     3.207        2.380        0.539      0.918     0.000
+                    (0.785)   (0.480)      (0.772)      (0.252)    (0.393)   (0.000)
+         1000        6.107     3.113        1.993        0.671      0.669     0.000
+                    (0.449)   (0.317)      (0.337)      (0.027)    (0.303)   (0.000)
+         2000        6.133     3.087        2.047        0.675      0.497     0.000
+                    (0.499)   (0.281)      (0.291)      (0.026)    (0.273)   (0.000)
+         4000        6.040     3.020        2.020        0.671      0.321     0.000
+                    (0.280)   (0.140)      (0.140)      (0.014)    (0.187)   (0.000)
+         8000        6.027     3.013        2.013        0.670      0.246     0.000
+                    (0.229)   (0.115)      (0.115)      (0.013)    (0.213)   (0.000)
+         16000       6.000     3.000        2.000        0.669      0.198     0.000
+                    (0.000)   (0.000)      (0.000)      (0.006)    (0.174)   (0.000)
+
+
+to compute predicted treatment effects. We then sum the squared difference from the true
+value, divide by sample size, and take the square root. Table 5 shows the main results for
+the model above when using all the data in sample on either side of the window (h = 0.5)
+and the threshold for improvement in the tree is set to 0.1.
+
+First, we note that the model obtains consistent estimates of the number of treatment effects
+(true value: 6), the number of discrete splits (true value: 3), the number of continuous splits
+(true value: 2), and the level at which the second covariate, X2 , splits the sample (true
+value: 0.670). This convergence to the true model is rapid—at the sample size of 16,000
+there is no appreciable variation across Monte Carlo experiments in the structure of the
+estimated tree. At that point, the estimator essentially recovers the true tree without error,
+as would be expected given the faster-than-parametric rate of convergence of the first stage
+of our estimation. The column labeled RMSPE reports the root mean squared prediction
+error on out-of-sample data. The RMSPE is the composition of two sources of error: errors
+in the specification of the classification tree, and errors arising from sampling error within
+each leaf. For smaller sample sizes, the rate of decline in the RMSPE is driven by both
+errors. As the tree converges at faster-than-parametric rates, so does the prediction error.
+Beyond n = 8000, when the tree is recovered with negligible error, the RMSPE is almost
+completely due to classical sampling error. At that point, the rate of convergence reverts to
+                 √
+the parametric n rate. Finally, in the last column we report out-of-sample observations
+
+
+                                              34
+for which the tree is unable to produce estimates due to the starvation of a given leaf in the
+second stage of our estimation process. At small samples, there are some observations which
+cannot be predicted, but this is a vanishingly small problem that disappears completely at
+sample sizes beyond n = 1000.
+
+The smaller sample sizes show some regularities, particularly with respect to bias. For
+one, our procedure tends to estimate too many treatment effects at smaller sample sizes,
+primarily of the continuous variety. This also introduced bias in the estimate of where X2 is
+split. These biases disappear rapidly as the sample size grows.
+
+
+6.3   Continuous Treatment Effects
+
+An extension of our econometric results above considers the case where K is infinite. To
+demonstrate the small sample performance of our estimator in such a setting, we perform
+a Monte Carlo experiment in a univariate RDD setup with the following function for the
+treatment effect:
+                                   τ (xi ) = sin(4πxi ),                           (6.12)
+
+where xi is a unidimensional covariate distributed uniformly on the unit interval. As before,
+we generate a U [0, 1] running variable and assign the treatment if the running variable is
+above one half. We estimate by splitting the sample in half, first fitting the tree on the first
+sample, and then fitting the estimates within each leaf on the second sample. We impose that
+α = 0.1 and choose the minimum number of observations in each node via cross-validation.
+This guards against the possibility of growing the number of splits faster than the number
+of observations, which by extension ensures that each leaf will have an infinite number of
+observations in the limit, while also balancing finite-sample bias and variance.
+
+
+6.4   No Error Term
+
+We begin by running our Monte Carlos with the variance of the idiosyncratic term set to
+zero. This captures the effect of pure approximation error.
+
+The left panel of Table 6 reports the results from this experiment. As the dimension of
+τ shows, the model fits an increasingly complex model to the data. This also results in a
+substantial decrease in mean squared prediction error.
+
+Figure 1 shows the fit of the moment tree in this case. First, the general fit is excellent
+across the entire range of the function. There is a small bias evident at the peaks and
+
+                                              35
+                                Figure 1: Estimated and True Treatment Effect Function, Without Error
+
+                                                   n = 2000                                                                                           n = 4000
+                   1.0                                                                                                 1.0
+                   0.9                                                                                                 0.9
+                   0.8                                                                                                 0.8
+                   0.7                                                                                                 0.7
+                   0.6                                                                                                 0.6
+                   0.5                                                                                                 0.5
+                   0.4                                                                                                 0.4
+                   0.3                                                                                                 0.3
+Treatment Effect
+
+
+
+
+                                                                                                    Treatment Effect
+                   0.2                                                                                                 0.2
+                   0.1                                                                                                 0.1
+                   0.0                                                                                                 0.0
+                   -0.1                                                                                                -0.1
+                   -0.2                                                                                                -0.2
+                   -0.3                                                                                                -0.3
+                   -0.4                                                                                                -0.4
+                   -0.5                                                                                                -0.5
+                   -0.6                                                                                                -0.6
+                   -0.7                                                                                                -0.7
+                   -0.8                                                                                                -0.8
+                   -0.9                                                                                                -0.9
+                   -1.0                                                                                                -1.0
+
+
+                          0.0    0.1   0.2   0.3    0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2   0.3    0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                           x_i                                                                                                x_i
+
+
+
+
+                                                   n = 8000                                                                                           n = 16000
+                   1.0                                                                                                 1.0
+                   0.9                                                                                                 0.9
+                   0.8                                                                                                 0.8
+                   0.7                                                                                                 0.7
+                   0.6                                                                                                 0.6
+                   0.5                                                                                                 0.5
+                   0.4                                                                                                 0.4
+                   0.3                                                                                                 0.3
+Treatment Effect
+
+
+
+
+                                                                                                    Treatment Effect
+
+
+
+
+                   0.2                                                                                                 0.2
+                   0.1                                                                                                 0.1
+                   0.0                                                                                                 0.0
+                   -0.1                                                                                                -0.1
+                   -0.2                                                                                                -0.2
+                   -0.3                                                                                                -0.3
+                   -0.4                                                                                                -0.4
+                   -0.5                                                                                                -0.5
+                   -0.6                                                                                                -0.6
+                   -0.7                                                                                                -0.7
+                   -0.8                                                                                                -0.8
+                   -0.9                                                                                                -0.9
+                   -1.0                                                                                                -1.0
+
+
+                          0.0    0.1   0.2   0.3    0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2   0.3    0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                           x_i                                                                                                x_i
+
+
+
+
+                                                                                               36
+                           Table 6: Continuous Treatment Effects
+
+                    Without Error                              With Error
+             Uniform x         Normal x                Uniform x         Normal x
+  n       Dim(τ ) RMSPE Dim(τ ) RMSPE               Dim(τ ) RMSPE Dim(τ ) RMSPE
+  2000     15.548     0.137    19.560      0.148     11.942     0.373      7.282     0.360
+           (0.976)   (0.006)   (0.697)    (0.010)    (0.755)   (0.052)    (0.599)   (0.046)
+  4000     24.520     0.090    37.156      0.081     12.222     0.298     14.190     0.292
+           (1.044)   (0.004)   (1.254)    (0.004)    (0.667)   (0.033)    (0.806)   (0.038)
+  8000     30.332     0.071    64.148      0.046     16.880     0.361     14.306     0.235
+           (0.823)   (0.002)   (1.353)    (0.001)    (0.840)   (0.033)    (0.770)   (0.024)
+  16000    40.244     0.057    113.440     0.028     24.764     0.193     22.666     0.197
+           (1.339)   (0.002)   (1.905)    (0.002)    (1.168)   (0.019)    (1.157)   (0.019)
+
+
+troughs of the sine function, where the derivative is near zero. In smaller samples, the
+estimator fits a constant to these neighborhoods, which leads to some minor underfitting.
+This bias disappears in the large samples. By n = 16000, the underlying function is recovered
+uniformly and with nearly no variance.
+
+
+6.5   With Measurement Error
+
+We now allow the error term to be drawn from a standard normal. The right panel of the
+table shows the results. The trees are simpler in this case, as the estimator has to balance
+variance against bias. The RMSPE is substantially larger, although it rapidly shrinks at
+higher sample sizes. Figure 2 shows the resulting estimated function across the domain of
+X.
+
+
+6.6   Normally-Distributed Data
+
+In this section, we show that the method works well even when data is not distributed
+uniformly across the domain of interest. We draw x from a normal distribution with mean
+one-half and standard deviation equal to 0.25, and truncate at zero and one, we can observe
+the effect of having non-uniformly distributed data across the interval. Figure 3 plots the
+estimated functions and the 95 percent confidence bands generated over 500 Monte Carlo
+iterations. It is immediately apparent that the estimator is best at capturing the variation in
+the underlying treatment effect function where the data is most frequent. The two tails have
+more constant approximations, which hones in on the true function rapidly as the sample
+
+
+                                              37
+   Figure 2: Estimated and True Treatment Effect Function, With Error and Optimal k
+
+                                                n = 2000 k = 125                                                                                   n = 4000 k = 250
+                       1.6                                                                                                1.4
+
+                       1.4                                                                                                1.2
+
+                       1.2
+                                                                                                                          1.0
+                       1.0
+                                                                                                                          0.8
+                       0.8
+                                                                                                                          0.6
+                       0.6
+                                                                                                                          0.4
+                       0.4
+    Treatment Effect
+
+
+
+
+                                                                                                       Treatment Effect
+                                                                                                                          0.2
+                       0.2
+
+                       0.0                                                                                                0.0
+
+                       -0.2                                                                                               -0.2
+
+                       -0.4                                                                                               -0.4
+
+                       -0.6
+                                                                                                                          -0.6
+                       -0.8
+                                                                                                                          -0.8
+                       -1.0
+                                                                                                                          -1.0
+                       -1.2
+                                                                                                                          -1.2
+                       -1.4
+
+                       -1.6                                                                                               -1.4
+
+                              0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                              x_i                                                                                                x_i
+
+
+
+
+                                                n = 8000 k = 350                                                                                   n = 16000 k = 450
+                       1.4                                                                                                1.4
+
+
+                       1.2                                                                                                1.2
+
+
+                       1.0                                                                                                1.0
+
+                       0.8                                                                                                0.8
+
+                       0.6                                                                                                0.6
+
+                       0.4                                                                                                0.4
+    Treatment Effect
+
+
+
+
+                                                                                                       Treatment Effect
+
+
+
+
+                       0.2                                                                                                0.2
+
+                       0.0                                                                                                0.0
+
+                       -0.2                                                                                               -0.2
+
+                       -0.4
+                                                                                                                          -0.4
+
+                       -0.6
+                                                                                                                          -0.6
+
+                       -0.8
+                                                                                                                          -0.8
+
+                       -1.0
+                                                                                                                          -1.0
+                       -1.2
+                                                                                                                          -1.2
+                       -1.4
+                                                                                                                          -1.4
+                              0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                              x_i                                                                                                x_i
+
+
+Notes: Each figure plots the mean estimated and true treatment effect function, τ (xi ), for various sample
+sizes. The minimum number of observations in each leaf, k, was chosen via cross-validation. The data-
+generating process is a regression discontinuity design with uniformly-distributed xi . The dashed lines
+represent the 95 percent confidence interval. Results computed using 500 Monte Carlo experiments.
+
+
+
+
+                                                                                                  38
+   Figure 3: Estimated and True Treatment Effect Function, Normally-Distributed Data
+
+                                                 n = 2000 k = 200                                                                                   n = 4000 k = 200
+                                                                                                                           1.6
+                        1.4
+                                                                                                                           1.4
+                        1.2
+                                                                                                                           1.2
+                        1.0
+                                                                                                                           1.0
+                        0.8
+                                                                                                                           0.8
+
+                        0.6                                                                                                0.6
+
+                        0.4                                                                                                0.4
+     Treatment Effect
+
+
+
+
+                                                                                                        Treatment Effect
+                        0.2                                                                                                0.2
+
+                        0.0                                                                                                0.0
+
+                        -0.2                                                                                               -0.2
+
+
+                        -0.4                                                                                               -0.4
+
+                                                                                                                           -0.6
+                        -0.6
+                                                                                                                           -0.8
+                        -0.8
+                                                                                                                           -1.0
+                        -1.0
+                                                                                                                           -1.2
+                        -1.2
+                                                                                                                           -1.4
+                        -1.4
+                                                                                                                           -1.6
+                               0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                               x_i                                                                                                x_i
+
+
+
+
+                                                 n = 8000 k = 400                                                                                   n = 16000 k = 400
+                        1.4
+                                                                                                                           1.4
+
+                        1.2
+                                                                                                                           1.2
+
+                        1.0                                                                                                1.0
+
+                        0.8                                                                                                0.8
+
+                        0.6                                                                                                0.6
+
+                        0.4                                                                                                0.4
+     Treatment Effect
+
+
+
+
+                                                                                                        Treatment Effect
+
+
+
+
+                        0.2                                                                                                0.2
+
+                        0.0                                                                                                0.0
+
+                        -0.2                                                                                               -0.2
+
+
+                        -0.4                                                                                               -0.4
+
+
+                        -0.6                                                                                               -0.6
+
+                                                                                                                           -0.8
+                        -0.8
+
+                                                                                                                           -1.0
+                        -1.0
+
+                                                                                                                           -1.2
+                        -1.2
+                                                                                                                           -1.4
+                        -1.4
+
+                               0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0                                  0.0   0.1   0.2    0.3   0.4   0.5    0.6   0.7   0.8   0.9   1.0
+                                                               x_i                                                                                                x_i
+
+
+Notes: Each figure plots the mean estimated and true treatment effect function, τ (xi ), for various sample
+sizes. The minimum number of observations in each leaf, k, was chosen via cross-validation. The data-
+generating process is a regression discontinuity design with truncated normal-distributed xi with mean 0.5
+and standard deviation 0.25. The dashed lines represent the 95 percent confidence interval. Results computed
+using 500 Monte Carlo experiments.
+
+
+
+
+                                                                                                   39
+size increases. This result gives confidence that the method is still able to consistently and
+accurately recover the true function in reasonably-sized data sets, even when the data density
+is unevenly distributed.
+
+
+7       Empirical Application
+The Pradhan Mantri Gram Sadak Yojana (PMGSY)—the Prime Minister’s Village Road
+Program—was launched in 2000 with the goal of providing all-weather access to unconnected
+habitations across India.6 The focus was on the provision of new feeder roads to localities
+that did not have paved roads. By 2011, the government had upgraded or built new roads
+to over 115,000 villages at a cost of nearly $30 billion.
+
+National guidelines determine prioritization of road construction under the PMGSY. Most
+importantly for this empirical exercise, road construction is supposed to occur first in large
+localities, as defined by the 2001 Population Census. Program rules dictate that villages of
+1000+ population were to be prioritized over villages in the population range of 500-999,
+which were in turn to be prioritized over smaller villages. These rules create discontinuities
+in the probability of road construction by 2011, the year for which we have outcome data
+from the 2011 Population Census. Villages with baseline (2001) populations above the
+population cutoffs (500 and 1000) are approximately fifteen percentage points more likely to
+have received a road by 2011. We can exploit these discontinuous jumps in the probability
+of road construction to estimate the impact of the PMGSY. 7
+
+For this application, we focus on the question of the impact of road construction on the
+provision of public transportation. Specifically, we estimate the impact of PMGSY road
+construction on the likelihood that a village will be served by either a public or private bus
+route. Access to a bus route is a critical mechanism for individuals to take advantage of
+rural roads, as few individuals in these villages will own vehicles. Further, recent research
+has suggested that rural demand may not be sufficient to support the provision of bus
+services, which may mitigate the value of new roads Raballand, Thornton, Yang, Goldberg,
+Keleher, and Müller (2011). Bryan, Chowdhury, and Mobarak (2014) find large returns to
+subsidizing bus travel to nearby cities, so much so that their intervention is being scaled up
+    6
+      Habitations are defined as clusters of population whose location does not change over time. They are
+distinct from, but form parts of, villages as defined by the Population Census. In this paper, we aggregate
+all data to the level of the census village.
+    7
+      For a more detailed description of the PMGSY program, as well a comprehensive set of regression
+discontinuity validity tests, see Asher and Novosad (2016).
+
+
+                                                    40
+into a major anti-poverty program in Bangladesh. Given the high cost of road construction,
+a better understanding of the conditions under which road provision leads to an expansion of
+actual transportation options would help policymakers maximize the impact of infrastructure
+investments.
+
+A priori, one could hypothesize that distance to towns plays a key role in whether a village
+with a new road also gets serviced by a bus route. However, the multidimensional nature
+of distance to towns (i.e. distance to town * town size) forces the econometrician to make
+many arbitrary decisions. Are distance effects linear, or do they take a specific non-linear
+form? Is treatment heterogeneity in distance to small towns equivalent to heterogeneity in
+distance to large towns? What town sizes should be used? The most common approach is
+to collapse the multidimensional town distance variable into a single scalar market access
+variable (e.g. Donaldson and Hornbeck (2016)) but this may not be the empirically correct
+functional form. Our estimator allows the econometrician to capture a complex relationship
+between town distance and treatment effects, without committing beforehand to an arbitrary
+functional form.
+
+
+7.1    Data
+
+We assembled a high spatial resolution dataset that combines household and firm microdata
+with village aggregates describing amenities, infrastructure and demographic information.
+Data on road construction (the treatment) come from the administrative records of the
+PMGSY.8 For the purposes of our analysis, all variables are aggregated to the level of the
+census village, the geographic unit at which we measure outcomes. We consider a village
+to be treated by the PMGSY if at least one habitation in the village received a completed
+PMGSY road by 2010, the year before the most recent round of the Population Census.
+
+The primary outcome of interest, the presence of regular bus service to a village, comes from
+the 2011 Population Census. Baseline village characteristics come from the 2001 Population
+Census, which was collected in the year that the first PMGSY roads were being constructed.
+We also use GIS data purchased from ML Infomap to construct straight line distances from
+villages to towns of different sizes.
+   8
+    All data are publicly available at http://omms.nic.in. The variables used in this paper were assembled
+from data scraped in January 2015.
+
+
+
+
+                                                   41
+7.2     Empirical Strategy
+
+The generate causal treatment estimates of roads, we use a fuzzy regression discontinuity
+estimator Imbens and Lemieux (2008), that takes advantage of the quasirandom assignment
+of roads to villages with populations above the thresholds stipulated by the program. The
+estimator effectively compares similar villages on either side of the population threshold, and
+estimates the local average treatment effect (LATE) of receiving a new road, for a village at
+the threshold population:
+
+                     limpop→T + E[Yv |popv = T ] − limpop→T − E[Yv |popv = T ]
+         τ=                                                                         ,                   (7.13)
+              limpop→T + E[newroadv |popv = T ] − limpop→T − E[newroadv |popv = T ]
+
+where popv is the baseline village population, T is the threshold population, and newroadv
+is an indicator variable for whether village v received a new road in the sample period. The
+treatment effect can be interpreted as the discontinuous change in the outcome variable at the
+population threshold (the numerator) divided by the discontinuous change in the probability
+of treatment (the denominator). The local average treatment effect (LATE) estimated by
+our empirical design is specific to the complier set, namely those villages whose treatment
+status would be zero with population below the threshold and one with population above.
+
+The estimation follows the recommendations of Imbens and Lemieux (2008), Imbens and
+Wooldridge (2009) and Gelman and Imbens (2014). We use local linear regression to control
+for the running variable (village population) on either side of the threshold. We restrict
+our sample to villages with population within a narrow bandwidth around the threshold,
+formally popv ∈ [T − h; T + h], where h is the value of the bandwidth around threshold T .
+We calculate an optimal bandwidth of 54 following Imbens and Wooldridge (2009) and use
+a triangular kernel that places the most weight on observations close to the cutoff, as in Dell
+(2015).
+
+The IV estimator is a two-stage-least-squares estimator, which takes the form:
+
+Yv,j = γ0 + γ1 newroadv,j + γ2 (popv,j − T ) + γ3 (popv,j − T ) ∗ 1{popv,j ≥ T } + ζXv,j + ηj + υv,j ,
+                                                                                              (7.14)
+where Yv,j is the outcome of interest, T is the population threshold, popv,j is village pop-
+ulation measured at baseline, Xv,j is a vector of village controls measured at baseline, and
+ηj is a district-cutoff fixed effect.9 Village controls and fixed effects are not necessary for
+  9
+      Village control include the baseline literacy rate, share of individuals in marginalized groups (Scheduled
+
+
+                                                       42
+identification but improve the efficiency of the estimation. newroadv,j is instrumented by an
+indicator variable that takes the value one for villages above the population threshold. γ1
+captures the causal effect of being treated with a new road, for a village with population at
+the treatment threshold T .
+
+We restrict the sample to villages that did not have a paved road at the start of the program.
+The PMGSY used multiple population thresholds to determine road prioritization: 1000,
+500 and 250. Very few villages around the 250 population threshold received roads by 2010,
+so we limit our sample to villages with populations close to 500 and 1000. Further, only
+certain states followed the population threshold prioritization rules as given by the national
+guidelines of the PMGSY. We worked with the National Rural Roads Development Agency to
+identify the state-specific thresholds that were followed and define our sample accordingly.10
+To maximize power, we pool our samples, using the same optimal bandwidth (54) for villages
+close to both the 500 and 1000 thresholds.
+
+
+7.3    Results
+
+We first present our baseline RDD estimates before turning to heterogeneous treatment
+effects using our two-step classification tree method above. As the RDD estimator can be
+interpreted as a Wald estimator, we report the first stage in Table 7, where the outcome
+variable is an indicator that takes the value one if a village received a new road by 2010.
+
+There is a strong relationship between the instrument (being above the pre-defined popula-
+tion threshold) and having a road. The second stage is reported in Table 8. We estimate
+that the causal effect of a newly-built road to a rural village is to increase bus availability by
+17 percentage points. The estimated effect is nominally significant at the 10 percent level.
+That may be due to either sampling error, a lot of heterogeneity in the correctly specified
+model, or specification error. To assess if we can improve on this estimate by accounting for
+unobserved heterogeneity, we next run the moment tree estimator on the same data.
+
+We include several covariates as possible splitting variables: state fixed effects; distance to
+the nearest city with 10,000 people, 100,000 people, and 500,000 people, respectively; and
+Castes and Scheduled Tribes), number of schools and medical centers, distance to nearest town, share of
+irrigated land, land area, share of population employed in agriculture, and a dummy variable indicating
+electrification.
+   10
+      Our sample is comprised of villages from the following states, with the population thresholds used in
+parentheses: Chhattisgarh (500, 1000), Gujarat (500), Madhya Pradesh (500, 1000), Maharashtra (500),
+Orissa (500), Rajasthan (500).
+
+
+
+                                                    43
+             Table 7: First Stage RDD
+
+                                         (1)
+                                     Road by 2011
+  Road priority                            0.196∗∗∗
+                                          (0.0185)
+  2001 Pop * 1(Pop < Cutoff)               0.0158
+                                          (0.0422)
+  2001 Pop * 1(Pop ≥ Cutoff)               0.0797
+                                          (0.0422)
+  Constant                                 0.262∗∗∗
+                                          (0.0132)
+  Observations                        10086
+  F                                     188.9
+  Standard errors in parentheses
+
+
+
+
+            Table 8: IV RDD Estimates
+
+                                          (1)
+                                   Bus service (2011)
+Road                                       0.171∗
+                                          (0.0862)
+2001 Pop * 1(Pop < Cutoff)               −0.0172
+                                          (0.0394)
+2001 Pop * 1(Pop ≥ Cutoff)               −0.00335
+                                          (0.0430)
+Constant                                   0.183∗∗∗
+                                          (0.0324)
+Observations                          10086
+Standard errors in parentheses
+
+
+
+
+                           44
+an indicator for existence of a bus route in 2001, prior to the road-building program.11 As
+discussed in Section 2, we use bootstrapping and inverse-variance weighting within moment
+forests to produce our estimates of θ(X). We use 50 bootstrap samples, constructed by
+sampling randomly with replacement from the base data set, and then split the sample in
+half; in each split, we grow a moment forest of 50 trees, where we obtain the leaf structure
+on the first half of the data and then estimate the RDD effect within each leaf of that tree
+with the second half.12
+
+To illustrate what is happening in our estimation, it is useful to consider the output of
+a single tree. Recalling that the estimator first splits the data in half and estimates the
+structure of the tree on the first half, output may look like the following:
+
+x1     < 24.71; x0 in { 8 }; x2 < 108.99; x4 in { 0 },0.113 (0.093)                           [537]
+x1     > 24.71; x0 in { 8 }; x2 < 108.99; x4 in { 0 },0.467 (0.712)                           [122]
+x0     in { 22 }; x2 < 108.99; x4 in { 0 },0.591 (0.369) * [558]
+x2     > 108.99; x0 in { 8 22 }; x4 in { 0 },0.070 (1.689) [268]
+x0     in { 21 23 }; x4 in { 0 },0.382 (0.208) ** [3014]
+x0     in { 8 22 }; x4 in { 1 },0.197 (0.375) [234]
+x0     in { 21 23 }; x4 in { 1 },0.162 (0.374) [353]
+
+Each line specifies a rule which defines a leaf of the tree, or a disjoint subset of the sample.
+This is followed by the estimated treatment effect in that leaf, its standard error, star notation
+indicating level of significance at the 0.10 (*), 0.05 (**), or 0.01 (***) level, and the number
+of observations falling into that leaf in brackets. In this tree, there are statistically significant
+effects in two of the leaves. The first is for states 21 and 23, in villages that previously did
+not have bus routes; the estimated treatment effect is a 38.2 percentage point increase in the
+probability of receiving a bus route after building a road. The second effect is a more complex
+splitting of the data: for state 22, when the nearest city of 100,000 people is less than 108
+kilometers away, and a bus route did not previously exist, the treatment effect is estimated
+to be 59.1 percentage points with a standard error of 39.6 percentage points, indicating this
+  11
+      Bus routes can exist at baseline in villages without paved roads, because some of these villages could be
+reached on dirt roads, though not necessarily in all seasons.
+   12
+      As in the Monte Carlo, the stopping criteria for growing the tree (k, α, and M SE) are set using cross-
+validation. We used a holdout sample of 1,000 observations to calculate prediction error while setting the
+sample sizes to grow the tree and estimate its values at 1,996 and 6,000 respectively. We used unequal
+sample sizes for growing the trees since the model selection step has much faster convergence rates than the
+estimation step, which therefore benefitted more from having a larger sample size. In principle these sample
+sizes are also subject to cross validation to select their optimal sizes.
+
+
+                                                      45
+effect is marginally significant at the 10 percent level. For comparison, a baseline RDD on
+the entire sample finds a treatment effect of 28.8 percentage points with a standard error of
+11.6 percentage points.13 Importantly, presence of a prior bus route (x4 = 1) is associated
+with low and statistically insignificant treatment effect, which follows intuition given that it
+is not possible for the outcome variable to grow in this subsample, though it could decline.
+Finally, the tree did not split on distance to either the smaller or larger towns, indicating
+that these are not key predictors of treatment effect sizes in this subsample.
+
+This tree from the first half of the sample is only used for its structure; we use the second
+sample to estimate treatment effects. This second tree is:
+
+x2     < 108.99; x0 in { 8 22 }; x4 in { 0 },0.268 (0.110) *** [1217]
+x2     > 108.99; x0 in { 8 22 }; x4 in { 0 },-0.085 (0.490) [106]
+x0     in { 21 23 }; x4 in { 0 },0.487 (0.075) *** [3515]
+x4     in { 1 },0.217 (0.287) [587]
+
+The second tree has fewer nodes than the first tree. This is due to the fact that some leaves
+that are estimates in the first stage do not have enough observations (or any) in the second
+sample to produce valid estimates. In these cases, we “prune” that leaf and consider the
+next highest level of aggregation the new terminal leaf. Interestingly, the second tree finds
+an even stronger effect for states 21 and 23 without prior bus routes. The two leaves with
+prior bus routes are now combined into one; there is still no significant effect. The first and
+third leafs are also combined, resulting in a more precise estimate for states 8 and 22 (versus
+just 22) with cities of more than 100,000 people less than 108 km away.
+
+Two interesting outcomes of this process are that, first, the full sample treatment effect of
+0.171 is a composite estimate mixing together several different estimates. It misses the much
+stronger (and precise) effect in states 21 and 23 that is almost three times as large. Second,
+the estimated model is more complex than anyone would ever stumble upon a priori. The
+first leaf’s rule splits on a continuous variable and interacts with two other discrete variables.
+
+We estimate the bootstrapped moment forest model under two sets of possible splitting vari-
+ables. We first restrict each tree to only split on the state indicators. Under this restriction,
+we obtain three statistically significant treatment effects, differentiated by Indian state. In
+state 22, the estimated treatment effect is 0.232 with a standard error of 0.126. In state
+  13
+    This is different from the grouped RDD effect on all the data because we are just using half of the sample
+data.
+
+
+                                                     46
+23, the estimated treatment effect is 0.301 with a standard error of 0.147. In state 21, the
+estimated treatment effect is 0.292 with a standard error of 0.157. These results contrast
+with the baseline homogeneous estimate in two important ways. First, the moment tree esti-
+mator finds statistically significant effects for only 7389 of the 9996 sample villages. Second,
+it estimates three different effects within those 7389 villages. The baseline estimate combines
+both kinds of heterogeneity, resulting in a lower point estimate with a larger standard error.
+
+We next estimate the full moment tree model, allowing for continuous variables to enter
+the tree, specifically the distances to towns of different sizes. The estimator finds 3,525
+statistically significant unique treatment effects across 3,603 villages. A density plot of the
+range of estimates is provided in Figure 4; the vast majority of estimated effects range from
+zero to 0.4. This density plot understates the incredible richness of the estimator, however,
+as can be seen by plotting the distribution of treatment effects across space.
+
+Figure 4a shows a heat map of treatment effects for all sample villages, both treated and
+untreated. Treatment effects are divided into deciles, and the black areas show the smallest
+treatment effects, and the bright red areas show the largest. Figure 4b presents another
+heatmap of treatment effects, this time for the subset of villages with statistically significant
+treatment effects (all of them positive). The maps highlight the variation in treatment
+effects across states, and also as a function of proximity to urban geography. Treatment
+effects are largest in Madhya Pradesh and Orissa, smaller (and not statistically significant)
+in Chhattisgarh, and close to zero in Rajasthan.14 Within those states, treatment effects
+are largest around the major cities of Bhubaneswar, Gwalior, Indore, Bhopal and Jabalpur.
+Proximity to smaller cities does not appear to drive significant variation in treatment effects,
+and Rajasthan and Chhattigarh to do not show strong heterogeneity in urban proximity. In
+Figure 4b, it is clear that the proximity effect is non-linear—treatment effects become smaller
+at extremely close proximity to towns, perhaps because even villages with very poor quality
+access roads were already connected to bus routes in these periurban areas. While this
+distribution of treatment effects is sensible and can be understood ex post, it would be
+impossible to predict this set of treatment interactions a priori.
+
+The importance of these findings are two-fold: first, the average treatment effect in the sub-
+samples in Figure 4b is ranges from near zero to 0.4, which is almost three times larger than
+the treatment effect found in the grouped data. Second, statistically significant treatment
+  14
+    Note that this variation is not related to the size of the first stage across villages, as the first stage
+estimator is in fact largest in Rajasthan.
+
+
+
+                                                     47
+                               Figure 4: Density Plot of Treatment Effects
+
+                                                Kernel density estimate
+
+               4
+               3
+            Density
+              21
+               0
+
+
+
+
+                           0                   .1                  .2     .3   .4
+                                                                  se
+                      kernel = epanechnikov, bandwidth = 0.0160
+
+
+
+
+effects only occurs in a subset of the villages. This is a highly complex nonlinear partitioning
+of the original data, highlighting the fact that it is highly unlikely anyone would ever be able
+to guess that this was the true model. The alternative of saturating the specification with
+every combination of all discrete variables runs into the problem of how to cut the continuous
+variables. There are literally an infinite number of cuts, and as such this is not a fruitful
+approach. Fully nonparametric approaches are fully general, but converge so slowly that
+it is unlikely to be a productive path for practitioners with finite data sets. Our estima-
+tor provides a middle path that allows for arbitrary structure while retaining the efficiency
+properties of pre-specified models.
+
+
+8   Conclusion
+We have presented a two-stage estimator for the problem of assigning statistical models to
+disjoint subsets of a sample. Leveraging recent results on the estimation of honest trees, we
+split the sample into two random halves. The first half is used to estimate the classification
+tree assigning observations to models. The second half is used to estimating parameters
+of those models within each assignment. Splitting the data in this fashion allows us to
+
+
+                                                             48
+Figure 5: Heatmap of Treatment Effects
+              (a) All Villages
+
+
+
+
+    (b) Statistically Significant Villages
+
+
+
+
+                     49
+derive econometric results that the tree is consistently estimated, converges to the truth at a
+faster-than-parametric rate, and therefore can be ignored when constructing standard errors
+for the estimates in the second stage. Our method applies to all empirical settings where
+the researcher has reason to believe that the estimated model may vary across units of the
+sample in some observable fashion.
+
+We show a simple application of our estimator to a roads building project in India. Using a
+bootstrapped moment forest, we estimate a model that produces 3,525 statistically significant
+treatment effects spread across 3,603 villages. The results highlight the heterogeneity in
+treatment effects found using a regression discontinuity framework across these villages,
+including the importance of proximity to large urban spaces and the variation across Indian
+states. In future work, we plan to expand on these preliminary results and bring in a micro-
+level data set at the household level to match with the village-building program. This will
+let us to test for observable heterogeneity at a much finer level than our current data allows
+for.
+
+
+References
+Ai, C., and X. Chen (2003): “Efficient estimation of models with conditional moment
+  restrictions containing unknown functions,” Econometrica, 71(6), 1795–1843.
+
+Asher, S., and P. Novosad (2016): “Market Access and Structural Transformation:
+ Evidence from Rural Roads in India,” .
+
+Assmann, S. F., S. J. Pocock, L. E. Enos, and L. E. Kasten (2000): “Subgroup
+ analysis and other (mis) uses of baseline data in clinical trials,” The Lancet, 355(9209),
+ 1064–1069.
+
+Athey, S., and G. Imbens (2015): “Machine learning methods for estimating heteroge-
+ neous causal effects,” arXiv preprint arXiv:1504.01132.
+
+Banerjee, A., S. Barnhardt, and E. Duflo (2016): “Can Iron-Fortified Salt Control
+ Anemia? Evidence from Two Experiments in Rural Bihar,” Discussion paper, National
+ Bureau of Economic Research.
+
+Barreca, A., K. Clay, O. Deschênes, M. Greenstone, and J. S. Shapiro (2015):
+ “Convergence in Adaptation to Climate Change: Evidence from High Temperatures and
+ Mortality, 1900–2004,” The American Economic Review, 105(5), 247–251.
+
+                                              50
+Bryan, G., S. Chowdhury, and A. M. Mobarak (2014): “Underinvestment in a prof-
+ itable technology: The case of seasonal migration in Bangladesh,” Econometrica, 82(5),
+ 1671–1748.
+
+Cappelli, C., F. Mola, and R. Siciliano (2002): “A statistical approach to growing a
+ reliable honest tree,” Computational statistics & data analysis, 38(3), 285–299.
+
+Card, D. (1999): “The causal effect of education on earnings,” Handbook of labor economics,
+ 3, 1801–1863.
+
+Chen, X. (2007): “Large sample sieve estimation of semi-nonparametric models,” Handbook
+ of econometrics, 6, 5549–5632.
+
+Chen, X., O. Linton, and I. Van Keilegom (2003): “Estimation of semiparametric
+ models when the criterion function is not smooth,” Econometrica, 71(5), 1591–1608.
+
+Chen, X., and X. Shen (1998): “Sieve extremum estimates for weakly dependent data,”
+ Econometrica, pp. 289–314.
+
+Chetty, R., N. Hendren, and L. F. Katz (2015): “The effects of exposure to better
+ neighborhoods on children: New evidence from the Moving to Opportunity experiment,”
+ Discussion paper, National Bureau of Economic Research.
+
+Collard-Wexler, A., and J. De Loecker (2015): “Reallocation and Technology:
+ Evidence from the US Steel Industry,” The American Economic Review, 105(1), 131–171.
+
+Dell, M. (2015): “Trafficking networks and the Mexican drug war,” The American Eco-
+ nomic Review, 105(6), 1738–1779.
+
+Donaldson, D., and R. Hornbeck (2016): “Railroads and American Economic Growth:
+ A ”Market Access” Approach,” Quarterly Journal of Economics, 131(2).
+
+Doyle, J., J. Graves, J. Gruber, and S. Kleiner (2015): “Measuring returns to hos-
+ pital care: Evidence from ambulance referral patterns,” The Journal of Political Economy,
+ 123(1), 170.
+
+Gelman, A., and G. Imbens (2014): “Why high-order polynomials should not be used
+ in regression discontinuity designs,” Discussion paper, National Bureau of Economic Re-
+ search.
+
+
+                                            51
+Heckman, J., R. Pinto, and P. Savelyev (2013): “Understanding the Mechanisms
+ Through Which an Influential Early Childhood Program Boosted Adult Outcomes,” THE
+ AMERICAN ECONOMIC REVIEW, 103(6), 1–35.
+
+Imbens, G. W., and T. Lemieux (2008): “Regression discontinuity designs: A guide to
+  practice,” Journal of econometrics, 142(2), 615–635.
+
+Imbens, G. W., and J. M. Wooldridge (2009): “Recent Developments in the Econo-
+  metrics of Program Evaluation,” Journal of Economic Literature, 47(1), 5–86.
+
+Lee, D. S., and T. Lemieux (2010): “Regression Discontinuity Designs in Economics,”
+  Journal of Economic Literature, 48, 281–355.
+
+Newey, W. K. (1997): “Convergence rates and asymptotic normality for series estimators,”
+ Journal of Econometrics, 79(1), 147–168.
+
+Pollard, D. (2012): Convergence of stochastic processes. Springer Science & Business
+ Media.
+
+Raballand, G., R. L. Thornton, D. Yang, J. Goldberg, N. C. Keleher, and
+ A. Müller (2011): “Are rural road investments alone sufficient to generate transport
+ flows? Lessons from a randomized experiment in rural Malawi and policy implications,”
+ Lessons from a Randomized Experiment in Rural Malawi and Policy Implications (January
+ 1, 2011). World Bank Policy Research Working Paper, (5535).
+
+Shen, X., and W. H. Wong (1994): “Convergence rate of sieve estimates,” The Annals
+  of Statistics, pp. 580–615.
+
+Van Der Vaart, A. W., and J. A. Wellner (1996): Weak Convergence. Springer.
+
+Wager, S., and S. Athey (2015): “Estimation and Inference of Heterogeneous Treatment
+ Effects using Random Forests,” arXiv preprint arXiv:1510.04342.
+
+Wager, S., and G. Walther (2015): “Uniform Convergence of Random Forests via
+ Adaptive Concentration,” arXiv preprint arXiv:1503.06388.
+
+Zhang, J., and I. Gijbels (2003): “Sieve empirical likelihood and extensions of the gen-
+  eralized least squares,” Scandinavian Journal of Statistics, 30(1), 1–24.
+
+
+
+
+                                          52
+

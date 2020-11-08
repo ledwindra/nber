@@ -3,6 +3,8 @@
 export START=$1
 export END=$2
 export DIRECTORY=$3
+export SLEEP=$4
+export USER_AGENT=$5
 
 # create directory if does not exist
 if [ ! -d $DIRECTORY ]; then
@@ -30,10 +32,21 @@ while (( $START < $END ))
 do
     get_nber_id
     URL="https://www.nber.org/system/files/working_papers/w${NBER_ID}/w${NBER_ID}.pdf"
-    echo $URL
-    wget $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
-    pdftotext -layout "${DIRECTORY}/${NBER_ID}.pdf" "${DIRECTORY}/${NBER_ID}.txt"
-    rm -rf "${DIRECTORY}/${NBER_ID}.pdf"
+    if [ -e "${DIRECTORY}/${NBER_ID}.txt" ]
+    then
+        echo "${DIRECTORY}/${NBER_ID}.pdf already exists."
+    else
+        wget \
+            --tries=3 \
+            --timeout=30 \
+            --waitretry=30 \
+            --user-agent=$USER_AGENT \
+            $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
+        printf "Done downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+        sleep $SLEEP
+        pdftotext -layout "${DIRECTORY}/${NBER_ID}.pdf" "${DIRECTORY}/${NBER_ID}.txt"
+        rm -rf "${DIRECTORY}/${NBER_ID}.pdf"
+    fi
     START=$(($START + 1))
 done
 

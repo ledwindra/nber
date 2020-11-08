@@ -1,10 +1,13 @@
 #!/bin/bash
 
-export START=$1
-export END=$2
-export DIRECTORY=$3
-export SLEEP=$4
-export USER_AGENT=$5
+START=$1
+END=$2
+DIRECTORY=$3
+SLEEP=$4
+USER_AGENT=$5
+TRIES=$6
+TIMEOUT=$7
+WAIT=$8
 
 # create directory if does not exist
 if [ ! -d $DIRECTORY ]; then
@@ -37,12 +40,18 @@ do
         echo "${DIRECTORY}/${NBER_ID}.pdf already exists."
     else
         wget \
-            --tries=3 \
-            --timeout=30 \
-            --waitretry=30 \
+            --tries=$TRIES \
+            --timeout=$TIMEOUT \
+            --waitretry=$WAIT \
             --user-agent=$USER_AGENT \
             $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
-        printf "Done downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+        STATUS=$?
+        if (( $STATUS == 0 ))
+        then
+            printf "Done downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+        else
+            printf "Failed downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+        fi
         sleep $SLEEP
         pdftotext -layout "${DIRECTORY}/${NBER_ID}.pdf" "${DIRECTORY}/${NBER_ID}.txt"
         rm -rf "${DIRECTORY}/${NBER_ID}.pdf"

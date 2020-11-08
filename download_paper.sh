@@ -41,11 +41,7 @@ do
     then
         echo "${DIRECTORY}/${NBER_ID}.pdf already exists."
     else
-        wget \
-            --timeout=$TIMEOUT \
-            --waitretry=$WAIT \
-            --user-agent=$USER_AGENT \
-            $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
+        wget --timeout=$TIMEOUT --waitretry=$WAIT --user-agent=$USER_AGENT $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
         STATUS=$?
         if (( $STATUS == 0 ))
         then

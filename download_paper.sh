@@ -1,13 +1,15 @@
 #!/bin/bash
 
+# parameters
 START=$1
 END=$2
-DIRECTORY=$3
-SLEEP=$4
-USER_AGENT=$5
-TRIES=$6
-TIMEOUT=$7
-WAIT=$8
+SLEEP=$3
+USER_AGENT=$4
+TIMEOUT=$5
+WAIT=$6
+
+# constant
+DIRECTORY="paper"
 
 # create directory if does not exist
 if [ ! -d $DIRECTORY ]; then
@@ -40,7 +42,6 @@ do
         echo "${DIRECTORY}/${NBER_ID}.pdf already exists."
     else
         wget \
-            --tries=$TRIES \
             --timeout=$TIMEOUT \
             --waitretry=$WAIT \
             --user-agent=$USER_AGENT \

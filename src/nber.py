@@ -144,7 +144,7 @@ if __name__ == '__main__':
     PARSER.add_argument('-e', '--end', type=int, default=5, help='Ending NBER ID', metavar='')
     ARGS = PARSER.parse_args()
     START = ARGS.start
-    END = END.end
+    END = ARGS.end
     EXISTING = pd.read_csv('data/nber.csv').id.to_list()
     while START < END:
         raw = HTML(START)

@@ -4,13 +4,11 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, date
-from random import randint
+from time import sleep
 
-class ID:
-    def __init__(self):
-        self.nber_id = randint(0, len(os.listdir('paper/')))
-
-class HTML(ID):
+class HTML:
+    def __init__(self, nber_id):
+        self.nber_id = nber_id
     
     def string_id(self):
         if self.nber_id < 10:
@@ -141,14 +139,20 @@ class Paper:
             self.create().to_csv(self.file_name, index=False)
         
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--total', type=int, default=5, help='Total paper(s) that will be downloaded', metavar='')
-    args = parser.parse_args()
-    i = 0
-    while i < args.total:        
-        raw = HTML()
-        print(raw.url())
-        content = raw.content()
-        paper = Paper(content, raw.nber_id)
-        paper.save()
-        i += 1
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('-s', '--start', type=int, default=0, help='Starting NBER ID', metavar='')
+    PARSER.add_argument('-e', '--end', type=int, default=5, help='Ending NBER ID', metavar='')
+    ARGS = PARSER.parse_args()
+    START = ARGS.start
+    END = ARGS.end
+    EXISTING = pd.read_csv('data/nber.csv').id.to_list()
+    while START < END:
+        raw = HTML(START)
+        if START not in EXISTING:
+            print(f'{raw.url()}: Downloading')
+            content = raw.content()
+            paper = Paper(content, raw.nber_id)
+            paper.save()
+            print(f'{raw.url()}: Download succeeded. Now let me sleep for 30 seconds \U0001F634')
+            sleep(30)
+        START += 1

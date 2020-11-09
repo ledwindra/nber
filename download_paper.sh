@@ -1,15 +1,9 @@
 #!/bin/bash
 
-# parameters
-START=$1
-END=$2
-SLEEP=$3
-USER_AGENT=$4
-TIMEOUT=$5
-WAIT=$6
-
-# constant
-DIRECTORY="paper"
+export START=$1
+export END=$2
+export SLEEP=30
+export DIRECTORY="paper"
 
 # create directory if does not exist
 if [ ! -d $DIRECTORY ]; then
@@ -39,15 +33,15 @@ do
     URL="https://www.nber.org/system/files/working_papers/w${NBER_ID}/w${NBER_ID}.pdf"
     if [ -e "${DIRECTORY}/${NBER_ID}.txt" ]
     then
-        echo "${DIRECTORY}/${NBER_ID}.pdf already exists."
+        echo "${DIRECTORY}/${NBER_ID}.txt already exists."
     else
-        wget --timeout=$TIMEOUT --waitretry=$WAIT --user-agent=$USER_AGENT $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
+        wget $URL -O "${DIRECTORY}/${NBER_ID}.pdf"
         STATUS=$?
         if (( $STATUS == 0 ))
         then
-            printf "Done downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+            printf "Download succeeded. Now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
         else
-            printf "Failed downloading, now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
+            printf "Download failed. Now let me sleep for ${SLEEP} seconds... \xF0\x9F\x98\xB4 \n"
         fi
         sleep $SLEEP
         pdftotext -layout "${DIRECTORY}/${NBER_ID}.pdf" "${DIRECTORY}/${NBER_ID}.txt"

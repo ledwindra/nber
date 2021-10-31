@@ -1,0 +1,61 @@
+name: PDF to text
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Manual trigger'
+
+jobs:
+  printInputs:
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "Log level: ${{ github.event.inputs.logLevel }}"
+        echo "Tags: ${{ github.event.inputs.tags }}"
+  job_id:
+    name: PDF to text
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run script
+      env:
+        # bash argument
+        START: ${{ secrets.START }}
+        END: ${{ secrets.END }}
+
+        # proxy
+        PROXY_USER: ${{ secrets.PROXY_USER }}
+        PROXY_PASSWORD: ${{ secrets.PROXY_PASSWORD }}
+        PROXY_HOST: ${{ secrets.PROXY_HOST }}
+        PROXY_PORT: ${{ secrets.PROXY_PORT }}
+        PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
+
+        # git
+        ACCESS_TOKEN: ${{ secrets.TOKEN }}
+        BRANCH: ${{ secrets.BRANCH }}
+        EMAIL: ${{ secrets.EMAIL }}
+        USERNAME: ${{ secrets.USERNAME }}
+      run: |
+        # set up git
+        git config --global user.email ${EMAIL}
+        git config --global user.name ${USERNAME}
+        git remote set-url origin https://${USERNAME}:${ACCESS_TOKEN}@github.com/${USERNAME}/nber.git
+
+        # download module for pdftotext
+        sudo apt-get install poppler-utils
+
+        # run bash script
+        bash pdf_to_txt.sh $START $END
+    - name: Commit changes
+      run: |
+        git add paper/*
+        git commit --allow-empty -m "Add paper(s)"
+        git pull --no-rebase origin ${BRANCH}
+        git push -u origin ${BRANCH}

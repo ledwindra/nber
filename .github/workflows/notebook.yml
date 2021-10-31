@@ -1,0 +1,53 @@
+name: notebook
+
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Manual trigger'
+        
+jobs:
+  printInputs:
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "Log level: ${{ github.event.inputs.logLevel }}"
+        echo "Tags: ${{ github.event.inputs.tags }}"
+  job_id:
+    name: notebook
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        sudo apt install fonts-humor-sans
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        rm -rf ~/.cache/matplotlib
+    - name: Run script
+      env:
+        ACCESS_TOKEN: ${{ secrets.TOKEN }}
+        EMAIL: ${{ secrets.EMAIL }}
+        USERNAME: ${{ secrets.USERNAME }}
+      run: |
+        git config --global user.email ${EMAIL}
+        git config --global user.name ${USERNAME}
+        git remote set-url origin https://${USERNAME}:${ACCESS_TOKEN}@github.com/${USERNAME}/nber.git
+        jupyter nbconvert --to notebook --execute index.ipynb
+        mv index.nbconvert.ipynb index.ipynb
+    - name: Commit changes
+      env:
+        ACCESS_TOKEN: ${{ secrets.TOKEN }}
+      run: |
+        git add .
+        git commit -m "Updated notebook for use case example"
+        git pull --rebase origin main
+        git push -u origin main

@@ -1,14 +1,8 @@
-# About ✌🏽
-Hello world 🌏! Are you an economist, or economics student, or just a random person like me who is interested in economics? Do you want to write a paper, a thesis, or just ramble on some stuffs but don't have any fresh ideas on what should be the topic? Worry no more! Because, this repository is for you!
+# Introduction
+This repository aims to analyze the trends of research topics in the field of economics by scraping the whole working papers published by the National Bureau of Economic Research. Everyone, including economics professors, public policy professionals, students, can take the benefit from this repository for free.
 
-# TL;DR
-
-I migrated all datasets to Dropbox and thus repository size decresases significatnly. Alas, in order to be downloadable, a folder must be less than [20 GB AND has fewer 10,000 total files](https://help.dropbox.com/installs-integrations/sync-uploads/download-entire-folders). So you have to click `Save to Dropbox` and sync to your local machine. Following are the URLs:
-- Paper summary (JSON): [link](https://www.dropbox.com/sh/dx2vbms2zgei7eb/AAA5PsnLBJtQyeEowFxeCMqqa?dl=0 )
-- Whole paper (plain text): [link](https://www.dropbox.com/sh/qxzcsj7b72gw9pv/AAB3Gywycgd_DrQYroGipBGAa?dl=0)
-
-# Do it yourself
-You can run the codes on your machine by cloning or downloading this repository.
+# Technical guide
+You can run the following snippet code on your machine to clone the repository:
 
 ```bash
 # if you clone then .git directory will be included on your machine
@@ -22,7 +16,7 @@ unzip nber-main
 cd nber-main 
 ```
 
-When it's all ready, you may want to use virtual environment before installing all of the required packages so that won't affect your globally installed packages on your machine.
+Before proceeding, you may want to use virtual environment, so that won't mess up the package versioning installed globally on your local machine.
 
 ```bash
 # create a virtual environment -> .venv is the folder, you can change
@@ -39,7 +33,15 @@ pip install --upgrade pip
 pip install -r requirements.txt 
 ```
 
-# Use case
+After installing all the dependencies, you can run the Python script by running the following snippet on the terminal:
+
+```bash
+# --start and --end can be any number, such that start < end.
+python --start=1 --end=33843
+```
+
+
+# Analysis
 What can be done from this dataset? Well, let's take a look at `/notebook/index.ipynb`. 📙
 
 # Permission
@@ -48,9 +50,6 @@ Check its [<strong>robots.txt</strong>](http://data.nber.org/robots.txt). Everyb
 
 2. RePEc
 Coming from its open API: <strong>http://citec.repec.org/api.html</strong>
-
-3. Wikipedia
-Check [<strong>robots.txt</strong>](https://en.wikipedia.org/robots.txt):
 
 ```
 User-agent: *
@@ -68,7 +67,5 @@ Disallow: /wiki/Spezial%3A
 Disallow: /wiki/Spesial%3A
 ```
 
-We're using <strong>https://en.wikipedia.org/wiki/</strong> so it's safe.
-
 # Closing
-If you have read up to this line, thank you for bearing with me. Hope this is useful for your purpose! 😎 🍻
+I hope you find this repository useful. Feel free to contact me by submitting issues or pull requests. All errors are mine. Thank you.
